@@ -94,7 +94,7 @@ func briefScheduleDetailFrom(now time.Time, loc *time.Location, state upcomingBr
 		// Older adaptive runs stored the default preparation time rather than
 		// the ready time. Correct that recognizable ten-minute offset in this
 		// projection; other historical times may reflect a different schedule.
-		if run.Slot == mobileBriefSlotEvening && run.Status == mobileBriefRunOK {
+		if run.Slot == mobileBriefSlotEvening && run.Status == mobileBriefRunOK && !run.ScheduledReady {
 			for _, fixed := range mobileBriefTodaySlots(scheduled.In(loc), loc, state.Settings) {
 				if fixed.Slot == run.Slot && scheduled.Equal(fixed.ScheduledAt.Add(-mobileBriefBuildLead)) {
 					scheduled = fixed.ScheduledAt

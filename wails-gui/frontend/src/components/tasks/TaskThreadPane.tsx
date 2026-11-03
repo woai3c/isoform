@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Check, FileText, MoreHorizontal } from "lucide-react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { AIReady, AbortHandoff, ActOnDesktopTask, DeleteHandoff, GetDesktopTaskThread, ReplyToDesktopTask, type DesktopTaskAction, type DesktopTaskThread } from "@/lib/wails-shim-app";
+import { AIReady, AbortHandoff, ActOnDesktopTask, DeleteHandoff, GetDesktopTaskThread, ReplyToDesktopTask, RevealTaskStep, type DesktopTaskAction, type DesktopTaskEffectStep, type DesktopTaskReply, type DesktopTaskThread } from "@/lib/wails-shim-app";
 import { onPagePrivacyWithdrawal } from "@/lib/page-privacy-withdrawal";
-import { EventsOn } from "../../../wailsjs/runtime/runtime";
-import { taskOutcomeLine } from "./task-outcome";
+import { BrowserOpenURL, EventsOn } from "../../../wailsjs/runtime/runtime";
+import { currentStep, taskOutcomeLine } from "./task-outcome";
 import { FailureLine } from "./FailureLine";
 import { measureTasks, recordTasksAction, type TasksActionId } from "@/lib/tasks-telemetry";
 import { beginRestart, openYourAI, stopEventText, undoRestart, usePendingRestart } from "./task-stop";
 import { computerClock, computerHourOptions } from "@/lib/brief-time";
+import { EffectStepsMessage, FailedReply, ReplyMessage, replyPhase, repliesNeedingChoice, stepLabel, stepsNeedingAnswer, threadTimeline, type ReplyAction, type ThreadEvent } from "./TaskReplies";
 
 type PendingSend = { at: number; timer?: number; failed?: "definitive" | "unknown" | "receipt" };
 const sends = new Map<string, PendingSend>();
@@ -75,6 +76,9 @@ export function TaskThreadPane({ id, onClose, onOpened, onDoIt, onGone, onDelete
     const restart = usePendingRestart(id);
     const [restartFailed, setRestartFailed] = useState(false);
     const [aiReady, setAIReady] = useState(false);
+    const [failedReplies, setFailedReplies] = useState<{ key: number; text: string }[]>([]);
+    const [alreadyPickedUp, setAlreadyPickedUp] = useState<string | null>(null);
+    const [runCheck, setRunCheck] = useState<"checking" | "ended" | "failed">("checking");
     const noAssistant = detail?.stopCause === "no_assistant";
     useEffect(() => {
         if (!noAssistant) return;
@@ -98,7 +102,7 @@ export function TaskThreadPane({ id, onClose, onOpened, onDoIt, onGone, onDelete
     useEffect(() => {
         let active = true;
         initialized.current = false; previousPending.current = undefined;
-        setDetail(null); setFailed(false); setReply(""); setEditing(false); setActionFailed(false);
+        setDetail(null); setFailed(false); setReply(""); setEditing(false); setActionFailed(false); setFailedReplies([]); setAlreadyPickedUp(null);
         void load();
         if (!id.startsWith("draft.")) void Promise.resolve().then(() => ActOnDesktopTask(id, { action: "opened" })).catch(() => {});
         const off = EventsOn("handoff:updated", () => { if (active) void load(); });
@@ -115,6 +119,53 @@ export function TaskThreadPane({ id, onClose, onOpened, onDoIt, onGone, onDelete
         try { const next = await ActOnDesktopTask(id, input); if (telemetryAction) recordTodayAction(telemetryAction, "do", "done", started); if (epoch === privacyEpoch.current) { generation.current++; setDetail(next); if (input.action === "not_now") onClose?.(); } }
         catch { if (telemetryAction) recordTodayAction(telemetryAction, "do", "failed", started); if (epoch === privacyEpoch.current) setActionFailed(true); }
         finally { if (epoch === privacyEpoch.current) setBusy(false); }
+    };
+    const phase = detail ? replyPhase(detail) : "other";
+    const stopped = phase === "stopped_by_you" || phase === "stopped_by_isoform";
+    const replies = detail?.replies ?? [];
+    const uncertainReplies = replies.filter((item) => item.state === "uncertain").length;
+    const waitingReplies = replies.filter((item) => item.state === "waiting").length;
+    const needAnswers = detail ? repliesNeedingChoice(detail) + stepsNeedingAnswer(detail) : 0;
+    const needRunCheck = stopped && uncertainReplies > 0;
+    const startGated = needAnswers > 0 || (needRunCheck && runCheck !== "ended");
+    const lastStopId = detail?.events?.filter((event) => event.code === "stopped").pop()?.id;
+    const checkRunEnded = useCallback(() => {
+        setRunCheck("checking");
+        void Promise.resolve().then(() => ActOnDesktopTask(id, { action: "run_ended" })).then(() => setRunCheck("ended")).catch(() => setRunCheck("failed"));
+    }, [id]);
+    useEffect(() => { if (needRunCheck) checkRunEnded(); }, [needRunCheck, checkRunEnded]);
+    const actOnReply = (replyId: string, action: ReplyAction) => void act({ action, eventId: replyId });
+    const undoReply = (replyId: string, text: string) => {
+        const epoch = privacyEpoch.current;
+        generation.current++;
+        void Promise.resolve().then(() => ActOnDesktopTask(id, { action: "reply_undo", eventId: replyId })).then((next) => {
+            if (epoch !== privacyEpoch.current) return;
+            generation.current++; setDetail(next);
+            setReply((box) => box.trim() ? `${box}\n${text}` : text);
+        }).catch((error: unknown) => {
+            if (epoch !== privacyEpoch.current) return;
+            if ((error instanceof Error ? error.message : String(error)).includes("already picked up")) {
+                setAlreadyPickedUp(replyId);
+                window.setTimeout(() => setAlreadyPickedUp((current) => current === replyId ? null : current), 3000);
+                void load();
+            } else setActionFailed(true);
+        });
+    };
+    const stopSentence = phase !== "stopped_by_isoform" ? ""
+        : uncertainReplies === 1 ? t("taskThread.stopRepliesUncertainOne")
+        : uncertainReplies > 1 ? t("taskThread.stopRepliesUncertainMany", { n: uncertainReplies })
+        : waitingReplies === 1 ? t("taskThread.stopRepliesKeptOne")
+        : waitingReplies > 1 ? t("taskThread.stopRepliesKeptMany", { n: waitingReplies }) : "";
+    const gateHint = needAnswers > 0 ? <p data-testid="task-start-hint" className="self-center text-xs text-muted">{t("taskThread.chooseThenStartAgain")}</p>
+        : needRunCheck && runCheck === "checking" ? <p data-testid="task-run-check" className="self-center text-xs text-muted">{t("taskThread.checkingRunEnded")}</p>
+        : needRunCheck && runCheck === "failed" ? <FailureLine className="self-center" text={t("taskThread.runEndedUnconfirmed")} onRetry={checkRunEnded} /> : null;
+    const sendReply = (text: string) => {
+        const epoch = privacyEpoch.current;
+        const running = detail?.group === "running";
+        generation.current++; setBusy(true); setActionFailed(false);
+        void track("do", "sent", () => ReplyToDesktopTask(id, text)).then((next) => { if (epoch === privacyEpoch.current) { generation.current++; setDetail(next); setReply(""); } })
+            .catch(() => { if (epoch !== privacyEpoch.current) return; if (running) { setFailedReplies((list) => [...list, { key: Date.now(), text }]); setReply(""); } else setActionFailed(true); })
+            .finally(() => { if (epoch === privacyEpoch.current) setBusy(false); });
     };
     const clock = (value?: string) => {
         if (!value) return "";
@@ -144,11 +195,23 @@ export function TaskThreadPane({ id, onClose, onOpened, onDoIt, onGone, onDelete
         : draft.recipients.notIncluded?.length
           ? t(draft.recipients.notIncluded.length === 1 ? "taskThread.notCopiedOne" : "taskThread.notCopiedMany", { to: person, others: draft.recipients.notIncluded.join(", ") })
           : t("taskThread.onlyTo", { to: person }));
+    const timeline = detail ? threadTimeline(detail, stopped) : { items: [], live: [], waiting: [] };
+    const checkStep = (step: DesktopTaskEffectStep) => {
+        if (step.app === "Finder") void Promise.resolve().then(() => RevealTaskStep(id, step.id)).catch(() => setActionFailed(true));
+        else if (step.target && /^https?:\/\//.test(step.target)) BrowserOpenURL(step.target);
+    };
+    const replyNode = (item: DesktopTaskReply) => <ReplyMessage key={item.id} reply={item} phase={phase} clock={clock} busy={busy} alreadyPickedUp={alreadyPickedUp === item.id} onAct={(action) => actOnReply(item.id, action)} onUndo={() => undoReply(item.id, item.text)} />;
+    const eventNode = (event: ThreadEvent) => <div key={event.id} className={event.kind === "you" ? "ml-auto max-w-[85%] text-right" : "max-w-[90%]"}>
+                    {event.file ? <p className="rounded-lg border border-border bg-panel p-3 text-sm text-ink">{event.file.name}</p> : <p className={event.kind === "line" ? "text-xs text-muted" : "whitespace-pre-wrap rounded-xl border border-border bg-panel p-3 text-sm text-ink"}>{(event.code && stopEventText(event.code, event.params, clock(event.at), t)) || event.text}{event.id === lastStopId && stopSentence && <>{i18n.language.startsWith("zh") ? "" : " "}{stopSentence}</>}</p>}
+                    {event.at && event.code !== "started_again" && <p className="mt-1 text-xs text-muted">{clock(event.at)}</p>}
+                    {!event.chosenId && event.choices?.map((choice) => <Button key={choice.id} className="mr-2 mt-2" size="sm" variant="secondary" disabled={busy} onClick={() => void act({ action: "choose", eventId: event.id, choiceId: choice.id })}>{choice.label}</Button>)}
+                </div>;
+    const effectsNode = <EffectStepsMessage key="effect-steps" onCheck={checkStep} steps={detail?.effectSteps ?? []} clock={clock} busy={busy} onAnswer={(step, action) => void act({ action: step.answer === (action === "step_skip" ? "skip" : "redo") ? "step_change" : action, eventId: step.id })} />;
     return <section className="flex min-h-0 flex-1 flex-col bg-background-accent" data-testid="task-thread">
         {!detail ? <div className="p-5 text-sm text-muted">{failed ? <><p role="alert">{t("taskThread.failed")} <Button variant="quiet" size="sm" onClick={() => void track("do", "done", load)}>{t("taskThread.retry")}</Button></p></> : t("taskThread.loading")}{renderSupplement?.(null)}</div> : <>
             <header className="flex items-start gap-2 border-b border-border px-5 py-4">
                 <div className="min-w-0 flex-1">{renaming ? <form onSubmit={(event) => { event.preventDefault(); void act({ action: "rename", title }).then(() => setRenaming(false)); }}><input aria-label={t("taskThread.rename")} value={title} onChange={(event) => setTitle(event.target.value)} className="w-full rounded border border-border bg-panel p-2 text-ink" /><Button size="sm" type="submit">{t("taskThread.save")}</Button></form> : <h2 className="text-lg font-semibold text-ink">{detail.title}</h2>}
-                <p className="text-xs text-muted">{detail.group === "needs_you" && detail.stopCause ? t("taskThread.needsCouldntFinish") : detail.group === "done" ? t("taskThread.doneAt", { time: when(detail.outcome?.at || detail.updatedAt) }) : detail.group === "running" ? detail.progress?.total ? t("taskThread.runningStep", { step: Math.min(detail.progress.done + 1, detail.progress.total), total: detail.progress.total }) : t("taskThread.runningStarting") : t("taskThread.needsUpdated", { time: when(detail.updatedAt) })}</p></div>
+                <p className="text-xs text-muted">{detail.group === "needs_you" && detail.stopCause ? t("taskThread.needsCouldntFinish") : detail.group === "done" ? t("taskThread.doneAt", { time: when(detail.outcome?.at || detail.updatedAt) }) : detail.group === "running" ? currentStep(detail.progress) ? t("taskThread.runningStep", currentStep(detail.progress)!) : t("taskThread.runningStarting") : t("taskThread.needsUpdated", { time: when(detail.updatedAt) })}</p></div>
                 {(detail.actions.length > 0 || !id.startsWith("draft.")) && <DropdownMenu><DropdownMenuTrigger asChild><Button variant="quiet" size="icon" aria-label={t("taskThread.more")} onClick={() => track("open", "opened", () => undefined)}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
                     {detail.actions.includes("mark_done") && <DropdownMenuItem onSelect={() => void act({ action: "mark_done" })}>{t("taskThread.markDone")}</DropdownMenuItem>}
                     {detail.actions.includes("rename") && <DropdownMenuItem onSelect={() => track("open", "opened", () => { setTitle(detail.title); setRenaming(true); })}>{t("taskThread.rename")}</DropdownMenuItem>}
@@ -159,6 +222,7 @@ export function TaskThreadPane({ id, onClose, onOpened, onDoIt, onGone, onDelete
             </header>
             <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
                 {outcomeLine && <p data-testid="task-outcome" className={detail.outcome?.kind === "stopped" ? "rounded-lg bg-surface-active p-3 text-sm text-muted" : "rounded-lg bg-surface-active p-3 text-sm text-ink"}>{outcomeLine}</p>}
+                {detail.group === "done" && detail.skipped?.filter((step) => step.answer === "skip").map((step) => <p key={step.id} data-testid="task-skipped" className="text-sm text-muted">{t("taskThread.skippedAsChosen", { step: stepLabel(step) })}</p>)}
                 {originLine && <p className="text-center text-xs text-muted">{originLine}</p>}
                 {detail.plan && (detail.plan.unavailable
                     ? <p data-testid="task-plan-unavailable" className="text-sm text-muted">{t("taskThread.planUnavailable")} <Button variant="quiet" size="sm" onClick={() => void load()}>{t("taskThread.retry")}</Button></p>
@@ -182,20 +246,25 @@ export function TaskThreadPane({ id, onClose, onOpened, onDoIt, onGone, onDelete
                         <p className="text-sm text-copper">{t("taskThread.checksLine", { met: detail.checks.met, total: detail.checks.total })} · <button type="button" className="underline-offset-2 hover:underline" aria-expanded={checksOpen} onClick={() => setChecksOpen(!checksOpen)}>{checksOpen ? t("taskThread.hide") : t("taskThread.seeWhich")}</button></p>
                         {checksOpen && <ul className="space-y-1 text-sm text-ink">{detail.checks.criteria.map((criterion, index) => <li key={index} className="flex items-start gap-1.5">{detail.checks!.unmet[index] ? <span>{t("taskThread.couldntConfirm", { criterion })}</span> : <><Check aria-hidden className="mt-0.5 size-3.5 shrink-0 text-muted" /><span>{criterion}</span></>}</li>)}</ul>}
                     </div>)}
-                {detail.events?.map((event) => <div key={event.id} className={event.kind === "you" ? "ml-auto max-w-[85%] text-right" : "max-w-[90%]"}>
-                    {event.file ? <p className="rounded-lg border border-border bg-panel p-3 text-sm text-ink">{event.file.name}</p> : <p className={event.kind === "line" ? "text-xs text-muted" : "whitespace-pre-wrap rounded-xl border border-border bg-panel p-3 text-sm text-ink"}>{(event.code && stopEventText(event.code, event.params, clock(event.at), t)) || event.text}</p>}
-                    {event.at && event.code !== "started_again" && <p className="mt-1 text-xs text-muted">{clock(event.at)}</p>}
-                    {!event.chosenId && event.choices?.map((choice) => <Button key={choice.id} className="mr-2 mt-2" size="sm" variant="secondary" disabled={busy} onClick={() => void act({ action: "choose", eventId: event.id, choiceId: choice.id })}>{choice.label}</Button>)}
-                </div>)}
+                {timeline.items.map((item) => item.kind === "event" ? eventNode(item.event)
+                    : item.kind === "reply" ? replyNode(item.reply)
+                    : item.kind === "step" ? <p key={`step-${item.index}`} data-testid="task-step-done" className="flex items-start gap-1.5 text-sm text-ink"><Check aria-hidden className="mt-0.5 size-3.5 shrink-0 text-muted" /><span>{item.step.text}</span></p>
+                    : effectsNode)}
+                {timeline.live.length > 0 && <ul data-testid="task-steps-live" className="space-y-2 rounded-xl border border-border bg-panel p-3 text-sm text-ink">{timeline.live.map((step, index) => <li key={index}>{step.text}</li>)}</ul>}
+                {timeline.waiting.map(replyNode)}
+                {failedReplies.map((item) => <FailedReply key={item.key} text={item.text} onRetry={() => { setFailedReplies((list) => list.filter((other) => other.key !== item.key)); sendReply(item.text); }} onEdit={() => { setFailedReplies((list) => list.filter((other) => other.key !== item.key)); setReply((box) => box.trim() ? `${box}\n${item.text}` : item.text); }} />)}
                 {restart ? <p data-testid="task-restart" className="flex items-center gap-2 text-xs text-muted">{t("taskThread.started")}{restart.timer !== 0 && <Button variant="quiet" size="sm" onClick={() => undoRestart(id)}>{t("taskThread.undo")}</Button>}</p>
                 : detail.group === "needs_you" && detail.stopCause ? <div data-testid="task-stop-actions" className="flex gap-2">
                     {noAssistant && <Button size="sm" variant={aiReady ? "secondary" : "default"} onClick={openYourAI}>{t("taskThread.setUp")}</Button>}
                     {detail.stopCause === "signed_out" && <Button size="sm" onClick={openYourAI}>{t("taskThread.signIn")}</Button>}
-                    <Button size="sm" variant={(noAssistant && !aiReady) || detail.stopCause === "signed_out" ? "secondary" : "default"} onClick={startAgain}>{t("taskThread.startAgain")}</Button>
+                    <Button size="sm" variant={(noAssistant && !aiReady) || detail.stopCause === "signed_out" ? "secondary" : "default"} disabled={startGated} onClick={startAgain}>{t("taskThread.startAgain")}</Button>
+                    {gateHint}
                 </div>
-                : detail.stoppedBy === "person" && <p data-testid="task-stopped-line" className="flex items-center gap-1 text-xs text-muted">{t("taskThread.stopped")} ·<Button variant="quiet" size="sm" onClick={startAgain}>{t("taskThread.startOver")}</Button></p>}
+                : detail.stoppedBy === "person" && <div className="flex flex-wrap items-center gap-2">{repliesNeedingChoice(detail) > 0
+                    ? <p data-testid="task-stopped-line" className="text-xs text-muted">{t("taskThread.stopped")} · {t("taskThread.stoppedChooseReplies")}</p>
+                    : <p data-testid="task-stopped-line" className="flex items-center gap-1 text-xs text-muted">{t("taskThread.stopped")} ·<Button variant="quiet" size="sm" disabled={startGated} onClick={startAgain}>{t("taskThread.startOver")}</Button></p>}
+                    {repliesNeedingChoice(detail) === 0 && gateHint}</div>}
                 {restartFailed && <FailureLine tone="copper" text={t("taskThread.startFailed")} onRetry={() => detail.plan && onDoIt ? beginRestart(id, restartFailedH, restartedH, onDoIt) : startAgain()} />}
-                {detail.steps?.length > 0 && <ul className="space-y-2 rounded-xl border border-border bg-panel p-3 text-sm text-ink">{detail.steps.map((step, index) => <li key={index}>{step.text}</li>)}</ul>}
                 {draft && (pending && !pending.failed || draft.state === "sent" ? <div className="flex items-center gap-2 rounded-xl border border-border bg-panel p-3 text-sm text-ink"><span className="flex-1">{t("taskThread.sent", { person, time: clock(pending ? new Date(pending.at).toISOString() : draft.sentAt) })}</span>{pending?.timer && <Button variant="quiet" size="sm" onClick={() => track("reach", "undone", () => undoDraft(id))}>{t("taskThread.undo")}</Button>}</div> : draft.state === "not_sent" ? <p className="rounded-xl border border-border bg-panel p-3 text-sm text-muted">{t("taskThread.notSent", { person })}</p> : <div data-testid="task-draft-card" className="space-y-3 rounded-xl border border-border bg-panel p-4 text-sm text-ink">
                     <h3 className="text-xs font-semibold uppercase text-muted">{draft.channel === "slack" ? t("taskThread.slackHeader") : t("taskThread.mailHeader")}</h3>
                     {draft.why && <div className="rounded-lg bg-surface-active p-3"><p className="text-xs font-semibold">{t("taskThread.why")}</p><p>{draft.why.textLocalized?.[i18n.language] || draft.why.text}</p><p className="mt-1 text-xs text-muted">{t("tasks.evidenceCard.source", { source: draft.why.source === "mail" ? t("tasks.evidenceCard.mail") : draft.why.source, when: when(draft.why.at) })}</p></div>}
@@ -208,8 +277,8 @@ export function TaskThreadPane({ id, onClose, onOpened, onDoIt, onGone, onDelete
                 {actionFailed && !draft && <FailureLine tone="copper" text={t("taskThread.actionFailed")} />}
                 {renderSupplement?.(detail)}
             </div>
-            {!id.startsWith("draft.") && detail.stopCause !== "loop_guard" && <form className="flex gap-2 border-t border-border p-3" onSubmit={(event) => { event.preventDefault(); if (!reply.trim() || busy) return; const epoch = privacyEpoch.current; generation.current++; setBusy(true); setActionFailed(false); void track("do", "sent", () => ReplyToDesktopTask(id, reply)).then((next) => { if (epoch === privacyEpoch.current) { generation.current++; setDetail(next); setReply(""); } }).catch(() => { if (epoch === privacyEpoch.current) setActionFailed(true); }).finally(() => { if (epoch === privacyEpoch.current) setBusy(false); }); }}>
-                <input className="min-w-0 flex-1 rounded-lg border border-border bg-panel px-3 py-2 text-sm text-ink" placeholder={t("taskThread.reply")} aria-label={t("taskThread.reply")} value={reply} onChange={(event) => setReply(event.target.value)} />
+            {!id.startsWith("draft.") && <form className="flex gap-2 border-t border-border p-3" onSubmit={(event) => { event.preventDefault(); if (!reply.trim() || busy) return; sendReply(reply); }}>
+                <textarea rows={1} className="min-w-0 flex-1 resize-none rounded-lg border border-border bg-panel px-3 py-2 text-sm text-ink" placeholder={detail.group === "running" ? t("taskThread.replyRunning") : t("taskThread.reply")} aria-label={detail.group === "running" ? t("taskThread.replyRunning") : t("taskThread.reply")} value={reply} onChange={(event) => setReply(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
                 <Button type="submit" size="sm" disabled={busy || !reply.trim()}>{t("taskThread.send")}</Button>
             </form>}
             <ConfirmDialog open={confirmDelete} onOpenChange={setConfirmDelete} title={t("taskThread.deleteTask")} description={t("taskThread.deleteConfirm", { title: detail.title })} confirmLabel={t("taskThread.delete")} variant="danger" onConfirm={() => { setConfirmDelete(false); void measureH("H04", "do", "done", () => DeleteHandoff(id)).then(() => onDeleted?.()).catch(() => setActionFailed(true)); }} />

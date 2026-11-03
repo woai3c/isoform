@@ -2,6 +2,12 @@ import type { DesktopTaskThread } from "@/lib/wails-shim-app";
 import type { TFunction } from "i18next";
 import { computerClock } from "@/lib/brief-time";
 
+/** The step a running task is on, from its progress: one count for the row and the thread. */
+export function currentStep(progress?: { done: number; total: number }): { step: number; total: number } | undefined {
+    if (!progress?.total) return undefined;
+    return { step: Math.min(progress.done + 1, progress.total), total: progress.total };
+}
+
 export function taskOutcomeLine(outcome: DesktopTaskThread["outcome"], language: string, t: TFunction<"app">): string | undefined {
     if (!outcome) return undefined;
     const params = outcome.params ?? {};

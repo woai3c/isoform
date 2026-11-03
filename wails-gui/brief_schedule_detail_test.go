@@ -80,6 +80,66 @@ func TestBriefScheduleDetailProjectsLegacyEveningReadyTime(t *testing.T) {
 	}
 }
 
+func TestBriefScheduleDetailWalkthroughStoredEveningHistory(t *testing.T) {
+	clock := &fakeMobileBriefClock{now: time.Date(2026, 11, 2, 13, 30, 0, 0, time.UTC)}
+	svc, _ := newTestMobileBriefService(t, clock)
+	if err := svc.config.save(mobileBriefSettings{Enabled: true, Morning: "07:00", Evening: "18:00"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, day := range []int{30, 31} {
+		prep := time.Date(2026, 10, day, 17, 50, 0, 0, time.UTC)
+		if _, err := svc.runs.record(mobileBriefRun{BriefID: prep.Format("2006-01-02") + "-evening", Slot: mobileBriefSlotEvening, Status: mobileBriefRunOK, ScheduledAt: formatMobileBriefTime(prep), At: formatMobileBriefTime(prep.Add(time.Minute))}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	prep := time.Date(2026, 11, 1, 17, 50, 0, 0, time.UTC)
+	if _, err := svc.runs.record(mobileBriefRun{BriefID: "2026-11-01-evening", Slot: mobileBriefSlotEvening, Status: mobileBriefRunOK, ScheduledAt: formatMobileBriefTime(prep), At: formatMobileBriefTime(prep.Add(11 * time.Minute))}); err != nil {
+		t.Fatal(err)
+	}
+	detail := briefScheduleDetailFrom(clock.Now(), time.UTC, svc.upcomingBrief(), mobileBriefSlotEvening)
+	if len(detail.Runs) != 3 {
+		t.Fatalf("stored runs = %+v", detail.Runs)
+	}
+	for _, run := range detail.Runs {
+		at, err := time.Parse(time.RFC3339, run.ScheduledAt)
+		if err != nil || at.Hour() != 18 || at.Minute() != 0 || run.Late {
+			t.Fatalf("stored evening run = %+v", run)
+		}
+	}
+}
+
+func TestBriefScheduleDetailPreservesProvenEarlierSchedule(t *testing.T) {
+	settings := mobileBriefSettings{Enabled: true, Morning: "07:00", Evening: "18:00"}
+	state := upcomingBriefState{Available: true, Settings: settings, Runs: []mobileBriefRun{{
+		BriefID: "2026-10-31-evening", Slot: mobileBriefSlotEvening, Status: mobileBriefRunOK,
+		ScheduledAt: "2026-10-31T17:50:00Z", ScheduledReady: true, At: "2026-10-31T17:49:00Z",
+	}}}
+	runs := briefScheduleDetailFrom(time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC), time.UTC, state, mobileBriefSlotEvening).Runs
+	if len(runs) != 1 || runs[0].ScheduledAt != "2026-10-31T17:50:00Z" {
+		t.Fatalf("proven earlier schedule was changed: %+v", runs)
+	}
+}
+
+func TestBriefScheduleDetailUsesStoredBriefTimingEvidence(t *testing.T) {
+	clock := &fakeMobileBriefClock{now: time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)}
+	svc, _ := newTestMobileBriefService(t, clock)
+	if err := svc.config.save(mobileBriefSettings{Enabled: true, Morning: "07:00", Evening: "18:00"}); err != nil {
+		t.Fatal(err)
+	}
+	brief := mobileBriefStoredBrief(t, "2026-10-31", mobileBriefSlotEvening, 18)
+	brief.Generation = &MobileBriefGeneration{ScheduledAt: "2026-10-31T17:50:00Z"}
+	if err := svc.store.save(brief, clock.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.runs.record(mobileBriefRun{BriefID: brief.BriefID, Slot: mobileBriefSlotEvening, Status: mobileBriefRunOK, ScheduledAt: "2026-10-31T17:40:00Z", At: "2026-10-31T18:45:00Z"}); err != nil {
+		t.Fatal(err)
+	}
+	detail := briefScheduleDetailFrom(clock.Now(), time.UTC, svc.upcomingBrief(), mobileBriefSlotEvening)
+	if len(detail.Runs) != 1 || detail.Runs[0].ScheduledAt != "2026-10-31T17:50:00Z" || !detail.Runs[0].Late {
+		t.Fatalf("stored timing evidence lost: %+v", detail.Runs)
+	}
+}
+
 func TestBriefMissedReasonComesOnlyFromWhatWasObserved(t *testing.T) {
 	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(18, 0)}
 	svc, _ := newTestMobileBriefService(t, clock)

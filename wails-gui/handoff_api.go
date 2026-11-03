@@ -79,6 +79,9 @@ type HandoffEntryView struct {
 	Plan         *HandoffPlanView      `json:"plan,omitempty"`
 	Progress     *TaskProgressView     `json:"progress,omitempty"`
 	Runner       string                `json:"runner,omitempty"`
+	// StepsToCheck and RepliesToChoose make a stopped row say Review.
+	StepsToCheck    int `json:"stepsToCheck,omitempty"`
+	RepliesToChoose int `json:"repliesToChoose,omitempty"`
 }
 
 func handoffEntryView(entry handoff.Entry) HandoffEntryView {
@@ -106,6 +109,7 @@ func handoffEntryView(entry handoff.Entry) HandoffEntryView {
 		CreatedAt:     entry.CreatedAt,
 		UpdatedAt:     entry.UpdatedAt,
 	}
+	view.StepsToCheck, view.RepliesToChoose = taskStoppedAwaitingAnswers(entry)
 	if entry.Source != handoff.SourceAgency {
 		view.Body = entry.Body
 	}
@@ -306,6 +310,9 @@ func (a *App) acceptHandoff(id string, send func(HandoffAcceptResult) error) (Ha
 	if err := a.checkAgencyHandoffStartable(original); err != nil {
 		return HandoffAcceptResult{}, err
 	}
+	if err := a.handoffRestartGate(original); err != nil {
+		return HandoffAcceptResult{}, err
+	}
 
 	// Start again on a run that was blocked or needs review continues in its own
 	// chat, so the earlier conversation stays one thread. When that chat is gone,
@@ -334,7 +341,8 @@ func (a *App) acceptHandoff(id string, send func(HandoffAcceptResult) error) (Ha
 		entry.NoAIAtStart = noAIAtStart
 		switch original.Status {
 		case handoff.StatusBlocked, handoff.StatusNeedsReview, handoff.StatusAborted:
-			ensureThread(entry).AppendEvent(handoff.Event{ID: uuid.NewString(), Kind: handoff.EventLine, At: attemptStartedAt, Code: handoff.EventCodeStartedAgain})
+			params := prepareHandoffRestart(entry, send != nil)
+			ensureThread(entry).AppendEvent(handoff.Event{ID: uuid.NewString(), Kind: handoff.EventLine, At: attemptStartedAt, Code: handoff.EventCodeStartedAgain, Params: params})
 		}
 	})
 	if err != nil {
@@ -417,6 +425,9 @@ func (a *App) acceptHandoff(id string, send func(HandoffAcceptResult) error) (Ha
 		HandoffID: e.ID, SessionID: sessionID, Title: e.Title,
 		Prompt: e.Body, Workdir: workdir, Model: a.chatTaskModel(),
 	}
+	if send != nil && e.Thread != nil {
+		result.Prompt = handoffRestartPrompt(e.Body, handoffTakenReplies(e), e.Thread.Skipped)
+	}
 	if send != nil {
 		if err := send(result); err != nil {
 			rollback("chat send")
@@ -494,11 +505,15 @@ func (a *App) abortHandoff(id, expectedMomentID string) error {
 	progress := HandoffEntryView{}
 	a.handoffActionMu.Unlock()
 	a.populateTaskProgress(e, &progress)
+	steps := a.handoffEffectSteps(e)
 	a.handoffActionMu.Lock()
 	_, err = a.handoffStore.MutateIfAttempt(id, e.AttemptID, []handoff.Status{handoff.StatusActive, handoff.StatusStale, handoff.StatusInProgress, handoff.StatusBlocked, handoff.StatusNeedsReview}, func(entry *handoff.Entry) {
 		entry.Status = handoff.StatusAborted
 		entry.BlockedReason = ""
 		recordPersonStop(entry, progress.Progress, time.Now().UnixMilli())
+		if e.Status == handoff.StatusInProgress {
+			ensureThread(entry).Steps = steps
+		}
 	})
 	if err != nil {
 		return fmt.Errorf("mark aborted: %w", err)
@@ -569,6 +584,15 @@ func (a *App) markHandoffAttemptEnded(current handoff.Entry, ok bool, transcript
 		// Quitting ends the run; startup recovery marks it stopped by the restart.
 		return
 	}
+	pickupTried := false
+	if ok && !a.handoffShuttingDown.Load() {
+		started, tried := a.pickUpTaskReplies(current)
+		if started {
+			// Replies were waiting: the run goes on with them (tasks-review v1.0.5 §2).
+			return
+		}
+		pickupTried = tried
+	}
 	a.handoffActionMu.Lock()
 	entry, err := a.handoffStore.Get(current.ID)
 	if err != nil || entry.Status != handoff.StatusInProgress || entry.AttemptID != current.AttemptID {
@@ -596,25 +620,45 @@ func (a *App) markHandoffAttemptEnded(current handoff.Entry, ok bool, transcript
 		proof.LoopGuard = errors.Is(runErr, native.ErrLoopGuardStuck)
 		proof.AuthFailed = handoffRunAuthFailed(runErr)
 	}
+	var steps []handoff.EffectStep
+	if !ok {
+		steps = a.handoffEffectSteps(entry)
+	}
+	requeue := false
+	if handoffSettleHook != nil {
+		handoffSettleHook(current.ID)
+	}
 	a.handoffActionMu.Lock()
 	defer a.handoffActionMu.Unlock()
 	saved, err := a.handoffStore.MutateIfAttempt(current.ID, current.AttemptID, []handoff.Status{handoff.StatusInProgress}, func(e *handoff.Entry) {
+		if ok && !pickupTried && e.Thread != nil && len(e.Thread.WaitingReplies()) > 0 {
+			// A reply came while the run was being checked: nothing waits on a
+			// finished task, so the run takes it instead of settling.
+			requeue = true
+			return
+		}
 		e.Status = outcome.Status
 		e.Result = outcome.Result
 		if ok {
 			verification := outcome.Verification
 			e.Verification = &verification
+			recordHandoffStepsDone(e, time.Now().UnixMilli())
 			if !pii.IsSensitiveAppName(e.AppName) {
 				recordHandoffThreadResult(e, transcript, time.Now().UnixMilli())
 			}
 		} else {
 			recordSystemStop(e, handoffStopCause(proof), proof.Assistant, time.Now().UnixMilli())
+			ensureThread(e).Steps = steps
 		}
 	})
 	if run := a.handoffRuns[current.ID]; run != nil && run.attemptID == current.AttemptID {
 		delete(a.handoffRuns, current.ID)
 	}
 	if err != nil {
+		return
+	}
+	if requeue {
+		go a.markHandoffAttemptEnded(saved, true, transcript, nil)
 		return
 	}
 	a.emitBrowserEvent("handoff:updated", map[string]any{"id": current.ID, "status": string(saved.Status)})
@@ -644,7 +688,12 @@ func (a *App) markHandoffBlocked(id, reason string) {
 	if id == "" || a.handoffStore == nil {
 		return
 	}
+	var steps []handoff.EffectStep
+	if current, err := a.handoffStore.Get(id); err == nil && current.Status == handoff.StatusInProgress {
+		steps = a.handoffEffectSteps(current)
+	}
 	saved, err := a.handoffStore.MutateIfStatus(id, []handoff.Status{handoff.StatusInProgress}, func(entry *handoff.Entry) {
+		ensureThread(entry).Steps = steps
 		entry.Status = handoff.StatusBlocked
 		entry.BlockedReason = reason
 		cause := handoff.CauseRestarted

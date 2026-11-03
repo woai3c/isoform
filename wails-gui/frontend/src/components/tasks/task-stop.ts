@@ -28,7 +28,9 @@ export function stopRowLine(cause: string | undefined, runner: string | undefine
 }
 
 export type StopButton = "set_up" | "sign_in" | "start_again";
-export function stopRowButton(cause: string | undefined): StopButton | undefined {
+/** A row whose stop left a step to check or a reply to choose for says Review (v1.0.2, v1.0.7). */
+export function stopRowButton(cause: string | undefined, awaiting?: { stepsToCheck?: number; repliesToChoose?: number }): StopButton | undefined {
+    if (awaiting?.stepsToCheck || awaiting?.repliesToChoose) return undefined;
     switch (cause) {
         case "no_assistant": return "set_up";
         case "signed_out": return "sign_in";
@@ -39,6 +41,17 @@ export function stopRowButton(cause: string | undefined): StopButton | undefined
     }
 }
 
+/** The sentence a stopped row gains when a step needs checking or a reply needs a choice. */
+export function stopRowAwaiting(awaiting: { stepsToCheck?: number; repliesToChoose?: number }, t: TFunction<"app">): string | undefined {
+    const steps = awaiting.stepsToCheck ?? 0;
+    const replies = awaiting.repliesToChoose ?? 0;
+    const parts = [
+        steps === 1 ? t("taskThread.rowStepsCheckOne") : steps > 1 ? t("taskThread.rowStepsCheckMany", { n: steps }) : undefined,
+        replies === 1 ? t("taskThread.rowRepliesChoiceOne") : replies > 1 ? t("taskThread.rowRepliesChoiceMany", { n: replies }) : undefined,
+    ].filter((part): part is string => !!part);
+    return parts.length ? parts.reduce((line, extra) => t("taskThread.rowLineJoin", { line, extra })) : undefined;
+}
+
 /** Set up and Sign in open the Your AI screen in Settings, as setup does. */
 export function openYourAI() { EventsEmit("settings:open", "ai-provider"); }
 
@@ -46,7 +59,10 @@ export function openYourAI() { EventsEmit("settings:open", "ai-provider"); }
 export function stopEventText(code: string | undefined, params: Record<string, string> | undefined, time: string, t: TFunction<"app">): string | undefined {
     const ai = stopAssistantName(params?.assistant, t);
     switch (code) {
-        case "started_again": return t("taskThread.startedAgain", { time });
+        case "started_again":
+            if (params?.skipped) return t("taskThread.startedAgainSkipping", { time, step: params.skipped });
+            if (Number(params?.skippedCount) > 1) return t("taskThread.startedAgainSkippingMany", { time, n: Number(params?.skippedCount) });
+            return t("taskThread.startedAgain", { time });
         case "stopped_no_assistant": return t("taskThread.threadNoAssistant", { time });
         case "stopped":
             switch (params?.cause) {

@@ -35,15 +35,18 @@ const (
 
 // mobileBriefRun is one scheduled slot's outcome.
 type mobileBriefRun struct {
-	BriefID      string `json:"briefId"`
-	Slot         string `json:"slot"`
-	ScheduledAt  string `json:"scheduledAt"`
-	Status       string `json:"status"`
-	At           string `json:"at"`
-	Attempts     int    `json:"attempts,omitempty"`
-	FailureKey   string `json:"failureKey,omitempty"`
-	FailureCause string `json:"failureCause,omitempty"`
-	SameFailures int    `json:"sameFailures,omitempty"`
+	BriefID     string `json:"briefId"`
+	Slot        string `json:"slot"`
+	ScheduledAt string `json:"scheduledAt"`
+	// ScheduledReady distinguishes a configured slot from legacy adaptive
+	// preparation timestamps when the schedule changes later.
+	ScheduledReady bool   `json:"scheduledReady,omitempty"`
+	Status         string `json:"status"`
+	At             string `json:"at"`
+	Attempts       int    `json:"attempts,omitempty"`
+	FailureKey     string `json:"failureKey,omitempty"`
+	FailureCause   string `json:"failureCause,omitempty"`
+	SameFailures   int    `json:"sameFailures,omitempty"`
 	// Reason says why a missed slot didn't run, only when Isoform observed
 	// it (mobileBriefService.missedReason): asleep or closed. Empty when the
 	// record can't say.

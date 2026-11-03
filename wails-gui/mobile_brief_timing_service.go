@@ -113,8 +113,10 @@ func (s *mobileBriefService) runAdaptiveSlot(ctx context.Context, occurrence mob
 	// The prediction is when preparation starts. The run record describes the
 	// configured slot, which is when the brief is due to be ready.
 	recordedOccurrence := occurrence
+	fixedSchedule := false
 	if fixed, found := s.slotOccurrence(now, s.config.load(), occurrence.Slot); found && fixed.BriefID == occurrence.BriefID {
 		recordedOccurrence = fixed
+		fixedSchedule = true
 	}
 	s.mu.Lock()
 	if s.running || s.stopped || s.sleeping || s.retryHeldLocked(now, occurrence.BriefID) {
@@ -136,7 +138,7 @@ func (s *mobileBriefService) runAdaptiveSlot(ctx context.Context, occurrence mob
 	s.announceBuilding(true)
 	recorded := false
 	recordCompleted := func(brief MobileBriefV1) {
-		run := mobileBriefRun{BriefID: brief.BriefID, Slot: occurrence.Slot, ScheduledAt: formatMobileBriefTime(recordedOccurrence.ScheduledAt), Status: mobileBriefRunOK, At: brief.AsOf}
+		run := mobileBriefRun{BriefID: brief.BriefID, Slot: occurrence.Slot, ScheduledAt: formatMobileBriefTime(recordedOccurrence.ScheduledAt), ScheduledReady: fixedSchedule, Status: mobileBriefRunOK, At: brief.AsOf}
 		if generation != nil {
 			if generation.Reason == "mac_asleep" {
 				run.Reason = mobileBriefMissedAsleep

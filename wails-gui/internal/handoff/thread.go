@@ -22,6 +22,15 @@ type Thread struct {
 	NotNowUntil int64 `json:"notNowUntil,omitempty"`
 	// PutOff is the task's Not now on Needs you.
 	PutOff *PutOff `json:"putOff,omitempty"`
+	// Replies are the person's messages queued while the task ran (v1.0.5).
+	Replies []Reply `json:"replies,omitempty"`
+	// Steps are the stopped run's steps whose effect left the run (v1.0.2).
+	Steps []EffectStep `json:"steps,omitempty"`
+	// Skipped are the steps the current run skipped on the person's answer.
+	Skipped []EffectStep `json:"skipped,omitempty"`
+	// StepDoneAt is when each met criterion was first confirmed (unix ms),
+	// in criteria order.
+	StepDoneAt []int64 `json:"stepDoneAt,omitempty"`
 }
 
 // Origin kinds: where a task came from.

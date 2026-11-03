@@ -374,7 +374,7 @@ func (s *mobileBriefService) checkDue(ctx context.Context) {
 		if !found {
 			return
 		}
-		run := mobileBriefRun{BriefID: brief.BriefID, Slot: slot, ScheduledAt: formatMobileBriefTime(occurrence.ScheduledAt),
+		run := mobileBriefRun{BriefID: brief.BriefID, Slot: slot, ScheduledAt: formatMobileBriefTime(occurrence.ScheduledAt), ScheduledReady: true,
 			Status: mobileBriefRunOK, At: brief.AsOf}
 		if generation != nil {
 			if recovering {
@@ -1038,6 +1038,13 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 		s.patchMu.Unlock()
 		log.Printf("[mobile-brief] kept the stored %s brief: the rebuild has no written text", brief.Slot)
 		return stored, nil
+	}
+	// Delivery projection reads completed run records, but this run is not
+	// recorded until after generation returns. Keep the observed timing on the
+	// stored brief; every delivery still rechecks the matching run record.
+	if generation != nil {
+		captured := *generation
+		brief.Generation = &captured
 	}
 	firstReadBriefMu.Lock()
 	err = s.store.save(brief, asOf)

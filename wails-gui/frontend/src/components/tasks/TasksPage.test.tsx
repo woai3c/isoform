@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setComputerClock } from "@/lib/brief-time";
@@ -330,7 +330,7 @@ describe("Tasks board", () => {
         expect(await within(needs).findByText("active")).toBeInTheDocument();
         expect(within(needs).getByText("review")).toBeInTheDocument();
         expect(within(needs).getByText("Needs access")).toBeInTheDocument();
-        expect(screen.getByText("Claude Code on this computer · Tests · 2 of 3 steps done")).toBeInTheDocument();
+        expect(screen.getByText("Claude Code on this computer · step 3 of 3 · Tests")).toBeInTheDocument();
         expect(screen.getAllByRole("progressbar")[0]).toHaveAttribute("aria-valuenow", "2");
         expect(screen.getAllByRole("progressbar")[1]).not.toHaveAttribute("aria-valuenow");
         expect(within(screen.getByRole("region", { name: "Done this week" })).getByText("done")).toBeInTheDocument();
@@ -943,6 +943,34 @@ describe("A task never disappears (K1)", () => {
         expect(screen.getByRole("region", { name: "Needs you" }).querySelector("header")).toHaveTextContent(/^Needs you$/);
     });
 
+    it("says Review with one more sentence when a step needs checking or a reply needs a choice (v1.0.2, v1.0.7)", async () => {
+        const checking = [
+            handoff("step", "blocked", { title: "Post the FAQ", blockedReason: "interrupted", stopCause: "restarted", group: "needs_you", stepsToCheck: 1 }),
+            handoff("steps", "aborted", { title: "Push the site", stoppedBy: "system", stopCause: "timeout", group: "needs_you", stepsToCheck: 2 }),
+            handoff("reply", "aborted", { title: "Send the deck", stoppedBy: "system", stopCause: "assistant_error", stopAssistant: "codex", group: "needs_you", repliesToChoose: 1 }),
+        ];
+        mocks.list.mockResolvedValue(checking);
+        const items = checking.map((h) => ({ id: h.id, kind: "work_blocked", sentence: h.title, createdAt: 0, targetKind: "handoff", targetId: h.id, stopCause: h.stopCause }));
+        mocks.needs.mockResolvedValue({ items, total: items.length });
+        mount();
+        for (const [id, line] of [
+            ["step", "Stopped when Isoform restarted. One step needs checking."],
+            ["steps", "Stopped: no activity for two hours. 2 steps need checking."],
+            ["reply", "Couldn't finish: Codex stopped with an error. One reply needs a choice."],
+        ]) {
+            const card = await row(id);
+            expect(card.getByText(line)).toBeInTheDocument();
+            expect(card.getByRole("button", { name: "Review" })).toBeInTheDocument();
+            expect(card.queryByRole("button", { name: "Start again" })).toBeNull();
+        }
+        cleanup();
+        await i18n.changeLanguage("zh-CN");
+        mount();
+        expect((await row("step")).getByText("Isoform 重启时中断了。有一步需要你确认。")).toBeInTheDocument();
+        expect((await row("reply")).getByText("没能完成：Codex 出错停止了。有一条回复需要你决定。")).toBeInTheDocument();
+        expect((await row("reply")).getByRole("button", { name: "查看" })).toBeInTheDocument();
+    });
+
     it("words the rows in Chinese from the copy table", async () => {
         await i18n.changeLanguage("zh-CN");
         mount();
@@ -1220,6 +1248,38 @@ describe("measuring Tasks (K8)", () => {
 });
 
 // tasks-review v1.0.3: design's live walk-through of build ab2d86ee.
+describe("tasks-review v1.0.11 page regression gate", () => {
+    it("keeps the header and empty needs-you sentence", async () => {
+        mount();
+        expect(screen.getByRole("heading", { name: "What Isoform is doing for you" })).toBeInTheDocument();
+        await waitFor(() => expect(screen.getByTestId("tasks-line")).toHaveTextContent("Nothing needs you."));
+    });
+
+    it("keeps the task box and Make tasks button", async () => {
+        mount();
+        expect(await screen.findByPlaceholderText("Give Isoform a task…")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Make tasks" })).toBeInTheDocument();
+    });
+
+    it("keeps the empty Up next message and Find more", async () => {
+        mount();
+        const section = await screen.findByRole("region", { name: "Up next" });
+        expect(await within(section).findByText("Nothing up next.")).toBeInTheDocument();
+        expect(within(section).getByRole("button", { name: "Find more" })).toBeInTheDocument();
+    });
+
+    it("keeps both brief rows without descriptions or a Scheduled count", async () => {
+        mount({ upcoming: { loading: false, items: [brief("morning", "07:00", { summary: "hidden morning description" }), brief("evening", "18:00", { summary: "hidden evening description" })] } });
+        const section = await screen.findByRole("region", { name: "Scheduled" });
+        expect(section.querySelector("header")).toHaveTextContent(/^Scheduled$/);
+        for (const slot of ["morning", "evening"]) {
+            const row = section.querySelector(`[data-scheduled-row="brief:${slot}"]`) as HTMLElement;
+            expect(row).toBeInTheDocument();
+            expect(row).not.toHaveTextContent(`hidden ${slot} description`);
+        }
+    });
+});
+
 describe("tasks-review v1.0.3", () => {
     const tomorrowAt = (hour: number) => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(hour, 0, 0, 0); return d.getTime(); };
     const todayAt = (hour: number) => { const d = new Date(); d.setHours(hour, 0, 0, 0); return d.getTime(); };
@@ -1292,6 +1352,33 @@ describe("tasks-review v1.0.3", () => {
         expect(within(all).getByText("Weekly update")).toBeInTheDocument();
         expect(within(all).getByText("weekly-update.md")).toBeInTheDocument();
         expect(all.querySelector("header")).toHaveTextContent(/^All done$/);
+    });
+
+    it("shows All done for a draft sent before this week", async () => {
+        const old = new Date(); old.setMonth(old.getMonth() - 2);
+        mocks.desktopTasks.mockResolvedValue({ tasks: [{ id: "draft.old", title: "An older reply", group: "done", status: "completed", updatedAt: old.toISOString(), outcome: { kind: "replied", by: "isoform", at: old.toISOString(), params: { person: "Dana" } } }] });
+        mount();
+        fireEvent.click(await screen.findByTestId("all-done-link"));
+        expect(within(await screen.findByTestId("all-done")).getByText("An older reply")).toBeInTheDocument();
+    });
+
+    it("shows an old scheduled run from the retained history in All done", async () => {
+        const old = new Date(); old.setMonth(old.getMonth() - 3);
+        const run = { id: "automation:weekly:old", source: "automation", sourceId: "weekly:old", title: "Weekly update", summary: "Report ready", status: "completed", files: [], createdAt: old.getTime(), updatedAt: old.getTime() };
+        mocks.desktopTasks.mockResolvedValue({ tasks: [], finishedDeliverables: [run] });
+        mocks.deliverables.mockResolvedValue([]);
+        mount();
+        fireEvent.click(await screen.findByTestId("all-done-link"));
+        expect(within(await screen.findByTestId("all-done")).getByText("Weekly update")).toBeInTheDocument();
+    });
+
+    it("offers All done and reports a failed task-history read", async () => {
+        mocks.desktopTasks.mockRejectedValue(new Error("history unavailable"));
+        mocks.deliverables.mockResolvedValue([]);
+        mount();
+        fireEvent.click(await screen.findByTestId("all-done-link"));
+        expect(await screen.findByTestId("all-done-failed")).toHaveTextContent("Couldn't load your finished work.");
+        expect(screen.queryByText("Nothing finished yet")).toBeNull();
     });
 
     it("shows a finished chat file in All done even when it has no summary", async () => {

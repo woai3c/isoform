@@ -41,12 +41,16 @@ type MobileTaskView struct {
 	// Outcome is the Done row's sentence (20.7b); absent while the task runs.
 	Outcome *MobileTaskOutcome `json:"outcome,omitempty"`
 	// Unread marks a Needs you task changed since its thread was last opened.
-	Unread         bool   `json:"unread,omitempty"`
-	OpenedAt       string `json:"openedAt,omitempty"`
-	Source         string `json:"source,omitempty"`
-	linkedDraftID  string
-	linkedPerson   string
-	linkedOriginal string
+	Unread   bool   `json:"unread,omitempty"`
+	OpenedAt string `json:"openedAt,omitempty"`
+	Source   string `json:"source,omitempty"`
+	// StepsToCheck and RepliesToChoose make a stopped row say Review (v1.0.2,
+	// v1.0.7): steps whose outcome is unknown and replies needing a choice.
+	StepsToCheck    int `json:"stepsToCheck,omitempty"`
+	RepliesToChoose int `json:"repliesToChoose,omitempty"`
+	linkedDraftID   string
+	linkedPerson    string
+	linkedOriginal  string
 }
 
 type MobileTaskCounts struct {
@@ -58,6 +62,8 @@ type MobileTaskCounts struct {
 type MobileTaskPage struct {
 	Tasks  []MobileTaskView `json:"tasks"`
 	Counts MobileTaskCounts `json:"counts"`
+	// FinishedDeliverables is populated only for the desktop All done view.
+	FinishedDeliverables []DeliverableEntry `json:"finishedDeliverables,omitempty"`
 	// Threads tells a phone this Mac serves task threads (20.7b), so a Done
 	// row without an outcome sentence is left out rather than shown as "Done".
 	Threads bool `json:"threads,omitempty"`
@@ -74,6 +80,8 @@ type MobileTaskPage struct {
 type MobileTaskStep struct {
 	Text  string `json:"text"`
 	State string `json:"state"`
+	// At is when a done step was confirmed, when the hub recorded it.
+	At string `json:"at,omitempty"`
 }
 
 type MobileTaskDetail struct {
@@ -89,6 +97,12 @@ type MobileTaskDetail struct {
 	Hold  *HoldStatus      `json:"hold,omitempty"`
 	// HoldCleanup is the one-time ask after the work was marked done before its hold starts.
 	HoldCleanup bool `json:"holdCleanup,omitempty"`
+	// Replies are the person's queued replies (tasks-review v1.0.5–v1.0.7).
+	Replies []MobileTaskReply `json:"replies,omitempty"`
+	// EffectSteps are the stopped run's steps whose effect left it (v1.0.2);
+	// Skipped are the ones the current run skipped.
+	EffectSteps []MobileTaskEffectStep `json:"effectSteps,omitempty"`
+	Skipped     []MobileTaskEffectStep `json:"skipped,omitempty"`
 }
 
 func mobileTaskDetail(entry handoff.Entry, subjects []string) (MobileTaskDetail, bool) {
@@ -131,7 +145,11 @@ func mobileTaskDetail(entry handoff.Entry, subjects []string) (MobileTaskDetail,
 		if mobileTaskEchoesMail(criterion, subjects) {
 			continue
 		}
-		steps = append(steps, MobileTaskStep{Text: mobileOfferText(criterion, 200), State: state})
+		step := MobileTaskStep{Text: mobileOfferText(criterion, 200), State: state}
+		if state == "done" && entry.Thread != nil && i < len(entry.Thread.StepDoneAt) {
+			step.At = mobileTaskTime(entry.Thread.StepDoneAt[i])
+		}
+		steps = append(steps, step)
 	}
 	if entry.Status == handoff.StatusInProgress {
 		for i := range steps {
@@ -196,6 +214,7 @@ func mobileTaskView(entry handoff.Entry) MobileTaskView {
 	}
 	task.Outcome = mobileTaskOutcome(entry)
 	task.Unread = mobileTaskUnread(entry)
+	task.StepsToCheck, task.RepliesToChoose = taskStoppedAwaitingAnswers(entry)
 	if entry.Thread != nil {
 		task.OpenedAt = mobileTaskTime(entry.Thread.OpenedAt)
 		if entry.Thread.Origin != nil {

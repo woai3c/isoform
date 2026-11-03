@@ -59,7 +59,11 @@ func (bridge *mobileBridge) startHandoffWithOffers(id string, refs []mobileOffer
 		}
 		row.WorktreePath = result.Workdir
 		row.ProjectPath = ""
-		_, _, err = bridge.startChatTurn(row, result.Prompt, refs)
-		return err
+		_, seq, err := bridge.startChatTurn(row, result.Prompt, refs)
+		if err != nil {
+			return err
+		}
+		bridge.app.confirmHandoffRestartReplies(id, seq)
+		return nil
 	})
 }

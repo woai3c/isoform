@@ -91,14 +91,25 @@ export interface DesktopTaskThread {
     origin?: { kind: string; at: string; slot?: string; label?: string };
     outcome?: { kind: string; by: string; at: string; params?: Record<string, string> };
     events: { id: string; kind: string; at: string; text?: string; chosenId?: string; choices?: { id: string; label: string }[]; file?: { name: string }; code?: string; params?: Record<string, string> }[];
-    actions: string[]; steps: { text: string; state: string }[];
+    actions: string[]; steps: { text: string; state: string; at?: string }[];
     draft?: { channel: string; why?: DesktopTaskEvidence; to: string; subject?: string; body: string; state: string; sentAt?: string; recipients?: { to: string[]; cc?: string[]; notIncluded?: string[] } };
+    /** Replies queued on the task (tasks-review v1.0.5–v1.0.7). */
+    replies?: DesktopTaskReply[];
+    /** The stopped run's steps whose effect left it (v1.0.2), and the ones the current run skipped. */
+    effectSteps?: DesktopTaskEffectStep[];
+    skipped?: DesktopTaskEffectStep[];
+    stepsToCheck?: number;
+    repliesToChoose?: number;
 }
+export interface DesktopTaskReply { id: string; text: string; sentAt: string; state: "waiting" | "picked_up" | "uncertain"; pickedUpAt?: string; leftOut?: boolean; choice?: "left_out" | "use_again"; leftOutOfRun?: boolean }
+export interface DesktopTaskEffectStep { id: string; kind: string; name?: string; target?: string; at: string; app?: string; proof: "done" | "not_done" | "unknown"; answer?: "skip" | "redo" }
 export type DesktopTaskAction = { action: string; title?: string; eventId?: string; choiceId?: string; text?: string };
 export const GetDesktopTaskThread = appBinding<[string], DesktopTaskThread>("GetDesktopTaskThread");
 export interface DesktopScheduledTask { id: string; kind: string; title?: string; at: string }
-export const ListDesktopTaskThreads = appBinding<[], { tasks: DesktopTaskThread[]; scheduled?: DesktopScheduledTask[] }>("ListDesktopTaskThreads");
+export const ListDesktopTaskThreads = appBinding<[], { tasks: DesktopTaskThread[]; scheduled?: DesktopScheduledTask[]; finishedDeliverables?: DeliverableEntry[] }>("ListDesktopTaskThreads");
 export const ActOnDesktopTask = appBinding<[string, DesktopTaskAction], DesktopTaskThread>("ActOnDesktopTask");
+// Opens Finder on a stopped task's file step with the file selected.
+export const RevealTaskStep = appBinding<[string, string], void>("RevealTaskStep");
 export const ReplyToDesktopTask = appBinding<[string, string], DesktopTaskThread>("ReplyToDesktopTask");
 export const DesktopDraftTaskID = appBinding<[string], string>("DesktopDraftTaskID");
 export const StartDesktopTaskOffer = appBinding<[string, string], HandoffAcceptResult>("StartDesktopTaskOffer");
@@ -4193,6 +4204,9 @@ export type HandoffEntry = {
     stoppedBy?: string;
     stopAssistant?: string;
     stoppedAt?: number;
+    /** A stopped row says Review while a step needs checking or a reply needs a choice. */
+    stepsToCheck?: number;
+    repliesToChoose?: number;
     group?: string;
     progress?: { done: number; total: number; label: string };
     runner?: "claude_code" | "codex" | "isoform";

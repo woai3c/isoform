@@ -201,7 +201,13 @@ func (a *App) mobileTaskEvents(ctx context.Context, entry handoff.Entry) []Mobil
 	}
 	sensitive := pii.IsSensitiveAppName(entry.AppName)
 	events := make([]MobileTaskEvent, 0, len(entry.Thread.Events))
-	for _, event := range entry.Thread.Events {
+	lastStop := -1
+	for i, event := range entry.Thread.Events {
+		if event.Code == handoff.EventCodeStopped {
+			lastStop = i
+		}
+	}
+	for i, event := range entry.Thread.Events {
 		view := MobileTaskEvent{ID: event.ID, Kind: event.Kind, At: mobileTaskTime(event.At), ChosenID: event.ChosenID}
 		switch event.Kind {
 		case handoff.EventIsoform, handoff.EventYou, handoff.EventLine:
@@ -225,6 +231,11 @@ func (a *App) mobileTaskEvents(ctx context.Context, entry handoff.Entry) []Mobil
 				}
 			case handoff.EventCodeStopped, handoff.EventCodeStoppedNoAssistant, handoff.EventCodeStartedAgain:
 				text = handoffStopEventText(event, a.currentUILanguage())
+				if i == lastStop {
+					if sentence := taskRepliesStopSentence(entry, a.currentUILanguage() == "zh-CN"); sentence != "" {
+						text += " " + sentence
+					}
+				}
 				view.Code, view.Params = event.Code, mobileStopEventParams(event.Params)
 			}
 			view.Text = mobileTaskThreadText(text, mobileTaskThreadTextMax)
@@ -387,14 +398,20 @@ func (bridge *mobileBridge) serveTaskMessage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	bridge.runReceipted(w, device, key, r.Method+" "+r.URL.Path, func(w http.ResponseWriter) {
-		bridge.performTaskMessage(w, id, text)
+		bridge.performTaskMessage(w, id, text, input.IdempotencyKey)
 	})
 }
 
 // performTaskMessage is shared by the phone route and desktop bindings.
-func (bridge *mobileBridge) performTaskMessage(w http.ResponseWriter, id, text string) {
+func (bridge *mobileBridge) performTaskMessage(w http.ResponseWriter, id, text, key string) {
 	entry, ok := bridge.taskForWrite(w, id)
 	if !ok {
+		return
+	}
+	if entry.Status == handoff.StatusInProgress || taskStoppedForReplies(entry) {
+		// The run reads it at its next step (tasks-review v1.0.5); a stopped
+		// task takes it on Start again (v1.0.12).
+		bridge.queueTaskReply(w, entry, text, key)
 		return
 	}
 	app := bridge.app
@@ -494,6 +511,13 @@ func validateTaskAction(w http.ResponseWriter, id string, input taskActionInput)
 			mobileJSON(w, http.StatusBadRequest, nil, "a title of 1 to 200 bytes on one line is required")
 			return false
 		}
+	case mobileTaskActionRunEnded:
+	case mobileTaskActionReplyUndo, mobileTaskActionReplyLeaveOut, mobileTaskActionReplyUse, mobileTaskActionReplyUseAgain,
+		mobileTaskActionReplyChange, mobileTaskActionStepSkip, mobileTaskActionStepRedo, mobileTaskActionStepChange:
+		if !mobileValidID(input.EventID) {
+			mobileJSON(w, http.StatusBadRequest, nil, "a reply or step id is required")
+			return false
+		}
 	case mobileTaskActionChoose:
 		if !mobileValidID(input.EventID) || !mobileValidID(input.ChoiceID) {
 			mobileJSON(w, http.StatusBadRequest, nil, "a message id and a choice id are required")
@@ -525,6 +549,10 @@ func (bridge *mobileBridge) performTaskAction(w http.ResponseWriter, device mobi
 	}
 	if input.Action == "send" {
 		bridge.performLinkedListDraftSend(w, device, entry, input, channel)
+		return
+	}
+	if taskReplyAction(input.Action) {
+		bridge.performTaskReplyAction(w, entry, input)
 		return
 	}
 	app := bridge.app
@@ -763,6 +791,11 @@ func (a *App) mobileTaskThreadDetail(ctx context.Context, entry handoff.Entry, s
 	detail.Origin = mobileTaskOriginView(entry)
 	detail.Events = a.mobileTaskEvents(ctx, entry)
 	detail.Actions = mobileTaskActions(entry, detail.Events)
+	detail.Replies = mobileTaskReplies(entry)
+	if entry.Thread != nil {
+		detail.EffectSteps = mobileTaskEffectSteps(entry.Thread.Steps)
+		detail.Skipped = mobileTaskEffectSteps(entry.Thread.Skipped)
+	}
 	if entry.Thread != nil {
 		for i := len(entry.Thread.Leftovers) - 1; i >= 0; i-- {
 			leftover := entry.Thread.Leftovers[i]

@@ -1,12 +1,66 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"wails-gui/internal/handoff"
 )
+
+func TestDesktopTasksIncludeOldSentDraftsInAllDone(t *testing.T) {
+	app, _, moment := outboundSendTestCard(t)
+	var err error
+	app.handoffStore, err = handoff.NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	card := outboundStoredCard(t, app, moment.ID)
+	send := outboundRowForMainChatDraft(&card, moment.DedupeKey)
+	if _, claimed, err := app.store.ClaimOutboundSend(context.Background(), send, time.Now().UnixMilli()); err != nil || !claimed {
+		t.Fatalf("claim = %v, %v", claimed, err)
+	}
+	sentAt := time.Now().AddDate(0, -2, 0).UnixMilli()
+	if err := app.store.MarkOutboundSendAccepted(context.Background(), moment.ID, card.DraftContent.Revision, sentAt, sentAt+time.Hour.Milliseconds()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.ResolveMainChatProactiveAction(moment.ID, "send"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if app.desktopTaskBridge != nil {
+			app.desktopTaskBridge.Stop()
+		}
+	})
+	page, err := app.ListDesktopTaskThreads()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := mobileDraftTaskID(moment.ID)
+	count := 0
+	for _, task := range page.Tasks {
+		if task.ID == id && task.Group == mobileTaskGroupDone {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("old draft count = %d, tasks = %+v", count, page.Tasks)
+	}
+	recent, err := app.mobileDraftTasks(context.Background(), mobileGoalsNow())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, draft := range recent {
+		if draft.TaskID == id {
+			t.Fatal("old draft leaked into the phone's recent task list")
+		}
+	}
+	if _, err := app.GetDesktopTaskThread(id); err != nil {
+		t.Fatalf("old completed draft cannot be opened: %v", err)
+	}
+}
 
 func TestDesktopMobileTaskChoiceIsSerialized(t *testing.T) {
 	bridge, store, _ := mobileTestThreadBridge(t)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"wails-gui/internal/engagement"
 	"wails-gui/internal/handoff"
@@ -64,7 +65,81 @@ func (a *App) ListDesktopTaskThreads() (MobileTaskPage, error) {
 	if err != nil {
 		return MobileTaskPage{}, err
 	}
-	return desktopTaskResponse[MobileTaskPage](bridge.serveTaskList)
+	page, err := desktopTaskResponse[MobileTaskPage](bridge.serveTaskList)
+	if err != nil {
+		return MobileTaskPage{}, err
+	}
+	now := mobileGoalsNow()
+	drafts, err := a.mobileDraftTasksSince(bridge.ctx, now, 0)
+	if err != nil {
+		return MobileTaskPage{}, err
+	}
+	seen := make(map[string]bool, len(page.Tasks))
+	for _, task := range page.Tasks {
+		seen[task.ID] = true
+	}
+	cutoff := now.Add(-mobileDraftDoneWindow)
+	for _, draft := range drafts {
+		if !draft.done() || seen[draft.TaskID] {
+			continue
+		}
+		view := draft.view(a)
+		updated, err := time.Parse(time.RFC3339, view.UpdatedAt)
+		if err == nil && updated.Before(cutoff) {
+			page.Tasks = append(page.Tasks, view)
+		}
+	}
+	page.FinishedDeliverables, err = a.desktopFinishedDeliverables(bridge.ctx, now)
+	if err != nil {
+		return MobileTaskPage{}, err
+	}
+	return page, nil
+}
+
+// desktopFinishedDeliverables reads the retained history for Tasks. The
+// ordinary Deliverables hub deliberately uses a shorter, bounded window.
+func (a *App) desktopFinishedDeliverables(ctx context.Context, now time.Time) ([]DeliverableEntry, error) {
+	if a.store == nil {
+		return nil, nil
+	}
+	chat, err := a.store.ListChatDeliverables(ctx, int(^uint(0)>>1))
+	if err != nil {
+		return nil, err
+	}
+	var out []DeliverableEntry
+	for _, row := range chat {
+		files := decodeChatDeliverableFiles(row.Files)
+		if len(files) == 0 {
+			continue
+		}
+		out = append(out, DeliverableEntry{ID: deliverableSourceChat + ":" + row.ID, Source: deliverableSourceChat, SourceID: row.ID, Title: row.Title, Summary: deliverableSummaryLine(row.Summary, 200), Status: "completed", Files: files, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt})
+	}
+	runs, err := a.store.ListCronRunsByDateRange(ctx, 0, now.Add(24*time.Hour).UnixMilli(), 0)
+	if err != nil {
+		return nil, err
+	}
+	jobs, err := a.store.ListCronJobs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	jobNames := make(map[string]string)
+	for _, job := range jobs {
+		if upcomingListsSurface(job.SurfaceKind) && !upcomingSystemSurface(job.SurfaceKind) && strings.TrimSpace(job.Name) != "" {
+			jobNames[job.ID] = job.Name
+		}
+	}
+	for _, run := range runs {
+		name, ok := jobNames[run.JobID]
+		if !ok || run.Status != "ok" {
+			continue
+		}
+		updated := run.FinishedAt
+		if updated == 0 {
+			updated = run.StartedAt
+		}
+		out = append(out, DeliverableEntry{ID: deliverableSourceAutomation + ":" + run.JobID + ":" + run.ID, Source: deliverableSourceAutomation, SourceID: run.JobID + ":" + run.ID, Title: name, Summary: deliverableSummaryLine(run.ResultSummary, 200), Status: "completed", Files: a.cronRunDeliverableRefs(ctx, run), CreatedAt: run.StartedAt, UpdatedAt: updated})
+	}
+	return out, nil
 }
 
 type DesktopTaskActionInput struct {
@@ -100,7 +175,7 @@ func (a *App) ReplyToDesktopTask(id, text string) (DesktopTaskDetail, error) {
 	if err != nil {
 		return DesktopTaskDetail{}, err
 	}
-	detail, err := desktopTaskResponse[MobileTaskDetail](func(w http.ResponseWriter) { bridge.performTaskMessage(w, id, text) })
+	detail, err := desktopTaskResponse[MobileTaskDetail](func(w http.ResponseWriter) { bridge.performTaskMessage(w, id, text, "") })
 	return a.desktopTaskDetail(id, detail, err)
 }
 

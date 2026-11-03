@@ -203,9 +203,9 @@ func TestStopEventTextUsesTheCopyTable(t *testing.T) {
 	}{
 		{handoff.Event{Code: handoff.EventCodeStoppedNoAssistant, At: at}, "en", "I started at 3:04 PM, but no AI is signed in on this computer, so nothing was done. Set one up, then start again."},
 		{handoff.Event{Code: handoff.EventCodeStoppedNoAssistant, At: at}, "zh-CN", "我15:04开始了，但这台电脑上还没有登录 AI，所以什么都没做。设置好以后再重新开始。"},
-		{handoff.Event{Code: handoff.EventCodeStopped, At: at, Params: map[string]string{"cause": handoff.CauseRestarted}}, "en", "I stopped at 3:04 PM because Isoform restarted. What I'd finished is below."},
-		{handoff.Event{Code: handoff.EventCodeStopped, At: at, Params: map[string]string{"cause": handoff.CauseTimeout}}, "zh-CN", "我在15:04停下了，因为两小时没有任何进展。已经完成的部分在下面。"},
-		{handoff.Event{Code: handoff.EventCodeStopped, At: at, Params: map[string]string{"cause": handoff.CauseAssistantError, "assistant": "codex"}}, "en", "I stopped at 3:04 PM because Codex stopped with an error. What I'd finished is below."},
+		{handoff.Event{Code: handoff.EventCodeStopped, At: at, Params: map[string]string{"cause": handoff.CauseRestarted}}, "en", "I stopped at 3:04 PM because Isoform restarted."},
+		{handoff.Event{Code: handoff.EventCodeStopped, At: at, Params: map[string]string{"cause": handoff.CauseTimeout}}, "zh-CN", "我在15:04停下了，因为两小时没有任何进展。"},
+		{handoff.Event{Code: handoff.EventCodeStopped, At: at, Params: map[string]string{"cause": handoff.CauseAssistantError, "assistant": "codex"}}, "en", "I stopped at 3:04 PM because Codex stopped with an error."},
 		{handoff.Event{Code: handoff.EventCodeStartedAgain, At: at}, "zh-CN", "重新开始 · 15:04"},
 	} {
 		if got := handoffStopEventText(tc.event, tc.lang); got != tc.want {

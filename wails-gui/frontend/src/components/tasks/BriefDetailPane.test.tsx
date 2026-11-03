@@ -36,6 +36,26 @@ beforeEach(async () => {
 afterEach(async () => { await i18n.changeLanguage("en"); });
 
 describe("BriefDetailPane (K3)", () => {
+    it("keeps the v1.0.11 detail controls and the last three openable runs", async () => {
+        mocks.detail.mockResolvedValue(detail({ runs: [-2, -1, 0].map((day) => ({ briefId: `run-${day}`, status: "ok", scheduledAt: at(day, 7, 0).toISOString(), at: at(day, 7, 0).toISOString() })) }));
+        render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
+        expect(await screen.findByRole("button", { name: "Make it now" })).toBeInTheDocument();
+        const list = await screen.findByRole("region", { name: "The last three" });
+        await waitFor(() => expect(list.querySelectorAll("[data-brief-run]")).toHaveLength(3));
+        expect(within(list).getAllByRole("button", { name: "Open on Today" })).toHaveLength(3);
+        expect(screen.getByTestId("brief-detail-foot")).toHaveTextContent("Change times · In Settings › Brief");
+    });
+
+    it("shows the scheduled ready time for an on-time run and the actual time for a late run", async () => {
+        mocks.detail.mockResolvedValue(detail({ runs: [
+            { briefId: "on-time", status: "ok", scheduledAt: at(0, 18, 0).toISOString(), at: at(0, 17, 50).toISOString() },
+            { briefId: "late", status: "ok", scheduledAt: at(-1, 18, 0).toISOString(), at: at(-1, 19, 5).toISOString(), late: true },
+        ] }));
+        render(<BriefDetailPane slot="evening" onClose={vi.fn()} />);
+        await screen.findByRole("region", { name: "The last three" });
+        await waitFor(() => expect(document.querySelector('[data-brief-run="on-time"]')).toHaveTextContent("Today, 6:00 PM"));
+        expect(document.querySelector('[data-brief-run="late"]')).toHaveTextContent("Yesterday, 7:05 PM");
+    });
     it("shows the brief's schedule, what it is and the foot, with no schedule controls", async () => {
         const onChangeTimes = vi.fn();
         render(<BriefDetailPane slot="morning" onClose={vi.fn()} onChangeTimes={onChangeTimes} />);

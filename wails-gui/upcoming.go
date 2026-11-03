@@ -128,6 +128,7 @@ func (s *mobileBriefService) upcomingBrief() upcomingBriefState {
 		if brief, ok := s.store.load(runs[i].BriefID); ok && brief.Generation != nil && brief.Generation.ScheduledAt != "" {
 			if _, err := time.Parse(time.RFC3339Nano, brief.Generation.ScheduledAt); err == nil {
 				runs[i].ScheduledAt = brief.Generation.ScheduledAt
+				runs[i].ScheduledReady = true
 			}
 		}
 	}

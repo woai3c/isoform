@@ -39,8 +39,8 @@ import { BriefDetailPane, type BriefSlot } from "./BriefDetailPane";
 import { briefEvery, briefNext } from "./brief-schedule-text";
 import { clockTime } from "@/lib/brief-time";
 import { undoTaskStart, usePendingTaskStarts } from "./pending-task-starts";
-import { taskOutcomeLine } from "./task-outcome";
-import { beginRestart, openYourAI, stopRowButton, stopRowLine, undoRestart, usePendingRestarts } from "./task-stop";
+import { currentStep, taskOutcomeLine } from "./task-outcome";
+import { beginRestart, openYourAI, stopRowAwaiting, stopRowButton, stopRowLine, undoRestart, usePendingRestarts } from "./task-stop";
 import { onPagePrivacyWithdrawal } from "@/lib/page-privacy-withdrawal";
 import { todayReviewSentence } from "@/lib/today-review-sentence";
 import { measureTasks, recordTasksAction, useTasksSectionSeen, type TasksActionId } from "@/lib/tasks-telemetry";
@@ -126,6 +126,7 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
     // When the list on screen was last read, for "showing {time}" (T30).
     const [loadedAt, setLoadedAt] = useState<number | null>(() => pageQueryCache.peek("ListHandoffs") === undefined ? null : Date.now());
     const [deliverablesFailed, setDeliverablesFailed] = useState(false);
+    const [taskViewsFailed, setTaskViewsFailed] = useState(false);
     const [stopFailed, setStopFailed] = useState<string | null>(null);
     const [surface, setSurface] = useState<"board" | "all">("board");
     // A link to a task that was deleted (K2).
@@ -138,6 +139,7 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
     const waiting = useTodayNeeds();
     const waitingPanel = useMainChatItemPanel("tasks");
     const [deliverables, setDeliverables] = useState<DeliverableEntry[]>([]);
+    const [finishedHistory, setFinishedHistory] = useState<DeliverableEntry[]>([]);
     const [firstWeekDay, setFirstWeekDay] = useState<number | null>(null);
     const { answers } = useOpenAnswers();
     const pendingStarts = usePendingTaskStarts();
@@ -168,7 +170,7 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
     }, []);
     const reloadDrafts = useCallback(() => {
         const request = ++taskViewGeneration.current;
-        void Promise.resolve().then(() => ListDesktopTaskThreads()).then((page) => { if (request === taskViewGeneration.current) { setTaskViews(page.tasks ?? []); setListScheduled((page.scheduled ?? []).filter((item) => item.kind === "reminder")); } }).catch(() => { if (request === taskViewGeneration.current) setFailed(true); });
+        void Promise.resolve().then(() => ListDesktopTaskThreads()).then((page) => { if (request === taskViewGeneration.current) { setTaskViews(page.tasks ?? []); setFinishedHistory(page.finishedDeliverables ?? []); setTaskViewsFailed(false); setListScheduled((page.scheduled ?? []).filter((item) => item.kind === "reminder")); } }).catch(() => { if (request === taskViewGeneration.current) { setFailed(true); setTaskViewsFailed(true); } });
     }, []);
     const reloadDeliverables = useCallback(() => {
         return Promise.resolve().then(() => ListDeliverables()).then((rows) => { setDeliverables(Array.isArray(rows) ? rows : []); setDeliverablesFailed(false); return true; }).catch(() => { setDeliverablesFailed(true); return false; });
@@ -188,7 +190,7 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
         reloadDrafts();
         GetFirstWeekDay().then((day) => setFirstWeekDay(typeof day === "number" ? day : -1)).catch(() => setFirstWeekDay(-1));
         const unsubscribe = EventsOn("handoff:updated", () => void reloadFresh());
-        const withdraw = onPagePrivacyWithdrawal(() => { taskViewGeneration.current++; setTaskViews([]); setListScheduled([]); reloadDrafts(); });
+        const withdraw = onPagePrivacyWithdrawal(() => { taskViewGeneration.current++; setTaskViews([]); setFinishedHistory([]); setListScheduled([]); reloadDrafts(); });
         return () => { generation.current++; taskViewGeneration.current++; unsubscribe?.(); withdraw(); };
     }, [reload]);
     useEffect(() => {
@@ -286,7 +288,8 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
     // Work finished in Chat that made a file counts as done.
     const doneChats = deliverables.filter((d) => d.source === "chat" && d.status === "completed" && (d.files?.length ?? 0) > 0 && d.updatedAt >= weekStart && d.summary?.trim());
     // A scheduled run that finished with its files is finished work too (tasks-01's Weekly update).
-    const finishedRuns = deliverables.filter((d) => d.source === "automation" && d.status === "completed");
+    const allDeliverables = [...new Map([...finishedHistory, ...deliverables].map((item) => [item.id, item])).values()];
+    const finishedRuns = allDeliverables.filter((d) => d.source === "automation" && d.status === "completed");
     // Finished drafts: every other finished task is a handoff row.
     const finishedTasks = taskViews.filter((task) => task.id.startsWith("draft.") && task.group === "done");
     const runRow = (d: DeliverableEntry): DoneRow => ({ key: `automation:${d.id}`, title: d.title, at: d.updatedAt, outcome: d.summary || undefined, entry: d, open: undefined });
@@ -295,7 +298,7 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
     const allDone: DoneRow[] = [
         ...allDoneHandoffs.map(doneRow),
         ...finishedTasks.map((task) => ({ key: task.id, title: task.title, at: Date.parse(task.updatedAt), outcome: taskOutcomeLine(task.outcome, i18n.language, t), entry: null, open: (action: TasksActionId) => open(task.id, action) })),
-        ...deliverables.filter((d) => d.source === "chat" && d.status === "completed" && (d.files?.length ?? 0) > 0).map((d) => ({ key: `chat:${d.id}`, title: d.title, at: d.updatedAt, outcome: d.summary?.trim() || undefined, entry: d, open: undefined })),
+        ...allDeliverables.filter((d) => d.source === "chat" && d.status === "completed" && (d.files?.length ?? 0) > 0).map((d) => ({ key: `chat:${d.id}`, title: d.title, at: d.updatedAt, outcome: d.summary?.trim() || undefined, entry: d, open: undefined })),
         ...finishedRuns.map(runRow),
     ].sort((a, b) => b.at - a.at);
     const threadAside = selectedId && <aside className="flex w-[420px] min-h-0 shrink-0 flex-col border-l border-border" data-testid="tasks-thread-panel"><div className="flex justify-end px-2 pt-2"><Button variant="quiet" size="icon" aria-label={t("tasks.back")} onClick={() => { recordTasksAction("H05", "open", "opened"); closeThread(); }}><X className="size-4" /></Button></div><TaskThreadPane id={selectedId} tasksMeasured onClose={() => { recordTasksAction("H05", "open", "opened"); closeThread(); }} onDoIt={() => runStart(selectedId)} onGone={() => { recordTasksAction("H06", "open", "failed"); setSelectedId(null); setGone(true); }} onDeleted={() => { setHandoffs((rows) => rows.filter((row) => row.id !== selectedId)); closeThread(); }} /></aside>;
@@ -306,7 +309,7 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
         ...finishedRuns.filter((d) => d.updatedAt >= weekStart).map(runRow),
     ].sort((a, b) => b.at - a.at);
     // All done can't say "nothing yet" when a read behind it failed (D03).
-    const allDoneFailed = deliverablesFailed || (failed && loadedAt === null);
+    const allDoneFailed = deliverablesFailed || taskViewsFailed || (failed && loadedAt === null);
     const showAll = () => { recordTasksAction("T28", "open", "opened"); setSelectedId(null); setSurface("all"); };
     const runningRows = running.length + drafting.length + openAnswers.length + pendingStarts.length;
     const needsRows = needs.length + listNeeds.length;
@@ -340,7 +343,8 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
         ].filter(Boolean).join(" · ");
     const subtitle = (h: HandoffEntry) => {
         const stopped = stopRowLine(h.stopCause, h.stopAssistant, t);
-        if (stopped) return stopped;
+        const awaiting = stopRowAwaiting(h, t);
+        if (stopped) return awaiting ? t("taskThread.rowLineJoin", { line: stopped, extra: awaiting }) : stopped;
         if (h.status === "needs_review" && h.verification?.total) return t("taskThread.checksMet", { met: h.verification.met, total: h.verification.total });
         const reason = handoffBlockedReasonKey(h);
         if (reason) return t(reason);
@@ -381,7 +385,7 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
                                         <button className="min-w-0 flex-1 text-left" onClick={openItem}>
                                             <span className="block text-[14px] font-semibold text-ink">{todayReviewSentence(item, i18n.resolvedLanguage)}</span>
                                             {notSaved === item.id && <span role="status" className="mt-1 block text-[13px] text-muted">{t("tasks.notNowNotSaved")}</span>}
-                                            {(handoff || item.source) && <span className={cn("mt-1 block text-[13px]", handoff?.stopCause === "loop_guard" ? "text-copper" : "text-muted")}>{handoff ? subtitle(handoff) : item.source}</span>}
+                                            {(handoff || item.source) && <span className={cn("mt-1 block text-[13px]", handoff ? "text-copper" : "text-muted")}>{handoff ? subtitle(handoff) : item.source}</span>}
                                         </button>
                                         {item.asksKeep ? <div data-testid="needs-asks-keep" className="flex shrink-0 gap-2">
                                             <Button variant="secondary" size="sm" onClick={() => putOff(item, "keep")}>{t("tasks.keep")}</Button>
@@ -389,7 +393,7 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
                                             <Button variant="secondary" size="sm" onClick={() => putOff(item, "forget")}>{t("tasks.forget")}</Button>
                                         </div>
                                         : handoff && handoff.status === "active" && !listTask && pendingRestarts[handoff.id] ? <div className="flex shrink-0 items-center gap-2"><span className="text-[13px] text-muted">{t("taskThread.started")}</span>{!!pendingRestarts[handoff.id]?.timer && <Button variant="quiet" size="sm" onClick={() => undoRestart(handoff.id)}>{t("taskThread.undo")}</Button>}</div>
-                                        : handoff && stopRowButton(handoff.stopCause) ? <StopRowAction id={handoff.id} button={stopRowButton(handoff.stopCause)!} pending={!!pendingRestarts[handoff.id]} undoable={!!pendingRestarts[handoff.id]?.timer} onDone={reloadFresh} />
+                                        : handoff && stopRowButton(handoff.stopCause, handoff) ? <StopRowAction id={handoff.id} button={stopRowButton(handoff.stopCause, handoff)!} pending={!!pendingRestarts[handoff.id]} undoable={!!pendingRestarts[handoff.id]?.timer} onDone={reloadFresh} />
                                         : handoff?.status === "active" && !listTask ? <div className="flex shrink-0 gap-2">
                                             {startFailed === handoff.id && <FailureLine tone="copper" className="self-center" text={t("taskThread.startFailed")} />}
                                             <Button variant="secondary" size="sm" onClick={() => putOff(item, "put_off")}>{t("tasks.notNow")}</Button>
@@ -443,7 +447,7 @@ export function TasksPage({ openHandoffId, onOpenChatMessage, onReaderOpenChange
                         </TaskList>}
                     </section>
                 )}
-                {(allDone.length > 0 || deliverablesFailed) && <div className="flex justify-center"><Button variant="quiet" size="sm" data-testid="all-done-link" className="text-muted" onClick={showAll}>{t("tasks.allDoneLink")}</Button></div>}
+                {(allDone.length > 0 || deliverablesFailed || taskViewsFailed) && <div className="flex justify-center"><Button variant="quiet" size="sm" data-testid="all-done-link" className="text-muted" onClick={showAll}>{t("tasks.allDoneLink")}</Button></div>}
             </div>
         </div>
         <MainChatItemPanel surface="tasks" />
@@ -470,7 +474,8 @@ function StopRowAction({ id, button, pending, undoable, onDone }: { id: string; 
 
 function runningLine(h: HandoffEntry, t: ReturnType<typeof useTranslation<"app">>["t"]): string {
     const who = h.runner === "claude_code" ? t("tasks.claudeCode") : h.runner === "codex" ? t("tasks.codex") : "";
-    const what = h.progress ? t("tasks.progress", { count: h.progress.total, done: h.progress.done, total: h.progress.total, label: h.progress.label }) : t("tasks.working");
+    const step = currentStep(h.progress);
+    const what = step ? [t("tasks.stepOf", step), h.progress?.label].filter(Boolean).join(" · ") : t("tasks.working");
     return who ? t("tasks.runningLine", { who, what }) : what;
 }
 

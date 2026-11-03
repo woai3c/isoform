@@ -81,17 +81,30 @@ const stoppedThread = (cause: string, extra: Record<string, unknown> = {}) => ({
     ...thread, group: "needs_you", status: "aborted", stopCause: cause, actions: ["rename"],
     events: [{ id: "stop", kind: "isoform", at, code: cause === "no_assistant" ? "stopped_no_assistant" : "stopped", params: { cause, ...(cause === "assistant_error" ? { assistant: "codex" } : {}) }, text: "Mac wording" }], ...extra,
 });
+it("keeps the loop-guard stop in review until a person starts it again", async () => {
+    mocks.get.mockResolvedValue(stoppedThread("loop_guard", { actions: ["mark_done", "rename"], steps: [{ text: "Finished work", state: "done" }] }));
+    render(<TaskThreadPane id="task" />);
+    expect(await screen.findByText("Finished work")).toBeInTheDocument();
+    expect(screen.getByText("Needs you · couldn't finish")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start again" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Reply about this task" })).toBeInTheDocument();
+    expect(mocks.startAgain).not.toHaveBeenCalled();
+    fireEvent.pointerDown(screen.getByRole("button", { name: "More options" }), { button: 0, ctrlKey: false });
+    expect(await screen.findByRole("menuitem", { name: "Mark as done" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Delete task" })).toBeInTheDocument();
+    expect(mocks.startAgain).not.toHaveBeenCalled();
+});
 it.each([
     ["en", "no_assistant", (time: string) => `I started at ${time}, but no AI is signed in on this computer, so nothing was done. Set one up, then start again.`, ["Set up", "Start again"], "Needs you · couldn't finish"],
-    ["en", "restarted", (time: string) => `I stopped at ${time} because Isoform restarted. What I'd finished is below.`, ["Start again"], "Needs you · couldn't finish"],
-    ["en", "timeout", (time: string) => `I stopped at ${time} because nothing happened for two hours. What I'd finished is below.`, ["Start again"], "Needs you · couldn't finish"],
-    ["en", "assistant_error", (time: string) => `I stopped at ${time} because Codex stopped with an error. What I'd finished is below.`, ["Start again"], "Needs you · couldn't finish"],
-    ["en", "loop_guard", (time: string) => `I stopped at ${time}: it took too many attempts without finishing. What I'd finished is below. Starting again runs it from the start, so if it changed anything in another app, check that first.`, ["Start again"], "Needs you · couldn't finish"],
+    ["en", "restarted", (time: string) => `I stopped at ${time} because Isoform restarted.`, ["Start again"], "Needs you · couldn't finish"],
+    ["en", "timeout", (time: string) => `I stopped at ${time} because nothing happened for two hours.`, ["Start again"], "Needs you · couldn't finish"],
+    ["en", "assistant_error", (time: string) => `I stopped at ${time} because Codex stopped with an error.`, ["Start again"], "Needs you · couldn't finish"],
+    ["en", "loop_guard", (time: string) => `I stopped at ${time}: it took too many attempts without finishing. Starting again runs it from the start, so if it changed anything in another app, check that first.`, ["Start again"], "Needs you · couldn't finish"],
     ["zh-CN", "no_assistant", (time: string) => `我${time}开始了，但这台电脑上还没有登录 AI，所以什么都没做。设置好以后再重新开始。`, ["去设置", "重新开始"], "需要你 · 没能完成"],
-    ["zh-CN", "restarted", (time: string) => `我在${time}停下了，因为Isoform 重启了。已经完成的部分在下面。`, ["重新开始"], "需要你 · 没能完成"],
-    ["zh-CN", "timeout", (time: string) => `我在${time}停下了，因为两小时没有任何进展。已经完成的部分在下面。`, ["重新开始"], "需要你 · 没能完成"],
-    ["zh-CN", "assistant_error", (time: string) => `我在${time}停下了，因为Codex 出错停止了。已经完成的部分在下面。`, ["重新开始"], "需要你 · 没能完成"],
-    ["zh-CN", "loop_guard", (time: string) => `我在${time}停下了：尝试了太多次也没完成。已经完成的部分在下面。重新开始会从头再做一遍，所以如果它在别的应用里改过什么，请先看一下。`, ["重新开始"], "需要你 · 没能完成"],
+    ["zh-CN", "restarted", (time: string) => `我在${time}停下了，因为 Isoform 重启了。`, ["重新开始"], "需要你 · 没能完成"],
+    ["zh-CN", "timeout", (time: string) => `我在${time}停下了，因为两小时没有任何进展。`, ["重新开始"], "需要你 · 没能完成"],
+    ["zh-CN", "assistant_error", (time: string) => `我在${time}停下了，因为 Codex 出错停止了。`, ["重新开始"], "需要你 · 没能完成"],
+    ["zh-CN", "loop_guard", (time: string) => `我在${time}停下了：尝试了太多次也没完成。重新开始会从头再做一遍，所以如果它在别的应用里改过什么，请先看一下。`, ["重新开始"], "需要你 · 没能完成"],
 ] as const)("%s thread says why it stopped (%s) with its buttons", async (lang, cause, message, buttons, status) => {
     // These sentences are written for a computer set to the 24-hour clock.
     if (lang === "zh-CN") setComputerClock("24h");

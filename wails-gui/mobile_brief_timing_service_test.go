@@ -32,12 +32,29 @@ func TestAdaptiveBriefRunRecordsScheduledTimeInsteadOfPreparation(t *testing.T) 
 	enableTestAdaptiveBrief(t, svc, &input)
 	svc.checkDue(context.Background())
 	runs := svc.runs.list()
-	if len(runs) != 1 || runs[0].ScheduledAt != formatMobileBriefTime(mobileBriefTestDay(7, 0)) {
+	if len(runs) != 1 || runs[0].ScheduledAt != formatMobileBriefTime(mobileBriefTestDay(7, 0)) || !runs[0].ScheduledReady {
 		t.Fatalf("run = %+v, want the 07:00 ready time, not the 06:50 preparation time", runs)
 	}
 	detail := briefScheduleDetailFrom(clock.Now(), time.UTC, svc.upcomingBrief(), mobileBriefSlotMorning)
 	if len(detail.Runs) != 1 || detail.Runs[0].ScheduledAt != runs[0].ScheduledAt || detail.Runs[0].Late {
 		t.Fatalf("detail = %+v, want the on-time 07:00 run", detail.Runs)
+	}
+}
+
+func TestBriefGenerationRetainsObservedTimingBeforeRunRecord(t *testing.T) {
+	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(18, 20)}
+	svc, _ := newTestMobileBriefService(t, clock)
+	metadata := &MobileBriefGeneration{Reason: "mac_asleep", ScheduledAt: formatMobileBriefTime(mobileBriefTestDay(18, 0))}
+	brief, err := svc.generateWithMetadata(context.Background(), mobileBriefSlotEvening, mobileBriefReasonWake, metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, ok := svc.store.load(brief.BriefID)
+	if !ok || stored.Generation == nil || stored.Generation.ScheduledAt != metadata.ScheduledAt || stored.Generation.Reason != "mac_asleep" {
+		t.Fatalf("stored timing = %+v, found %v", stored.Generation, ok)
+	}
+	if delivered := svc.app.mobileBriefForDelivery(stored); delivered.Generation != nil {
+		t.Fatalf("delivery claimed timing without a completed run: %+v", delivered.Generation)
 	}
 }
 

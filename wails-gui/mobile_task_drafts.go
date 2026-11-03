@@ -74,6 +74,12 @@ func mobileDraftCard(card *mainChatProactive) bool {
 // replied themselves and who else is on the thread; without them the drafts
 // still list.
 func (a *App) mobileDraftTasks(ctx context.Context, now time.Time) ([]mobileDraftTask, error) {
+	return a.mobileDraftTasksSince(ctx, now, now.Add(-mobileDraftDoneWindow).UnixMilli())
+}
+
+// mobileDraftTasksSince also supports the desktop's All done history. The
+// phone's ordinary task list keeps its existing seven-day window.
+func (a *App) mobileDraftTasksSince(ctx context.Context, now time.Time, since int64) ([]mobileDraftTask, error) {
 	store := a.storeForMobile()
 	if store == nil {
 		return nil, nil
@@ -124,7 +130,7 @@ func (a *App) mobileDraftTasks(ctx context.Context, now time.Time) ([]mobileDraf
 		}
 	}
 	if main, err := store.LoadMainSession(ctx); err == nil && main != nil {
-		sends, err := store.ListOutboundSendsSentSince(ctx, now.Add(-mobileDraftDoneWindow).UnixMilli())
+		sends, err := store.ListOutboundSendsSentSince(ctx, since)
 		if err != nil {
 			return nil, err
 		}
@@ -348,7 +354,7 @@ func mobileDraftCopy(lang, key, person string) string {
 }
 
 func (a *App) mobileDraftTask(ctx context.Context, id string) (mobileDraftTask, bool, error) {
-	tasks, err := a.mobileDraftTasks(ctx, mobileGoalsNow())
+	tasks, err := a.mobileDraftTasksSince(ctx, mobileGoalsNow(), 0)
 	if err != nil {
 		return mobileDraftTask{}, false, err
 	}
