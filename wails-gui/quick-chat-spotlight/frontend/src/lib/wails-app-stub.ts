@@ -900,6 +900,7 @@ export const UnlinkPersonContact = makeNoop("UnlinkPersonContact");
 export const CancelContactsSync = makeNoop("CancelContactsSync");
 export const GetMeetingNotesForSessions = makeNoop("GetMeetingNotesForSessions");
 export const RevealMeetingRecording = makeNoop("RevealMeetingRecording");
+export const RevealTaskStep = makeNoop("RevealTaskStep");
 export const GetMeetingNotesTranscript = makeNoop("GetMeetingNotesTranscript");
 export const DeleteMeetingNotes = makeNoop("DeleteMeetingNotes");
 export const GetMeetingCallTurns = makeNoop("GetMeetingCallTurns");
