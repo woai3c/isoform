@@ -141,7 +141,7 @@
     "permissions": {
         "heading": "权限",
         "intro": "Isoform 需要少量权限来跟上你的工作。可选的权限可以稍后再开启。",
-        "localProcessing": "屏幕和音频录制由这台电脑上的<h>本地模型</h>读取，并留在本机。只有 Isoform 帮你做事所需的内容，才会发送给你选择的 AI。",
+        "localProcessing": "屏幕和音频录制<h>存储在这台电脑上</h>，由这里的模型读取。你的 AI 只会拿到任务需要的内容：文字，或者微信的裁剪截图。",
         "webCalendarsNote": "如果你在浏览器中使用 Google 日历或 Outlook，Isoform 也可以在电脑空闲时读取它们。你随时可以在「设置 > 观察」中关闭。",
         "checking": "正在检查 Isoform 在这台电脑上需要的权限……",
         "couldNotDetermine": "Isoform 暂时无法检查权限。你可以先继续，之后在「设置 > 隐私」中开启。",
@@ -609,7 +609,7 @@
         "ai": {
             "title": "用你已有的 AI",
             "line": "Isoform 在这台电脑上读取屏幕，只把需要的文字交给你的助手。",
-            "zone": "在这台电脑上：截图和音频留在这里",
+            "zone": "在这台电脑上：截图和音频存储在这里",
             "isoform": "Isoform",
             "answersFirst": "优先回答",
             "backup": "备用",

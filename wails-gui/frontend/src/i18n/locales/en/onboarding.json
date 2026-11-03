@@ -141,7 +141,7 @@
     "permissions": {
         "heading": "Permissions",
         "intro": "Isoform needs a few permissions to follow your work. You can turn on the optional ones any time later.",
-        "localProcessing": "Screen and audio recordings are read by <h>local models</h> on this computer and stay here. Only what Isoform needs to help you is sent to the AI you chose.",
+        "localProcessing": "Screen and audio recordings are <h>stored on this computer</h>, and models here read them. Your AI gets only what a task needs: the text, or for WeChat, a cropped screenshot.",
         "webCalendarsNote": "If you use Google Calendar or Outlook in your browser, Isoform can also read them while your computer is idle. You can turn that off any time in Settings > Observation.",
         "checking": "Checking what Isoform needs on this computer…",
         "couldNotDetermine": "Isoform could not check its permissions right now. You can continue and turn them on later in Settings > Privacy.",
@@ -609,7 +609,7 @@
         "ai": {
             "title": "Works with the AI you already use",
             "line": "Isoform reads your screen on this computer, then hands your assistant only the text it needs.",
-            "zone": "On this computer: screenshots and audio stay here",
+            "zone": "On this computer: screenshots and audio are stored here",
             "isoform": "Isoform",
             "answersFirst": "Answers first",
             "backup": "Backup",

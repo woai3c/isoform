@@ -1027,7 +1027,7 @@
             "off": "Can't hear your calls yet, so meetings have no notes."
         },
         "screen": {
-            "on": "Sees the app and window you're in. Screenshots stay on your computer.",
+            "on": "Sees the app and window you're in. Screenshots are stored on your computer. For WeChat, a cropped screenshot goes to your AI.",
             "off": "Can't see your screen yet, so Isoform doesn't know what you work on."
         },
         "assistant": {
