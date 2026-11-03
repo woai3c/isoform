@@ -1,8 +1,7 @@
 {
     "title": "Activity",
     "privacyNotice": {
-        "title": "All recorded data is auto-redacted on device.",
-        "detail": "<pw>Passwords</pw>, <api>API keys</api>, <addr>addresses</addr>, <bank>bank card numbers</bank>, <cc>credit card numbers</cc>, and similar sensitive content are removed by a local model."
+        "title": "Screenshots and audio stay on your computer."
     },
     "searchPlaceholder": "Search...",
     "groupHeaders": {
@@ -24,9 +23,8 @@
     },
     "day": {
         "yourDay": "Your day",
-        "writeSummary": "Write summary",
-        "activeLineWithApps": "{{duration}} at the computer, mostly {{apps}}",
-        "activeLineNoApps": "{{duration}} at the computer",
+        "activeLineWithApps": "{{duration}} active · most of it in {{apps}}",
+        "activeLineNoApps": "{{duration}} active",
         "appsJoin": "{{first}} and {{second}}",
         "details": "Details",
         "byHour": "Activity by hour",
@@ -53,7 +51,9 @@
         "workedOnSoon": "What you worked on shows up after about 30 minutes.",
         "people": "People: {{names}}",
         "links": "Links: {{names}}",
-        "deleteFromHistory": "Delete from history"
+        "deleteFromHistory": "Delete from history",
+        "learnedShowMore": "Show more",
+        "deleteMomentFailed": "Couldn't delete this from history."
     },
     "rowActions": {
         "addFollowUp": "Add follow-up",
@@ -89,7 +89,8 @@
         "correctionSavedToast": "Saved. Isoform will name things your way.",
         "correctionFailed": "Couldn't save your correction. Try again.",
         "withheldPrivate": "This moment was private, so Isoform keeps it out of follow-ups and reminders.",
-        "withheldPaused": "Observing was paused during this moment, so Isoform keeps it out of follow-ups and reminders."
+        "withheldPaused": "Observing was paused during this moment, so Isoform keeps it out of follow-ups and reminders.",
+        "choicesFailed": "Couldn't load reminder times."
     },
     "noticed": {
         "followUpFailedInline": "Couldn't add the follow-up. Try again",
@@ -132,7 +133,8 @@
             "fri": "Friday",
             "sat": "Saturday",
             "sun": "Sunday"
-        }
+        },
+        "notNowFailedLine": "Couldn't hide this suggestion."
     },
     "threads": {
         "span": "{{start}} to {{end}}",
@@ -211,10 +213,11 @@
         "pickUp": {
             "label": "Isoform noticed",
             "title": "Pick up where you left off: {{title}}.",
-            "steppedAway": "You stepped away at {{time}}, after {{minutes}} minutes.",
+            "steppedAway": "You stepped away at {{time}}, after {{minutes}} min.",
             "steppedAwayAt": "You stepped away at {{time}}, at {{label}}.",
             "show": "Show where you left off",
-            "later": "Not now"
+            "later": "Not now",
+            "from": "From {{time}}"
         },
         "loading": "Reading this day's activity",
         "loadFailed": "Could not read this day's activity.",
@@ -352,7 +355,8 @@
         "nextEvent": "Next event",
         "snapshotBeforeEvent": "snapshot −{{seconds}}s",
         "snapshotAfterEvent": "snapshot +{{seconds}}s",
-        "snapshotDistanceHint": "Screen capture briefly failed around this moment, so the closest available snapshot is shown instead. This usually happens on hardware-accelerated apps (WebView2, Direct3D)."
+        "snapshotDistanceHint": "Screen capture briefly failed around this moment, so the closest available snapshot is shown instead. This usually happens on hardware-accelerated apps (WebView2, Direct3D).",
+        "ocrFailed": "Couldn't read the text on this screen."
     },
     "summary": {
         "noWeeklyActivity": "No activity recorded this week",
@@ -378,7 +382,6 @@
             "copied": "Copied",
             "todayUnfolding": "Your day is still unfolding. Generate a digest anytime, or check back when the day wraps up.",
             "noneDay": "No digest yet for this day.",
-            "noneWeek": "No weekly digest yet for this week.",
             "unavailableDay": "Digest unavailable.",
             "unavailableWeek": "Weekly digest unavailable.",
             "freshnessTodayPartial": "Generated at {{time}}. Later activity may not be included.",
@@ -388,7 +391,14 @@
             "languageHint": "Generated in {{lang}}",
             "regenerateInCurrent": "Regenerate in {{lang}}",
             "writingDay": "Writing your day...",
-            "writingWeek": "Writing your week..."
+            "writingWeek": "Writing your week...",
+            "writingNewer": "Writing a newer version…",
+            "writtenAt": "Written at {{time}}. Later work may not be in it.",
+            "writeAgain": "Write it again",
+            "writeFailed": "Couldn't write your day. Try again.",
+            "dayNotWritten": "This day isn't written yet.",
+            "weekNotWritten": "Your week isn't written yet.",
+            "writeIt": "Write it"
         },
         "languageName": {
             "en": "English",
@@ -396,7 +406,7 @@
         }
     },
     "yourWeek": {
-        "weekOf": "Week of {{date}}"
+        "title": "Your week"
     },
     "session": {
         "events": "{{count}} events",
@@ -497,6 +507,7 @@
         "knowledgeSection": "Knowledge ({{count}})"
     },
     "meetingNotes": {
+        "loadFailed": "Couldn't load meeting notes.",
         "section": "Meeting notes",
         "callTitle": "{{app}} call",
         "untitledCall": "Call",
@@ -566,5 +577,30 @@
     "firstDay": {
         "rightNow": "The first sessions show up after about 30 minutes. Right now:",
         "now": "Now"
+    },
+    "belief": {
+        "history": "From your {{assistant}} history",
+        "activity": "From your activity",
+        "sourceUnknown": "Source unavailable",
+        "location": "In About you › {{area}}",
+        "loadFailed": "Couldn't load this belief.",
+        "retry": "Try again"
+    },
+    "ask": {
+        "placeholder": "Ask anything about this",
+        "send": "Ask",
+        "answering": "Isoform is answering…",
+        "failed": "Couldn't send your question.",
+        "tryAgain": "Try again",
+        "openInChat": "Open in Chat"
+    },
+    "week": {
+        "yourWeekFailed": "Couldn't load Your week.",
+        "loadFailed": "Couldn't load this week.",
+        "recapFailed": "Couldn't write the weekly recap.",
+        "noActivity": "—"
+    },
+    "timeline": {
+        "sessionsFailed": "Couldn't load your sessions."
     }
 }

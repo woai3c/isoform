@@ -1,7 +1,7 @@
 import { lastActivityDate, lastActivityScope, lastActivityScroll, lastTimelineFilters, rememberActivityDate, rememberActivityScope, rememberActivityScroll, rememberTimelineFilters } from './timeline/activity-session-cache';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Trans, useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
     X,
@@ -36,10 +36,10 @@ import {
     Briefcase,
     Brain,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { ActivityOpenChatContext } from './activity-ask-inline';
+import { ActivityInlineNotice, type ActivityNotice } from './activity-inline-notice';
 import { SearchIcon } from '@/assets/icons/SearchIcon';
 import { RedactionShieldIcon } from '@/components/icons/redaction-shield-icon';
-import { RedactedKeyword } from '@/components/icons/redacted-keyword';
 import { AppIcon, YansuIcon, hasAppIcon } from '@/components/icons/app-icons';
 import { ActivityDayView, type ActivityDaySection } from './activity-day-view';
 import type { WorkedOnView } from './activity-stitched';
@@ -136,7 +136,8 @@ interface ActivityPageProps {
     /** Optional: called when the user clicks "Chat about this day/week" from
      *  the Day or Week view. Parent should leave the page and start a new
      *  chat session seeded with a question about the given date. */
-    onAskAboutDate?: (date: string, scope: 'daily' | 'weekly') => void;
+    /** Open in Chat under an in-place answer: shows the main chat. */
+    onOpenChat?: () => void;
     /** Optional: "Chat about this" on a Day view moment. The parent leaves the
      *  page and puts the prepared words in the main chat box, unsent, with
      *  the moment as the chat's context (the Today route, item 64). */
@@ -1122,7 +1123,7 @@ function CollapsibleParsedSection({
     );
 }
 
-function EventFramePopup({
+export function EventFramePopup({
     data: incomingData,
     keyword,
     onClose,
@@ -1212,6 +1213,8 @@ function EventFramePopup({
     // single "no OCR" affordance below.
     const [ocrText, setOcrText] = useState<string>('');
     const [ocrLoaded, setOcrLoaded] = useState(false);
+    const [ocrFailed, setOcrFailed] = useState(false);
+    const [ocrAttempt, setOcrAttempt] = useState(0);
     useEffect(() => {
         const snap = data.snapshot;
         if (!snap?.id || !snap.sessionId) {
@@ -1220,11 +1223,16 @@ function EventFramePopup({
             return;
         }
         setOcrLoaded(false);
+        setOcrFailed(false);
         GetSnapshotOCRText(snap.sessionId, snap.id)
             .then((text) => setOcrText(text ?? ''))
-            .catch(() => setOcrText(''))
+            .catch((err) => {
+                console.error('[activity] snapshot OCR read failed:', err);
+                setOcrText('');
+                setOcrFailed(true);
+            })
             .finally(() => setOcrLoaded(true));
-    }, [data.snapshot?.id, data.snapshot?.sessionId]);
+    }, [data.snapshot?.id, data.snapshot?.sessionId, ocrAttempt]);
 
     // App-specific parser output (Slack messages, browser page bodies, etc.).
     // Stored on the snapshot row as a JSON blob; deserialize once per frame.
@@ -1693,7 +1701,10 @@ function EventFramePopup({
                                 defaultOpen={false}
                             />
                         )}
-                        {ocrLoaded && (
+                        {ocrFailed && (
+                            <ActivityInlineNotice notice={{ tone: 'error', text: t('popup.ocrFailed'), onAction: () => setOcrAttempt((n) => n + 1) }} />
+                        )}
+                        {ocrLoaded && !ocrFailed && (
                             <CollapsibleTextSection
                                 title={t('popup.ocrText')}
                                 text={ocrText}
@@ -1996,24 +2007,6 @@ function AppFilterDropdown({
     );
 }
 
-// ── Privacy-footer staggered redaction ──────────────────────────────
-function PrivacyDetailText() {
-    const { t } = useTranslation('activity');
-    return (
-        <Trans
-            t={t}
-            i18nKey="privacyNotice.detail"
-            components={{
-                pw: <RedactedKeyword index={0} />,
-                api: <RedactedKeyword index={1} />,
-                addr: <RedactedKeyword index={2} />,
-                bank: <RedactedKeyword index={3} />,
-                cc: <RedactedKeyword index={4} />,
-            }}
-        />
-    );
-}
-
 /** Extract hostname from a URL for compact display in the audit UI.
  *  Returns the original string when parsing fails so we never lose
  *  signal — operators would rather see "weird:string" than nothing. */
@@ -2055,7 +2048,7 @@ function formatDayNavLabel(date: Date, todayLabel: string, yesterdayLabel: strin
 }
 
 // ── Main activity page ───────────────────────────────────────────────
-export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFocus, onNoticedFocusConsumed, initialThreadId, onInitialThreadConsumed, cronJobs, backButton, section, onSectionChange, onAskAboutDate, onStartChat, yourWeekHandlers, onYourWeekCard, highlightedFrames, highlightedPipelineRunId, restrictToSessionIds, initialEventTimestamp, highlightedSenderName }: ActivityPageProps) {
+export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFocus, onNoticedFocusConsumed, initialThreadId, onInitialThreadConsumed, cronJobs, backButton, section, onSectionChange, onOpenChat, onStartChat, yourWeekHandlers, onYourWeekCard, highlightedFrames, highlightedPipelineRunId, restrictToSessionIds, initialEventTimestamp, highlightedSenderName }: ActivityPageProps) {
     const { t } = useTranslation('activity');
     // The scope switch in the section panel: Day shows the picked day
     // section, Week the week containing the picked day. The Screen timeline
@@ -2086,6 +2079,9 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
     const calendarData = useCalendarData(cronJobs, selectedDate, setSelectedDate, datePopoverOpen, section === 'learned');
     // The scheduled run whose detail dialog is open (Day view "Open result").
     const [detailJobId, setDetailJobId] = useState<string | null>(null);
+    const [sessionsFailed, setSessionsFailed] = useState(false);
+    const refreshSessionsRef = useRef<() => void>(() => {});
+    const [speechNotice, setSpeechNotice] = useState<{ key: string; notice: ActivityNotice } | null>(null);
     const [sessions, setSessions] = useState<main.ActivitySessionSummary[]>([]);
     const [timelineGroups, setTimelineGroups] = useState<ActivityTimelineGroup[]>([]);
     const [expandedSemanticTimelineItems, setExpandedSemanticTimelineItems] = useState<Set<string>>(() => new Set());
@@ -2673,7 +2669,11 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                     return null;
                 });
             })
-            .catch((err) => console.error('[activity] load sessions failed:', err))
+            .then(() => setSessionsFailed(false))
+            .catch((err) => {
+                console.error('[activity] load sessions failed:', err);
+                setSessionsFailed(true);
+            })
             .finally(() => setLoading(false));
 
         // Fire semantic search in parallel (non-blocking, best-effort)
@@ -2734,8 +2734,13 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                         return groups[0]?.id ?? null;
                     });
                 })
-                .catch((err) => console.error('[activity] refresh sessions failed:', err));
+                .then(() => setSessionsFailed(false))
+                .catch((err) => {
+                    console.error('[activity] refresh sessions failed:', err);
+                    setSessionsFailed(true);
+                });
         };
+        refreshSessionsRef.current = refresh;
         const unsub1 = EventsOn('activity:session-saved', refresh);
         const unsub2 = EventsOn('app:ready', refresh);
         // The backend summary worker (and the on-demand path) signal run/
@@ -3672,23 +3677,8 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
         return next.getTime() > today.getTime();
     })();
 
-    // Counts on the section panel's rows. "What Isoform learned" comes from
-    // the page-level day data (loaded for the panel's date either way);
-    // "What you worked on" is reported by the Day view once it has loaded —
-    // it owns the row grouping, so the count always matches the rows.
-    const learnedCount = calendarData.learnedLoading
-        ? null
-        : (calendarData.knowledge?.length ?? 0) + (calendarData.memoryEntries?.length ?? 0);
-    const [workedOnCount, setWorkedOnCount] = useState<number | null>(null);
     // What you worked on: Stitched by work or As recorded, kept across days.
     const [workedOnView, setWorkedOnView] = useState<WorkedOnView>('stitched');
-    useEffect(() => {
-        setWorkedOnCount(null);
-    }, [selectedDate]);
-    const handleDayCountsChange = useCallback(
-        (counts: { workedOn: number; learned: number }) => setWorkedOnCount(counts.workedOn),
-        [],
-    );
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -3843,27 +3833,24 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                         day section while the Week scope shows returns to Day. */}
                     <div className="flex flex-col gap-1">
                         {([
-                            { id: 'yourDay' as const, labelKey: 'day.yourDay', Icon: Sun, count: null },
-                            { id: 'workedOn' as const, labelKey: 'day.workedOn', Icon: Briefcase, count: workedOnCount },
-                            { id: 'learned' as const, labelKey: 'day.learned', Icon: Brain, count: learnedCount },
-                        ]).map(({ id, labelKey, Icon, count }) => (
+                            { id: 'yourDay' as const, labelKey: 'day.yourDay', Icon: Sun },
+                            { id: 'workedOn' as const, labelKey: 'day.workedOn', Icon: Briefcase },
+                            { id: 'learned' as const, labelKey: 'day.learned', Icon: Brain },
+                        ]).map(({ id, labelKey, Icon }) => (
                             <button
                                 key={id}
                                 type="button"
                                 data-activity-section={id}
-                                aria-current={section === id ? 'page' : undefined}
+                                aria-current={scope === 'day' && section === id ? 'page' : undefined}
                                 onClick={() => { setScope('day'); onSectionChange(id); }}
                                 className={`flex items-center gap-2 w-full px-3 py-[5px] text-[13px] rounded-md transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] cursor-pointer ${
-                                    section === id
+                                    scope === 'day' && section === id
                                         ? 'bg-surface-active text-ink'
                                         : 'text-muted hover:bg-surface-hover'
                                 }`}
                             >
                                 <Icon className="size-3.5 shrink-0" />
                                 <span className="flex-1 min-w-0 text-left truncate">{t(labelKey as never) as string}</span>
-                                {count != null && (
-                                    <span className="shrink-0 text-[11px] text-muted tabular-nums">{count}</span>
-                                )}
                             </button>
                         ))}
                         <button
@@ -4137,10 +4124,7 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                     <div className="shrink-0 border-t border-border px-4 py-3 flex items-start gap-2.5 text-[10.5px] leading-snug text-muted">
                         <RedactionShieldIcon size={14} className="mt-[1px]" />
                         <p className="min-w-0">
-                            <span className="text-ink/85 font-medium">{t('privacyNotice.title')}</span>{' '}
-                            <span className="opacity-80">
-                                <PrivacyDetailText />
-                            </span>
+                            <span className="text-ink/85 font-medium">{t('privacyNotice.title')}</span>
                         </p>
                     </div>
                 </nav>
@@ -4148,6 +4132,7 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
 
                 {/* ── Right content area ── */}
                 <div className="flex-1 min-w-0 flex flex-col">
+                    <ActivityOpenChatContext.Provider value={onOpenChat}>
                     {!isTimeline && scope === 'day' ? (
                         <ActivityDayView
                             date={selectedDate}
@@ -4165,13 +4150,11 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                             hourRange={calendarData.hourRange}
                             maxHourly={calendarData.maxHourly}
                             reloadDailySummary={calendarData.reloadDailySummary}
-                            onAskAboutDate={onAskAboutDate}
                             onStartChat={onStartChat}
                             onOpenSession={openSessionInTimeline}
                             onOpenRunDetail={setDetailJobId}
                             section={daySection}
                             onSectionChange={onSectionChange}
-                            onCountsChange={handleDayCountsChange}
                             workedOnView={workedOnView}
                             onWorkedOnViewChange={setWorkedOnView}
                         />
@@ -4182,12 +4165,16 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                 setSelectedDate(new Date(dateStr + 'T00:00:00'));
                                 setScope('day');
                             }}
-                            onAskAboutDate={onAskAboutDate}
                             yourWeekHandlers={yourWeekHandlers}
                             onYourWeekCard={onYourWeekCard}
                         />
-                    ) : (
+                    ) : null}
+                    </ActivityOpenChatContext.Provider>
+                    {!isTimeline && (scope === 'day' || scope === 'week') ? null : (
                     <>
+                    {sessionsFailed && (
+                        <ActivityInlineNotice notice={{ tone: 'error', text: t('timeline.sessionsFailed'), onAction: () => refreshSessionsRef.current() }} className="px-8 pt-4" />
+                    )}
                     {/* Session summary header */}
                     <div className="px-8 pt-7 pb-4 shrink-0">
                         <div className="flex items-start justify-between">
@@ -5622,8 +5609,8 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                                         const bundleID = evt.appBundleId!;
                                                                         const appName = evt.appName || bundleID;
                                                                         AddVoiceInputApp(bundleID, appName)
-                                                                            .then(() => toast.success(t('speechEvent.toasts.added', { name: appName })))
-                                                                            .catch(() => toast.error(t('speechEvent.toasts.addFailed')));
+                                                                            .then(() => setSpeechNotice({ key: bundleID, notice: { tone: 'done', text: t('speechEvent.toasts.added', { name: appName }) } }))
+                                                                            .catch(() => setSpeechNotice({ key: bundleID, notice: { tone: 'error', text: t('speechEvent.toasts.addFailed') } }));
                                                                     }}
                                                                     className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity shrink-0 text-muted hover:text-ink p-0.5 rounded"
                                                                     title={t('speechEvent.ignoreAppTooltip', { name: evt.appName || (t('session.unknownApp') as string) })}
@@ -5631,6 +5618,9 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                                 >
                                                                     <MicOff className="h-3 w-3" />
                                                                 </button>
+                                                            )}
+                                                            {evt.kind === 'speech' && speechNotice && speechNotice.key === evt.appBundleId && (
+                                                                <ActivityInlineNotice notice={speechNotice.notice} />
                                                             )}
                                                             {hasMedia && (
                                                                 <Play className="h-3 w-3 text-muted opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />

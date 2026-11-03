@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useFirstDay } from '@/hooks/useFirstDay';
 import { useDoingNow } from '@/hooks/useDoingNow';
 import { ChevronDown, ChevronRight, Trash2, Zap } from 'lucide-react';
-import { toast } from 'sonner';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { GenerateDailySummary } from '../../wailsjs/go/main/App';
 import {
@@ -36,17 +35,23 @@ import {
 } from './activity-stitched';
 import type { main } from '../../wailsjs/go/models';
 import { EntryDetail } from '@/components/entry-content';
+import { GetAboutYou } from '@/lib/page-queries';
+import { humanMemoryText, memoryPoints } from '@/lib/memory-content';
+import { memoryArea } from '@/lib/communication';
+import { useBeliefReview, reviewOpen, NotQuiteField, ReviewOutcome } from '@/components/about-you/new-this-week';
+import { Button } from '@/components/ui/button';
+import type { AboutYouBelief } from '@/lib/wails-shim-app';
 import { AppGlyph, FrameLightbox, RunFrameThumb, useAppIcons } from './activities-view';
 import { AISummaryCard, cleanSummaryText } from './activity-summary';
 import { ActivityRowActions } from './activity-row-actions';
 import { ActivityNoticed } from './activity-noticed';
 import type { MobileBriefActivityTarget } from '@/lib/wails-shim-app';
 import type { TodayChatContextRef } from '@/lib/today-chat-navigation';
-import { formatTodayChatPrefill } from '@/lib/today-chat-prefill';
 import { warmTodayChatDrafts } from '@/lib/today-chat-prepared';
 import { MeetingNotesCard } from './activity-meeting-notes';
 import { ActivityCaptureLine } from './activity-capture-line';
 import { cn } from '../lib/utils';
+import { ACTION_LINK } from './activity-inline-notice';
 import {
     dayEndMs,
     dayStartMs,
@@ -147,7 +152,6 @@ export interface ActivityDayViewProps {
     hourRange: { start: number; end: number };
     maxHourly: number;
     reloadDailySummary: () => Promise<void>;
-    onAskAboutDate?: (date: string, scope: 'daily' | 'weekly') => void;
     /** "Chat about this" on a moment: the prepared words go in the main chat
      *  box, unsent, with the moment as context (Today's route). */
     onStartChat?: (prompt: string, context: TodayChatContextRef) => void;
@@ -186,7 +190,6 @@ export function ActivityDayView({
     hourRange,
     maxHourly,
     reloadDailySummary,
-    onAskAboutDate,
     onStartChat: startChat,
     onOpenSession,
     onOpenRunDetail,
@@ -276,6 +279,7 @@ export function ActivityDayView({
     // ── Digest generation state (backend lifecycle events are the
     //    authoritative signal; the RPC await alone can hang under hot
     //    reload — same reasoning as the old Calendar page) ──
+    const [summaryErrorDate, setSummaryErrorDate] = useState<string | null>(null);
     const [generatingDates, setGeneratingDates] = useState<ReadonlySet<string>>(() => new Set());
     useEffect(() => {
         const onGenerating = (eventDate: unknown) => {
@@ -299,6 +303,7 @@ export function ActivityDayView({
         // Optimistically mark in-progress so the UI updates instantly, before
         // the backend's summary-generating event arrives. The event listeners
         // and the timeout fallback clear it — not the RPC await alone.
+        setSummaryErrorDate(null);
         setGeneratingDates((prev) => addDate(prev, dateStr));
         // Safety net for the case where neither the RPC nor any backend event
         // ever lands (process killed mid-flight, IPC torn down). The backend
@@ -311,8 +316,8 @@ export function ActivityDayView({
             // Explicit refetch: the summary-ready event can be missed even
             // when the summary itself updates.
             await reloadDailySummary();
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : String(err));
+        } catch {
+            setSummaryErrorDate(dateStr);
         } finally {
             window.clearTimeout(timeoutId);
             setGeneratingDates((prev) => removeDate(prev, dateStr));
@@ -368,6 +373,7 @@ export function ActivityDayView({
                 title: entry.title || t('day.untitled'),
                 content: entry.content ?? '',
                 timestamp: entry.modTime || 0,
+                memory: entry,
             });
         }
         out.sort((a, b) => b.timestamp - a.timestamp);
@@ -505,6 +511,8 @@ export function ActivityDayView({
 
     // One accordion row open at a time across both lists.
     const [openItemId, setOpenItemId] = useState<string | null>(null);
+    const [learnedShown, setLearnedShown] = useState({ memory: LEARNED_PAGE, knowledge: LEARNED_PAGE });
+    useEffect(() => setLearnedShown({ memory: LEARNED_PAGE, knowledge: LEARNED_PAGE }), [dateStr, query]);
     const handleToggleItem = useCallback((itemId: string) => {
         setOpenItemId((current) => (current === itemId ? null : itemId));
     }, []);
@@ -575,6 +583,7 @@ export function ActivityDayView({
             <section>
                 <h3 className={sectionLabelClass}>{t('day.yourDay')}</h3>
                 <AISummaryCard
+                    key={dateStr}
                     isToday={isToday}
                     summary={dailyData?.aiSummary ?? ''}
                     summaryStatus={dailyData?.aiSummaryStatus ?? 'none'}
@@ -582,11 +591,12 @@ export function ActivityDayView({
                     generating={generating}
                     autoStatus={dailyData?.autoStatus}
                     onGenerate={handleGenerateDigest}
-                    onAskAI={onAskAboutDate ? () => onAskAboutDate(dateStr, 'daily') : undefined}
+                    askContext={{ sourceKind: 'summary', sourceId: dateStr }}
                     scope="daily"
                     isPartial={dailyData?.isPartial}
                     summaryCreatedAt={dailyData?.summaryCreatedAt}
-                    emptyActionLabel={isFuture ? undefined : t('day.writeSummary')}
+                    emptyActionLabel={isFuture ? undefined : t('summary.card.writeIt')}
+                    emptyText={isFuture ? undefined : t('summary.card.dayNotWritten')}
                 >
                     {activeMs > 0 && (
                         <div className="border-t border-border/60 pt-3 space-y-3">
@@ -607,6 +617,7 @@ export function ActivityDayView({
                         </div>
                     )}
                 </AISummaryCard>
+                {summaryErrorDate === dateStr && <p role="alert" className="mt-2 text-[12px] text-copper">{t('summary.card.writeFailed')}</p>}
             </section>
             <ActivityNoticed
                 key={dateStr}
@@ -758,17 +769,40 @@ export function ActivityDayView({
         <section>
             <h3 className={sectionLabelClass}>{t('day.learned')}</h3>
             {visibleLearned.length > 0 ? (
-                <ul className="divide-y divide-border/60 rounded-xl border border-border bg-panel overflow-hidden">
-                    {visibleLearned.map((entry) => (
-                        <LearnedRow
-                            key={entry.id}
-                            entry={entry}
-                            open={openItemId === entry.id}
-                            onToggleItem={handleToggleItem}
-                            onOpenSession={onOpenSession}
-                        />
+                <div className="space-y-4">
+                    {learnedGroups(visibleLearned).map((group) => (
+                        <div key={group.kind}>
+                            <h4 className="px-1 pb-1.5 text-[12px] font-medium text-muted">
+                                {group.kind === 'memory' ? t('day.learnedAboutYou') : t('day.learnedKnowHow')}
+                            </h4>
+                            <ul className="divide-y divide-border/60 rounded-xl border border-border bg-panel overflow-hidden">
+                                {group.entries.slice(0, learnedShown[group.kind]).map((entry) => (
+                                    <LearnedRow
+                                        key={entry.id}
+                                        entry={entry}
+                                        open={openItemId === entry.id}
+                                        onToggleItem={handleToggleItem}
+                                        onOpenSession={onOpenSession}
+                                    />
+                                ))}
+                            </ul>
+                            {group.entries.length > learnedShown[group.kind] && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setLearnedShown((shown) => ({
+                                            ...shown,
+                                            [group.kind]: shown[group.kind] + LEARNED_PAGE,
+                                        }))
+                                    }
+                                    className="mt-1.5 px-1 text-[12px] text-muted hover:text-ink transition-colors"
+                                >
+                                    {t('day.learnedShowMore')}
+                                </button>
+                            )}
+                        </div>
                     ))}
-                </ul>
+                </div>
             ) : (
                 <p className="text-[12px] text-muted/70 px-1">
                     {query ? t('day.noMatches', { query: searchQuery.trim() }) : t('day.sectionEmpty')}
@@ -791,7 +825,7 @@ export function ActivityDayView({
                 {section ? (
                     <>
                         {/* One section at a time (the Activity page's panel). */}
-                        {section === 'yourDay' && (dailyData || !dayLoading ? yourDaySection : renderWorkedOn('recorded', false))}
+                        {section === 'yourDay' && yourDaySection}
                         {section === 'workedOn' && workedOnSection}
                         {section === 'learned' && learnedEntries.length > 0 && learnedSection}
                     </>
@@ -1023,33 +1057,25 @@ function ActivityWorkRow({
     onStartChat?: (prompt: string, context: TodayChatContextRef) => void;
 }) {
     const { t } = useTranslation('activity');
-    const { t: tToday, i18n } = useTranslation('today');
     useAppIcons(activity.apps.map((a) => a.appKey));
     // The words Today would write for this moment; Go's prepared draft
     // replaces them while untouched, and Send reads the moment again.
-    const chatAbout = onStartChat
-        ? () =>
-              onStartChat(
-                  formatTodayChatPrefill(
-                      {
-                          kind: 'activity',
-                          title: activity.title,
-                          occurredAt: activity.endMs,
-                          durationMinutes: Math.round(activity.activeMs / 60_000),
-                      },
-                      tToday,
-                      i18n.resolvedLanguage ?? i18n.language,
-                  ),
-                  { sourceKind: 'activity', sourceId: activity.id },
-              )
+    // Chat about this asks in place, with the moment as the chat's context.
+    const chatContext: TodayChatContextRef | undefined = onStartChat
+        ? { sourceKind: 'activity', sourceId: activity.id, dayStartMs: dayStartMs(new Date(activity.startMs)) }
         : undefined;
     // The same two-step confirm the old activity card had: the action turns
     // into Delete / Cancel in place.
     const [confirmingDelete, setConfirmingDelete] = useState(false);
+    const [deleteFailed, setDeleteFailed] = useState(false);
     const doDelete = () => {
+        setDeleteFailed(false);
         DeleteActivity(activity.id)
             .then(() => onDeleted(activity.id))
-            .catch((err) => console.error('[activity] delete activity failed:', err));
+            .catch((err) => {
+                console.error('[activity] delete activity failed:', err);
+                setDeleteFailed(true);
+            });
     };
     const oneLine = activity.description || activity.latestChange || '';
     // People and the real repos/projects/pull-requests/channels this moment
@@ -1129,7 +1155,7 @@ function ActivityWorkRow({
                         activity={activity}
                         onChanged={onChanged}
                         threadControl={threadControl}
-                        onChatAbout={chatAbout}
+                        chatContext={chatContext}
                         deleteControl={
                             confirmingDelete ? (
                                 <div className="flex items-center gap-1">
@@ -1160,6 +1186,7 @@ function ActivityWorkRow({
                             )
                         }
                     />
+                    {deleteFailed && <p role="alert" className="text-[12px] text-copper">{t('day.deleteMomentFailed')} <button type="button" className={ACTION_LINK} onClick={doDelete}>{t('ask.tryAgain')}</button></p>}
                 </div>
             )}
         </li>
@@ -1254,6 +1281,29 @@ interface LearnedEntry {
     title: string;
     content: string;
     timestamp: number;
+    memory?: main.MemoryEntry;
+}
+
+const LEARNED_PAGE = 20;
+
+// About you first, then How you do things; one row per belief (the newest
+// copy of the same words), newest first.
+function learnedGroups(entries: LearnedEntry[]): { kind: LearnedEntry['kind']; entries: LearnedEntry[] }[] {
+    const kinds: LearnedEntry['kind'][] = ['memory', 'knowledge'];
+    return kinds
+        .map((kind) => {
+            const seen = new Set<string>();
+            const out: LearnedEntry[] = [];
+            for (const entry of [...entries].sort((a, b) => b.timestamp - a.timestamp)) {
+                if (entry.kind !== kind) continue;
+                const key = entry.title.trim().toLowerCase().replace(/\s+/g, ' ');
+                if (seen.has(key)) continue;
+                seen.add(key);
+                out.push(entry);
+            }
+            return { kind, entries: out };
+        })
+        .filter((group) => group.entries.length > 0);
 }
 
 const LearnedRow = memo(function LearnedRow({
@@ -1277,17 +1327,16 @@ const LearnedRow = memo(function LearnedRow({
                 aria-expanded={open}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-hover transition-colors"
             >
-                <span className="flex-1 min-w-0 text-[13px] text-ink truncate">{entry.title}</span>
-                <span className="shrink-0 text-[10px] text-muted/80">
-                    {entry.kind === 'knowledge' ? t('day.learnedKnowHow') : t('day.learnedAboutYou')}
-                </span>
+                <span className="flex-1 min-w-0 text-[13px] text-ink break-words">{entry.title}</span>
                 <ChevronDown
                     className={`h-3.5 w-3.5 shrink-0 text-muted/60 transition-transform ${open ? 'rotate-180' : ''}`}
                 />
             </button>
             {open && (
                 <div className="px-4 pb-4 pt-1">
-                    {entry.content ? (
+                    {entry.kind === 'memory' && entry.memory ? (
+                        <ActivityBelief entry={entry.memory} rowText={entry.title} />
+                    ) : entry.content ? (
                         <EntryDetail
                             content={entry.content}
                             onOpenActivitySession={onOpenSession}
@@ -1304,6 +1353,70 @@ const LearnedRow = memo(function LearnedRow({
     );
 // Same closure exclusion as WorkItemRow: the handlers are day-stable.
 }, (prev, next) => prev.entry === next.entry && prev.open === next.open);
+
+// Reuse About you's review lifecycle so correction and Forget have the same
+// source checks and undo behavior here as on the belief's home page.
+function ActivityBelief({ entry, rowText }: { entry: main.MemoryEntry; rowText: string }) {
+    const { t, i18n } = useTranslation(['activity', 'memory']);
+    const [belief, setBelief] = useState<AboutYouBelief | null | undefined>(undefined);
+    const [current, setCurrent] = useState(entry);
+    const [loadError, setLoadError] = useState(false);
+    const [reload, setReload] = useState(0);
+    useEffect(() => {
+        let active = true;
+        setLoadError(false);
+        GetAboutYou().then((view) => {
+            if (active) setBelief(view.beliefs?.find((item) => item.id === entry.id) ?? null);
+        }).catch(() => { if (active) setLoadError(true); });
+        return () => { active = false; };
+    }, [entry.id, reload]);
+    const changed = useCallback(() => setReload((value) => value + 1), []);
+    const review = useBeliefReview({
+        onConfirmed: setCurrent,
+        onForgotten: changed,
+        onChanged: changed,
+        contentOf: (id) => id === current.id ? current.content : undefined,
+    });
+    const text = memoryPoints(current.content)
+        .filter((point) => !/^\*\*[^*]+\*\*:/.test(point.text))
+        .map((point) => humanMemoryText(point.text))
+        .join(' ');
+    const item = { id: entry.id, text, where: '', status: belief?.status, portraitCandidate: belief?.portraitCandidate };
+    const result = review.results[entry.id];
+    const area = memoryArea(belief?.area ?? entry.area);
+    const source = belief?.source === 'assistant-history' && (belief.sourceAssistant === 'claude' || belief.sourceAssistant === 'codex')
+        ? t('belief.history', { assistant: belief.sourceAssistant === 'claude' ? 'Claude Code' : 'Codex' })
+        : t('belief.activity');
+    const sourceAt = belief?.sourceAt || belief?.firstLearnedAt || entry.updatedAt || entry.modTime;
+    const sourceTime = sourceAt > 0 ? new Date(sourceAt).toLocaleTimeString(i18n.language, { hour: 'numeric', minute: '2-digit' }) : '';
+    // The row already says the belief; its sentence shows once (activity
+    // review v1.0.3 #5), here only when the row's words differ.
+    const plain = (value: string) => value.trim().replace(/[.\s]+$/, '').toLowerCase();
+    const repeat = !text || plain(text) === plain(rowText);
+    return (
+        <div className="flex flex-col gap-2.5 text-[13px]">
+            {!repeat && <p className="text-ink whitespace-pre-wrap">{text}</p>}
+            {loadError ? (
+                <p className="text-copper" role="alert">{t('belief.loadFailed')} <button type="button" className={ACTION_LINK} onClick={changed}>{t('belief.retry')}</button></p>
+            ) : belief !== undefined ? (
+                <>
+                    <p className="text-muted">{source}{sourceTime && ` · ${sourceTime}`}</p>
+                    <p className="text-muted">{t('belief.location', { area: t(`memory:aboutYou.areas.${area}`) })}</p>
+                    {reviewOpen(result) ? (
+                        <>
+                            {result?.kind === 'confirmFailed' && <p className="text-copper" role="alert">{t('memory:aboutYou.review.confirmFailed')}</p>}
+                            <div className="flex flex-wrap gap-1.5">
+                                <Button size="sm" disabled={result?.kind === 'confirming'} onClick={() => void review.confirm(entry.id)}>{t('memory:aboutYou.review.confirm')}</Button>
+                                <Button size="sm" variant="secondary" disabled={result?.kind === 'confirming'} onClick={() => review.ask(entry.id)}>{t('memory:aboutYou.review.notQuite')}</Button>
+                                <Button size="sm" variant="outline" disabled={result?.kind === 'confirming'} onClick={() => review.forget(entry.id)}>{t('memory:aboutYou.review.forget')}</Button>
+                            </div>
+                        </>
+                    ) : result?.kind === 'asking' || result?.kind === 'saving' ? <NotQuiteField item={item} review={review} /> : <ReviewOutcome item={item} review={review} />}
+                </>
+            ) : null}
+        </div>
+    );
+}
 
 // ── Details disclosure: the hour chart and top applications ──
 

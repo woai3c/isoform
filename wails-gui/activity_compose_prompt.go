@@ -57,7 +57,7 @@ Then refresh the affected activity's summary in "bucket":
 
 Rules: Output JSON only, no markdown. Do not invent activities the run does not support. When unsure whether the run joins an existing activity, prefer "new" (under-merging is safer than wrongly merging). If route is "join", include an admission entry for joinBucketId with decision "join" and enough evidence to satisfy the criteria above. If route is "new" or "skip", include admission entries for plausible candidates with decision "reject" when useful.
 
-`)
+` + activitySecondPersonRule + "\n\n")
 
 	b.WriteString("Candidate resumable activities:\n")
 	if len(openBuckets) == 0 {

@@ -241,6 +241,18 @@ describe('Stitched by work: reading the threads', () => {
         expect(screen.queryByText('In progress')).toBeNull();
     });
 
+    // Activity review v1.0.4: Left off at is the thing you were in or the
+    // time alone, never the moment's summary.
+    it('says only the time in Left off at when the stretch has no resume point', async () => {
+        binding('GetActivitiesInRange').mockResolvedValue(activities.map((moment) => moment.id === 'a4'
+            ? { ...moment, description: 'You answered three emails and archived the rest.', latestChange: 'Archived the rest' } : moment));
+        renderDay();
+        await screen.findByTestId('stitched-axis');
+        const leftOff = within(card('msg')).getByText('Left off at').nextSibling;
+        expect(leftOff).toHaveTextContent(/^11:55\sAM$/);
+        expect(within(card('msg')).queryByText(/answered three emails|Archived the rest|Email triage/)).toBeNull();
+    });
+
     it('does not offer thread controls for an ungrouped overnight moment', async () => {
         const startMs = new Date(2026, 9, 19, 23).getTime();
         const endMs = new Date(2026, 9, 20, 2).getTime();
@@ -292,6 +304,9 @@ describe('Stitched by work: reading the threads', () => {
         expect(lefts[1]).toBeGreaterThan(lefts[0]);
         expect(lefts[2]).toBeGreaterThan(lefts[1]);
         expect(axis.nextElementSibling).toHaveClass('w-[170px]', 'shrink-0');
+        // Activity review v1.0.3 #3: hour lines only at the labeled hours.
+        const hourLines = [...lane('mer').querySelectorAll('[data-testid="stitched-hour-line"]')].map((el) => (el as HTMLElement).style.left);
+        expect(hourLines).toEqual(['21.525%', '48.43%', '75.336%']);
         await act(async () => { await i18n.changeLanguage('zh-CN'); });
         expect(texts()).toEqual(['上午10时', '11时', '中午12时']);
     });
@@ -331,11 +346,20 @@ describe('Stitched by work: reading the threads', () => {
         expect(within(card(unique[0].id)).getByText('Release: staging checklist')).toBeInTheDocument();
     });
 
-    it('never labels a gap shorter than a minute', () => {
+    // Activity review v1.0.3 #1: an interruption is 10 minutes or more.
+    it('never labels a gap shorter than ten minutes', () => {
         const item = stitchThreads(threads, activities, 0, false)[0];
-        const short = { ...item, gaps: [{ ...item.gaps[0], start: 0, end: 59_999 }] };
+        const short = { ...item, gaps: [{ ...item.gaps[0], start: 0, end: 10 * 60_000 - 1 }] };
         expect(rowGapLabel(t(), short, [short])).toBe('');
-        expect(rowGapLabel(t(), { ...short, gaps: [{ ...short.gaps[0], end: 60_000 }] }, [])).toContain('1m');
+        expect(rowGapLabel(t(), { ...short, gaps: [{ ...short.gaps[0], end: 10 * 60_000 }] }, [])).toContain('10m');
+    });
+
+    // Activity review v1.0.3 #2: an away gap names the work that filled it.
+    it('names the drawn work that filled an away gap, and says Away alone only when nothing did', () => {
+        const items = stitchThreads(threads, activities, 0, false);
+        const msg = items.find((s) => s.thread.id === 'msg')!;
+        expect(rowGapLabel(t(), msg, items)).toBe('Away 25m · Writing Halcyon launch memo');
+        expect(rowGapLabel(t(), msg, [msg])).toBe('Away 25m');
     });
 
     it('explains a link in words without deciding it', () => {
@@ -348,7 +372,7 @@ describe('Stitched by work: reading the threads', () => {
 
     it('counts pieces of work in the headline', () => {
         const items = stitchThreads(threads, activities, 0, false);
-        expect(stitchedHeadline(t(), items)).toBe('4 pieces of work, 3 picked back up after an interruption');
+        expect(stitchedHeadline(t(), items)).toBe('4 pieces of work, 2 picked back up after an interruption');
         expect(stitchedHeadline(t(), items.filter((s) => s.thread.id !== 'mer').concat({ ...items[1], stretches: [items[1].stretches[0]] }))).toBe(
             '4 pieces of work, 2 picked back up after an interruption',
         );
@@ -384,7 +408,7 @@ describe('Stitched by work: reading the threads', () => {
 describe('Stitched by work: the page', () => {
     it('opens on Stitched by work with one row per thread and the headline', async () => {
         renderDay();
-        expect(await screen.findByText('4 pieces of work, 3 picked back up after an interruption')).toBeInTheDocument();
+        expect(await screen.findByText('4 pieces of work, 2 picked back up after an interruption')).toBeInTheDocument();
         expect(screen.getByRole('tab', { name: 'Stitched by work' })).toHaveAttribute('aria-selected', 'true');
         expect([...document.querySelectorAll('[data-thread-lane]')].map((el) => el.getAttribute('data-thread-lane'))).toEqual(['mer', 'hal', 'nw', 'msg']);
         expect(screen.getByRole('heading', { name: '9:12 AM to 12:55 PM' })).toBeInTheDocument();
@@ -396,11 +420,16 @@ describe('Stitched by work: the page', () => {
         const hal = lane('hal');
         expect(hal.querySelectorAll('[class*="rounded-md"][title]')).toHaveLength(2);
         expect(within(hal).getByText('Away 28m · Northwind call')).toBeInTheDocument();
-        expect(within(lane('mer')).getByText('Away 8m · Quick replies')).toBeInTheDocument();
+        // An 8-minute hop is a plain gap: no dashed line, no Away label.
+        expect(within(lane('mer')).queryAllByTestId('stitched-gap-link')).toHaveLength(0);
+        expect(within(lane('mer')).queryByTestId('stitched-gap-label')).toBeNull();
+        expect(within(card('mer')).queryByText(/Away/)).toBeNull();
+        expect(within(card('mer')).queryByText('Picked back up')).toBeNull();
         // Interruptions sit on their own lighter rows, without connectors.
         expect(lane('msg')).toHaveAttribute('data-interruption', 'true');
         expect(lane('msg').querySelectorAll('.bg-faint')).toHaveLength(2);
-        expect(within(lane('msg')).getByTestId('stitched-gap-label')).toHaveTextContent('Away 25m');
+        expect(within(lane('msg')).getByTestId('stitched-gap-label')).toHaveTextContent('Away 25m · Writing Halcyon launch memo');
+        expect(within(card('msg')).getByText('Away · Writing Halcyon launch memo')).toBeInTheDocument();
     });
 
     it('shows active time on rows and preserves times in detail cards', async () => {
@@ -444,19 +473,19 @@ describe('Stitched by work: the page', () => {
     });
 
     it('shows the time alone at Left off at when all Isoform has is a duration or a path', async () => {
-        const updated = threads.map((thread) => thread.id === 'mer' ? {
+        const updated = threads.map((thread) => thread.id === 'hal' ? {
             ...thread, stretches: thread.stretches.map((stretch) => ({ ...stretch, resumePoint: { kind: 'path', label: '/agents/example' } })),
         } : thread);
-        const moments = activities.map((moment) => updated.find((thread) => thread.id === 'mer')!.activityIds.includes(moment.id)
+        const moments = activities.map((moment) => updated.find((thread) => thread.id === 'hal')!.activityIds.includes(moment.id)
             ? { ...moment, latestChange: '20 s', description: '', title: '/agents/example' } : moment);
         binding('GetActivitiesInRange').mockResolvedValue(moments);
         binding('GetDayThreads').mockResolvedValue({ grouped: true, threads: updated });
         renderDay();
         await screen.findByText('Work threads');
-        const mer = card('mer');
-        expect(within(mer).queryByText(/20 s/)).toBeNull();
-        expect(within(mer).queryByText(/\/agents\/example/)).toBeNull();
-        expect(within(mer).getByText('Left off at').nextSibling).toHaveTextContent(/^12:20\sPM$/);
+        const hal = card('hal');
+        expect(within(hal).queryByText(/20 s/)).toBeNull();
+        expect(within(hal).queryByText(/\/agents\/example/)).toBeNull();
+        expect(within(hal).getByText('Left off at').nextSibling).toHaveTextContent(/^10:02\sAM$/);
     });
 
     it('shows the source active duration in the thread bar when its span is longer', async () => {
@@ -478,7 +507,7 @@ describe('Stitched by work: the page', () => {
         renderDay();
         await screen.findByText('Work threads');
         expect(within(card('hal')).queryByText('Picked back up')).toBeNull();
-        expect(within(card('mer')).getByText('Picked back up')).toBeInTheDocument();
+        expect(within(card('msg')).getByText('Picked back up')).toBeInTheDocument();
     });
 
     it('selecting a row dims others, highlights its surfaces and draws its stretches in ink', async () => {
@@ -542,7 +571,9 @@ describe('Stitched by work: the page', () => {
         renderDay();
         await screen.findByText('Work threads');
         fireEvent.click(within(card('hal')).getByRole('button', { name: 'Looks right' }));
-        await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Couldn't save your correction. Try again."));
+        expect(await within(card('hal')).findByRole('alert')).toHaveTextContent("Couldn't save your correction. Try again.");
+        expect(within(card('hal')).getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+        expect(toast.error).not.toHaveBeenCalled();
         expect(within(card('hal')).getByRole('button', { name: 'Looks right' })).toBeInTheDocument();
     });
 
@@ -636,10 +667,14 @@ describe('Stitched by work: Pick up where you left off', () => {
         renderDay();
         const prompt = await screen.findByTestId('stitched-pick-up');
         expect(within(prompt).getByText('Pick up where you left off: Writing Halcyon launch memo.')).toBeInTheDocument();
-        expect(within(prompt).getByText('You stepped away at 12:55 PM, after 47 minutes.')).toBeInTheDocument();
+        expect(within(prompt).getByText('You stepped away at 12:55 PM, after 47 min.')).toBeInTheDocument();
         const { unmount } = renderDay({ section: 'yourDay' });
         const noticed = await screen.findByTestId('noticed-pick-up');
         expect(noticed.closest('ul')).toHaveTextContent('Reply to the ERP review');
+        // Activity review v1.0.3 #4: the stretch runs back across the 8-minute
+        // hop to 12:00 PM, and the meta does not repeat the thread name.
+        expect(within(noticed).getByText('From 12:00 PM')).toBeInTheDocument();
+        expect(within(noticed).getAllByText(/Writing Halcyon launch memo/)).toHaveLength(1);
         unmount();
     });
 
@@ -895,7 +930,7 @@ describe('Stitched cleanup: resume eligibility', () => {
     const at = (h: number, m = 0) => new Date(2026, 9, 19, h, m).getTime();
     const item = (activeMinutes: number, end = at(15, 52)): StitchedThread => {
         const original = stitchThreads(threads, activities, at(16), false)[0];
-        return { ...original, thread: { ...original.thread, title: 'Isoform hub: Claude Code sessions', activeMs: activeMinutes * 60_000, endMs: end }, moments: [], stretches: [{ ...original.stretches[0], end }] };
+        return { ...original, thread: { ...original.thread, title: 'Isoform hub: Claude Code sessions', activeMs: activeMinutes * 60_000, endMs: end }, moments: [], stretches: [{ ...original.stretches[0], end, activeMs: activeMinutes * 60_000 }] };
     };
 
     it('requires ten minutes active and an end within the last four hours, including boundaries', () => {
@@ -916,8 +951,11 @@ describe('Stitched cleanup: resume eligibility', () => {
     it('chooses longest-active qualifying work and says the thread words and active minutes', () => {
         const shorter = { ...item(12, at(15, 59)), thread: { ...item(12).thread, id: 'shorter', activeMs: 12 * 60_000, endMs: at(15, 59) } };
         const notice = pickUpNotice([shorter, item(29)], '2026-10-19', at(16))!;
-        expect(notice.title).toBe('Isoform hub, Claude Code sessions');
-        expect(t()('stitched.pickUp.title', { title: notice.title }) + ' ' + pickUpBody(t(), notice)).toBe('Pick up where you left off: Isoform hub, Claude Code sessions. You stepped away at 3:52 PM, after 29 minutes.');
+        expect(notice.title).toBe('Isoform hub · Claude Code sessions');
+        const list = item(29);
+        list.thread.title = 'Isoform: publish decision, PR review, launch video';
+        expect(pickUpNotice([list], '2026-10-19', at(16))?.title).toBe('Isoform · publish decision');
+        expect(t()('stitched.pickUp.title', { title: notice.title }) + ' ' + pickUpBody(t(), notice)).toBe('Pick up where you left off: Isoform hub · Claude Code sessions. You stepped away at 3:52 PM, after 29 min.');
     });
 });
 
@@ -1149,9 +1187,12 @@ describe('Integration 2213: day bounds with render memoization', () => {
         view.rerender(dayElement({ date: new Date(source.edge), onStartChat, workedOnView: 'recorded' }));
         fireEvent.click((await screen.findByText(source.moment.title)).closest('button')!);
         fireEvent.click(screen.getByRole('button', { name: 'Chat about this' }));
-        expect(onStartChat).toHaveBeenLastCalledWith(expect.any(String), {
+        binding('GetMainChat').mockResolvedValue({ session: { localId: 'main-1' } });
+        fireEvent.change(screen.getByRole('textbox', { name: 'Ask anything about this' }), { target: { value: 'Where was I?' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Ask' }));
+        await waitFor(() => expect(binding('AskMainChatWithContext')).toHaveBeenLastCalledWith('Where was I?', {
             sourceKind: 'activity', sourceId: source.moment.id, dayStartMs: source.edge,
-        });
+        }));
     });
 
     it('updates cached header and moment span with the visible query while retaining total row counts', async () => {

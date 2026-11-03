@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import { resetPageQueries } from '@/lib/page-queries';
@@ -113,6 +113,61 @@ describe('Activity Week view', () => {
         expect(onOpenDay).toHaveBeenCalledWith('2026-10-12');
     });
 
+    it('starts with Your week, then one row per day, with one active-time measure', async () => {
+        binding('GetYourWeekForDate').mockResolvedValue(yourWeekEntry());
+        render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
+        const days = await screen.findByTestId('activity-week-days');
+        const yourWeek = screen.getByTestId('activity-your-week');
+        expect(yourWeek.compareDocumentPosition(days) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.queryByText(/per day/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/A steady week of shipping the billing rework/)).not.toBeInTheDocument();
+    });
+
+    it("puts Your week isn't written yet with Write it above the days when there is no look-back", async () => {
+        binding('EnsureWeeklySummary').mockResolvedValue(weeklyData({ aiSummary: '', aiSummaryStatus: 'none' }));
+        render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
+        const days = await screen.findByTestId('activity-week-days');
+        const empty = screen.getByText("Your week isn't written yet.");
+        expect(empty.compareDocumentPosition(days) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        const write = screen.getByRole('button', { name: 'Write it' });
+        expect(write.compareDocumentPosition(days) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('says in place when Your week or the recap fails, with Try again', async () => {
+        binding('GetYourWeekForDate').mockRejectedValueOnce(new Error('offline'));
+        binding('GenerateWeeklySummary').mockRejectedValueOnce(new Error('model down'));
+        render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
+        expect(await screen.findByText("Couldn't load Your week.")).toBeInTheDocument();
+        fireEvent.click(within(screen.getByText("Couldn't load Your week.")).getByRole('button', { name: 'Try again' }));
+        await waitFor(() => expect(binding('GetYourWeekForDate')).toHaveBeenCalledTimes(2));
+        await waitFor(() => expect(screen.queryByText("Couldn't load Your week.")).not.toBeInTheDocument());
+        fireEvent.click(await screen.findByRole('button', { name: /Write it again|Regenerate|Write summary/ }));
+        expect(await screen.findByText("Couldn't write the weekly recap.")).toBeInTheDocument();
+        expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    // Activity review v1.0.3 #6: copper line, accent Try again, header above.
+    it('keeps the week header above a copper load failure with an accent Try again', async () => {
+        binding('EnsureWeeklySummary').mockRejectedValueOnce(new Error('database is locked'));
+        render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
+        const failure = await screen.findByText("Couldn't load this week.", { exact: false });
+        expect(failure).toHaveClass('text-copper');
+        expect(within(failure).getByRole('button', { name: 'Try again' })).toHaveClass('text-accent');
+        const header = screen.getByRole('heading', { level: 2 });
+        expect(header).toHaveTextContent('Week of Oct 12 – Oct 18');
+        expect(header.compareDocumentPosition(failure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('puts each day headline beside its time and keeps a quiet dash for a day with no activity', async () => {
+        render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
+        const headline = await screen.findByText('Fixed the deploy pipeline.');
+        const mon = screen.getByText('Mon, Oct 12').closest('button')!;
+        const time = within(mon).getByText('1h');
+        expect(time.compareDocumentPosition(headline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        const tue = screen.getByText('Tue, Oct 13').closest('button')!;
+        expect(within(tue).getByText('\u2014')).toBeInTheDocument();
+    });
+
     it('shows no week-over-week comparison', async () => {
         render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
         await screen.findByText(/Week of Oct 12/);
@@ -120,11 +175,12 @@ describe('Activity Week view', () => {
         expect(screen.queryByText(/%/)).not.toBeInTheDocument();
     });
 
-    it('offers Chat about this week through the digest card', async () => {
-        const onAskAboutDate = vi.fn();
-        render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} onAskAboutDate={onAskAboutDate} />);
+    it('opens Chat about this week in place, with the field focused', async () => {
+        render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
         fireEvent.click(await screen.findByRole('button', { name: 'Chat about this week' }));
-        expect(onAskAboutDate).toHaveBeenCalledWith('2026-10-13', 'weekly');
+        const field = screen.getByRole('textbox', { name: 'Ask anything about this' });
+        expect(field).toHaveFocus();
+        expect(screen.getByRole('button', { name: 'Ask' })).toBeInTheDocument();
     });
 
     it('reads the week through EnsureWeeklySummary and never starts a summary itself', async () => {
@@ -135,7 +191,7 @@ describe('Activity Week view', () => {
         expect(await screen.findByText('Writing your week...')).toBeInTheDocument();
         expect(binding('EnsureWeeklySummary')).toHaveBeenCalledWith('2026-10-13');
         expect(binding('GenerateWeeklySummary')).not.toHaveBeenCalled();
-        expect(screen.queryByRole('button', { name: /Generate/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Write it/ })).not.toBeInTheDocument();
     });
 
     it.each([
@@ -225,7 +281,7 @@ describe('Activity Week view', () => {
             }}
         />);
         const row = await screen.findByTestId('activity-your-week');
-        expect(row).toHaveTextContent('Week of Oct 19');
+        expect(row).toHaveTextContent('Your week');
         expect(row).toHaveTextContent('A Halcyon week.');
         const toggle = row.querySelector('button');
         expect(toggle).not.toBeNull();
@@ -249,12 +305,14 @@ describe('Activity Week view', () => {
         await waitFor(() => expect(binding('EnsureWeeklySummary').mock.calls.length).toBeGreaterThan(calls));
     });
 
-    it('offers Generate only when no summary exists and none is being made', async () => {
+    it('offers Write it only when no summary exists and none is being made', async () => {
         binding('EnsureWeeklySummary').mockResolvedValue(
             weeklyData({ aiSummary: '', aiSummaryStatus: 'none', autoStatus: 'unavailable' }),
         );
         render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
-        expect(await screen.findByRole('button', { name: /Generate/ })).toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: 'Write it' })).toBeInTheDocument();
+        expect(screen.getByText("Your week isn't written yet.")).toBeInTheDocument();
+        expect(screen.queryByText(/No weekly digest|Generate weekly digest/)).not.toBeInTheDocument();
         expect(screen.queryByText('Writing your week...')).not.toBeInTheDocument();
     });
 
@@ -325,7 +383,7 @@ describe('Activity Week view', () => {
         expect(screen.queryByText('Stale daily sentence.')).not.toBeInTheDocument();
     });
 
-    it('keeps Generate disabled through a privacy withdrawal until manual generation settles', async () => {
+    it('keeps Write it again disabled through a privacy withdrawal until manual generation settles', async () => {
         const generation = deferred<void>();
         const reread = deferred<ReturnType<typeof weeklyData>>();
         const currentWeek = weeklyData();
@@ -334,19 +392,19 @@ describe('Activity Week view', () => {
             .mockReturnValueOnce(reread.promise);
         binding('GenerateWeeklySummary').mockReturnValue(generation.promise);
         render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
-        fireEvent.click(await screen.findByRole('button', { name: /Regenerate/ }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Write it again' }));
         expect(binding('GenerateWeeklySummary')).toHaveBeenCalledWith('2026-10-13');
-        expect(await screen.findByRole('button', { name: /Regenerating/ })).toBeDisabled();
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Write it again' })).toBeDisabled());
 
         await emitRuntimeEvent('memory:updated');
         await waitFor(() => expect(binding('EnsureWeeklySummary')).toHaveBeenCalledTimes(2));
         reread.resolve(currentWeek);
         await screen.findByText(/A steady week of shipping the billing rework/);
-        const busyButton = screen.queryByRole('button', { name: /Regenerating/ });
+        const busyButton = screen.queryByRole('button', { name: 'Write it again' }) as HTMLButtonElement | null;
         const remainedDisabled = busyButton?.disabled ?? false;
 
         generation.resolve(undefined);
-        await waitFor(() => expect(screen.getByRole('button', { name: /Regenerate/ })).toBeEnabled());
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Write it again' })).toBeEnabled());
         expect(remainedDisabled).toBe(true);
     });
 
@@ -361,7 +419,7 @@ describe('Activity Week view', () => {
         }));
         binding('GenerateWeeklySummary').mockReturnValue(generation.promise);
         const view = render(<ActivityWeekView date={WEEK_DAY} onOpenDay={vi.fn()} />);
-        fireEvent.click(await screen.findByRole('button', { name: /Generate/ }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Write it' }));
         expect(binding('GenerateWeeklySummary')).toHaveBeenCalledWith('2026-10-13');
 
         view.rerender(<ActivityWeekView date={new Date(2026, 9, 20)} onOpenDay={vi.fn()} />);
@@ -371,7 +429,7 @@ describe('Activity Week view', () => {
             generation.reject(new Error('Old week generation failed.'));
             await Promise.resolve();
         });
-        await waitFor(() => expect(screen.getByRole('button', { name: /Generate/ })).toBeEnabled());
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Write it' })).toBeEnabled());
         expect(toast.error).not.toHaveBeenCalled();
     });
 });

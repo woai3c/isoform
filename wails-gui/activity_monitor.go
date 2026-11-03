@@ -3822,6 +3822,7 @@ func (a *App) GetActivitySessions(limit, offset int, startMs, endMs int64, keywo
 // limit, and keyword changes.
 func (a *App) GetActivityTimelineGroups(limit, offset int, startMs, endMs int64, keyword string) (perfValue []ActivityTimelineGroup, perfErr error) {
 	defer logPageBinding("GetActivityTimelineGroups", time.Now(), &perfValue)
+	defer func() { a.secondPersonTimeline(perfValue) }()
 	if a.activity == nil || a.activity.store == nil {
 		return nil, nil
 	}

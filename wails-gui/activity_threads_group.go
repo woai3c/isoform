@@ -361,7 +361,8 @@ Decide, for each new moment, which thread it belongs to.
 - When two threads so far are one line of work, list them in "merge" as ["t1","t2"]; the second folds into the first.
 
 Then give every thread that gained moments (and every new thread) a short title: the project or subject first, then the two or three things done, like "Isoform: brief fix, Activity review, workers". No times. When a thread serves one of the person's goals, set "goal" to that goal's id.
-`)
+
+` + activitySecondPersonRule + "\n")
 	if in.Language != "" {
 		b.WriteString(in.Language)
 		b.WriteString("\n")

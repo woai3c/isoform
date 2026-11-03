@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { ChevronDown, PencilLine, Split } from 'lucide-react';
-import { toast } from 'sonner';
+import { ActivityInlineNotice, errorNotice } from './activity-inline-notice';
 import {
     MoveActivityToThread,
     RenameActivityThread,
@@ -74,19 +74,24 @@ export function useThreadRename(threadId: string) {
     const { t } = useTranslation('activity');
     const [renaming, setRenaming] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [failedTitle, setFailedTitle] = useState<string | null>(null);
     const rename = async (title: string) => {
         setBusy(true);
+        setFailedTitle(null);
         try {
             await RenameActivityThread(threadId, title);
             setRenaming(false);
         } catch (err) {
             console.error('[activity] rename thread failed:', err);
-            toast.error(t('threads.renameFailed'));
+            setFailedTitle(title);
         } finally {
             setBusy(false);
         }
     };
-    return { renaming, setRenaming, busy, rename };
+    const renameFailed = failedTitle === null ? null : (
+        <ActivityInlineNotice notice={errorNotice(t('threads.renameFailed'), () => void rename(failedTitle))} className="pt-1" />
+    );
+    return { renaming, setRenaming, busy, rename, renameFailed };
 }
 
 /** The inline title field Rename thread opens: Enter saves, Escape cancels. */
@@ -156,7 +161,7 @@ export function ThreadWorkRow({
     const apps = threadApps(moments);
     useAppIcons(apps.map((a) => a.appKey));
     const live = moments.some((m) => m.inProgress);
-    const { renaming, setRenaming, busy, rename } = useThreadRename(thread.id);
+    const { renaming, setRenaming, busy, rename, renameFailed } = useThreadRename(thread.id);
 
     const meta = threadMetaLine(t, thread, moments.length);
 
@@ -208,6 +213,8 @@ export function ThreadWorkRow({
                                 onSave={(title) => void rename(title)}
                                 onCancel={() => setRenaming(false)}
                             />
+                        ) : renameFailed ? (
+                            renameFailed
                         ) : (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -255,6 +262,7 @@ export function ThreadMoveControl({
 }) {
     const { t } = useTranslation('activity');
     const [busy, setBusy] = useState(false);
+    const [moveFailed, setMoveFailed] = useState<string | null>(null);
     const others = threads.filter((thread) => thread.id !== currentThreadId);
     const inSharedThread =
         currentThreadId !== null &&
@@ -262,16 +270,18 @@ export function ThreadMoveControl({
     if (others.length === 0 && !inSharedThread) return null;
     const move = async (target: string) => {
         setBusy(true);
+        setMoveFailed(null);
         try {
             await MoveActivityToThread(activityId, target);
         } catch (err) {
             console.error('[activity] move moment failed:', err);
-            toast.error(t('threads.moveFailed'));
+            setMoveFailed(target);
         } finally {
             setBusy(false);
         }
     };
     return (
+        <>
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <button type="button" disabled={busy} className={actionClass}>
@@ -293,5 +303,7 @@ export function ThreadMoveControl({
                 )}
             </DropdownMenuContent>
         </DropdownMenu>
+        {moveFailed !== null && <ActivityInlineNotice notice={errorNotice(t('threads.moveFailed'), () => void move(moveFailed))} className="pt-1" />}
+        </>
     );
 }

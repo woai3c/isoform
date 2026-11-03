@@ -146,10 +146,6 @@ vi.mock('@/components/activity-page', () => ({ ActivityPage: (props: any) => {
     fixture.pages.ActivityPage = props;
     return <output data-testid="ActivityPage" />;
 } }));
-vi.mock('@/components/activity-ask-panel', () => ({ ActivityAskPanel: (props: any) => {
-    fixture.pages.ActivityAskPanel = props;
-    return <output data-testid="ActivityAskPanel" />;
-} }));
 vi.mock('@/components/memory-page', () => ({ MemoryPage: (props: any) => {
     fixture.pages.MemoryPage = props;
     return <input aria-label="MemoryPage selection" defaultValue="" />;
@@ -441,33 +437,14 @@ describe('App Activity/Library navigation', () => {
         expect(screen.getByTestId('stream').closest('[data-retained-page]')).toHaveStyle({ display: 'none' });
     });
 
-    it('keeps Activity open when asking about a day or a moment', async () => {
+    it('answers in place on Activity and opens the main chat only from Open in Chat', async () => {
         await mountApp();
         await act(async () => fixture.sidebarProps!.onOpenActivity());
-        await act(async () => fixture.pages.ActivityPage.onAskAboutDate('2026-10-12', 'daily'));
-        expect(screen.getByTestId('ActivityPage')).toBeInTheDocument();
-        expect(screen.getByTestId('ActivityAskPanel')).toBeInTheDocument();
-        expect(fixture.pages.ActivityAskPanel.request.text).toContain('2026-10-12');
-        expect(fixture.pages.ActivityAskPanel.request.context).toEqual({ sourceKind: 'summary', sourceId: '2026-10-12' });
-        await act(async () => fixture.pages.ActivityPage.onAskAboutDate('2026-10-13', 'weekly'));
-        expect(fixture.pages.ActivityAskPanel.request.context).toEqual({ sourceKind: 'summary_week', sourceId: '2026-10-13' });
-        const ref = { sourceKind: 'activity', sourceId: 'moment', dayStartMs: 123 };
-        await act(async () => fixture.pages.ActivityPage.onStartChat('A moment', ref));
-        expect(fixture.pages.ActivityAskPanel.request.context).toEqual(ref);
+        expect(fixture.pages.ActivityPage.onAskAboutDate).toBeUndefined();
+        expect(fixture.pages.ActivityPage.onOpenChat).toBeTypeOf('function');
         expect(localStorage.getItem('yansu.appMode')).toBe('activity');
-        expect(fixture.prefill).not.toHaveBeenCalled();
-    });
-
-    it('routes a weekly item question to Activity without starting draft actions', async () => {
-        await mountApp();
-        await act(async () => fixture.sidebarProps!.onOpenActivity());
-        const item = { id: 'item', kind: 'item', message: 'Tell me what remains', mode: 'send' };
-        await act(async () => fixture.pages.ActivityPage.onYourWeekCard('brief', item, true));
-        expect(fixture.pages.ActivityAskPanel.request.context).toMatchObject({ sourceKind: 'brief_card', sourceId: 'item' });
-        await act(async () => fixture.pages.ActivityAskPanel.onClose());
-        const draft = { id: 'draft', kind: 'question', message: 'Draft a reply.', mode: 'send' };
-        await act(async () => fixture.pages.ActivityPage.onYourWeekCard('brief', draft));
-        expect(screen.queryByTestId('ActivityAskPanel')).toBeNull();
+        await act(async () => fixture.pages.ActivityPage.onOpenChat());
+        expect(localStorage.getItem('yansu.appMode')).toBe('chat');
     });
 
     it('opens on today from the menu bar "Open Activity" event', async () => {

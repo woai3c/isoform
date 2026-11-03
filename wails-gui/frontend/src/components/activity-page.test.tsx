@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import enActivity from '@/i18n/locales/en/activity.json';
-import { ActivityPage, SessionPeopleChips, SessionSpeakerChips, type ActivitySectionId } from './activity-page';
+import { ActivityPage, EventFramePopup, SessionPeopleChips, SessionSpeakerChips, type ActivitySectionId } from './activity-page';
 import type { CronJobsProp } from './timeline/useCalendarData';
 import type { MobileBriefActivityTarget } from '@/lib/wails-shim-app';
 
@@ -140,6 +140,34 @@ describe('ActivityPage section panel', () => {
         expect((document.querySelector('[data-activity-section="workedOn"]') as HTMLElement).getAttribute('aria-current')).toBe('page');
     });
 
+    it('says in place when a frame screen text cannot be read, with Try again', async () => {
+        binding('GetSnapshotOCRText').mockRejectedValueOnce(new Error('ocr down')).mockResolvedValueOnce('Quarterly plan');
+        render(
+            <EventFramePopup
+                data={{ frameSrc: '', evt: { timestamp: Date.now(), app: 'Notes' }, snapshot: { id: 's1', sessionId: 'sess1' } } as never}
+                keyword=""
+                onClose={vi.fn()}
+            />,
+        );
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent("Couldn't read the text on this screen.");
+        fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+        await waitFor(() => expect(screen.queryByText("Couldn't read the text on this screen.")).not.toBeInTheDocument());
+        expect(binding('GetSnapshotOCRText')).toHaveBeenCalledTimes(2);
+    });
+
+    it('says in place when the Screen timeline sessions fail to load, with Try again', async () => {
+        binding('GetActivitySessions').mockRejectedValueOnce(new Error('db locked'));
+        await act(async () => {
+            render(<Harness initialSection="timeline" />);
+        });
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent("Couldn't load your sessions.");
+        fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+        await waitFor(() => expect(screen.queryByText("Couldn't load your sessions.")).not.toBeInTheDocument());
+        expect(binding('GetActivitySessions')).toHaveBeenCalledTimes(2);
+    });
+
     it('does not load the Screen timeline until its section is picked', async () => {
         await act(async () => {
             render(<Harness initialSection="yourDay" />);
@@ -153,6 +181,19 @@ describe('ActivityPage section panel', () => {
             expect(binding('GetActivitySessions')).toHaveBeenCalled();
             expect(binding('GetActivityTimelineGroups')).toHaveBeenCalled();
         });
+    });
+
+    it('states only the supported privacy line on the Screen timeline', async () => {
+        await act(async () => { render(<Harness initialSection="timeline" />); });
+        expect(screen.getByText('Screenshots and audio stay on your computer.')).toBeInTheDocument();
+        expect(screen.queryByText(/redact|passwords|API keys/i)).not.toBeInTheDocument();
+    });
+
+    it('localizes the Screen timeline privacy line', async () => {
+        await i18n.changeLanguage('zh-CN');
+        await act(async () => { render(<Harness initialSection="timeline" />); });
+        expect(screen.getByText('屏幕截图和音频留在你的电脑上。')).toBeInTheDocument();
+        expect(screen.queryByText(/脱敏|密码|API 密钥/)).not.toBeInTheDocument();
     });
 
     it('opens on the day the caller asked for', async () => {
@@ -253,7 +294,7 @@ describe('Activity first view and session reuse', () => {
         await i18n.changeLanguage('en');
     });
 
-    it('renders rows before the digest and libraries resolve, then keeps the loaded sections', async () => {
+    it('keeps the selected section while the digest loads and shows no menu counts', async () => {
         let finishSummary!: (value: unknown) => void;
         let finishKnowledge!: (value: unknown) => void;
         let finishMemory!: (value: unknown) => void;
@@ -265,7 +306,10 @@ describe('Activity first view and session reuse', () => {
             apps: [], entities: [], thumbnails: [], runCount: 0, activeMs: 60_000,
         }]);
         render(<Harness initialDate="2026-10-15" />);
-        expect(await screen.findByText('Public fixture row')).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: enActivity.day.yourDay })).toBeInTheDocument();
+        expect(screen.queryByText('Public fixture row')).not.toBeInTheDocument();
+        expect(document.querySelector('[data-activity-section="yourDay"]')).toHaveAttribute('aria-current', 'page');
+        for (const row of document.querySelectorAll('[data-activity-section]')) expect(row.textContent).not.toMatch(/\d/);
         expect(binding('GetKnowledgeEntries')).not.toHaveBeenCalled();
         expect(binding('GetWeeklySummary')).not.toHaveBeenCalled();
         expect(binding('GetActivityMonthStats')).not.toHaveBeenCalled();
@@ -320,7 +364,7 @@ it('settles a failed digest and thread read so the existing summary and source c
         id: 'source', kind: 'follow_up', momentId: 'recoverable-row', momentTitle: 'Recoverable public row', momentStartMs: new Date(2026, 9, 15, 9).getTime(), text: 'Check the public row', why: '',
     }]);
     render(<Harness initialDate="2026-10-15" />);
-    expect(await screen.findByRole('button', { name: enActivity.day.writeSummary })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: enActivity.summary.card.writeIt })).toBeEnabled();
     fireEvent.click(await screen.findByRole('button', { name: /From .*Recoverable public row/ }));
     expect(await screen.findByRole('button', { name: 'Delete from history' })).toBeInTheDocument();
 });

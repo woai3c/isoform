@@ -109,7 +109,6 @@ import { MemoryPage } from "@/components/memory-page";
 import { PeoplePage, type PeopleSelection } from "@/components/people-page";
 import { AutomationDetailPane } from "@/components/automations/AutomationDetailPane";
 import { TodayPage } from "@/components/today/TodayPage";
-import { ActivityAskPanel, type ActivityAskRequest } from "@/components/activity-ask-panel";
 import { CAPTURED_COUNTS_ANCHOR } from "@/components/settings/pages/captured-counts-card";
 import type { TodayActionHandlers } from "@/components/today/types";
 import { todayBriefCardRef } from "@/lib/today-chat-navigation";
@@ -529,8 +528,6 @@ export default function App() {
     // opens Today (engagementClickData in wails-gui/engagement_app.go).
     const openTodayRef = useRef<(briefId?: string) => void>(() => {});
     const [todayBriefRequest, setTodayBriefRequest] = useState<{ briefId?: string; focus?: TodayBriefFocus; nonce: number } | null>(null);
-    const [activityAsk, setActivityAsk] = useState<ActivityAskRequest | null>(null);
-    const activityAskSequence = useRef(0);
     // Set alongside openTodayRef: a clicked missed-schedule toast opens the
     // schedule on Upcoming.
     const openUpcomingRef = useRef<(jobId: string) => void>(() => {});
@@ -3866,26 +3863,12 @@ export default function App() {
                         restrictToSessionIds={activityRestrictToSessionIds}
                         initialEventTimestamp={activityInitialEventTimestamp}
                         highlightedSenderName={activityHighlightedSenderName}
-                        onStartChat={(prompt, context) => {
-                            setActivityAsk({ id: ++activityAskSequence.current, text: prompt, context });
-                        }}
+                        onStartChat={(prompt, context) => briefHandlers.onStartChat(prompt, context)}
+                        onOpenChat={() => openMainChatRef.current()}
                         yourWeekHandlers={briefHandlers}
-                        onYourWeekCard={(briefId, card, ask) => {
-                            const context = todayBriefCardRef(briefId, card.id, card.message);
-                            if (ask) {
-                                setActivityAsk({ id: ++activityAskSequence.current, text: card.message, context });
-                            } else {
-                                briefHandlers.onStartChat(card.message, context);
-                            }
-                        }}
-                        onAskAboutDate={(date, scope) => {
-                            setActivityAsk({ id: ++activityAskSequence.current,
-                                text: tToday(scope === "weekly" ? "prompts.activityWeek" : "prompts.activityDay", { date }),
-                                context: { sourceKind: scope === "daily" ? "summary" : "summary_week", sourceId: date } });
-                        }}
+                        onYourWeekCard={(briefId, card) => briefHandlers.onStartChat(card.message, todayBriefCardRef(briefId, card.id, card.message))}
                     />
                     </Suspense>
-                    {activityAsk && <ActivityAskPanel request={activityAsk} handlers={briefHandlers} onClose={() => setActivityAsk(null)} />}
                     </div>
                 ) : appMode === "tasks" ? (
                     <TasksPage

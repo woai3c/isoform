@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp, FileText, FolderOpen, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import {
     DeleteMeetingNotes,
@@ -16,6 +15,7 @@ import { getFileManagerName } from '@/lib/platform';
 import { MarkdownContent } from '@/components/markdown-content';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { CallTranscript } from '@/components/call-transcript';
+import { ACTION_LINK } from './activity-inline-notice';
 
 // A meeting's notes on Activity: what the after-call pass wrote (summary,
 // decisions, follow-ups), what the user wrote, and each part of the call
@@ -40,6 +40,8 @@ export function transcriptBody(markdown: string): string {
 export function ActivityMeetingNotes({ sessionIds, bridgePort }: { sessionIds: string[]; bridgePort: number }) {
     const { t } = useTranslation('activity');
     const [notes, setNotes] = useState<MeetingNotesView[]>([]);
+    const [loadFailed, setLoadFailed] = useState(false);
+    const [retry, setRetry] = useState(0);
     const idsKey = sessionIds.join('\n');
 
     useEffect(() => {
@@ -52,10 +54,10 @@ export function ActivityMeetingNotes({ sessionIds, bridgePort }: { sessionIds: s
             }
             GetMeetingNotesForSessions(ids)
                 .then((result) => {
-                    if (!cancelled) setNotes(result ?? []);
+                    if (!cancelled) { setNotes(result ?? []); setLoadFailed(false); }
                 })
                 .catch(() => {
-                    if (!cancelled) setNotes([]);
+                    if (!cancelled) setLoadFailed(true);
                 });
         };
         load();
@@ -68,13 +70,14 @@ export function ActivityMeetingNotes({ sessionIds, bridgePort }: { sessionIds: s
             offClosedEyes?.();
             window.removeEventListener('focus', load);
         };
-    }, [idsKey]);
+    }, [idsKey, retry]);
 
-    if (notes.length === 0) return null;
+    if (notes.length === 0 && !loadFailed) return null;
 
     return (
         <div className="space-y-3 shrink-0">
             <h2 className={sectionHeadingClass}>{t('meetingNotes.section')}</h2>
+            {loadFailed && <p role="alert" className="text-[12px] text-copper">{t('meetingNotes.loadFailed')} <button type="button" className={ACTION_LINK} onClick={() => setRetry((n) => n + 1)}>{t('stitched.retry')}</button></p>}
             {notes.map((meeting) => (
                 <MeetingNotesCard
                     key={meeting.meetingKey}
@@ -101,6 +104,7 @@ export function MeetingNotesCard({
     const { t, i18n } = useTranslation('activity');
     const [open, setOpen] = useState(true);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleteFailed, setDeleteFailed] = useState(false);
     const title =
         meeting.title ||
         (meeting.meetingApp ? t('meetingNotes.callTitle', { app: meeting.meetingApp }) : t('meetingNotes.untitledCall'));
@@ -116,9 +120,10 @@ export function MeetingNotesCard({
             ? t('meetingNotes.metaWithWords', { time, duration, words: t('meetingNotes.words', { count: words }) })
             : t('meetingNotes.meta', { time, duration });
     const deleteNotes = () => {
+        setDeleteFailed(false);
         DeleteMeetingNotes(meeting.meetingKey)
             .then(onDeleted)
-            .catch(() => toast.error(t('meetingNotes.deleteFailed')));
+            .catch(() => setDeleteFailed(true));
     };
     const hasOutline = meeting.summary !== '' || meeting.decisions.length > 0 || meeting.followups.length > 0;
     // Activity sessions a recording only spans have nothing to open.
@@ -126,6 +131,7 @@ export function MeetingNotesCard({
 
     return (
         <section className="rounded-lg border border-border bg-panel">
+            {deleteFailed && <p role="alert" className="px-4 pt-3 text-[12px] text-copper">{t('meetingNotes.deleteFailed')} <button type="button" className={ACTION_LINK} onClick={deleteNotes}>{t('stitched.retry')}</button></p>}
             <button
                 type="button"
                 onClick={() => setOpen((o) => !o)}
@@ -263,12 +269,14 @@ function MeetingPartRow({
     const { t, i18n } = useTranslation('activity');
     const [transcriptOpen, setTranscriptOpen] = useState(false);
     const [audioFailed, setAudioFailed] = useState(false);
+    const [revealFailed, setRevealFailed] = useState(false);
 
     const toggleTranscript = () => {
         setTranscriptOpen((o) => !o);
     };
     const reveal = () => {
-        RevealMeetingRecording(part.sessionId).catch(() => toast.error(t('meetingNotes.revealFailed')));
+        setRevealFailed(false);
+        RevealMeetingRecording(part.sessionId).catch(() => setRevealFailed(true));
     };
     const canPlay = part.hasRecording && bridgePort > 0 && !audioFailed;
 
@@ -300,6 +308,7 @@ function MeetingPartRow({
                         <FolderOpen className="h-3 w-3" />
                         {t('meetingNotes.revealRecording', { fileManager: getFileManagerName(i18n.language) })}
                     </button>
+                    {revealFailed && <p role="alert" className="basis-full text-copper">{t('meetingNotes.revealFailed')} <button type="button" className={ACTION_LINK} onClick={reveal}>{t('stitched.retry')}</button></p>}
                 </div>
             )}
             {part.hasTranscript && (

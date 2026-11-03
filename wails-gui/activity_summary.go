@@ -399,7 +399,9 @@ func (s *ActivityStore) HasActivityData(date string) bool {
 // GetDailySummary computes all statistics for a given date and returns cached AI summary if available.
 func (a *App) GetDailySummary(dateStr string) (perfValue *DailySummaryData, perfErr error) {
 	defer logPageBinding("GetDailySummary", time.Now(), &perfValue)
-	return a.getDailySummary(dateStr, nil)
+	data, err := a.getDailySummary(dateStr, nil)
+	a.secondPersonDaily(data)
+	return data, err
 }
 
 func (a *App) getDailySummary(dateStr string, sources *activitySummarySourceSet) (*DailySummaryData, error) {
@@ -551,7 +553,11 @@ func (a *App) getDailySummary(dateStr string, sources *activitySummarySourceSet)
 // GetWeeklySummary computes weekly statistics for the week containing dateStr.
 func (a *App) GetWeeklySummary(dateStr string) (perfValue *WeeklySummaryData, perfErr error) {
 	defer logPageBinding("GetWeeklySummary", time.Now(), &perfValue)
-	return a.getWeeklySummary(dateStr, nil)
+	data, err := a.getWeeklySummary(dateStr, nil)
+	if data != nil {
+		data.AISummary = secondPersonLine(data.AISummary, a.activitySelfNames())
+	}
+	return data, err
 }
 
 func (a *App) getWeeklySummary(dateStr string, sources *activitySummarySourceSet) (*WeeklySummaryData, error) {
@@ -1182,10 +1188,12 @@ Rules:
 - Aim for 5-15 moments total. Err toward fewer, larger moments for a narrative feel.
 - Title: short, concrete, 2-8 words. Name real projects/files/topics when visible in window titles. No emoji. Follow the UI language instruction above.
 - Subtitle: optional, 4-12 words of supporting detail. Omit if nothing to add.
-- Description: required, 1-2 concise sentences in markdown. Explain what the person was likely doing and mention concrete projects, files, people, channels, or artifacts visible in the titles. Use only simple markdown emphasis or inline code; no headings, tables, or bullet lists.
+- Description: required, 1-2 concise sentences in markdown. Say what you did and mention concrete projects, files, people, channels, or artifacts visible in the titles. Use only simple markdown emphasis or inline code; no headings, tables, or bullet lists.
 - Do NOT include any prose outside the JSON object.
 
-`, languageInstruction)
+%s
+
+`, languageInstruction, activitySecondPersonRule)
 
 	sb.WriteString("Sessions (index. HH:MM-HH:MM | duration | apps | top window titles):\n")
 
@@ -1564,6 +1572,7 @@ func (a *App) runGenerateDailySummary(dateStr string) error {
 	// Both generation prompts already request the UI language. Do not spend
 	// another model pass translating the summary or its moments.
 	summary, noticed := splitNoticedBlock(summary)
+	summary = secondPersonLine(summary, a.activitySelfNames())
 
 	// Determine if partial (today)
 	today := time.Now().Format("2006-01-02")
@@ -1773,6 +1782,7 @@ func (a *App) GenerateWeeklySummary(dateStr string) error {
 		return err
 	}
 	summary = a.normalizeActivityMarkdownToCurrentUILanguage("weekly summary", summary)
+	summary = secondPersonLine(summary, a.activitySelfNames())
 
 	weekKey := data.WeekStart + "/week"
 	// Weekly summaries don't run a moments pipeline, so we discard gen.
@@ -2091,14 +2101,16 @@ Output format:
 Bullet rules:
 - Be SPECIFIC. Include names, products, branches, PR numbers, channels, files, dollar amounts, and dates you see in the data.
 - CURATE. Pick the 8-14 most meaningful items for the day, not every trace.
-- Include state when inferable, using plain prefixes like "Done:", "Open:", "Waiting:", "Next:", or "Decision:".
+- Include state when inferable, using plain prefixes like "Decision:", "Next:", "Done:", "Open:", "Blocked:", or "Waiting:".
 - Prefer verbs of commitment over passive description.
 - Keep bullets readable in a calendar card. Do not write long paragraphs.
 - No emojis. No tables. No ending invitation or question.
 - Do NOT use rigid data-source headings like "OCR", "Messenger", or "Window Titles". Group by meaning.
 - If data is sparse, write fewer sections and fewer bullets. Don't pad.
 
-`, responseLanguageInstruction(a.currentUILanguageName()))
+%s
+
+`, responseLanguageInstruction(a.currentUILanguageName()), activitySecondPersonRule)
 
 	// Core stats
 	fmt.Fprintf(&sb, "Date: %s\n", dateStr)
@@ -2178,7 +2190,7 @@ func buildWeeklySummaryPrompt(data *WeeklySummaryData, languageInstruction strin
 
 	fmt.Fprintf(&sb, `%s
 
-Write a detailed summary of this person's work week. Use multiple paragraphs, as long as needed to cover the data thoroughly.
+Write a detailed summary of your work week, written to you. Use multiple paragraphs, as long as needed to cover the data thoroughly.
 
 Structure:
 1. Overview: what they primarily focused on this week. Use daily summaries (if provided) to identify recurring themes, major projects, or evolving tasks across the week. Be specific about project names, features, or areas of work.
@@ -2189,7 +2201,9 @@ Structure:
 
 Tone: warm and observant, like a thoughtful colleague giving a thorough weekly debrief. No emoji, no markdown, no bullet points -- write in flowing prose paragraphs.
 
-`, languageInstruction)
+%s
+
+`, languageInstruction, activitySecondPersonRule)
 
 	fmt.Fprintf(&sb, "Week: %s to %s\n", data.WeekStart, data.WeekEnd)
 	fmt.Fprintf(&sb, "Total active time: %s\n", formatDurationMs(data.TotalActiveMs))

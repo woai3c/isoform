@@ -114,13 +114,10 @@ describe('Isoform noticed', () => {
         await waitFor(() =>
             expect(binding('AddActivityFollowUp')).toHaveBeenCalledWith('act-lamp', 'Ask Priya which Halcyon Arc finish they want', expect.any(String)),
         );
-        expect(toast.success).toHaveBeenCalledWith(
-            'Added to What needs your attention.',
-            expect.objectContaining({ action: expect.objectContaining({ label: 'Undo' }) }),
-        );
+        expect(await screen.findByRole('status')).toHaveTextContent('Added to What needs your attention.');
+        expect(toast.success).not.toHaveBeenCalled();
         const calls = binding('GetDayNoticed').mock.calls.length;
-        const options = vi.mocked(toast.success).mock.calls[0][1] as unknown as { action: { onClick: () => void } };
-        act(() => options.action.onClick());
+        fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
         await waitFor(() => expect(binding('UndoActivityFollowUp')).toHaveBeenCalledWith('loop', 'ev'));
         await waitFor(() => expect(binding('GetDayNoticed').mock.calls.length).toBeGreaterThan(calls));
     });
@@ -143,9 +140,9 @@ describe('Isoform noticed', () => {
         fireEvent.click(screen.getAllByRole('button', { name: 'Not now' })[0]);
         await waitFor(() => expect(binding('DismissNoticed')).toHaveBeenCalledWith(DAY, 's-follow'));
         await waitFor(() => expect(screen.queryByText('Follow up with Priya about the Halcyon Arc lamp')).not.toBeInTheDocument());
-        expect(toast).toHaveBeenCalledWith("Isoform won't suggest this again.", expect.objectContaining({ action: expect.anything() }));
-        const options = vi.mocked(toast).mock.calls[0][1] as unknown as { action: { onClick: () => void } };
-        act(() => options.action.onClick());
+        expect(screen.getByRole('status')).toHaveTextContent("Isoform won't suggest this again.");
+        expect(toast).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
         await waitFor(() => expect(binding('UndoDismissNoticed')).toHaveBeenCalledWith(DAY, 's-follow'));
     });
 
@@ -178,7 +175,7 @@ describe('Isoform noticed', () => {
                 wont: ['Submit anything'],
             }),
         );
-        expect(toast.success).toHaveBeenCalledWith("Scheduled. It runs on the schedule you picked, and you'll find it in Tasks.");
+        expect(await screen.findByRole('status')).toHaveTextContent("Scheduled. It runs on the schedule you picked, and you'll find it in Tasks.");
     });
 
     it('a routine with no set time goes to Knowledge, and Save needs a name and a step', async () => {
@@ -202,7 +199,7 @@ describe('Isoform noticed', () => {
                 steps: ['Open the sheet', 'Add receipts'],
             })),
         );
-        expect(toast.success).toHaveBeenCalledWith('Saved to Knowledge.');
+        expect(await screen.findByRole('status')).toHaveTextContent('Saved to Knowledge.');
     });
 
     it('reads the suggestions again when a new summary is ready or a follow-up changes', async () => {

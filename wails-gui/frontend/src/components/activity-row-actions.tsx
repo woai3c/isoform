@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bell, Check, ListPlus, MessageSquare, PencilLine } from 'lucide-react';
-import { toast } from 'sonner';
+import { ActivityAskInline } from './activity-ask-inline';
+import { ActivityInlineNotice, errorNotice, type ActivityNotice } from './activity-inline-notice';
+import type { TodayChatContextRef } from '@/lib/today-chat-navigation';
 import {
     AddActivityFollowUp,
     CancelActivityReminder,
@@ -30,7 +32,7 @@ const actionClass =
 const inputClass =
     'w-full px-3 py-1.5 text-xs rounded-md border border-border bg-panel text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent';
 
-type Editor = 'none' | 'followUp' | 'pickTime' | 'correct';
+type Editor = 'none' | 'followUp' | 'pickTime' | 'correct' | 'ask';
 
 function newKey(): string {
     return typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -63,16 +65,16 @@ function toLocalInputValue(ms: number): string {
 export function ActivityRowActions({
     activity,
     onChanged,
-    onChatAbout,
+    chatContext,
     deleteControl,
     threadControl,
 }: {
     activity: ActivityView;
     /** Reloads the day's activities after a change Go made. */
     onChanged: () => void;
-    /** Chat about this: opens the main chat with the moment's words in the
-     *  box, unsent. Absent where the page has no main chat to open. */
-    onChatAbout?: () => void;
+    /** Chat about this, asked in place with the moment as the chat's
+     *  context. Absent where the page has no main chat. */
+    chatContext?: TodayChatContextRef;
     /** The existing Delete from history control, kept as it was. */
     deleteControl: ReactNode;
     /** Not right also moves the moment to another thread or into its own. */
@@ -81,6 +83,7 @@ export function ActivityRowActions({
     const { t } = useTranslation('activity');
     const reminderWhen = useReminderWhen();
     const [editor, setEditor] = useState<Editor>('none');
+    const [notice, setNotice] = useState<ActivityNotice | null>(null);
     const [busy, setBusy] = useState(false);
     const [followUp, setFollowUp] = useState<ActivityFollowUp | undefined>(activity.followUp);
     const [reminderAt, setReminderAt] = useState<number | undefined>(activity.reminderAt || undefined);
@@ -104,22 +107,18 @@ export function ActivityRowActions({
             setFollowUp(added);
             setEditor('none');
             onChanged();
-            toast.success(t('rowActions.followUpAddedToast'), {
-                action: {
-                    label: t('rowActions.undo'),
-                    onClick: () => {
-                        UndoActivityFollowUp(added.openLoopId, added.eventId)
-                            .then(() => {
-                                setFollowUp(undefined);
-                                onChanged();
-                                toast(t('rowActions.followUpRemovedToast'));
-                            })
-                            .catch(() => toast.error(t('rowActions.undoFailed')));
-                    },
-                },
-            });
+            const undo = () => {
+                UndoActivityFollowUp(added.openLoopId, added.eventId)
+                    .then(() => {
+                        setFollowUp(undefined);
+                        onChanged();
+                        setNotice({ tone: 'done', text: t('rowActions.followUpRemovedToast') });
+                    })
+                    .catch(() => setNotice(errorNotice(t('rowActions.undoFailed'), undo)));
+            };
+            setNotice({ tone: 'done', text: t('rowActions.followUpAddedToast'), actionLabel: t('rowActions.undo'), onAction: undo });
         } catch {
-            toast.error(t('rowActions.followUpFailed'));
+            setNotice(errorNotice(t('rowActions.followUpFailed'), () => void addFollowUp()));
         } finally {
             setBusy(false);
         }
@@ -132,7 +131,10 @@ export function ActivityRowActions({
         if (!open) return;
         GetActivityReminderChoices()
             .then((rows) => setChoices(rows ?? []))
-            .catch(() => setChoices([]));
+            .catch(() => {
+                setChoices([]);
+                setNotice(errorNotice(t('rowActions.choicesFailed'), () => loadChoices(true)));
+            });
     };
     const setReminder = async (atMs: number) => {
         if (busy) return;
@@ -142,9 +144,9 @@ export function ActivityRowActions({
             setReminderAt(at);
             setEditor('none');
             onChanged();
-            toast.success(t('rowActions.reminderSetToast', { when: reminderWhen(at) }));
+            setNotice({ tone: 'done', text: t('rowActions.reminderSetToast', { when: reminderWhen(at) }) });
         } catch {
-            toast.error(t('rowActions.reminderFailed'));
+            setNotice(errorNotice(t('rowActions.reminderFailed'), () => void setReminder(atMs)));
         } finally {
             setBusy(false);
         }
@@ -163,9 +165,9 @@ export function ActivityRowActions({
             await CancelActivityReminder(activity.id);
             setReminderAt(undefined);
             onChanged();
-            toast(t('rowActions.reminderCancelledToast'));
+            setNotice({ tone: 'done', text: t('rowActions.reminderCancelledToast') });
         } catch {
-            toast.error(t('rowActions.cancelReminderFailed'));
+            setNotice(errorNotice(t('rowActions.cancelReminderFailed'), () => void cancelReminder()));
         } finally {
             setBusy(false);
         }
@@ -186,9 +188,9 @@ export function ActivityRowActions({
             await CorrectActivity(activity.id, titleDraft, summaryDraft);
             setEditor('none');
             onChanged();
-            toast.success(t('rowActions.correctionSavedToast'));
+            setNotice({ tone: 'done', text: t('rowActions.correctionSavedToast') });
         } catch {
-            toast.error(t('rowActions.correctionFailed'));
+            setNotice(errorNotice(t('rowActions.correctionFailed'), () => void saveCorrection()));
         } finally {
             setBusy(false);
         }
@@ -254,8 +256,13 @@ export function ActivityRowActions({
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )}
-                {!withheld && onChatAbout && (
-                    <button type="button" onClick={onChatAbout} className={actionClass}>
+                {!withheld && chatContext && (
+                    <button
+                        type="button"
+                        onClick={() => setEditor((current) => (current === 'ask' ? 'none' : 'ask'))}
+                        aria-expanded={editor === 'ask'}
+                        className={actionClass}
+                    >
                         <MessageSquare className="h-3 w-3" />
                         {t('rowActions.chatAboutThis')}
                     </button>
@@ -266,6 +273,9 @@ export function ActivityRowActions({
                 </button>
                 <span className="ml-auto">{deleteControl}</span>
             </div>
+            <ActivityInlineNotice notice={notice} />
+
+            {editor === 'ask' && chatContext && <ActivityAskInline context={chatContext} onClose={() => setEditor('none')} />}
 
             {editor === 'followUp' && (
                 <div className="flex items-center gap-2">

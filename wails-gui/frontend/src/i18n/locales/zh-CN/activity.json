@@ -1,8 +1,7 @@
 {
     "title": "活动",
     "privacyNotice": {
-        "title": "所有记录的数据均在本地自动脱敏。",
-        "detail": "<pw>密码</pw>、<api>API 密钥</api>、<addr>地址</addr>、<bank>银行卡号</bank>、<cc>信用卡号</cc>等敏感信息由本地模型自动移除。"
+        "title": "屏幕截图和音频留在你的电脑上。"
     },
     "searchPlaceholder": "搜索……",
     "groupHeaders": {
@@ -24,9 +23,8 @@
     },
     "day": {
         "yourDay": "你的一天",
-        "writeSummary": "写总结",
-        "activeLineWithApps": "在电脑前 {{duration}}，主要用{{apps}}",
-        "activeLineNoApps": "在电脑前 {{duration}}",
+        "activeLineWithApps": "活跃 {{duration}} · 大多在{{apps}}",
+        "activeLineNoApps": "活跃 {{duration}}",
         "appsJoin": "{{first}}和{{second}}",
         "details": "详情",
         "byHour": "按小时统计的活动",
@@ -53,7 +51,9 @@
         "workedOnSoon": "大约 30 分钟后，这里会显示你做了什么。",
         "people": "人物：{{names}}",
         "links": "链接：{{names}}",
-        "deleteFromHistory": "从历史中删除"
+        "deleteFromHistory": "从历史中删除",
+        "learnedShowMore": "显示更多",
+        "deleteMomentFailed": "无法从历史记录中删除。"
     },
     "rowActions": {
         "addFollowUp": "添加跟进",
@@ -89,7 +89,8 @@
         "correctionSavedToast": "已保存。Isoform 会按你的方式命名。",
         "correctionFailed": "无法保存你的修改，请重试。",
         "withheldPrivate": "这段时间是私密的，Isoform 不会把它用于跟进和提醒。",
-        "withheldPaused": "这段时间观察已暂停，Isoform 不会把它用于跟进和提醒。"
+        "withheldPaused": "这段时间观察已暂停，Isoform 不会把它用于跟进和提醒。",
+        "choicesFailed": "无法加载提醒时间。"
     },
     "noticed": {
         "followUpFailedInline": "没能添加跟进。重试",
@@ -132,7 +133,8 @@
             "fri": "星期五",
             "sat": "星期六",
             "sun": "星期日"
-        }
+        },
+        "notNowFailedLine": "无法隐藏这条建议。"
     },
     "threads": {
         "span": "{{start}} 至 {{end}}",
@@ -214,7 +216,8 @@
             "steppedAway": "你在 {{time}} 离开，此前已活跃 {{minutes}} 分钟。",
             "steppedAwayAt": "你在 {{time}} 离开，停在 {{label}}。",
             "show": "查看上次停在哪里",
-            "later": "暂不"
+            "later": "暂不",
+            "from": "从 {{time}} 开始"
         },
         "loading": "正在读取这一天的活动",
         "loadFailed": "无法读取这一天的活动。",
@@ -352,7 +355,8 @@
         "nextEvent": "下一个事件",
         "snapshotBeforeEvent": "画面 −{{seconds}}s",
         "snapshotAfterEvent": "画面 +{{seconds}}s",
-        "snapshotDistanceHint": "事件时刻附近截屏失败,显示的是最近的一张可用画面。GPU 加速的应用(WebView2、Direct3D)经常触发这种情况。"
+        "snapshotDistanceHint": "事件时刻附近截屏失败,显示的是最近的一张可用画面。GPU 加速的应用(WebView2、Direct3D)经常触发这种情况。",
+        "ocrFailed": "无法读取此画面上的文字。"
     },
     "summary": {
         "noWeeklyActivity": "本周没有记录活动",
@@ -378,7 +382,6 @@
             "copied": "已复制",
             "todayUnfolding": "今天还在进行中。可以随时生成摘要,也可以等今天结束后再来查看。",
             "noneDay": "这一天还没有摘要。",
-            "noneWeek": "本周还没有周摘要。",
             "unavailableDay": "摘要不可用。",
             "unavailableWeek": "周摘要不可用。",
             "freshnessTodayPartial": "生成于 {{time}}。后续活动可能未包含。",
@@ -388,7 +391,14 @@
             "languageHint": "由{{lang}}生成",
             "regenerateInCurrent": "用{{lang}}重新生成",
             "writingDay": "正在写你的这一天……",
-            "writingWeek": "正在写你的这一周……"
+            "writingWeek": "正在写你的这一周……",
+            "writingNewer": "正在写一个更新的版本…",
+            "writtenAt": "写于 {{time}}。之后的工作可能未包含在内。",
+            "writeAgain": "再写一次",
+            "writeFailed": "无法写下你的一天。请重试。",
+            "dayNotWritten": "这一天还没写。",
+            "weekNotWritten": "你的这一周还没写。",
+            "writeIt": "写一下"
         },
         "languageName": {
             "en": "英文",
@@ -396,7 +406,7 @@
         }
     },
     "yourWeek": {
-        "weekOf": "{{date}}这周"
+        "title": "你的这一周"
     },
     "session": {
         "events": "{{count}} 个事件",
@@ -497,6 +507,7 @@
         "knowledgeSection": "知识({{count}})"
     },
     "meetingNotes": {
+        "loadFailed": "无法加载会议笔记。",
         "section": "会议纪要",
         "callTitle": "{{app}} 通话",
         "untitledCall": "通话",
@@ -566,5 +577,30 @@
     "firstDay": {
         "rightNow": "大约 30 分钟后会显示最初的工作记录。现在：",
         "now": "现在"
+    },
+    "belief": {
+        "history": "来自你的 {{assistant}} 历史记录",
+        "activity": "来自你的活动",
+        "sourceUnknown": "来源不可用",
+        "location": "在关于你 › {{area}}",
+        "loadFailed": "无法加载这条了解。",
+        "retry": "重试"
+    },
+    "ask": {
+        "placeholder": "关于这里，问什么都可以",
+        "send": "提问",
+        "answering": "Isoform 正在回答…",
+        "failed": "无法发送你的问题。",
+        "tryAgain": "重试",
+        "openInChat": "在聊天中打开"
+    },
+    "week": {
+        "yourWeekFailed": "无法加载你的一周。",
+        "loadFailed": "无法加载这一周。",
+        "recapFailed": "无法写出每周回顾。",
+        "noActivity": "—"
+    },
+    "timeline": {
+        "sessionsFailed": "无法加载你的会话。"
     }
 }

@@ -933,6 +933,7 @@ func (a *App) groupPastDayOnce(day int64) {
 // returns Grouped=false and starts its grouping in the background.
 func (a *App) GetDayThreads(startMs, endMs int64) (perfValue ActivityDayThreads, perfErr error) {
 	defer logPageBinding("GetDayThreads", time.Now(), &perfValue)
+	defer func() { a.secondPersonThreads(&perfValue) }()
 	empty := ActivityDayThreads{Grouped: true, Threads: []ActivityThreadView{}}
 	if a == nil || a.activity == nil || a.activity.store == nil {
 		return empty, nil

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListPlus, Repeat, Undo2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { ActivityInlineNotice, errorNotice, type ActivityNotice } from './activity-inline-notice';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import {
     AddActivityFollowUp,
@@ -97,6 +97,7 @@ export function ActivityNoticed({
     const [followUpFor, setFollowUpFor] = useState<string | null>(null);
     const [followUpDraft, setFollowUpDraft] = useState('');
     const [followUpFailed, setFollowUpFailed] = useState(false);
+    const [notice, setNotice] = useState<ActivityNotice | null>(null);
     const followUpKey = useRef('');
     const [routineFor, setRoutineFor] = useState<NoticedSuggestion | null>(null);
     const [editTarget, setEditTarget] = useState<MobileBriefActivityTarget | null>(null);
@@ -191,19 +192,15 @@ export function ActivityNoticed({
             const added = await AddActivityFollowUp(item.momentId, text, followUpKey.current);
             setFollowUpFor(null);
             reload();
-            toast.success(t('rowActions.followUpAddedToast'), {
-                action: {
-                    label: t('rowActions.undo'),
-                    onClick: () => {
-                        UndoActivityFollowUp(added.openLoopId, added.eventId)
-                            .then(() => {
-                                reload();
-                                toast(t('rowActions.followUpRemovedToast'));
-                            })
-                            .catch(() => toast.error(t('rowActions.undoFailed')));
-                    },
-                },
-            });
+            const undo = () => {
+                UndoActivityFollowUp(added.openLoopId, added.eventId)
+                    .then(() => {
+                        reload();
+                        setNotice({ tone: 'done', text: t('rowActions.followUpRemovedToast') });
+                    })
+                    .catch(() => setNotice(errorNotice(t('rowActions.undoFailed'), undo)));
+            };
+            setNotice({ tone: 'done', text: t('rowActions.followUpAddedToast'), actionLabel: t('rowActions.undo'), onAction: undo });
         } catch {
             setFollowUpFailed(true);
         } finally {
@@ -217,18 +214,17 @@ export function ActivityNoticed({
         try {
             await DismissNoticed(dateStr, item.id);
             setItems((current) => current.filter((i) => i.id !== item.id));
-            toast(t('noticed.notNowToast'), {
-                action: {
-                    label: t('rowActions.undo'),
-                    onClick: () => {
-                        UndoDismissNoticed(dateStr, item.id)
-                            .then(reload)
-                            .catch(() => toast.error(t('rowActions.undoFailed')));
-                    },
-                },
-            });
+            const undo = () => {
+                UndoDismissNoticed(dateStr, item.id)
+                    .then(() => {
+                        setNotice(null);
+                        reload();
+                    })
+                    .catch(() => setNotice(errorNotice(t('rowActions.undoFailed'), undo)));
+            };
+            setNotice({ tone: 'done', text: t('noticed.notNowToast'), actionLabel: t('rowActions.undo'), onAction: undo });
         } catch {
-            toast.error(t('noticed.notNowFailed'));
+            setNotice(errorNotice(t('noticed.notNowFailedLine'), () => void notNow(item)));
         } finally {
             setBusy(false);
         }
@@ -259,7 +255,7 @@ export function ActivityNoticed({
                                 onClick={() => onOpenMoment(pickUp.momentId)}
                                 className="block max-w-full truncate text-left text-[11px] text-muted/80 hover:text-ink transition-colors"
                             >
-                                {t('noticed.from', { time: stitchedClock(pickUp.momentStartMs, i18n.language), title: pickUp.momentTitle })}
+                                {t('stitched.pickUp.from', { time: stitchedClock(pickUp.fromMs, i18n.language) })}
                             </button>
                         )}
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
@@ -317,19 +313,21 @@ export function ActivityNoticed({
                                 <Button size="sm" variant="ghost" onClick={() => setFollowUpFor(null)}>
                                     {t('activityCard.cancel')}
                                 </Button>
-                                {followUpFailed && <p role="alert" className="basis-full text-[12px] text-error">{t('noticed.followUpFailedInline')}</p>}
+                                {followUpFailed && <p role="alert" className="basis-full text-[12px] text-copper">{t('noticed.followUpFailedInline')}</p>}
                             </div>
                         )}
                     </li>
                 ))}
             </ul>
+            <ActivityInlineNotice notice={notice} className="px-1 pt-1.5" />
             {routineFor && (
                 <RoutineDraftDialog
                     dateStr={dateStr}
                     item={routineFor}
                     editTarget={editTarget}
                     onClose={() => { setRoutineFor(null); setEditTarget(null); }}
-                    onSaved={() => {
+                    onSaved={(text) => {
+                        setNotice(text ? { tone: 'done', text } : null);
                         setRoutineFor(null);
                         setEditTarget(null);
                         reload();
@@ -351,7 +349,7 @@ function RoutineDraftDialog({
     item: NoticedSuggestion;
     editTarget?: MobileBriefActivityTarget | null;
     onClose: () => void;
-    onSaved: () => void;
+    onSaved: (text?: string) => void;
 }) {
     const { t } = useTranslation('activity');
     const draft: NoticedRoutineDraft = item.routine ?? { name: item.text, when: '', steps: [], will: [], wont: [] };
@@ -364,12 +362,15 @@ function RoutineDraftDialog({
     const [will, setWill] = useState(draft.will.join('\n'));
     const [wont, setWont] = useState(draft.wont.join('\n'));
     const [saving, setSaving] = useState(false);
+    const [saveFailed, setSaveFailed] = useState(false);
 
     const missing = !name.trim() ? t('noticed.routine.needsName') : lines(steps).length === 0 ? t('noticed.routine.needsSteps') : '';
 
     const save = async () => {
         if (missing || saving) return;
         setSaving(true);
+        setSaveFailed(false);
+        let savedText: string | undefined;
         try {
             const nextDraft = {
                 name: name.trim(),
@@ -382,11 +383,11 @@ function RoutineDraftDialog({
                 await EditTodayNoticedSchedule(editTarget, editTarget.schedule, '', nextDraft);
             } else {
                 const saved = await SaveNoticedRoutine(dateStr, item.id, nextDraft);
-                toast.success(saved.home === 'schedule' ? t('noticed.routine.savedSchedule') : t('noticed.routine.savedKnowhow'));
+                savedText = saved.home === 'schedule' ? t('noticed.routine.savedSchedule') : t('noticed.routine.savedKnowhow');
             }
-            onSaved();
+            onSaved(savedText);
         } catch {
-            toast.error(t('noticed.routine.failed'));
+            setSaveFailed(true);
         } finally {
             setSaving(false);
         }
@@ -448,6 +449,7 @@ function RoutineDraftDialog({
                         <textarea className={inputClass} rows={2} value={wont} onChange={(e) => setWont(e.target.value)} />
                     </label>
                     {missing && <p className="text-[11px] text-muted">{missing}</p>}
+                    {saveFailed && <ActivityInlineNotice notice={errorNotice(t('noticed.routine.failed'), () => void save())} />}
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                     <Button size="sm" variant="ghost" onClick={onClose}>

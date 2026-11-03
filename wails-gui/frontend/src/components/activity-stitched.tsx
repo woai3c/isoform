@@ -2,7 +2,7 @@ import { memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, 
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { AlertCircle, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { ActivityInlineNotice, errorNotice, type ActivityNotice } from './activity-inline-notice';
 import {
     ConfirmActivityThreadLink,
     MoveActivityToThread,
@@ -136,6 +136,13 @@ export function stitchThreads(
 const HOUR_MS = 3_600_000;
 /** Go's away rule (activityThreadFocusGapMs): longer idle ends a stretch. */
 const FOCUS_GAP_MS = 10 * 60_000;
+/** An interruption is 10 minutes or more away from the work (activity
+ *  review v1.0.3 #1); a shorter hop is a plain gap: no link, no Away. */
+const INTERRUPTION_MS = 10 * 60_000;
+
+export function isInterruption(gap: ActivityThreadGap): boolean {
+    return !gap.idle && gap.end - gap.start >= INTERRUPTION_MS;
+}
 
 export function activeTime(item: StitchedThread): number {
     return item.thread.activeMs ?? item.thread.timeSpentMs;
@@ -311,7 +318,7 @@ function joinList(items: string[], language: string): string {
 // thread to a calendar day must not turn the boundary into an interruption.
 function resumeIndexes(item: StitchedThread): number[] {
     return item.stretches.flatMap((stretch, index) => index > 0 && item.gaps.some((gap) =>
-        !gap.idle && gap.end > gap.start && gap.start === item.stretches[index - 1].end && gap.end === stretch.start,
+        isInterruption(gap) && gap.start === item.stretches[index - 1].end && gap.end === stretch.start,
     ) ? [index] : []);
 }
 
@@ -331,6 +338,8 @@ export interface PickUpNotice {
     threadId: string;
     title: string;
     steppedAwayMs: number;
+    /** Where the stretch you stepped away from began. */
+    fromMs: number;
     label: string;
     momentId: string;
     momentTitle: string;
@@ -350,19 +359,25 @@ export function pickUpNotice(items: StitchedThread[], dateStr: string, now: numb
     }
     if (!best) return null;
     const last = best.stretches[best.stretches.length - 1];
+    // The stretch you stepped away from runs back across plain gaps.
+    let first = best.stretches.length - 1;
+    while (first > 0 && !best.gaps.some((gap) => isInterruption(gap)
+        && gap.start >= best!.stretches[first - 1].end && gap.end <= best!.stretches[first].start)) first--;
+    const stretch = best.stretches.slice(first);
     const lastId = last.activityIds[last.activityIds.length - 1];
     const title = splitThreadTitle(best.thread.title);
     const moment = best.moments.find((m) => m.id === lastId);
     return {
         key: `${dateStr}:${best.thread.id}:${last.end}`,
         threadId: best.thread.id,
-        title: [title.title, title.detail].filter(Boolean).join(', '),
+        title: [title.title.split(',')[0].trim(), title.detail.split(',')[0].trim()].filter(Boolean).join(' · '),
         steppedAwayMs: last.end,
+        fromMs: stretch[0].start,
         label: last.resumePoint?.label ?? '',
         momentId: moment?.id ?? '',
         momentTitle: moment?.title ?? '',
         momentStartMs: moment?.startMs ?? 0,
-        activeMs: activeTime(best),
+        activeMs: stretch.reduce((sum, item) => sum + item.activeMs, 0),
     };
 }
 
@@ -524,7 +539,7 @@ export function StitchedFailure({ onRetry }: { onRetry: () => void }) {
     return (
         <div className={cn(STATE_CARD, 'gap-2.5')}>
             <p role="alert" className="flex items-center gap-2 text-[13.5px] text-ink">
-                <AlertCircle className="size-[15px] shrink-0 text-error" />
+                <AlertCircle className="size-[15px] shrink-0 text-copper" />
                 {t('stitched.loadFailed')}
             </p>
             <div>
@@ -587,21 +602,36 @@ function gapDuration(t: TFunction<'activity'>, ms: number): string {
 }
 
 export function rowGapLabel(t: TFunction<'activity'>, item: StitchedThread, items: StitchedThread[]): string {
-    const gaps = item.gaps.filter((gap) => !gap.idle && gap.end - gap.start >= 60_000);
+    const gaps = item.gaps.filter(isInterruption);
     if (gaps.length === 0) return '';
     if (gaps.length > 1) return t('stitched.gapResumed', {
         count: gaps.length,
         duration: gapDuration(t, gaps.reduce((sum, gap) => sum + gap.end - gap.start, 0)),
     });
     const gap = gaps[0];
-    const label = interrupter(gap, items);
+    const label = interrupter(gap, items.map((other) => other.thread), item.thread.id);
     return label ? t('stitched.gapAway', { duration: formatDurationMs(gap.end - gap.start), label: splitThreadTitle(label).title })
         : t('stitched.gapAwayPlain', { duration: formatDurationMs(gap.end - gap.start) });
 }
 
-function interrupter(gap: ActivityThreadGap, items: StitchedThread[]): string {
-    return items.find((item) => item.thread.id === gap.threadId)?.thread.title
+/** What took you away: Go's label, else the drawn work that filled most of
+ *  the gap. Nothing filled it only when the computer was locked or asleep
+ *  (activity review v1.0.3 #2). */
+function interrupter(gap: ActivityThreadGap, threads: ActivityThreadView[], threadId: string): string {
+    const named = threads.find((thread) => thread.id === gap.threadId)?.title
         || (gap.label === 'away' ? '' : gap.label);
+    if (named) return named;
+    let best = '';
+    let bestMs = 0;
+    for (const thread of threads) {
+        if (thread.id === threadId) continue;
+        const ms = (thread.stretches ?? []).reduce((sum, stretch) => sum + Math.max(0, Math.min(gap.end, stretch.end) - Math.max(gap.start, stretch.start)), 0);
+        if (ms > bestMs) {
+            bestMs = ms;
+            best = thread.title;
+        }
+    }
+    return best;
 }
 
 function StitchedTimeline({
@@ -639,11 +669,6 @@ function StitchedTimeline({
     const span = range.end - range.start;
     const pct = (ms: number) => `${(((ms - range.start) / span) * 100).toFixed(3)}%`;
     const width = (ms: number) => `${((ms / span) * 100).toFixed(3)}%`;
-    const axisStep = range.step;
-    const grid: CSSProperties = {
-        backgroundImage: 'linear-gradient(to right, var(--color-border-subtle) 1px, transparent 1px)',
-        backgroundSize: `${axisStep * HOUR_MS / span * 100}% 100%`,
-    };
     const rows = useMemo(() => stitchedRows(items, resumeThreadId), [items, resumeThreadId]);
     const rowClass = (id: string) => cn(
         'flex min-h-[56px] w-full items-center rounded-md border-t border-border-divider py-2 text-left',
@@ -663,6 +688,12 @@ function StitchedTimeline({
     const language = i18n.language;
     const ticks = useMemo(() => stitchedAxisTicks(range.start, range.end, trackWidth || 300,
         (at, withPeriod) => stitchedAxisClock(at, language, t, withPeriod)), [range.start, range.end, trackWidth, language, t]);
+    // Hour lines only at the labeled hours, on the bars' scale (activity
+    // review v1.0.3 #3).
+    const hourLines = ticks.filter(({ at }) => at > range.start && at < range.end).map(({ at }) => (
+        <span key={`hour-${at}`} aria-hidden data-testid="stitched-hour-line" className="absolute inset-y-0 w-px" style={{ left: pct(at), backgroundColor: 'var(--color-border-subtle)' }} />
+    ));
+    const threadViews = useMemo(() => items.map((other) => other.thread), [items]);
     const laneModels = useMemo(() => rows.threads.map((item) => {
         const id = item.thread.id;
         const title = splitThreadTitle(item.thread.title);
@@ -674,9 +705,9 @@ function StitchedTimeline({
         const laneTip = t('stitched.segmentTip', { title: item.thread.title, span: threadSpan });
         const activeSuffix = detail ? t('stitched.laneActiveSuffix', { active: formatDurationMs(activeTime(item)) }) : meta;
         // Idle inside the same work splits the bar but is no resume: no link.
-        const gaps = item.gaps.filter((gap) => !gap.idle && gapVisible(gap, span, trackWidth)).map((gap) => {
-            const label = interrupter(gap, items);
-            const tip = gap.end - gap.start < 60_000 ? undefined : t(label ? 'stitched.gapTip' : 'stitched.gapTipPlain', {
+        const gaps = item.gaps.filter((gap) => isInterruption(gap) && gapVisible(gap, span, trackWidth)).map((gap) => {
+            const label = interrupter(gap, threadViews, id);
+            const tip = t(label ? 'stitched.gapTip' : 'stitched.gapTipPlain', {
                 duration: formatDurationMs(gap.end - gap.start),
                 span: t('threads.span', { start: clock(gap.start), end: clock(gap.end) }), label,
             });
@@ -690,7 +721,7 @@ function StitchedTimeline({
         return { item, id, title, detail, meta, threadSpan, laneTip, activeSuffix, gaps, stretches, gapSummary };
         // trackWidth only decides which gaps clear the 4 px minimum.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), [rows, titles, items, language, t, trackWidth]);
+    }), [rows, titles, items, threadViews, language, t, trackWidth]);
     const aggregateModels = useMemo(() => [
         { id: 'aggregate:other', members: rows.otherWork, short: false },
         { id: 'aggregate:short', members: rows.shortMoments, short: true },
@@ -732,7 +763,7 @@ function StitchedTimeline({
                         </div>
                         <div className={GAP_COLUMN} />
                     </div>
-                    {laneModels.map(({ item, id, title, detail, meta, threadSpan, laneTip, activeSuffix, gaps, stretches, gapSummary }) => {
+                    {laneModels.map(({ item, id, title, detail, meta, laneTip, activeSuffix, gaps, stretches, gapSummary }) => {
                         const selected = selectedThreadId === id;
                         return (
                             <button key={id} type="button" data-thread-lane={id} data-interruption={item.interruption ? 'true' : undefined}
@@ -745,7 +776,8 @@ function StitchedTimeline({
                                         <span className="shrink-0 whitespace-pre">{activeSuffix}</span>
                                     </span>
                                 </span>
-                                <span className="relative block h-[22px] min-w-[300px] flex-1 overflow-hidden" style={grid}>
+                                <span className="relative block h-[22px] min-w-[300px] flex-1 overflow-hidden">
+                                    {hourLines}
                                     {gaps.map(({ gap, tip }) => (
                                         <span key={`gap-${gap.start}`} data-testid="stitched-gap-link" title={tip} aria-label={tip}
                                             className="absolute top-[10px] border-t-2 border-dashed border-accent" style={{ left: pct(gap.start), width: width(gap.end - gap.start) }} />
@@ -760,7 +792,7 @@ function StitchedTimeline({
                                         </span>
                                     ))}
                                 </span>
-                                <span className={cn(GAP_COLUMN, 'whitespace-nowrap text-[11.5px] text-muted')} data-testid={gapSummary ? 'stitched-gap-label' : undefined}>{gapSummary}</span>
+                                <span className={cn(GAP_COLUMN, 'text-[11.5px] leading-snug text-muted')} data-testid={gapSummary ? 'stitched-gap-label' : undefined}>{gapSummary}</span>
                             </button>
                         );
                     })}
@@ -769,7 +801,8 @@ function StitchedTimeline({
                             <div key={id}>
                                 <button type="button" data-aggregate-lane={id} className={rowClass(id)} aria-pressed={selectedThreadId === id} aria-expanded={selectedThreadId === id} onClick={() => select(id)}>
                                     <span className={cn(LABEL_COLUMN, 'px-2 text-[13px] font-semibold text-ink')}>{label}</span>
-                                    <span className="relative block h-[22px] min-w-[300px] flex-1 overflow-hidden" style={grid}>
+                                    <span className="relative block h-[22px] min-w-[300px] flex-1 overflow-hidden">
+                                        {hourLines}
                                         {aggregateTicks.map((stretch, i) => (
                                             <span key={i} data-testid="stitched-tick" data-interruption={stretch.interruption ? 'true' : undefined} className={cn('absolute top-1 h-3.5 rounded-sm', stretch.interruption ? 'bg-faint' : 'bg-ink')} style={{ left: `min(${pct(stretch.start)}, calc(100% - 6px))`, width: '6px' }} />
                                         ))}
@@ -795,10 +828,10 @@ function StitchedTimeline({
     );
 }
 
-function gapLabel(t: TFunction<'activity'>, gap: ActivityThreadGap): string {
-    if (gap.idle || gap.end - gap.start < 60_000) return '';
-    const plain = !gap.label || (gap.label === 'away' && !gap.threadId);
-    return plain ? t('stitched.stripAwayPlain') : t('stitched.stripAway', { label: splitThreadTitle(gap.label).title });
+function gapLabel(t: TFunction<'activity'>, gap: ActivityThreadGap, threads: ActivityThreadView[], threadId: string): string {
+    if (!isInterruption(gap)) return '';
+    const label = interrupter(gap, threads, threadId);
+    return label ? t('stitched.stripAway', { label: splitThreadTitle(label).title }) : t('stitched.stripAwayPlain');
 }
 
 // ── Thread card ──
@@ -827,14 +860,14 @@ export function pointWhat(text: string | undefined, kind?: string): string {
     return /\.[a-z0-9]{1,8}$/i.test(name) ? name : '';
 }
 
-/** Where a stretch ended (its resume point, else what its last moment
- *  changed) or where one began (its first moment). */
+/** Where a stretch ended or began: the thing you were in, never a summary
+ *  of what you did (activity review v1.0.4). */
 function stretchPoint(item: StitchedThread, stretch: ActivityThreadStretch, at: 'end' | 'start'): string {
     const id = at === 'end' ? stretch.activityIds[stretch.activityIds.length - 1] : stretch.activityIds[0];
     const moment = item.moments.find((m) => m.id === id);
     if (at === 'end') {
-        return pointWhat(stretch.resumePoint?.label, stretch.resumePoint?.kind) || pointWhat(moment?.latestChange)
-            || pointWhat(moment?.description) || pointWhat(moment?.title);
+        // Left off at is its resume point, else the time alone.
+        return pointWhat(stretch.resumePoint?.label, stretch.resumePoint?.kind);
     }
     // Picked back up names the thing you were in, never what you did there
     // (activity review v1.0.1 #3): the stretch's resume point, else a moment
@@ -850,7 +883,7 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
     // Timeline labels may show only the leading segment. A full card keeps
     // the original title unless the day supplied a disambiguated name.
     const cardTitle = title === splitThreadTitle(thread.title).title ? thread.title : title;
-    const { renaming, setRenaming, busy: renameBusy, rename } = useThreadRename(thread.id);
+    const { renaming, setRenaming, busy: renameBusy, rename, renameFailed } = useThreadRename(thread.id);
     const [busy, setBusy] = useState(false);
     // A confirmation holds for the members it was given to; Go clears it
     // when membership changes.
@@ -860,7 +893,7 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
 
     const first = stretches[0];
     const last = stretches[stretches.length - 1];
-    const awayMs = gaps.reduce((sum, gap) => sum + (gap.idle ? 0 : Math.max(0, gap.end - gap.start)), 0);
+    const awayMs = gaps.filter(isInterruption).reduce((sum, gap) => sum + gap.end - gap.start, 0);
     const resumes = resumeIndexes(item);
     const apps = threadAppNames(item.moments).slice(0, 3);
     const stats = [
@@ -884,14 +917,16 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
     const leftOff = latestResume !== undefined ? point(stretches[latestResume - 1], 'end') : item.live || item.continuesAfter || idleOnly ? null : point(last, 'end');
     const pickedUp = latestResume !== undefined ? point(stretches[latestResume], 'start') : null;
 
+    const [correctionNotice, setCorrectionNotice] = useState<ActivityNotice | null>(null);
     const confirm = async () => {
         setBusy(true);
+        setCorrectionNotice(null);
         try {
             await ConfirmActivityThreadLink(thread.id);
             setConfirmedFor(membership);
         } catch (err) {
             console.error('[activity] confirm thread link failed:', err);
-            toast.error(t('stitched.correctionFailed'));
+            setCorrectionNotice(errorNotice(t('stitched.correctionFailed'), () => void confirm()));
         } finally {
             setBusy(false);
         }
@@ -908,7 +943,7 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
             }
         } catch (err) {
             console.error('[activity] move stretch failed:', err);
-            toast.error(t('stitched.correctionFailed'));
+            setCorrectionNotice(errorNotice(t('stitched.correctionFailed'), () => void moveStretch(stretch, target)));
         } finally {
             setBusy(false);
         }
@@ -953,7 +988,7 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
                                         flex: `${gap.end - gap.start} 1 0`,
                                     }}
                                 >
-                                    <span className="min-w-0 truncate">{gapLabel(t, gap)}</span>
+                                    <span className="min-w-0 truncate">{gapLabel(t, gap, threads, thread.id)}</span>
                                 </span>
                             ) : null,
                             <span
@@ -1033,6 +1068,7 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
                             </Button>
                         )}
                     </div>
+                    <ActivityInlineNotice notice={correctionNotice} className="pt-1.5" />
                 </div>
             )}
             {renaming && (
@@ -1043,6 +1079,7 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
                     onCancel={() => setRenaming(false)}
                 />
             )}
+            {renameFailed}
         </article>
     );
 });

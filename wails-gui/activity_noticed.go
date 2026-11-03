@@ -436,7 +436,10 @@ func (a *App) noticedOpenCommitmentTitles() map[string]bool {
 // a later generation for the date replaces them.
 func (a *App) saveNoticed(dateStr, language string, generation int, raws []noticedRaw) {
 	items := make([]NoticedSuggestion, 0, len(raws))
+	self := a.activitySelfNames()
 	for _, raw := range raws {
+		raw.Text = secondPersonLine(raw.Text, self)
+		raw.Why = secondPersonLine(raw.Why, self)
 		kind := strings.TrimSpace(raw.Kind)
 		text := activityCorrectionText(raw.Text, noticedTextMaxRunes)
 		if (kind != noticedKindFollowUp && kind != noticedKindRoutine) || text == "" {
@@ -583,6 +586,7 @@ func (a *App) GetDayNoticed(dateStr string) (perfValue []NoticedSuggestion, perf
 	if checked == nil {
 		checked = []NoticedSuggestion{}
 	}
+	a.secondPersonNoticed(checked)
 	return checked, nil
 }
 

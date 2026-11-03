@@ -1,7 +1,9 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Copy, RefreshCw, Loader2, MessageCircle } from 'lucide-react';
 import { DigestMarkdown } from './digest-markdown';
+import { ActivityAskInline } from './activity-ask-inline';
+import type { TodayChatContextRef } from '@/lib/today-chat-navigation';
 import { NativeClipboardSetText } from '../../wailsjs/go/main/App';
 import { ClipboardSetText } from '../../wailsjs/runtime/runtime';
 
@@ -50,12 +52,12 @@ export function firstDigestSentence(summary: string): string {
 
 function formatGeneratedAt(ms: number): string {
     if (!ms) return '';
-    return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 // ── Digest card ──
 
-export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage, generating, autoStatus, onGenerate, onAskAI, scope, isPartial, summaryCreatedAt, children, emptyActionLabel }: {
+export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage, generating, autoStatus, onGenerate, askContext, scope, summaryCreatedAt, children, emptyActionLabel, emptyText }: {
     isToday?: boolean; summary: string; summaryStatus: string;
     cachedLanguage?: string;
     generating: boolean;
@@ -64,7 +66,8 @@ export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage,
      *  or "unavailable" (no summary and none being made). */
     autoStatus?: string;
     onGenerate: () => void;
-    onAskAI?: () => void; scope?: 'daily' | 'weekly';
+    /** Chat about this day/week, asked in place under the card. */
+    askContext?: TodayChatContextRef; scope?: 'daily' | 'weekly';
     isPartial?: boolean; summaryCreatedAt?: number;
     /** Rendered at the bottom of the card (the Day view's numbers line and
      *  Details disclosure live there). */
@@ -72,10 +75,13 @@ export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage,
     /** When set, the no-digest state is one quiet button with this label
      *  instead of the explanatory text row. */
     emptyActionLabel?: string;
+    /** The sentence beside emptyActionLabel ("This day isn't written yet."). */
+    emptyText?: string;
 }) {
     const { t, i18n } = useTranslation('activity');
     const [copied, setCopied] = useState(false);
-    const displaySummary = cleanSummaryText(summary);
+    const [asking, setAsking] = useState(false);
+    const nextSummary = cleanSummaryText(summary);
     // Isoform is writing the summary on its own: the cached one stays
     // readable with a quiet line, and nothing asks the user to write it. Its
     // run fires the same generating event a user's click does, so a run Go
@@ -83,10 +89,13 @@ export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage,
     const autoWriting = autoStatus === 'refreshing';
     const userGenerating = generating && !autoWriting;
     const busy = generating || autoWriting;
-    const writingLine = autoWriting ? (
+    const heldSummary = useRef(nextSummary);
+    if (!busy || !nextSummary || !heldSummary.current) heldSummary.current = nextSummary;
+    const displaySummary = heldSummary.current;
+    const writingLine = busy ? (
         <p className="flex items-center gap-1.5 text-[12px] text-muted">
             <Loader2 className="h-3 w-3 animate-spin" />
-            {scope === 'weekly' ? (t('summary.card.writingWeek') as string) : (t('summary.card.writingDay') as string)}
+            {displaySummary ? t('summary.card.writingNewer') : scope === 'weekly' ? t('summary.card.writingWeek') : t('summary.card.writingDay')}
         </p>
     ) : null;
     const digestLabel = scope === 'weekly' ? (t('summary.card.weeklyDigest') as string) : (t('summary.card.digest') as string);
@@ -131,49 +140,37 @@ export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage,
             ) : displaySummary ? (
                 <>
                     {writingLine}
-                    <DigestMarkdown text={displaySummary} className={userGenerating ? 'opacity-50' : ''} />
+                    <DigestMarkdown text={displaySummary} />
                     <div className="flex items-center gap-2 pt-1 flex-wrap">
-                        {onAskAI && (
+                        {askContext && (
                             <SmallButton
                                 icon={MessageCircle}
                                 label={scope === 'weekly' ? (t('summary.card.chatAboutWeek') as string) : (t('summary.card.chatAboutDay') as string)}
-                                onClick={onAskAI}
-                                disabled={userGenerating}
+                                onClick={() => setAsking((open) => !open)}
+                                disabled={false}
                             />
                         )}
                         {/* The cached summary stays usable while Isoform refreshes it. */}
-                        <SmallButton icon={Copy} label={copied ? (t('summary.card.copied') as string) : (t('summary.card.copy') as string)} onClick={handleCopy} disabled={userGenerating} />
+                        <SmallButton icon={Copy} label={copied ? (t('summary.card.copied') as string) : (t('summary.card.copy') as string)} onClick={handleCopy} />
                         <SmallButton
                             icon={userGenerating ? Loader2 : RefreshCw}
-                            label={userGenerating ? (t('summary.card.regenerating', { label: digestLabel }) as string) : (t('summary.card.regenerate', { label: digestLabel }) as string)}
+                            label={t('summary.card.writeAgain')}
                             onClick={onGenerate}
                             disabled={busy}
                             spinning={userGenerating}
                         />
                     </div>
-                    {isPartial && summaryCreatedAt ? (
-                        <DigestFreshnessFooter
-                            text={isToday
-                                ? (t('summary.card.freshnessTodayPartial', { time: formatGeneratedAt(summaryCreatedAt) }) as string)
-                                : (t('summary.card.freshnessPastPartial') as string)}
-                            action={isToday ? (userGenerating ? (t('summary.card.refreshing') as string) : (t('summary.card.refresh') as string)) : undefined}
-                            disabled={busy}
-                            onAction={isToday ? onGenerate : undefined}
-                        />
+                    {asking && askContext && <ActivityAskInline context={askContext} onClose={() => setAsking(false)} />}
+                    {!busy && summaryCreatedAt ? (
+                        <DigestFreshnessFooter text={t('summary.card.writtenAt', { time: formatGeneratedAt(summaryCreatedAt) })} />
                     ) : null}
                     {showLanguageHint ? (
-                        <DigestFreshnessFooter
-                            text={t('summary.card.languageHint', { lang: languageDisplayName(cachedLang) }) as string}
-                            action={userGenerating
-                                ? (t('summary.card.regenerating', { label: digestLabel }) as string)
-                                : (t('summary.card.regenerateInCurrent', { lang: languageDisplayName(uiLang) }) as string)}
-                            disabled={busy}
-                            onAction={onGenerate}
-                        />
+                        <DigestFreshnessFooter text={t('summary.card.languageHint', { lang: languageDisplayName(cachedLang) })} />
                     ) : null}
                 </>
             ) : emptyActionLabel ? (
-                <div>
+                <div className="flex items-center justify-between gap-3">
+                    {emptyText && <p className="text-[13px] text-muted/80 leading-relaxed">{emptyText}</p>}
                     <button
                         type="button"
                         onClick={onGenerate}
@@ -188,13 +185,13 @@ export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage,
                 <div className="flex items-center justify-between gap-3">
                     <p className="text-[13px] text-muted/80 leading-relaxed">
                         {isToday ? (t('summary.card.todayUnfolding') as string)
-                            : summaryStatus === 'none' ? (scope === 'weekly' ? (t('summary.card.noneWeek') as string) : (t('summary.card.noneDay') as string))
+                            : summaryStatus === 'none' ? (scope === 'weekly' ? (t('summary.card.weekNotWritten') as string) : (t('summary.card.noneDay') as string))
                             : (scope === 'weekly' ? (t('summary.card.unavailableWeek') as string) : (t('summary.card.unavailableDay') as string))}
                     </p>
                     <button onClick={onGenerate} disabled={busy}
                         className="shrink-0 flex items-center gap-1.5 h-8 px-3 text-[12px] rounded-md border border-border bg-transparent text-ink hover:bg-ink/[0.04] transition-colors">
                         {userGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                        {userGenerating ? (t('summary.generating') as string) : (t('summary.card.generate', { label: digestLabel }) as string)}
+                        {userGenerating ? (t('summary.generating') as string) : scope === 'weekly' ? (t('summary.card.writeIt') as string) : (t('summary.card.generate', { label: digestLabel }) as string)}
                     </button>
                 </div>
             )}

@@ -171,6 +171,26 @@ describe('Meeting notes on Activity', () => {
         expect(container).toBeEmptyDOMElement();
     });
 
+    it('keeps the meeting section and retries a failed load', async () => {
+        mocks.getNotes.mockRejectedValueOnce(new Error('offline')).mockResolvedValue([meeting()]);
+        render(<ActivityMeetingNotes sessionIds={['session-1']} bridgePort={4242} />);
+        expect(await screen.findByText("Couldn't load meeting notes.")).toBeInTheDocument();
+        expect(screen.getByText('Meeting notes')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        expect(await screen.findByText('Halcyon studio review')).toBeInTheDocument();
+    });
+
+    it('keeps notes and retries a failed delete in place', async () => {
+        mocks.deleteNotes.mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
+        render(<ActivityMeetingNotes sessionIds={['session-1']} bridgePort={4242} />);
+        fireEvent.click(await screen.findByRole('button', { name: 'Delete notes and recording' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+        expect(await screen.findByText("Couldn't delete these notes.")).toBeInTheDocument();
+        expect(screen.getByText('Halcyon studio review')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        await waitFor(() => expect(screen.queryByText('Meeting notes')).not.toBeInTheDocument());
+    });
+
     it('deletes the notes and the recording after the user confirms', async () => {
         render(<ActivityMeetingNotes sessionIds={['session-1']} bridgePort={4242} />);
         fireEvent.click(await screen.findByRole('button', { name: 'Delete notes and recording' }));

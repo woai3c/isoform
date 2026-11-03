@@ -72,7 +72,9 @@ Each observation marks an INDEPENDENT source. Material from different apps may b
 - keywords: 3-5 concise core identifiers shown to the user as tags. Keep ONLY keywords that uniquely locate this event. Priority: proper nouns (project name, file name) > core tech names (framework, library). Exclude: generic words ("coding", "browsing", "type safety"); near-synonym duplicates (keep only one of "schema validation" / "data validation"). A key project/file name may repeat one already in the title (these tags double as click-to-filter handles, so that overlap is useful) — but don't waste a slot on a filler word the title already conveys. Unlike entities, keywords are a curated, precision-first DISPLAY label set — favor what a person recognizes at a glance over coverage, and never exceed 5.
 - source_indices: 0-based observation indices this event is built from. The same observation may appear in multiple events. Every event must reference at least one observation.
 - continuation_of_previous: true only if this event continues the immediately previous event's same work (a stitching hint).
-- task_worthy: true for goal-oriented work (coding, debugging, writing, configuring, deploying, reviewing PRs, technical discussion) OR substantive research / learning on a coherent topic — even via videos, forums, or search (e.g. researching cold brew coffee, comparing tennis gear, studying a framework). false for: opening or switching apps, glancing at notifications, momentary actions, AIMLESS social-media scrolling or idle entertainment with NO coherent thread, or checking your own activity logs. The test is INTENT: a real thread of interest/work = true; mindless flipping = false.`
+- task_worthy: true for goal-oriented work (coding, debugging, writing, configuring, deploying, reviewing PRs, technical discussion) OR substantive research / learning on a coherent topic — even via videos, forums, or search (e.g. researching cold brew coffee, comparing tennis gear, studying a framework). false for: opening or switching apps, glancing at notifications, momentary actions, AIMLESS social-media scrolling or idle entertainment with NO coherent thread, or checking your own activity logs. The test is INTENT: a real thread of interest/work = true; mindless flipping = false.
+
+` + activitySecondPersonRule
 
 const eventExtractionJSONInstruction = `Respond with ONLY a JSON object (no markdown, no code fences):
 { "events": [ { "title": "...", "description": "...", "category": "build|connect|explore|sustain", "entities": [{"type":"repo|project|pr|channel|person|topic","name":"..."}], "keywords": ["...", "..."], "source_indices": [0, 1], "continuation_of_previous": false, "task_worthy": true } ] }
@@ -137,7 +139,9 @@ Your job: decide whether these observations are truly ONE piece of work, and re-
 - task_worthy: true for goal-oriented work or substantive research; false for idle/mechanical activity.
 
 ## Account for EVERY observation (REQUIRED)
-Every observation index MUST be accounted for EXACTLY ONCE — either inside one event's source_indices OR listed in "dropped_indices" (with a short reason in "drop_reasons"). Put an index in dropped_indices when it is pure noise (a glance, notification, app switch, empty frame). Do NOT leave any index out of both: an omitted index is treated as an invalid response.`
+Every observation index MUST be accounted for EXACTLY ONCE — either inside one event's source_indices OR listed in "dropped_indices" (with a short reason in "drop_reasons"). Put an index in dropped_indices when it is pure noise (a glance, notification, app switch, empty frame). Do NOT leave any index out of both: an omitted index is treated as an invalid response.
+
+` + activitySecondPersonRule
 
 const coherenceVerifyJSONInstruction = `Respond with ONLY a JSON object (no markdown, no code fences):
 { "events": [ { "title": "...", "description": "...", "category": "build|connect|explore|sustain", "entities": [{"type":"repo|project|pr|channel|person|topic","name":"..."}], "source_indices": [0, 1], "continuation_of_previous": false, "task_worthy": true } ], "dropped_indices": [2], "drop_reasons": {"2": "notification glance"} }

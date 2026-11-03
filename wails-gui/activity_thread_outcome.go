@@ -318,6 +318,7 @@ func buildThreadOutcomePrompt(evidence []threadOutcomeEvidence, language string,
 Use the FINAL visible state, not an earlier cart/answer/draft. If the final screen says [Screen text not yet available], the end state is incomplete; state the last observed progress with one pointed question or return null. Distinguish a checkout form from an order confirmation. Never infer purchase, saving, sending, agreement or completion from opening, typing, copying, or an assistant's proposed action.
 Kinds/states: purchase: cart_left, checkout_started, order_placed; assistant: answered, acted_on; document: draft, saved, decision; research: conclusion; any of these kinds: incomplete. For an assistant summarize the LAST answer's gist and set answerRef to the cited screen containing that last answer (omit it when no answer is visible and the state is incomplete). Set userActed=observed only when a later user action is explicitly evidenced, otherwise not_observed. A later document screen can follow that user action. A research conclusion must be a conclusion sentence the user typed or copied, not a claim from a viewed page. For a document give its final visible state and any explicit decision line the user typed. Do not treat a question, rejected option or TODO as a decision.
 Give a compact specific summary (one complete sentence, <=140 bytes) grounded in quoted evidence. Typed-text diffs show what the user did; never quote, repeat or narrate what they typed into a terminal, a chat box or a form (no "you typed"). Describe the work and its state in your own words. When the work is unfinished, write the summary as one sentence to the user about what they were doing ("You were going through what Isoform learned about you."); never a template such as "X has a next step". A purchase summary names the item and whether it is in the cart, at checkout, or confirmed; order numbers must say [masked]. If unfinished and a useful next step exists, propose exactly one nextStep (<=120 bytes), with action=order|reply|schedule|review. Write nextStep as one imperative action, never a question. A proposal never grants permission. Only state=incomplete may carry one pointed question about the missing end state, with no generic uncertainty language. Completed outcomes have no question. If no supported outcome exists return null. No "I can't tell", "I can't see", "worth a quick look to see if it's settled" or equivalent evasive copy.
+` + activitySecondPersonRule + `
 Reply JSON only: {"kind":"purchase|assistant|document|research","state":"...","summary":"...","nextStep":"...","action":"...","question":"...","userActed":"observed|not_observed","answerRef":"f1","confidence":0.9,"evidence":[{"ref":"f1","quote":"exact supporting substring"}]}.
 Confidence is 0..1. Cite the latest relevant frame and each distinct fact/action; quotes must occur literally in the cited text. Never cite identifiers or facts not in the observations. ` + responseLanguageInstruction(language) + label + "\nObservations:\n" + string(raw)
 }
@@ -541,7 +542,9 @@ func (a *App) readableThreadOutcome(ctx context.Context, row ActivityRow) *Activ
 		return nil
 	}
 	subjects, err := mobileBriefMailSubjectsContext(ctx, a)
-	return readableThreadOutcomeEvidence(row, evidence, allowed && err == nil, subjects)
+	outcome := readableThreadOutcomeEvidence(row, evidence, allowed && err == nil, subjects)
+	secondPersonOutcome(outcome, a.activitySelfNames())
+	return outcome
 }
 
 func readableThreadOutcomeEvidence(row ActivityRow, evidence []threadOutcomeEvidence, allowed bool, subjects []string) *ActivityThreadOutcome {

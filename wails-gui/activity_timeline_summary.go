@@ -296,6 +296,8 @@ Rules:
 - Do not include status, confidence, intent, timestamps, event indexes, or invented ids.
 - If evidence is thin, stay conservative — but still name whatever specific content is visible.
 
+` + activitySecondPersonRule + `
+
 JSON shape:
 {
   "title": "Verb + specific artifact",
