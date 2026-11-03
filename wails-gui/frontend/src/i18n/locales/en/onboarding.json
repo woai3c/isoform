@@ -585,7 +585,7 @@
         "continue": "Continue",
         "notices": {
             "title": "Notices what needs doing. Gets it ready.",
-            "line": "Isoform follows your work on this computer and gets the next step ready. Screenshots and audio stay here.",
+            "line": "Isoform follows your work on this computer and gets the next step ready. Screenshots and audio are stored here.",
             "hours": {
                 "h7": "7 AM",
                 "h10": "10",
@@ -694,7 +694,7 @@
             "openSettings": "Open Settings",
             "openSettingsNamed": "Open Settings for {{name}}",
             "turnOn": "Turn on",
-            "done": "Everything is on. Screenshots and audio stay on this computer.",
+            "done": "Everything is on. Screenshots and audio are stored on this computer.",
             "failed": "Couldn't ask for that. Try again.",
             "reopenFailed": "Isoform couldn't reopen itself. Quit and open it again."
         },

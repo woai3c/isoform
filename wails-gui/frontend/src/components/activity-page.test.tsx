@@ -185,14 +185,14 @@ describe('ActivityPage section panel', () => {
 
     it('states only the supported privacy line on the Screen timeline', async () => {
         await act(async () => { render(<Harness initialSection="timeline" />); });
-        expect(screen.getByText('Screenshots and audio stay on your computer.')).toBeInTheDocument();
+        expect(screen.getByText('Screenshots and audio are stored on your computer.')).toBeInTheDocument();
         expect(screen.queryByText(/redact|passwords|API keys/i)).not.toBeInTheDocument();
     });
 
     it('localizes the Screen timeline privacy line', async () => {
         await i18n.changeLanguage('zh-CN');
         await act(async () => { render(<Harness initialSection="timeline" />); });
-        expect(screen.getByText('屏幕截图和音频留在你的电脑上。')).toBeInTheDocument();
+        expect(screen.getByText('屏幕截图和音频存储在你的电脑上。')).toBeInTheDocument();
         expect(screen.queryByText(/脱敏|密码|API 密钥/)).not.toBeInTheDocument();
     });
 
