@@ -46,7 +46,7 @@ func briefPicksFixture() MobileBriefV1 {
 	shape := MobileBriefItem{Key: "meetings.shape", Title: "The shape of today", Status: "day_shape", Kind: "day_shape", At: "2026-10-20T07:00:00Z", Refs: []string{"e24"}}
 	discovery := MobileBriefItem{Key: "openLoops.discovery", Title: "Discovery", Status: "active", Kind: "commitment", DueAt: "2026-03-21T06:59:59Z",
 		Since: "2026-10-18T06:00:24Z", Refs: []string{"e6"}, AttentionReason: "Was due March 20", AttentionRank: 1}
-	lamp := MobileBriefItem{Key: "openLoops.lamp", Title: "follow-up Priya lamp: Halcyon Arc dimmer", Status: "active", Kind: "commitment",
+	shoe := MobileBriefItem{Key: "openLoops.shoe", Title: "follow-up Sam shoe: insert on one shoe", Status: "active", Kind: "commitment",
 		Since: "2026-10-18T06:00:24Z", Refs: []string{"e7"}}
 	retune := MobileBriefItem{Key: "openLoops.retune", Title: "The briefing needs retuning to sound more proactive.", Status: "needs_review",
 		Kind: mobileBriefThreadOutcomeSource, At: "2026-10-18T18:02:18Z", Since: "2026-10-18T18:00:19Z", Refs: []string{"e8"},
@@ -61,8 +61,8 @@ func briefPicksFixture() MobileBriefV1 {
 	page := MobileBriefItem{Key: "doing.page", Title: "Hacker News: agents everywhere", Status: "opened", Kind: "web", At: "2026-10-19T20:00:00Z", Refs: []string{"e30"}}
 	news := MobileBriefItem{Key: "watching.news", Title: "Three coding agents ship updates", Status: "news", Kind: "news", At: "2026-10-19T15:00:38Z", Refs: []string{"e19"}}
 	learned := MobileBriefItem{Key: "learned.eeg", Title: "Surveying EEG hardware for a wearable prototype", Status: "updated", Kind: "memory", At: "2026-10-20T13:56:00Z", Refs: []string{"e25"}}
-	working := []MobileBriefItem{discovery, lamp}
-	working[0].Key, working[1].Key = "workingToward.discovery", "workingToward.lamp"
+	working := []MobileBriefItem{discovery, shoe}
+	working[0].Key, working[1].Key = "workingToward.discovery", "workingToward.shoe"
 	working[0].Detail, working[1].Detail = "No linked activity recorded yet.", "No linked activity recorded yet."
 	commitment := discovery
 	commitment.Key, commitment.Status = "commitments.discovery", "slipping"
@@ -76,7 +76,7 @@ func briefPicksFixture() MobileBriefV1 {
 			Commitments:   []MobileBriefItem{commitment},
 			WorkingToward: working,
 			Meetings:      []MobileBriefItem{deep, doctor, dinner, oneOnOne, checkIn, shape},
-			OpenLoops:     []MobileBriefItem{discovery, lamp, retune},
+			OpenLoops:     []MobileBriefItem{discovery, shoe, retune},
 			Moved:         []MobileBriefItem{thread, typed, research},
 			Doing:         []MobileBriefItem{page},
 			Watching:      []MobileBriefItem{news},
@@ -84,7 +84,7 @@ func briefPicksFixture() MobileBriefV1 {
 		},
 		Evidence: []MobileBriefRef{
 			{Ref: "e6", SourceKind: "purpose", SourceID: "purpose-discovery", Label: "Discovery"},
-			{Ref: "e7", SourceKind: "purpose", SourceID: "purpose-lamp", Label: "follow-up Priya lamp: Halcyon Arc dimmer"},
+			{Ref: "e7", SourceKind: "purpose", SourceID: "purpose-shoe", Label: "follow-up Sam shoe: insert on one shoe"},
 			{Ref: "e8", SourceKind: "summary", SourceID: "summary-retune", Label: "The briefing needs retuning."},
 			{Ref: "e9", SourceKind: "calendar", SourceID: "event-deep", Label: "Deep work"},
 			{Ref: "e10", SourceKind: "calendar", SourceID: "event-doctor", Label: "Dr Lee"},
@@ -132,7 +132,7 @@ func TestMobileBriefPicksTheDayThatMatters(t *testing.T) {
 	}
 	prompt := mobileBriefTestPrompt(brief, "English")
 	for _, want := range []string{"Northwind Weekly Check In | on now | Microsoft Teams; Andy Reed, Aaron Cole, Diego Park, +5; invite not answered",
-		"e22 | 1:1 with Wei | at 7:30 PM | Halcyon Meet", "open since last Sunday", "a follow-up you owe someone", "draft the follow-up on Priya lamp"} {
+		"e22 | 1:1 with Wei | at 7:30 PM | Halcyon Meet", "open since last Sunday", "a follow-up you owe someone", "draft the follow-up on Sam shoe"} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("prompt lacks %q:\n%s", want, prompt)
 		}
@@ -231,7 +231,7 @@ func TestMobileBriefOffersFollowThePicks(t *testing.T) {
 	if len(offers) != 2 || offers[0].Refs[0] != "e23" || offers[1].Refs[0] != "e7" || offers[1].Kind != "follow_up" {
 		t.Fatalf("offers = %+v", offers)
 	}
-	if offers[1].Label != "Follow up on Priya lamp" || !strings.Contains(offers[1].Prompt, "do not send it") {
+	if offers[1].Label != "Follow up on Sam shoe" || !strings.Contains(offers[1].Prompt, "do not send it") {
 		t.Fatalf("follow-up offer = %+v", offers[1])
 	}
 }
@@ -245,7 +245,7 @@ func TestMobileBriefPromptIsShort(t *testing.T) {
 	prompt := buildMobileBriefNarrativePrompt(brief, mobileBriefPicks(brief), profile, nil, "English")
 	for _, want := range []string{"chief of staff to Alex", "Working toward this week: Launch the beta", "How they work: Builds product with coding agents",
 		"Morning: Good morning.", "Evening: Tomorrow starts", "1. Lead with what matters most", "2. Say why", "3. Give each item one next step",
-		"4. End with one question", "5. Write 150 to 300 words", "offer-1 | Prep for Northwind Weekly Check In", "offer-2 | Follow up on Priya lamp",
+		"4. End with one question", "5. Write 150 to 300 words", "offer-1 | Prep for Northwind Weekly Check In", "offer-2 | Follow up on Sam shoe",
 		`"closing":{"text":"...?","card":"offer-1","answers":[`} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("prompt lacks %q", want)
@@ -314,7 +314,7 @@ func TestMobileBriefPromptCardsAreThePicks(t *testing.T) {
 	_, brief.Offers = mobileBriefClosing(brief, "English")
 	cards := mobileBriefPatternCards(brief, "English")
 	prompt := buildMobileBriefNarrativePrompt(brief, mobileBriefPicks(brief), mobileBriefProfile{}, cards, "English")
-	if !strings.Contains(prompt, "offer-2 | button | label: Follow up on Priya lamp") {
+	if !strings.Contains(prompt, "offer-2 | button | label: Follow up on Sam shoe") {
 		t.Fatalf("the pick's button is missing:\n%s", prompt)
 	}
 	for _, word := range append(briefPicksActivityWords, "Discovery") {
@@ -325,7 +325,7 @@ func TestMobileBriefPromptCardsAreThePicks(t *testing.T) {
 }
 
 // One pick is said with the day, with its age, and the closing offers its
-// button: the lamp follow-up must not drop out.
+// button: on 10-19 the shoe follow-up must not drop out (hub, 2026-10-20).
 func TestMobileBriefOnePickIsSaidWithTheDay(t *testing.T) {
 	brief := briefPicksFixture()
 	brief.Sections.Meetings = brief.Sections.Meetings[:3] // deep work, the appointment, dinner
@@ -339,8 +339,8 @@ func TestMobileBriefOnePickIsSaidWithTheDay(t *testing.T) {
 		t.Fatalf("buttons = %+v", buttons)
 	}
 	prompt := buildMobileBriefNarrativePrompt(brief, picks, mobileBriefProfile{}, nil, "English")
-	for _, want := range []string{"e7 | a follow-up you owe someone | follow-up Priya lamp: Halcyon Arc dimmer | open since last Saturday",
-		buttons[0].ID + " | Follow up on Priya lamp", "4. End with one question", "stay shorter rather than pad", `"closing"`} {
+	for _, want := range []string{"e7 | a follow-up you owe someone | follow-up Sam shoe: insert on one shoe | open since last Saturday",
+		buttons[0].ID + " | Follow up on Sam shoe", "4. End with one question", "stay shorter rather than pad", `"closing"`} {
 		if !strings.Contains(prompt, want) {
 			t.Errorf("prompt lacks %q:\n%s", want, prompt)
 		}
@@ -351,8 +351,8 @@ func TestMobileBriefOnePickIsSaidWithTheDay(t *testing.T) {
 		}
 	}
 	day := "You have deep work at 12:30pm, then Dr Lee at 3pm and dinner at 6pm."
-	lamp := "The Halcyon Arc lamp dimmer follow-up with Priya has been open since last Saturday, and I can draft the note for you."
-	raw := `{"paragraphs":[{"text":"` + day + `","refs":["e9","e10","e11"]},{"text":"` + lamp + `","refs":["e7"]}],"closing":{"text":"Want me to draft the note to Priya?","card":"` + buttons[0].ID + `"}}`
+	shoe := "The shoe insert follow-up with Sam has been open since last Saturday, and I can draft the note for you."
+	raw := `{"paragraphs":[{"text":"` + day + `","refs":["e9","e10","e11"]},{"text":"` + shoe + `","refs":["e7"]}],"closing":{"text":"Want me to draft the note to Sam?","card":"` + buttons[0].ID + `"}}`
 	paragraphs, _, err := mobileBriefNarrativeFromReply(brief, picks, raw, "English")
 	if err != nil || len(paragraphs) != 3 || !strings.Contains(paragraphs[1].Text, "since last Saturday") {
 		t.Fatalf("paragraphs = %+v, rule=%s", paragraphs, mobileBriefNarrativeRule(err))

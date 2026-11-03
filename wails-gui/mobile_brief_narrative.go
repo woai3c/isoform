@@ -291,7 +291,7 @@ func mobileBriefASCII(value string) bool {
 // The two example briefs show the voice. Their people and places are invented.
 const (
 	mobileBriefExampleMorning = "Good morning. Your weekly studio sync with Priya, Maya Chen and Alex is starting now on Halcyon Meet, and you haven't answered the invite. After that you're clear until deep work at 11:45 AM, then the Halcyon showroom tour at 2:15 PM, dinner at 6:30 PM and a 1:1 with Priya at 8:00 PM. The Halcyon Arc lamp follow-up with Priya has been open since last week. Want me to draft the note to Priya?"
-	mobileBriefExampleEvening = "Tomorrow starts with the Halcyon studio review with Maya Chen and Priya at 10:30 AM on Halcyon Meet, and the welcome guide they asked for is due the same day. Alex has been waiting on your reply about the venue since Tuesday, and the studio invoice is due Friday. The research summary I was writing for you finished this afternoon and is ready for your review. Want me to draft your reply to Alex?"
+	mobileBriefExampleEvening = "Tomorrow starts with the Halcyon studio review with Maya Chen and Priya at 10:30 AM on Halcyon Meet, and the welcome guide they asked for is due the same day. Alex has been waiting on your reply about the venue since Tuesday, and the studio invoice is due Thursday. The research summary I was writing for you finished this afternoon and is ready for your review. Want me to draft your reply to Alex?"
 )
 
 // mobileBriefPickWhy is how a pick's tier reads to the model.
@@ -362,7 +362,7 @@ func buildMobileBriefNarrativePrompt(brief MobileBriefV1, picks []mobileBriefPic
 		b.WriteString("Rules:\n")
 		b.WriteString("1. Lead with what matters most. The items under Worth saying are already in order; start with the first.\n")
 		b.WriteString("2. Say why each item matters today, from its facts: it is on now, the invite is unanswered, it is due Thursday, it has been open since last Sunday.\n")
-		b.WriteString("3. Give each item one next step, and only one that Isoform can do (its Isoform can line). Do not give the user homework.\n")
+		b.WriteString("3. Give each item one next step, and only one that Isoform can do (its Isoform can line). Never give the user homework.\n")
 		if len(buttons) > 0 {
 			b.WriteString("4. End with one question that offers one of the buttons below, in your own words and naming its subject, and put that button's id in card. Ask no other question.\n")
 		} else {
