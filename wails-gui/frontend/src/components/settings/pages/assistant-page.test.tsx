@@ -1,0 +1,168 @@
+import { act, render, screen } from "@testing-library/react";
+import { fireEvent } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import i18n from "@/i18n";
+import type { ReactNode } from "react";
+import type { AIProviderConfig, AIProviderPreset } from "@/lib/wails-shim-app";
+import { AIProviderSettingsCard, AssistantPage } from "./assistant-page";
+
+const mocks = vi.hoisted(() => ({
+    getConfig: vi.fn(),
+    listPresets: vi.fn(),
+    getMCPConnections: vi.fn(),
+    saveConfig: vi.fn(),
+    eventsOn: vi.fn(),
+    toastMessage: vi.fn(),
+    toastSuccess: vi.fn(),
+    toastError: vi.fn(),
+}));
+
+vi.mock("@/lib/wails-shim-app", () => ({
+    GetAIProviderConfig: mocks.getConfig,
+    ListAIProviderPresets: mocks.listPresets,
+    SaveAIProviderConfig: mocks.saveConfig,
+    SetCachedAIProviderModels: vi.fn(),
+    TestAIProvider: vi.fn(),
+    BuildProviderTestCurl: vi.fn(),
+    ListAIProviderModels: vi.fn(),
+    GetMCPReadConnections: mocks.getMCPConnections,
+    ConnectMCPReadAssistant: vi.fn(),
+    RevokeMCPReadAssistant: vi.fn(),
+}));
+
+vi.mock("../../../../wailsjs/runtime/runtime", () => ({
+    BrowserOpenURL: vi.fn(),
+    EventsOn: mocks.eventsOn,
+}));
+
+vi.mock("sonner", () => ({
+    toast: { message: mocks.toastMessage, success: mocks.toastSuccess, error: mocks.toastError },
+}));
+
+
+// The page's account cards have their own suite; here they only show the form they were given.
+vi.mock("@/components/model-accounts-card", () => ({
+    ModelAccountsSettings: ({ ownKeyForm }: { ownKeyForm: ReactNode }) => (
+        <div data-testid="model-accounts">{ownKeyForm}</div>
+    ),
+}));
+
+const openai: AIProviderPreset = {
+    id: "openai",
+    name: "OpenAI",
+    apiFormat: "openai",
+    baseUrl: "https://api.openai.com/v1",
+    seedModels: ["gpt-4o"],
+    apiKeyUrl: "",
+    requiresKey: true,
+    custom: false,
+};
+
+function config(overrides: Partial<AIProviderConfig> = {}): AIProviderConfig {
+    return {
+        provider: "openai",
+        presetId: "openai",
+        apiKey: "sk-test",
+        baseUrl: "",
+        model: "gpt-4o",
+        lightModel: "",
+        command: "",
+        ...overrides,
+    };
+}
+
+describe("AIProviderSettingsCard", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mocks.eventsOn.mockReturnValue(() => undefined);
+        mocks.listPresets.mockResolvedValue([openai]);
+        mocks.getConfig.mockResolvedValue(config());
+        mocks.saveConfig.mockResolvedValue(undefined);
+    });
+
+    it("renders only the form when flat, with no card or header of its own", async () => {
+        const { container } = render(<AIProviderSettingsCard flat />);
+        expect(await screen.findByText("API key")).toBeInTheDocument();
+        expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+        expect(container.querySelector(".settings-card")).toBeNull();
+        expect(screen.getByRole("button", { name: "Save and apply" })).toBeInTheDocument();
+    });
+
+    it("keeps Copy curl command under More options", async () => {
+        render(<AIProviderSettingsCard flat />);
+        await screen.findByText("API key");
+        expect(screen.queryByRole("button", { name: "Copy curl command" })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "More options" }));
+        expect(screen.getByRole("button", { name: "Copy curl command" })).toBeInTheDocument();
+    });
+
+    it("opens More options by itself when the saved CLI runs without the sandbox", async () => {
+        mocks.getConfig.mockResolvedValue(
+            config({ provider: "codex", presetId: "", apiKey: "", model: "", disableSandbox: true }),
+        );
+        render(<AIProviderSettingsCard flat />);
+        expect(await screen.findByText("Run commands without the sandbox")).toBeInTheDocument();
+        expect(screen.getByRole("checkbox", { name: /Run commands without the sandbox/ })).toBeChecked();
+        expect(screen.getByText("CLI command")).toBeInTheDocument();
+    });
+
+    it("names the models in plain words in the zh-CN locale", async () => {
+        await act(async () => {
+            await i18n.changeLanguage("zh-CN");
+        });
+        try {
+            const { container } = render(<AIProviderSettingsCard flat />);
+            expect(await screen.findByText("API 密钥")).toBeInTheDocument();
+            expect(screen.getByText("轻量模型")).toBeInTheDocument();
+            expect(screen.getByText("主模型，用于对话和大部分思考。")).toBeInTheDocument();
+            expect(container).not.toHaveTextContent(/大脑|小脑/);
+        } finally {
+            await act(async () => {
+                await i18n.changeLanguage("en");
+            });
+        }
+    });
+
+    it("saves an API provider and reports success", async () => {
+        render(<AIProviderSettingsCard flat />);
+        await screen.findByText("API key");
+        fireEvent.click(screen.getByRole("button", { name: "Save and apply" }));
+        await vi.waitFor(() => expect(mocks.saveConfig).toHaveBeenCalledWith(expect.objectContaining({ provider: "openai" })));
+        await vi.waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledTimes(1));
+        expect(mocks.toastError).not.toHaveBeenCalled();
+    });
+
+    it.each(["claude-code", "codex"])("saves the %s assistant with its command settings", async (provider) => {
+        mocks.getConfig.mockResolvedValue(config({ provider, presetId: "", apiKey: "" }));
+        render(<AIProviderSettingsCard flat />);
+        const save = await screen.findByRole("button", { name: "Save and apply" });
+        await vi.waitFor(() => expect(save).toBeEnabled());
+        fireEvent.click(save);
+        await vi.waitFor(() => expect(mocks.saveConfig).toHaveBeenCalledWith(expect.objectContaining({ provider })));
+        await vi.waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledTimes(1));
+        expect(mocks.toastError).not.toHaveBeenCalled();
+    });
+});
+
+describe("AssistantPage", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mocks.eventsOn.mockReturnValue(() => undefined);
+        mocks.listPresets.mockResolvedValue([openai]);
+        mocks.getConfig.mockResolvedValue(config());
+        mocks.getMCPConnections.mockResolvedValue([]);
+    });
+
+    it("hands the page the flat key form", async () => {
+        const { container } = render(<AssistantPage />);
+        expect(await screen.findByText("API key")).toBeInTheDocument();
+        expect(screen.getByTestId("model-accounts")).toBeInTheDocument();
+        // Isoform's own text stays internal: no prompt editors in Settings.
+        expect(screen.queryByText("How Isoform works with you")).not.toBeInTheDocument();
+        expect(screen.queryByRole("textbox", { name: /talk to you/i })).not.toBeInTheDocument();
+        expect(screen.getByTestId("model-accounts").querySelector(".settings-card")).toBeNull();
+        expect(container.querySelectorAll(".settings-card")).toHaveLength(1);
+        expect(screen.getByRole("heading", { name: "Connect Isoform to Claude Code / Codex" })).toBeInTheDocument();
+    });
+
+});

@@ -1,0 +1,420 @@
+import { LogoIcon } from "@/assets/icons/LogoIcon";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { useAboutInfo } from "@/hooks/use-about-info";
+import { briefClockTime, briefDateTime, briefDateAtTime } from "@/lib/brief-time";
+import {
+    CheckForUpdates,
+    GetVersion,
+    DownloadUpdate,
+    SetBackgroundUpdates,
+    RestartToUpdate,
+    SaveSupportLogs,
+    OpenDataFolder,
+    OpenExternalURL,
+} from "@/lib/wails-shim-app";
+
+export function AboutUpdates() {
+    const { t, i18n } = useTranslation("settings");
+    const { t: clock } = useTranslation("today");
+    const { info, failed, refresh } = useAboutInfo();
+    const [legalOpen, setLegalOpen] = useState(false);
+    const [error, setError] = useState(false);
+    const [busy, setBusy] = useState(false);
+    // Shown from the click until the app quits; cleared only on failure.
+    const [restarting, setRestarting] = useState(false);
+    async function restart() {
+        setRestarting(true);
+        try {
+            await RestartToUpdate();
+        } catch (err) {
+            setRestarting(false);
+            throw err;
+        }
+    }
+    async function perform(action: () => Promise<unknown>) {
+        setBusy(true);
+        setError(false);
+        try {
+            await action();
+            await refresh();
+        } catch {
+            setError(true);
+        } finally {
+            setBusy(false);
+        }
+    }
+    if (!info)
+        return (
+            <div role="status">
+                {t(failed ? "aboutPolish.loadFailed" : "aboutPolish.loading")}
+                {failed && <AboutVersionFallback />}
+                {failed && (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void refresh()}
+                    >
+                        {t("aboutPolish.retry")}
+                    </Button>
+                )}
+            </div>
+        );
+    const status = info.update.status;
+    const ready = status === "update-downloaded";
+    const checking = status === "checking";
+    const checked = info.lastChecked
+        ? briefDateTime(info.lastChecked, i18n.language, clock)
+        : null;
+    const today =
+        info.lastChecked &&
+        new Date(info.lastChecked).toDateString() === new Date().toDateString();
+    const checkedTime = today
+        ? briefClockTime(
+              new Date(info.lastChecked).toISOString(),
+              i18n.language,
+              clock,
+          )
+        : checked;
+    let statusLine = t("aboutPolish.idle");
+    switch (status) {
+        case "disabled":
+            statusLine = t("aboutPolish.releaseOnly");
+            break;
+        case "checking":
+            statusLine = t("aboutPolish.checking");
+            break;
+        case "up-to-date":
+            statusLine = checkedTime
+                ? t(
+                      today
+                          ? "aboutPolish.checkedToday"
+                          : "aboutPolish.checked",
+                      { time: checkedTime },
+                  )
+                : t("aboutPolish.upToDate");
+            break;
+        case "update-downloaded":
+            statusLine = t("aboutPolish.ready", {
+                version: info.update.version,
+            });
+            break;
+        case "update-available":
+            statusLine = t("aboutPolish.available", {
+                version: info.update.version,
+            });
+            break;
+        case "downloading":
+            statusLine = t("aboutPolish.downloading", {
+                percent: Math.round(info.update.percent ?? 0),
+            });
+            break;
+        case "error":
+            statusLine = t("aboutPolish.failed");
+            break;
+    }
+    return (
+        <>
+            <section className="flex flex-col gap-3.5 rounded-xl border border-border bg-panel px-5 py-[18px]">
+                <div className="flex flex-wrap items-center gap-3.5">
+                    <LogoIcon size={19} className="mb-3.5 shrink-0 text-accent" />
+                    <div className="flex-1">
+                        <h2 className="text-[15px] font-semibold text-ink">
+                            {t("aboutPolish.product")}
+                        </h2>
+                        <p className="text-[12.5px] text-muted">
+                            {t(
+                                ready
+                                    ? "aboutPolish.versionReady"
+                                    : "aboutPolish.version",
+                                {
+                                    version: info.version,
+                                    next: info.update.version,
+                                },
+                            )}
+                        </p>
+                    </div>
+                    {ready && (
+                        <Button
+                            size="sm"
+                            disabled={busy || restarting}
+                            onClick={() => void perform(restart)}
+                        >
+                            {t(
+                                restarting
+                                    ? "aboutPolish.restarting"
+                                    : "aboutPolish.restart",
+                            )}
+                        </Button>
+                    )}
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={
+                            busy ||
+                            checking ||
+                            status === "downloading" ||
+                            status === "disabled"
+                        }
+                        onClick={() =>
+                            void perform(async () => {
+                                const result = await CheckForUpdates();
+                                if (result.error) throw new Error(result.error);
+                            })
+                        }
+                    >
+                        {t(
+                            checking
+                                ? "aboutPolish.checkingButton"
+                                : "aboutPolish.check",
+                        )}
+                    </Button>
+                </div>
+                <p role="status" className="text-[12.5px] text-muted">
+                    {statusLine}
+                </p>
+                {status === "update-available" && (
+                    <Button
+                        className="self-start"
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => void perform(DownloadUpdate)}
+                    >
+                        {t("aboutPolish.download")}
+                    </Button>
+                )}
+                {status === "downloading" && (
+                    <div
+                        role="progressbar"
+                        aria-label={t("aboutPolish.download")}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.max(
+                            0,
+                            Math.min(100, info.update.percent ?? 0),
+                        )}
+                        className="h-1.5 w-full overflow-hidden rounded-full bg-border"
+                    >
+                        <div
+                            className="h-full rounded-full bg-accent-2"
+                            style={{
+                                width: `${Math.max(0, Math.min(100, info.update.percent ?? 0))}%`,
+                            }}
+                        />
+                    </div>
+                )}
+                <label className="flex items-center gap-2.5 text-[13px] text-ink">
+                    <Switch
+                        checked={info.backgroundUpdates}
+                        disabled={busy}
+                        onCheckedChange={(value) =>
+                            void perform(() => SetBackgroundUpdates(value))
+                        }
+                    />
+                    {t("aboutPolish.background")}
+                </label>
+            </section>
+            {error && (
+                <p role="alert" className="text-sm text-error">
+                    {t("aboutPolish.actionFailed")}
+                </p>
+            )}
+            <div className="divide-y divide-border border-t border-border">
+                <AboutRow
+                    title={t("aboutPolish.whatsNew")}
+                    description={
+                        info.releaseNotes ? (
+                            <div className="prose leading-relaxed [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-2 [&_p:last-child]:mb-0">
+                                <span>
+                                    {t("aboutPolish.notesVersion", {
+                                        version: info.releaseNotesVersion,
+                                    })}{" "}
+                                </span>
+                                <div className="inline [&>p:first-child]:inline">
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            a: ({ href, children }) => (
+                                                <Button
+                                                    size="sm"
+                                                    variant="link"
+                                                    onClick={() => {
+                                                        if (href) {
+                                                            void perform(() => OpenExternalURL(href));
+                                                        }
+                                                    }}
+                                                >
+                                                    {children}
+                                                </Button>
+                                            ),
+                                        }}
+                                    >
+                                        {info.releaseNotes}
+                                    </ReactMarkdown>
+                                </div>
+                            </div>
+                        ) : (
+                            t("aboutPolish.version", {
+                                version: info.releaseNotesVersion || info.version,
+                            })
+                        )
+                    }
+                    control={
+                        <Button
+                            size="sm"
+                            variant="link"
+                            onClick={() =>
+                                void perform(() =>
+                                    OpenExternalURL(info.releaseNotesUrl),
+                                )
+                            }
+                        >
+                            {t("aboutPolish.releaseNotes")}
+                        </Button>
+                    }
+                />
+                <AboutRow
+                    title={t("aboutPolish.build")}
+                    description={
+                        <>
+                            {t(
+                                `aboutPolish.builds.${info.build === "release" ? "release" : info.build === "staging" ? "staging" : "development"}`,
+                            )}
+                            {info.buildTime &&
+                                t("aboutPolish.buildDate", {
+                                    date:
+                                        briefDateAtTime(
+                                            info.buildTime,
+                                            i18n.language,
+                                            clock,
+                                        ) ?? "",
+                                })}
+                        </>
+                    }
+                />
+                <AboutRow
+                    title={t("aboutPolish.computer")}
+                    description={t("aboutPolish.computerDetails", {
+                        model: info.computer,
+                        os: info.os,
+                        phone: info.phones.length
+                            ? t("aboutPolish.paired", {
+                                  phone: info.phones.join(", "),
+                              })
+                            : t("aboutPolish.noPhone"),
+                    })}
+                />
+                <AboutRow
+                    title={t("aboutPolish.data")}
+                    description={t("aboutPolish.dataDescription", {
+                        size: (info.dataBytes / 1e9).toLocaleString(
+                            i18n.language,
+                            { maximumFractionDigits: 1 },
+                        ),
+                    })}
+                    control={
+                        <Button
+                            size="sm"
+                            variant="link"
+                            onClick={() => void perform(OpenDataFolder)}
+                        >
+                            {t("aboutPolish.openFolder")}
+                        </Button>
+                    }
+                />
+                <AboutRow
+                    title={t("aboutPolish.support")}
+                    description={t("aboutPolish.supportDescription")}
+                    control={
+                        <Button
+                            size="sm"
+                            variant="link"
+                            disabled={busy}
+                            onClick={() => void perform(SaveSupportLogs)}
+                        >
+                            {t("aboutPolish.saveLogs")}
+                        </Button>
+                    }
+                />
+                <AboutRow
+                    title={t("aboutPolish.legal")}
+                    description={t("aboutPolish.legalDescription")}
+                    control={
+                        <Button
+                            size="sm"
+                            variant="link"
+                            onClick={() => setLegalOpen(true)}
+                        >
+                            {t("aboutPolish.read")}
+                        </Button>
+                    }
+                />
+            </div>
+            <Dialog open={legalOpen} onOpenChange={setLegalOpen}>
+                <DialogContent>
+                    <DialogHeader className="flex-col items-start gap-2">
+                        <DialogTitle>{t("aboutPolish.legal")}</DialogTitle>
+                        <DialogDescription>
+                            {t("aboutPolish.legalUnavailable")}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="m-4 self-end"
+                        onClick={() => setLegalOpen(false)}
+                    >
+                        {t("aboutPolish.close")}
+                    </Button>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}
+
+function AboutRow({
+    title,
+    description,
+    control,
+}: {
+    title: string;
+    description: React.ReactNode;
+    control?: React.ReactNode;
+}) {
+    return (
+        <div className="grid grid-cols-[minmax(90px,140px)_minmax(0,1fr)_auto] items-center gap-4 py-3 text-[13.5px] sm:grid-cols-[180px_minmax(0,1fr)_auto]">
+            <span className="text-muted">{title}</span>
+            <div className="min-w-0 text-ink">{description}</div>
+            {control}
+        </div>
+    );
+}
+
+// The version binding remains available when richer device metadata cannot
+// load, including the browser bridge's intentionally limited read surface.
+function AboutVersionFallback() {
+    const { t } = useTranslation("settings");
+    const [version, setVersion] = useState("");
+    useEffect(() => {
+        void GetVersion()
+            .then(setVersion)
+            .catch(() => {});
+    }, []);
+    return version ? (
+        <p className="my-2 text-[12.5px] text-muted">
+            {t("aboutPolish.version", { version })}
+        </p>
+    ) : null;
+}

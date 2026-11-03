@@ -1,0 +1,16 @@
+{
+    "unfinished": [
+        "\\b(?:Name|NAME|FIRST_NAME|LAST_NAME|CONTACT_NAME|TODO|TBD|INSERT_[A-Z_]+)\\b",
+        "\\{\\{?\\s*[A-Za-z_][A-Za-z_0-9.]*\\s*\\}\\}?",
+        "%[sdv]",
+        "__[A-Za-z_]+__"
+    ],
+    "unfinishedInsensitive": [
+        "\\[(?:name|first_name|last_name|contact_name|contact|person|subject|project|topic)\\]",
+        "<(?:name|first_name|last_name|contact_name|contact|person|subject|project|topic)>",
+        "\\$(?:name|first_name|last_name|contact_name|contact|person|subject|project|topic)\\b",
+        "\\b(?:unidentified|unnamed|unknown) contacts?\\b",
+        "(?:\\b(?:for|to|about)|给|关于|为)\\s*[?？]"
+    ],
+    "privacyMask": "\\[(?:REDACTED:[a-z_]+|masked|\\.\\.\\.)\\]"
+}

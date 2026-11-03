@@ -1,0 +1,308 @@
+# Knowledge Package
+
+The `knowledge` package provides file-based knowledge management functionality for the Yansu Agent. It handles parsing, loading, writing, and indexing of knowledge items stored as structured markdown files.
+
+## Purpose
+
+This package serves as the core file system layer for knowledge management in Yansu Agent, enabling:
+
+- **Parsing**: Read structured markdown files containing knowledge items
+- **CRUD Operations**: Create, read, update, and delete knowledge files
+- **Indexing**: Auto-generate index files for quick lookup
+- **Directory Management**: Ensure proper directory structure for the `.something` workspace
+
+## Architecture
+
+The package follows a functional design with stateless operations. All functions work directly with the file system and return strongly-typed `Knowledge` structs.
+
+### Key Components
+
+#### `parser.go`
+Handles all knowledge file operations:
+
+- **`Knowledge` struct**: Core data structure representing a knowledge item
+  - `UUID`: Unique identifier for the knowledge item
+  - `Trigger`: Keywords or phrases that trigger this knowledge
+  - `Content`: The actual knowledge content
+  - `Tags`: Comma-separated tags for categorization
+  - `Path`: Hierarchical path for organizing knowledge (e.g., "backend/auth", "frontend/components")
+  - `Action`: Operation type (`create`, `update`, `delete`)
+  - `FilePath`: Path to the source file
+  - `UpdatedAt`: Last modification timestamp
+
+- **`ParseFile(filePath string)`**: Parses a single markdown file into a `Knowledge` struct
+- **`LoadAll(dir string)`**: Loads all knowledge files from a directory
+- **`WriteKnowledgeFile(dir, uuid, trigger, content string, tags []string, path string)`**: Creates a new knowledge file with tags and hierarchical path
+- **`FindKnowledgeFileByUUID(dir, uuid string)`**: Searches for a file by UUID
+- **`DeleteKnowledgeFile(dir, uuid string)`**: Removes a knowledge file
+- **`TriggerToFileName(trigger string)`**: Converts trigger text to a valid filename
+
+#### `index.go`
+Manages knowledge indices and project context:
+
+- **`UpdateIndex(somethingDir string)`**: Generates `_index.md` with a table of all knowledge items
+  - Groups knowledge items by their `Path` field for hierarchical organization
+  - Displays trigger, tags, and filename for each item in markdown tables
+  - Sorts knowledge items by path, then by trigger alphabetically
+- **`GenerateContextFile(somethingDir, prd, summary, requirements, scenarios, decisions string)`**: Creates `context.md`, `prd.md`, and individual scenario files in `scenarios/` directory from project metadata
+  - Parses JSON scenarios and creates separate markdown files for each scenario
+  - Maintains references between files for easy navigation
+  - Automatically cleans up removed scenarios and PRD files when content becomes empty
+  - Generates numbered scenario filenames (e.g., `01-user-login.md`, `02-data-export.md`)
+- **`EnsureDirectories(somethingDir string)`**: Creates required `.something` subdirectories
+
+**Data Structures:**
+- **`SimulationScenario`**: Represents a scenario with ID, UUID, name, description, steps, and status
+- **`SimulationStep`**: Individual step in a scenario with step number, action, and description
+- **`ScenariosToBuild`**: Container for project name and list of scenarios from API
+
+## Knowledge File Format
+
+Knowledge files use a structured markdown format with six sections:
+
+```markdown
+# UUID
+<unique-identifier>
+
+# Action
+<create|update|delete>
+
+# Trigger
+<keywords or phrases>
+
+# Tags
+<comma-separated tags>
+
+# Path
+<hierarchical path like "backend/auth" or "frontend/components">
+
+# Content
+<actual knowledge content>
+```
+
+**Note**: The Action section defaults to `create` if left empty during parsing.
+
+### Example
+
+```markdown
+# UUID
+550e8400-e29b-41d4-a801-426614174000
+
+# Action
+create
+
+# Trigger
+authentication flow
+
+# Tags
+auth, security, oauth
+
+# Path
+backend/auth
+
+# Content
+Our app uses OAuth 2.0 with GitHub as the provider.
+The auth flow is handled in `internal/handlers/auth.go`.
+```
+
+## Scenario File Format
+
+Scenarios are provided as JSON and converted to individual markdown files:
+
+### Input JSON Format
+
+```json
+{
+  "project_name": "MyApp",
+  "scenarios": [
+    {
+      "id": "1",
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "User Login",
+      "description": "Standard user authentication flow",
+      "steps": [
+        {
+          "step_number": 1,
+          "action": "Navigate to login page",
+          "description": "User opens the application"
+        },
+        {
+          "step_number": 2,
+          "action": "Enter credentials",
+          "description": "User provides username and password"
+        }
+      ],
+      "status": "active"
+    }
+  ]
+}
+```
+
+### Generated Markdown Output
+
+Each scenario becomes a file named `{number}-{sanitized-name}.md`:
+
+```markdown
+# User Login
+
+> This file is auto-generated by Yansu Agent. Do not edit manually.
+
+## Description
+
+Standard user authentication flow
+
+## Steps
+
+1. **Navigate to login page** - User opens the application
+2. **Enter credentials** - User provides username and password
+
+## Status
+
+active
+```
+
+## Usage
+
+### Loading Knowledge
+
+```go
+import "yansu-agent/internal/knowledge"
+
+// Load all knowledge items from a directory
+items, err := knowledge.LoadAll("/path/to/.something/knowledge")
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, k := range items {
+    fmt.Printf("Trigger: %s\n", k.Trigger)
+    fmt.Printf("Content: %s\n", k.Content)
+}
+```
+
+### Creating Knowledge
+
+```go
+// Write a new knowledge file
+// The Action field is left empty and defaults to "create" when parsed
+err := knowledge.WriteKnowledgeFile(
+    "/path/to/.something/knowledge",
+    "550e8400-e29b-41d4-a801-426614174000",
+    "database schema",
+    "We use PostgreSQL with automatic migrations...",
+    []string{"database", "postgres", "schema"}, // tags
+    "backend/database", // hierarchical path
+)
+```
+
+### Updating the Index
+
+```go
+// Regenerate the _index.md file
+// This creates a hierarchical index grouped by Path field
+err := knowledge.UpdateIndex("/path/to/.something")
+```
+
+The generated index file groups knowledge items by their `Path` field and displays them in markdown tables:
+
+```markdown
+# Knowledge Index
+
+Quick lookup for available knowledge. See individual files for full content.
+
+## backend/auth
+
+| Trigger | Tags | File |
+|---------|------|------|
+| authentication flow | auth, security, oauth | authentication-flow.md |
+| password reset | auth, security | password-reset.md |
+
+## frontend/components
+
+| Trigger | Tags | File |
+|---------|------|------|
+| button styles | ui, components | button-styles.md |
+
+---
+
+**Total: 3 knowledge items**
+```
+
+### Generating Context Files
+
+```go
+// Generate context.md, prd.md, and scenarios/*.md from API response
+err := knowledge.GenerateContextFile(
+    "/path/to/.something",
+    "# Product Requirements\n...",  // PRD content
+    "Project summary...",             // Summary
+    "Feature requirements...",        // Requirements
+    `{"project_name":"MyApp","scenarios":[...]}`, // Scenarios JSON
+    "Key architectural decisions...", // Decisions
+)
+```
+
+### Managing Directories
+
+```go
+// Ensure all required directories exist
+err := knowledge.EnsureDirectories("/path/to/.something")
+// Creates: knowledge/, new-knowledge/, activity/
+```
+
+## Directory Structure
+
+The package works with the following `.something` directory structure:
+
+```
+.something/
+├── context.md           # Project context (auto-generated)
+├── prd.md               # Product Requirements Document (auto-generated)
+├── knowledge/           # Synced knowledge items
+│   ├── _index.md       # Auto-generated index
+│   ├── auth-flow.md
+│   └── db-schema.md
+├── scenarios/           # User scenarios (auto-generated)
+│   ├── 01-user-login.md
+│   └── 02-data-export.md
+├── new-knowledge/       # Local knowledge pending sync
+└── activity/            # Activity logs
+```
+
+## Integration
+
+This package is used by:
+
+- **`internal/sync/sync.go`**: Syncs knowledge between local filesystem and cloud
+- **`cmd/yansu/main.go`**: CLI commands for knowledge management
+
+## Dependencies
+
+- Standard library only (no external dependencies)
+- Uses Go 1.23+ features
+
+## File Naming Convention
+
+Knowledge files are automatically named based on their trigger text:
+
+- Converted to lowercase
+- Non-alphanumeric characters replaced with hyphens
+- Limited to 50 characters
+- Duplicate names get numeric suffixes (`-1`, `-2`, etc.)
+
+Example transformations:
+- `"Database Schema"` → `database-schema.md`
+- `"OAuth 2.0 Flow"` → `oauth-2-0-flow.md`
+- `"How to Deploy?"` → `how-to-deploy.md`
+
+## Error Handling
+
+All functions return errors that can be wrapped or logged. The package is designed to be resilient:
+
+- `LoadAll()` continues loading even if individual files fail to parse
+- File operations check for existence before attempting modifications
+- Directory creation uses `os.MkdirAll()` to ensure parent directories exist
+
+## Thread Safety
+
+⚠️ **Note**: This package is **not** thread-safe. File operations should be coordinated by the caller (typically the daemon's file watcher) to avoid race conditions.

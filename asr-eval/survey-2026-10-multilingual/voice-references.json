@@ -1,0 +1,26 @@
+{
+  "samples": [
+    {
+      "voice": "synthetic_charlotte",
+      "file_name": "synthetic_charlotte-reference.wav",
+      "sha256": "9c07c012baf193aeb0a899b8ceb8534e04e924a9e7970076736fade06c074074",
+      "size_bytes": 511604,
+      "sample_rate": 44100,
+      "duration_s": 5.8,
+      "reference": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work.",
+      "source": "First-survey Ming synthetic preset; not a real-person voice clone",
+      "source_file": "ming_tts-en-UK_Charlotte-1.wav"
+    },
+    {
+      "voice": "synthetic_james",
+      "file_name": "synthetic_james-reference.wav",
+      "sha256": "39d4e94e9aff5653df5c9d8291a602d37e85eafb6288ce289da3c832c23391a3",
+      "size_bytes": 449864,
+      "sample_rate": 44100,
+      "duration_s": 5.1,
+      "reference": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work.",
+      "source": "First-survey Ming synthetic preset; not a real-person voice clone",
+      "source_file": "ming_tts-en-US_James-1.wav"
+    }
+  ]
+}

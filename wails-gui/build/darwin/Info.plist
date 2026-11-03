@@ -1,0 +1,79 @@
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleName</key>
+        <string>{{.Info.ProductName}}</string>
+        <key>CFBundleExecutable</key>
+        <string>{{.OutputFilename}}</string>
+        <key>CFBundleIdentifier</key>
+        <string>com.wails.{{.Name}}</string>
+        <key>CFBundleVersion</key>
+        <string>{{.Info.ProductVersion}}</string>
+        <key>CFBundleGetInfoString</key>
+        <string>{{.Info.Comments}}</string>
+        <key>CFBundleShortVersionString</key>
+        <string>{{.Info.ProductVersion}}</string>
+        <key>CFBundleIconFile</key>
+        <string>iconfile</string>
+        <key>LSMinimumSystemVersion</key>
+        <string>14.0</string>
+        <key>NSHighResolutionCapable</key>
+        <string>true</string>
+        <key>NSHumanReadableCopyright</key>
+        <string>{{.Info.Copyright}}</string>
+        <key>NSMicrophoneUsageDescription</key>
+        <string>Isoform uses the microphone for voice typing and, while listening is on, to hear what you say. Audio is transcribed on this computer.</string>
+        <key>NSAudioCaptureUsageDescription</key>
+        <string>Isoform captures the sound your computer plays, such as the other side of a call, and transcribes it on this computer while listening is on.</string>
+        <key>NSAppleEventsUsageDescription</key>
+        <string>Isoform sends you a text through Messages when it cannot reach your phone, and, while Mail is open, reads the headers of your recent mail (senders, recipients, subjects, dates and whether a message is read, flagged or answered, never the messages) to tell you who is waiting on a reply.</string>
+        <key>NSContactsUsageDescription</key>
+        <string>Isoform reads names, phone numbers and email addresses so you can choose which contacts to import from this computer.</string>
+        <key>NSCalendarsFullAccessUsageDescription</key>
+        <string>Isoform reads your calendars to prepare you for meetings and plan your day. It adds a hold only when you say so. Events are kept on this computer; what a task needs is sent to the AI you chose and to your paired phone.</string>
+        <key>NSCalendarsUsageDescription</key>
+        <string>Isoform reads your calendars to prepare you for meetings and plan your day. It adds a hold only when you say so. Events are kept on this computer; what a task needs is sent to the AI you chose and to your paired phone.</string>
+        <key>NSRemindersFullAccessUsageDescription</key>
+        <string>Isoform reads your reminders, open and recently completed, so open ones count as your commitments and it can tell you when one is slipping. Reminders are kept on this computer; open ones can appear in your brief on your paired phone, and what a task needs is sent to the AI you chose.</string>
+        <key>NSRemindersUsageDescription</key>
+        <string>Isoform reads your reminders, open and recently completed, so open ones count as your commitments and it can tell you when one is slipping. Reminders are kept on this computer; open ones can appear in your brief on your paired phone, and what a task needs is sent to the AI you chose.</string>
+        {{if .Info.FileAssociations}}
+        <key>CFBundleDocumentTypes</key>
+        <array>
+          {{range .Info.FileAssociations}}
+          <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+              <string>{{.Ext}}</string>
+            </array>
+            <key>CFBundleTypeName</key>
+            <string>{{.Name}}</string>
+            <key>CFBundleTypeRole</key>
+            <string>{{.Role}}</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>{{.IconName}}</string>
+          </dict>
+          {{end}}
+        </array>
+        {{end}}
+        {{if .Info.Protocols}}
+        <key>CFBundleURLTypes</key>
+        <array>
+          {{range .Info.Protocols}}
+            <dict>
+                <key>CFBundleURLName</key>
+                <string>com.wails.{{.Scheme}}</string>
+                <key>CFBundleURLSchemes</key>
+                <array>
+                    <string>{{.Scheme}}</string>
+                </array>
+                <key>CFBundleTypeRole</key>
+                <string>{{.Role}}</string>
+            </dict>
+          {{end}}
+        </array>
+        {{end}}
+    </dict>
+</plist>

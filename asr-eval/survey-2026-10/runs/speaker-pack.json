@@ -1,0 +1,96 @@
+{
+  "scope": "Two English audiobook speakers, six concatenated turns, no overlap; clustering smoke test only, not meeting DER",
+  "audio_duration_s": 38.38,
+  "load_s": 0.1366895410028519,
+  "inference_s": 2.012295416003326,
+  "rtf": 0.05243083418455773,
+  "reference": [
+    {
+      "speaker": 0,
+      "start": 1.0,
+      "end": 4.505,
+      "source_id": "6930-75918-0000"
+    },
+    {
+      "speaker": 1,
+      "start": 5.505,
+      "end": 7.6,
+      "source_id": "7902-96591-0000"
+    },
+    {
+      "speaker": 0,
+      "start": 8.6,
+      "end": 22.825,
+      "source_id": "6930-75918-0001"
+    },
+    {
+      "speaker": 1,
+      "start": 23.825,
+      "end": 26.335,
+      "source_id": "7902-96591-0001"
+    },
+    {
+      "speaker": 0,
+      "start": 27.335,
+      "end": 32.36,
+      "source_id": "6930-75918-0002"
+    },
+    {
+      "speaker": 1,
+      "start": 33.36,
+      "end": 38.38,
+      "source_id": "7902-96591-0002"
+    }
+  ],
+  "segments": [
+    {
+      "speaker": 1,
+      "start": 1.5665937662124634,
+      "end": 4.367844104766846
+    },
+    {
+      "speaker": 0,
+      "start": 5.8697190284729,
+      "end": 7.337843894958496
+    },
+    {
+      "speaker": 1,
+      "start": 8.83971881866455,
+      "end": 22.62659454345703
+    },
+    {
+      "speaker": 0,
+      "start": 24.263469696044922,
+      "end": 26.15346908569336
+    },
+    {
+      "speaker": 1,
+      "start": 27.57097053527832,
+      "end": 32.14409637451172
+    },
+    {
+      "speaker": 0,
+      "start": 33.7303466796875,
+      "end": 34.084720611572266
+    },
+    {
+      "speaker": 0,
+      "start": 34.59096908569336,
+      "end": 36.37971878051758
+    },
+    {
+      "speaker": 0,
+      "start": 36.6834716796875,
+      "end": 37.91534423828125
+    }
+  ],
+  "dominant_turn_labels": [
+    1,
+    0,
+    1,
+    0,
+    1,
+    0
+  ],
+  "six_turn_separation_passed": true
+}

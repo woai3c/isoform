@@ -1,0 +1,20 @@
+[
+    {
+        "name": "MergedFrom",
+        "content": "# Writing style\n\n- **Source**: manual\n- **Dimension**: user_insight\n- **MergedFrom**: point-source\n\n## Memory Points\n\n- Keep replies short.\n- Use examples.\n",
+        "edited": "# Writing style\n\n- **Source**: manual\n- **Dimension**: user_insight\n- **MergedFrom**: point-source\n\n## Memory Points\n\n- Keep replies short.\n- Offer context.\n",
+        "removed": "# Writing style\n\n- **Source**: manual\n- **Dimension**: user_insight\n- **MergedFrom**: point-source\n\n## Memory Points\n\n- Keep replies short.\n"
+    },
+    {
+        "name": "Merged From",
+        "content": "# Writing style\n\n- **Source**: manual\n- **Dimension**: user_insight\n- **Merged From**: point-source\n\n## Memory Points\n\n- Keep replies short.\n- Use examples.\n",
+        "edited": "# Writing style\n\n- **Source**: manual\n- **Dimension**: user_insight\n- **Merged From**: point-source\n\n## Memory Points\n\n- Keep replies short.\n- Offer context.\n",
+        "removed": "# Writing style\n\n- **Source**: manual\n- **Dimension**: user_insight\n- **Merged From**: point-source\n\n## Memory Points\n\n- Keep replies short.\n"
+    },
+    {
+        "name": "MergedFromRefs",
+        "content": "# Writing style\n\n- **Source**: manual\n- **Dimension**: user_insight\n- **MergedFrom**: point-source\n- **MergedFromRefs**: [\"memory:point-source\"]\n\n## Memory Points\n\n- Keep replies short.\n- Use examples.\n",
+        "edited": "# Writing style\n\n- **Source**: manual\n- **Dimension**: user_insight\n- **MergedFrom**: point-source\n- **MergedFromRefs**: [\"memory:point-source\"]\n\n## Memory Points\n\n- Keep replies short.\n- Offer context.\n",
+        "removed": "# Writing style\n\n- **Source**: manual\n- **Dimension**: user_insight\n- **MergedFrom**: point-source\n- **MergedFromRefs**: [\"memory:point-source\"]\n\n## Memory Points\n\n- Keep replies short.\n"
+    }
+]

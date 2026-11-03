@@ -1,0 +1,967 @@
+{
+  "name": "yansu-pii-eval-screenshots-v1",
+  "description": "Screenshot-based evaluation dataset with pixel-accurate PII annotations for GLiNER + regex evaluation",
+  "version": "1.1.0",
+  "samples": [
+    {
+      "id": "terminal-api-keys",
+      "image_path": "internal/pii/eval/testdata/screenshots/terminal-api-keys.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "sk-test-example-api-key",
+          "category": "api_key",
+          "x": 0.03125,
+          "y": 0.08333333333333333,
+          "width": 0.20364583333333333,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "ghp_aBcDeFgHiJkLmNoPqRsTuVw",
+          "category": "api_key",
+          "x": 0.03125,
+          "y": 0.15,
+          "width": 0.2390625,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "AKIAIOSFODNN7EXAMPLE",
+          "category": "api_key",
+          "x": 0.03125,
+          "y": 0.21666666666666667,
+          "width": 0.17708333333333334,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "xoxb-12345678-abcdefgh",
+          "category": "api_key",
+          "x": 0.03125,
+          "y": 0.2833333333333333,
+          "width": 0.19479166666666667,
+          "height": 0.03333333333333333
+        }
+      ]
+    },
+    {
+      "id": "form-personal-info",
+      "image_path": "internal/pii/eval/testdata/screenshots/form-personal-info.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "john.smith@example.com",
+          "category": "private_email",
+          "x": 0.18125,
+          "y": 0.1537037037037037,
+          "width": 0.20625,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "+1 (415) 555-0198",
+          "category": "private_phone",
+          "x": 0.18125,
+          "y": 0.18888888888888888,
+          "width": 0.159375,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "078-05-1120",
+          "category": "government_id",
+          "x": 0.18125,
+          "y": 0.22407407407407406,
+          "width": 0.103125,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "4532 0123 4567 8901",
+          "category": "credit_card",
+          "x": 0.18125,
+          "y": 0.3648148148148148,
+          "width": 0.178125,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "847",
+          "category": "cvv",
+          "x": 0.18125,
+          "y": 0.4,
+          "width": 0.028125,
+          "height": 0.03518518518518519
+        }
+      ]
+    },
+    {
+      "id": "code-editor-secrets",
+      "image_path": "internal/pii/eval/testdata/screenshots/code-editor-secrets.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "sk-ant-api03-abc123def456ghi789jkl012mno345",
+          "category": "api_key",
+          "x": 0.12291666666666666,
+          "y": 0.11481481481481481,
+          "width": 0.35833333333333334,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "Sup3r$ecret!DB_2024'",
+          "category": "password",
+          "x": 0.15625,
+          "y": 0.14629629629629629,
+          "width": 0.16666666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "sess-fixture-example",
+          "category": "session_id",
+          "x": 0.18125,
+          "y": 0.17777777777777778,
+          "width": 0.16666666666666666,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "chat-pii-leak",
+      "image_path": "internal/pii/eval/testdata/screenshots/chat-pii-leak.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "alice.johnson@example.com",
+          "category": "private_email",
+          "x": 0.1375,
+          "y": 0.11666666666666667,
+          "width": 0.22135416666666666,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "483 921",
+          "category": "one_time_password",
+          "x": 0.1375,
+          "y": 0.18333333333333332,
+          "width": 0.06197916666666667,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "Tr0ub4dor\u00263!xQ",
+          "category": "password",
+          "x": 0.11979166666666667,
+          "y": 0.25,
+          "width": 0.12395833333333334,
+          "height": 0.03333333333333333
+        }
+      ]
+    },
+    {
+      "id": "insurance-form-ja",
+      "image_path": "internal/pii/eval/testdata/screenshots/insurance-form-ja.jpg",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "INS-2024-JP-00789",
+          "category": "account_number",
+          "x": 0.171875,
+          "y": 0.11851851851851852,
+          "width": 0.159375,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "okyo Marine Insurance Co.",
+          "category": "private_org",
+          "x": 0.21875,
+          "y": 0.1537037037037037,
+          "width": 0.234375,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "+81-00-1234-5678",
+          "category": "private_phone",
+          "x": 0.096875,
+          "y": 0.22407407407407406,
+          "width": 0.15,
+          "height": 0.03518518518518519
+        }
+      ]
+    },
+    {
+      "id": "terminal-ssh-creds",
+      "image_path": "internal/pii/eval/testdata/screenshots/terminal-ssh-creds.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "xK9#mP2$vL5@Qw8",
+          "category": "password",
+          "x": 0.3145833333333333,
+          "y": 0.08333333333333333,
+          "width": 0.1328125,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "AGE-SECRET-KEY-1QFZWM9TXC7NRNPM6JHJQ6YPXK9E5KNCA",
+          "category": "api_key",
+          "x": 0.03125,
+          "y": 0.21666666666666667,
+          "width": 0.425,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "AKIAI44QH8DHBEXAMPLE",
+          "category": "api_key",
+          "x": 0.20833333333333334,
+          "y": 0.35,
+          "width": 0.17708333333333334,
+          "height": 0.03333333333333333
+        }
+      ]
+    },
+    {
+      "id": "contact-list-zh",
+      "image_path": "internal/pii/eval/testdata/screenshots/contact-list-zh.jpg",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "zhang.wei@example.com",
+          "category": "private_email",
+          "x": 0.03125,
+          "y": 0.11851851851851852,
+          "width": 0.196875,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "li.na@example.net",
+          "category": "private_email",
+          "x": 0.03125,
+          "y": 0.1537037037037037,
+          "width": 0.159375,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "wang.fang@example.org",
+          "category": "private_email",
+          "x": 0.03125,
+          "y": 0.18888888888888888,
+          "width": 0.196875,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "+86 000-0013-8000",
+          "category": "private_phone",
+          "x": 0.096875,
+          "y": 0.25925925925925924,
+          "width": 0.159375,
+          "height": 0.03518518518518519
+        },
+        {
+          "text": "+86 000-1234-5678",
+          "category": "private_phone",
+          "x": 0.10625,
+          "y": 0.29444444444444445,
+          "width": 0.159375,
+          "height": 0.03518518518518519
+        }
+      ]
+    },
+    {
+      "id": "env-file-secrets",
+      "image_path": "internal/pii/eval/testdata/screenshots/env-file-secrets.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "P@ssw0rd!DB",
+          "category": "password",
+          "x": 0.03125,
+          "y": 0.11481481481481481,
+          "width": 0.09166666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "STRIPE_SECRET_KEY=sk-test-example-api-key",
+          "category": "api_key",
+          "x": 0.03125,
+          "y": 0.14629629629629629,
+          "width": 0.3416666666666667,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "SESSION_SECRET=sess-fixture-example",
+          "category": "session_id",
+          "x": 0.03125,
+          "y": 0.17777777777777778,
+          "width": 0.2916666666666667,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "address-form-mixed",
+      "image_path": "internal/pii/eval/testdata/screenshots/address-form-mixed.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "1234 Oak Ave, Springfield, IL 62704",
+          "category": "street_address",
+          "x": 0.03125,
+          "y": 0.08333333333333333,
+          "width": 0.3098958333333333,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "5678 Maple Blvd, Portland, OR 97201",
+          "category": "street_address",
+          "x": 0.03125,
+          "y": 0.18333333333333332,
+          "width": 0.3098958333333333,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "D12345678",
+          "category": "government_id",
+          "x": 0.190625,
+          "y": 0.25,
+          "width": 0.0796875,
+          "height": 0.03333333333333333
+        }
+      ]
+    },
+    {
+      "id": "device-debug-log",
+      "image_path": "internal/pii/eval/testdata/screenshots/device-debug-log.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "353456789012345",
+          "category": "device_id",
+          "x": 0.08125,
+          "y": 0.08333333333333333,
+          "width": 0.125,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+          "category": "device_id",
+          "x": 0.08125,
+          "y": 0.11481481481481481,
+          "width": 0.3,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "prod_sess_a1b2c3d4e5f6g7h8",
+          "category": "session_id",
+          "x": 0.12291666666666666,
+          "y": 0.20925925925925926,
+          "width": 0.21666666666666667,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "rt_xYzAbCdEfGhIjKlMnOpQ",
+          "category": "session_id",
+          "x": 0.14791666666666667,
+          "y": 0.24074074074074073,
+          "width": 0.19166666666666668,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "browser-checkout-autofill",
+      "image_path": "internal/pii/eval/testdata/screenshots/browser-checkout-autofill.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "maya.chen@customer.example",
+          "category": "private_email",
+          "x": 0.1640625,
+          "y": 0.11666666666666667,
+          "width": 0.23020833333333332,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "+1 (212) 555-0184",
+          "category": "private_phone",
+          "x": 0.15520833333333334,
+          "y": 0.15,
+          "width": 0.15052083333333333,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "44 Pine St, New York, NY 10013",
+          "category": "street_address",
+          "x": 0.03125,
+          "y": 0.21666666666666667,
+          "width": 0.265625,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "4242 4242 4242 4242",
+          "category": "credit_card",
+          "x": 0.1640625,
+          "y": 0.35,
+          "width": 0.16822916666666668,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "737",
+          "category": "cvv",
+          "x": 0.09322916666666667,
+          "y": 0.38333333333333336,
+          "width": 0.0265625,
+          "height": 0.03333333333333333
+        }
+      ]
+    },
+    {
+      "id": "slack-incident-credentials",
+      "image_path": "internal/pii/eval/testdata/screenshots/slack-incident-credentials.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "alex.ops@example.com",
+          "category": "private_email",
+          "x": 0.18125,
+          "y": 0.08333333333333333,
+          "width": 0.16666666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "492-817",
+          "category": "one_time_password",
+          "x": 0.10625,
+          "y": 0.11481481481481481,
+          "width": 0.058333333333333334,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "rt-fixture-example",
+          "category": "session_id",
+          "x": 0.17291666666666666,
+          "y": 0.14629629629629629,
+          "width": 0.15,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "https://files.example.com/incidents/auth.log?signature=1f2e3d4c5b6a7980",
+          "category": "private_link",
+          "x": 0.03125,
+          "y": 0.20925925925925926,
+          "width": 0.5916666666666667,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "github-actions-log-secrets",
+      "image_path": "internal/pii/eval/testdata/screenshots/github-actions-log-secrets.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "AKIAZZZZZZZZZZZZZZZZ",
+          "category": "api_key",
+          "x": 0.18125,
+          "y": 0.11481481481481481,
+          "width": 0.16666666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "ProdDb!2026#ChangeMe",
+          "category": "password",
+          "x": 0.18125,
+          "y": 0.14629629629629629,
+          "width": 0.16666666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "prod_sess_9f8e7d6c5b4a3210",
+          "category": "session_id",
+          "x": 0.12291666666666666,
+          "y": 0.17777777777777778,
+          "width": 0.21666666666666667,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "https://s3.amazonaws.com/acme-artifacts/report.csv?X-Amz-Signature=abcdef1234567890",
+          "category": "private_link",
+          "x": 0.03125,
+          "y": 0.24074074074074073,
+          "width": 0.6916666666666667,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "notion-crm-record",
+      "image_path": "internal/pii/eval/testdata/screenshots/notion-crm-record.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "ACCT-2026-88421",
+          "category": "account_number",
+          "x": 0.17291666666666666,
+          "y": 0.11666666666666667,
+          "width": 0.1328125,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "priya.rao@example.com",
+          "category": "private_email",
+          "x": 0.1640625,
+          "y": 0.15,
+          "width": 0.1859375,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "+44 20 7946 0100",
+          "category": "private_phone",
+          "x": 0.09322916666666667,
+          "y": 0.18333333333333332,
+          "width": 0.14166666666666666,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "18 King St, London SW1A 1AA",
+          "category": "street_address",
+          "x": 0.18177083333333333,
+          "y": 0.21666666666666667,
+          "width": 0.2390625,
+          "height": 0.03333333333333333
+        }
+      ]
+    },
+    {
+      "id": "spreadsheet-customer-accounts",
+      "image_path": "internal/pii/eval/testdata/screenshots/spreadsheet-customer-accounts.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "CUST-884211",
+          "category": "account_number",
+          "x": 0.28125,
+          "y": 0.11481481481481481,
+          "width": 0.09166666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "jordan.lee@example.com",
+          "category": "private_email",
+          "x": 0.39791666666666664,
+          "y": 0.11481481481481481,
+          "width": 0.18333333333333332,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "+1 646 555 0144",
+          "category": "private_phone",
+          "x": 0.6645833333333333,
+          "y": 0.11481481481481481,
+          "width": 0.125,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "CUST-771029",
+          "category": "account_number",
+          "x": 0.28125,
+          "y": 0.14629629629629629,
+          "width": 0.09166666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "casey.park@example.net",
+          "category": "private_email",
+          "x": 0.39791666666666664,
+          "y": 0.14629629629629629,
+          "width": 0.18333333333333332,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "+1 415 555 0161",
+          "category": "private_phone",
+          "x": 0.6645833333333333,
+          "y": 0.14629629629629629,
+          "width": 0.125,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "low-contrast-login-form",
+      "image_path": "internal/pii/eval/testdata/screenshots/low-contrast-login-form.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "robin.admin@example.com",
+          "category": "private_email",
+          "x": 0.10416666666666667,
+          "y": 0.0824074074074074,
+          "width": 0.16770833333333332,
+          "height": 0.028703703703703703
+        },
+        {
+          "text": "AdminPortal#2026!",
+          "category": "password",
+          "x": 0.10416666666666667,
+          "y": 0.1111111111111111,
+          "width": 0.12395833333333334,
+          "height": 0.028703703703703703
+        },
+        {
+          "text": "831 204",
+          "category": "one_time_password",
+          "x": 0.10416666666666667,
+          "y": 0.1398148148148148,
+          "width": 0.051041666666666666,
+          "height": 0.028703703703703703
+        }
+      ]
+    },
+    {
+      "id": "ocr-fragmented-secrets",
+      "image_path": "internal/pii/eval/testdata/screenshots/ocr-fragmented-secrets.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "alex . ops @ example . com",
+          "category": "private_email",
+          "x": 0.08958333333333333,
+          "y": 0.11481481481481481,
+          "width": 0.21666666666666667,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "+1 ( 415 ) 555 - 0198",
+          "category": "private_phone",
+          "x": 0.08958333333333333,
+          "y": 0.14629629629629629,
+          "width": 0.175,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "4242 4242 4242 4242",
+          "category": "credit_card",
+          "x": 0.13958333333333334,
+          "y": 0.17777777777777778,
+          "width": 0.15833333333333333,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "831 204",
+          "category": "one_time_password",
+          "x": 0.11458333333333333,
+          "y": 0.20925925925925926,
+          "width": 0.058333333333333334,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "prod_sess_7f6e5d4c3b2a1098",
+          "category": "session_id",
+          "x": 0.13958333333333334,
+          "y": 0.24074074074074073,
+          "width": 0.21666666666666667,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "sk-test-example-api-key",
+          "category": "api_key",
+          "x": 0.17291666666666666,
+          "y": 0.2722222222222222,
+          "width": 0.19166666666666668,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "Admin Portal # 2026 !",
+          "category": "password",
+          "x": 0.11458333333333333,
+          "y": 0.3037037037037037,
+          "width": 0.175,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "CUST - 884211",
+          "category": "account_number",
+          "x": 0.13958333333333334,
+          "y": 0.3351851851851852,
+          "width": 0.10833333333333334,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "email-refund-thread",
+      "image_path": "internal/pii/eval/testdata/screenshots/email-refund-thread.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "olivia.park@example.org",
+          "category": "private_email",
+          "x": 0.19947916666666668,
+          "y": 0.08333333333333333,
+          "width": 0.20364583333333333,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "+1 917 555 0188",
+          "category": "private_phone",
+          "x": 0.190625,
+          "y": 0.18333333333333332,
+          "width": 0.1328125,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "https://files.example.com/refunds/claim.pdf?token=example-token",
+          "category": "private_link",
+          "x": 0.18177083333333333,
+          "y": 0.25,
+          "width": 0.5578125,
+          "height": 0.03333333333333333
+        }
+      ]
+    },
+    {
+      "id": "browser-bank-dashboard",
+      "image_path": "internal/pii/eval/testdata/screenshots/browser-bank-dashboard.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "CHK-004918273645",
+          "category": "account_number",
+          "x": 0.2171875,
+          "y": 0.11666666666666667,
+          "width": 0.14166666666666666,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "4532 1145 9876 2301",
+          "category": "credit_card",
+          "x": 0.1375,
+          "y": 0.18333333333333332,
+          "width": 0.16822916666666668,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "dana.kim@example.com",
+          "category": "private_email",
+          "x": 0.22604166666666667,
+          "y": 0.21666666666666667,
+          "width": 0.17708333333333334,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "+1 (305) 555-0109",
+          "category": "private_phone",
+          "x": 0.23489583333333333,
+          "y": 0.25,
+          "width": 0.15052083333333333,
+          "height": 0.03333333333333333
+        }
+      ]
+    },
+    {
+      "id": "medical-portal-record",
+      "image_path": "internal/pii/eval/testdata/screenshots/medical-portal-record.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "HMO-2026-550018",
+          "category": "account_number",
+          "x": 0.12864583333333332,
+          "y": 0.11666666666666667,
+          "width": 0.1328125,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "nora.lee@example.com",
+          "category": "private_email",
+          "x": 0.1640625,
+          "y": 0.15,
+          "width": 0.17708333333333334,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "+1 206 555 0172",
+          "category": "private_phone",
+          "x": 0.09322916666666667,
+          "y": 0.18333333333333332,
+          "width": 0.1328125,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "POL-US-883420",
+          "category": "account_number",
+          "x": 0.2526041666666667,
+          "y": 0.21666666666666667,
+          "width": 0.11510416666666666,
+          "height": 0.03333333333333333
+        }
+      ]
+    },
+    {
+      "id": "support-ticket-sidebar",
+      "image_path": "internal/pii/eval/testdata/screenshots/support-ticket-sidebar.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "renata.sousa@example.com",
+          "category": "private_email",
+          "x": 0.08958333333333333,
+          "y": 0.11481481481481481,
+          "width": 0.2,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "+55 11 00000 0199",
+          "category": "private_phone",
+          "x": 0.08958333333333333,
+          "y": 0.14629629629629629,
+          "width": 0.14166666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "BR-CNTR-2026-4412",
+          "category": "account_number",
+          "x": 0.17291666666666666,
+          "y": 0.17777777777777778,
+          "width": 0.14166666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "https://uploads.example.com/tickets/883421?signature=abc123def4567890",
+          "category": "private_link",
+          "x": 0.16458333333333333,
+          "y": 0.20925925925925926,
+          "width": 0.575,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "ai-chat-secret-review",
+      "image_path": "internal/pii/eval/testdata/screenshots/ai-chat-secret-review.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "BlueBird!2026",
+          "category": "password",
+          "x": 0.03125,
+          "y": 0.11481481481481481,
+          "width": 0.10833333333333334,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "sk-test-example-api-key",
+          "category": "api_key",
+          "x": 0.15625,
+          "y": 0.14629629629629629,
+          "width": 0.19166666666666668,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "rt_chat_9z8y7x6w5v4u3t2s1r0q",
+          "category": "session_id",
+          "x": 0.14791666666666667,
+          "y": 0.17777777777777778,
+          "width": 0.23333333333333334,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "browser-dev-console-auth",
+      "image_path": "internal/pii/eval/testdata/screenshots/browser-dev-console-auth.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "eyJhbGciOiJIUzI1NiJ9.e30.example",
+          "category": "session_id",
+          "x": 0.03958333333333333,
+          "y": 0.11481481481481481,
+          "width": 0.26666666666666666,
+          "height": 0.03148148148148148
+        },
+        {
+          "text": "sess_web_1a2b3c4d5e6f7g8h9i0j",
+          "category": "session_id",
+          "x": 0.06458333333333334,
+          "y": 0.17777777777777778,
+          "width": 0.24166666666666667,
+          "height": 0.03148148148148148
+        }
+      ]
+    },
+    {
+      "id": "clean-calendar-product-plan",
+      "image_path": "internal/pii/eval/testdata/screenshots/clean-calendar-product-plan.jpg",
+      "language": "en",
+      "annotations": null
+    },
+    {
+      "id": "clean-ci-log-public",
+      "image_path": "internal/pii/eval/testdata/screenshots/clean-ci-log-public.jpg",
+      "language": "en",
+      "annotations": null
+    },
+    {
+      "id": "clean-terminal-ops",
+      "image_path": "internal/pii/eval/testdata/screenshots/clean-terminal-ops.jpg",
+      "language": "en",
+      "annotations": null
+    },
+    {
+      "id": "clean-browser-docs-public-links",
+      "image_path": "internal/pii/eval/testdata/screenshots/clean-browser-docs-public-links.jpg",
+      "language": "en",
+      "annotations": null
+    },
+    {
+      "id": "clean-dashboard",
+      "image_path": "internal/pii/eval/testdata/screenshots/clean-dashboard.jpg",
+      "language": "en",
+      "annotations": null
+    },
+    {
+      "id": "clean-git-log",
+      "image_path": "internal/pii/eval/testdata/screenshots/clean-git-log.jpg",
+      "language": "en",
+      "annotations": null
+    },
+    {
+      "id": "clean-code",
+      "image_path": "internal/pii/eval/testdata/screenshots/clean-code.jpg",
+      "language": "en",
+      "annotations": null
+    },
+    {
+      "id": "license-plates-mixed",
+      "image_path": "internal/pii/eval/testdata/screenshots/license-plates-mixed.jpg",
+      "language": "zh",
+      "annotations": null
+    },
+    {
+      "id": "payment-receipt",
+      "image_path": "internal/pii/eval/testdata/screenshots/payment-receipt.jpg",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "5425-2334-3010-9903",
+          "category": "credit_card",
+          "x": 0.084375,
+          "y": 0.21666666666666667,
+          "width": 0.16822916666666668,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "pay@example.com",
+          "category": "private_email",
+          "x": 0.1640625,
+          "y": 0.31666666666666665,
+          "width": 0.1328125,
+          "height": 0.03333333333333333
+        },
+        {
+          "text": "+1 (650) 555-0147",
+          "category": "private_phone",
+          "x": 0.09322916666666667,
+          "y": 0.35,
+          "width": 0.15052083333333333,
+          "height": 0.03333333333333333
+        }
+      ]
+    }
+  ]
+}

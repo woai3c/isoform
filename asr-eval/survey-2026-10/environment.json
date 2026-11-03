@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-23",
+  "initial_base_commit": "508fe59f",
+  "machine": "Apple M4 Mac mini",
+  "cpu_cores": 10,
+  "unified_memory_bytes": 17179869184,
+  "os": "macOS 26.2 (25C56)",
+  "python": "3.11.16",
+  "model_inference_processes_concurrent": 1,
+  "note": "Shared host; CPU and disk pressure varied. No Isoform app launched. All inputs public/generated. See initial and final requirements snapshots.",
+  "nice_command_increment": 15,
+  "effective_nice": 20
+}

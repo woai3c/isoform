@@ -1,0 +1,65 @@
+diff --git a/dist/acp/agent.js b/dist/acp/agent.js
+index 86cf866d0..d75b7dc03 100644
+--- a/dist/acp/agent.js
++++ b/dist/acp/agent.js
+@@ -1104,6 +1104,20 @@ export class ClaudeAcpAgent {
+         }
+         delete this.sessions[sessionId];
+     }
++    // Best-effort batch close of every live session. Used by the process-exit
++    // handlers in runAcp() so SIGTERM / stdin-close reliably reaps CLI
++    // subprocesses instead of leaving them orphaned under the bun parent.
++    closeAllSessions() {
++        const ids = Object.keys(this.sessions);
++        for (const id of ids) {
++            try {
++                this.close(id);
++            }
++            catch {
++                // best-effort: ignore missing sessions and close failures
++            }
++        }
++    }
+     createSession(params, creationOpts = {}) {
+         // Acquire the serialization lock — only one createSession runs at a time
+         // to prevent concurrent CLI subprocess initialization which crashes bun.
+@@ -1764,5 +1778,38 @@ export function runAcp() {
+     const input = nodeToWebWritable(process.stdout);
+     const output = nodeToWebReadable(process.stdin);
+     const stream = ndJsonStream(input, output);
+-    new AgentSideConnection((client) => new ClaudeAcpAgent(client), stream);
++    let agent;
++    new AgentSideConnection((client) => {
++        agent = new ClaudeAcpAgent(client);
++        return agent;
++    }, stream);
++    // Reap CLI subprocesses when the parent (Yansu desktop app) goes away.
++    // Without this, every session spawns a claude-agent-sdk/cli.js child that
++    // never receives SIGTERM unless the client explicitly sends sessions/delete,
++    // and 100+ orphans can accumulate over a multi-day run.
++    let shuttingDown = false;
++    const drain = (reason) => {
++        if (shuttingDown)
++            return;
++        shuttingDown = true;
++        try {
++            agent?.closeAllSessions();
++        }
++        catch {
++            // best-effort
++        }
++        console.error(`[acp] shutdown cleanup (${reason})`);
++    };
++    const exitAfterDrain = (reason, code) => {
++        drain(reason);
++        // Give child close() calls a brief window to propagate SIGTERM before
++        // the parent SIGKILLs us. 500ms matches the Wails runner's grace budget.
++        setTimeout(() => process.exit(code), 500).unref();
++    };
++    process.once("SIGTERM", () => exitAfterDrain("SIGTERM", 0));
++    process.once("SIGINT", () => exitAfterDrain("SIGINT", 0));
++    process.once("SIGHUP", () => exitAfterDrain("SIGHUP", 0));
++    process.once("beforeExit", () => drain("beforeExit"));
++    process.stdin.once("end", () => exitAfterDrain("stdin-end", 0));
++    process.stdin.once("close", () => exitAfterDrain("stdin-close", 0));
+ }

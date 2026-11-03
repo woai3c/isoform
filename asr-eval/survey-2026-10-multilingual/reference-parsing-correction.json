@@ -1,0 +1,91 @@
+{
+  "reason": "FLEURS TSV has literal or unbalanced quotes. Default CSV quote parsing consumes the phonetic-transcription field into two German references and one Korean reference; four further Korean references differ only in quote punctuation. Parse seven literal tab-separated fields. Saved hypotheses and inference timings are retained and rescored against the corrected public reference fields; language content is not hand-edited.",
+  "languages": [
+    {
+      "language": "en",
+      "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/en_us/test.tsv",
+      "source_tsv_sha256": "74c046239374deeb60fa63f258f907388093a32bcaa3140965f70ef05c79f7ca",
+      "audio_ids_and_order_unchanged": true,
+      "changes": []
+    },
+    {
+      "language": "zh",
+      "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/cmn_hans_cn/test.tsv",
+      "source_tsv_sha256": "5734461648f816181d7dab5fc79204b18c4b9bc2cd5138225b25c72d18385d21",
+      "audio_ids_and_order_unchanged": true,
+      "changes": []
+    },
+    {
+      "language": "ja",
+      "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/ja_jp/test.tsv",
+      "source_tsv_sha256": "5dd9643511437414681ad3f23508596c621cdf78978724a09f1f06fefe9d300b",
+      "audio_ids_and_order_unchanged": true,
+      "changes": []
+    },
+    {
+      "language": "ko",
+      "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/ko_kr/test.tsv",
+      "source_tsv_sha256": "cf2f7c8765f6203e3c46ef620d5e936d3f331b6e8865455557777dd1347517f5",
+      "audio_ids_and_order_unchanged": true,
+      "changes": [
+        {
+          "id": "1699-13962545215242501803.wav",
+          "before": "한 목격자는 사람들이 무리를 이루어 거리를 배회하고 물품을 약탈하는 것으로 보아 비슈케크bishkek가 무정부\"\"상태로 빠지고 있다고 묘사하였습니다.",
+          "after": "\"한 목격자는 사람들이 무리를 이루어 거리를 배회하고 물품을 약탈하는 것으로 보아 비슈케크bishkek가 \"무정부\"\"상태로 빠지고 있다고 묘사하였습니다."
+        },
+        {
+          "id": "1699-14266303603009589328.wav",
+          "before": "한 목격자는 사람들이 무리를 이루어 거리를 배회하고 물품을 약탈하는 것으로 보아 비슈케크bishkek가 무정부\"\"상태로 빠지고 있다고 묘사하였습니다.",
+          "after": "\"한 목격자는 사람들이 무리를 이루어 거리를 배회하고 물품을 약탈하는 것으로 보아 비슈케크bishkek가 \"무정부\"\"상태로 빠지고 있다고 묘사하였습니다."
+        },
+        {
+          "id": "1973-9211385852971097630.wav",
+          "before": "하지만 적도에서 몇 도 정도에 위치한 고열대\" 지방에 놓이게 되면 높은 기온항상 높음과 강한 태양의 내리쬠드물지만 하늘이 맑을 때을 상대해야 할 것입니다.",
+          "after": "\"하지만 적도에서 몇 도 정도에 위치한 \"고열대\" 지방에 놓이게 되면 높은 기온항상 높음과 강한 태양의 내리쬠드물지만 하늘이 맑을 때을 상대해야 할 것입니다."
+        },
+        {
+          "id": "1749-9513115508818511685.wav",
+          "before": "거기는 비시\" 프랑스의 지배를 받았다. 이들은 1940년 독일과 강화를 택한 프랑스인들로 침략자들에 맞서 싸우기보다 동조한 사람들이다.",
+          "after": "\"거기는 \"비시\" 프랑스의 지배를 받았다. 이들은 1940년 독일과 강화를 택한 프랑스인들로 침략자들에 맞서 싸우기보다 동조한 사람들이다."
+        },
+        {
+          "id": "1906-2510882382123888779.wav",
+          "before": "\"이건 작별 인사가 아닙니다. 이것은 한 장의 끝이며 새로운 장의 시작입니다.\"\t \" \" 이 건 | 작 별 | 인 사 가 | 아 닙 니 다 . | 이 것 은 | 한 | 장 의 | 끝 이 며 | 새 로 운 | 장 의 | 시 작 입 니 다 . \" \" |",
+          "after": "\"\"\"이건 작별 인사가 아닙니다. 이것은 한 장의 끝이며 새로운 장의 시작입니다.\"\""
+        }
+      ]
+    },
+    {
+      "language": "es",
+      "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/es_419/test.tsv",
+      "source_tsv_sha256": "d107a93a4f54a18ac25cd470bb4cdadce14fb075b0c1d1542258e274d209ec09",
+      "audio_ids_and_order_unchanged": true,
+      "changes": []
+    },
+    {
+      "language": "fr",
+      "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/fr_fr/test.tsv",
+      "source_tsv_sha256": "5d06d338b242e00786fcf12c4c92008b9f399d5a5c872c91dca90572e7869c0d",
+      "audio_ids_and_order_unchanged": true,
+      "changes": []
+    },
+    {
+      "language": "de",
+      "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/de_de/test.tsv",
+      "source_tsv_sha256": "82fab72c58a347345675c238f2492bb997105a4ab45d69e2a2b34ed29082fa97",
+      "audio_ids_and_order_unchanged": true,
+      "changes": [
+        {
+          "id": "1749-8985978690235631242.wav",
+          "before": "er wurde von den vichy\"-franzosen beherrscht. dies waren franzosen die im jahr 1940 mit den deutschen frieden geschlossen hatten und mit den eroberern arbeiteten anstatt sie zu bekämpfen.\t e r | w u r d e | v o n | d e n | v i c h y \" \" - f r a n z o s e n | b e h e r r s c h t . | d i e s | w a r e n | f r a n z o s e n | d i e | i m | j a h r | 1 9 4 0 | m i t | d e n | d e u t s c h e n | f r i e d e n | g e s c h l o s s e n | h a t t e n | u n d | m i t | d e n | e r o b e r e r n | a r b e i t e t e n | a n s t a t t | s i e | z u | b e k ä m p f e n . |",
+          "after": "\"er wurde von den vichy\"\"-franzosen beherrscht. dies waren franzosen die im jahr 1940 mit den deutschen frieden geschlossen hatten und mit den eroberern arbeiteten anstatt sie zu bekämpfen."
+        },
+        {
+          "id": "1749-6166714273643756278.wav",
+          "before": "er wurde von den vichy\"-franzosen beherrscht. dies waren franzosen die im jahr 1940 mit den deutschen frieden geschlossen hatten und mit den eroberern arbeiteten anstatt sie zu bekämpfen.\t e r | w u r d e | v o n | d e n | v i c h y \" \" - f r a n z o s e n | b e h e r r s c h t . | d i e s | w a r e n | f r a n z o s e n | d i e | i m | j a h r | 1 9 4 0 | m i t | d e n | d e u t s c h e n | f r i e d e n | g e s c h l o s s e n | h a t t e n | u n d | m i t | d e n | e r o b e r e r n | a r b e i t e t e n | a n s t a t t | s i e | z u | b e k ä m p f e n . |",
+          "after": "\"er wurde von den vichy\"\"-franzosen beherrscht. dies waren franzosen die im jahr 1940 mit den deutschen frieden geschlossen hatten und mit den eroberern arbeiteten anstatt sie zu bekämpfen."
+        }
+      ]
+    }
+  ]
+}

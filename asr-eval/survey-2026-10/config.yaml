@@ -1,0 +1,52 @@
+datasets:
+    fleurs_zh:
+        name: FLEURS Mandarin pilot
+        language: zh
+    ascend_mixed:
+        name: ASCEND strictly mixed pilot
+        language: zh-en
+    ascend_test:
+        name: ASCEND mixed pilot
+        language: zh-en
+    librispeech_test_clean:
+        name: LibriSpeech clean pilot
+        language: en
+    librispeech_test_other:
+        name: LibriSpeech other pilot
+        language: en
+engines:
+    sensevoice:
+        name: SenseVoice baseline
+        type: sherpa_sensevoice
+        model_dir: .cache/october/sensevoice-layout
+        num_threads: 2
+    sensevoice_nano:
+        name: SenseVoice FunASR-Nano encoder
+        type: sherpa_sensevoice
+        model_dir: .cache/october/sensevoice-nano-layout
+        num_threads: 2
+    qwen06:
+        name: Qwen3-ASR 0.6B int8 app baseline
+        type: sherpa_qwen3
+        model_dir: .cache/october/qwen06
+        num_threads: 2
+    funasr_nano:
+        name: Fun-ASR-Nano full int8
+        type: sherpa_funasr_nano
+        model_dir: .cache/october/funasr_nano
+        num_threads: 2
+    qwen17:
+        name: Qwen3-ASR 1.7B MLX 8-bit handoff
+        type: qwen3_asr
+        model: .cache/october/qwen17
+    mimo:
+        name: MiMo V2.5 MLX 4-bit
+        type: mimo_asr
+        model: .cache/october/mimo
+        memory_limit_bytes: 8589934592
+
+evaluation:
+    data_dir: .cache/october/data
+    results_dir: survey-2026-10/runs
+    warmup_runs: 2
+    max_samples_per_dataset: 30

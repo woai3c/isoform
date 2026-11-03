@@ -1,0 +1,20 @@
+{
+  "id": "s3tokenizer3",
+  "repo": "mlx-community/S3TokenizerV3",
+  "revision": "b143914b3e912278104824da706edc9c2d317c4e",
+  "files": [
+    {
+      "path": "config.json",
+      "size_bytes": 174,
+      "sha256": "355c1cc1337107c89c786d7c2675d7a30322b204456f1a273acc037e291111cc",
+      "url": "https://huggingface.co/mlx-community/S3TokenizerV3/resolve/b143914b3e912278104824da706edc9c2d317c4e/config.json"
+    },
+    {
+      "path": "model.safetensors",
+      "size_bytes": 968059321,
+      "sha256": "ee05a65d4472f089d55b5dfcd9e19f42e3245f4f19d612b90c04cb051a80105e",
+      "url": "https://huggingface.co/mlx-community/S3TokenizerV3/resolve/b143914b3e912278104824da706edc9c2d317c4e/model.safetensors"
+    }
+  ],
+  "licence_metadata": null
+}

@@ -1,0 +1,182 @@
+{
+  "status": "complete",
+  "model": "melo",
+  "host": "macOS-26.2-arm64-arm-64bit",
+  "load_s": 1.6982742910040542,
+  "samples": [
+    {
+      "path": "tts-samples/melo-en-0-1.wav",
+      "lang": "en",
+      "voice": "0",
+      "prompt_index": 0,
+      "reference": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work.",
+      "sample_rate": 44100,
+      "duration_s": 5.787482993197279,
+      "synthesis_s": 3.9125822089990834,
+      "rtf": 0.6760421090823091,
+      "cpu_percent": 182.8,
+      "rss_mb": 563.3125,
+      "sha256": "1e2fa3558f0adf11da69639ac0540ec7a8f730e54724a6088b793f9d18987b1c",
+      "size_bytes": 510500
+    },
+    {
+      "path": "tts-samples/melo-en-0-2.wav",
+      "lang": "en",
+      "voice": "0",
+      "prompt_index": 1,
+      "reference": "The code review is ready. Please check the new API before merging the pull request.",
+      "sample_rate": 44100,
+      "duration_s": 4.85297052154195,
+      "synthesis_s": 2.963018624999677,
+      "rtf": 0.6105577216772846,
+      "cpu_percent": 185.0,
+      "rss_mb": 590.515625,
+      "sha256": "f5b94c94d112fddfffdd8d317166b6b16f0341aa816164584a381c07c284ad2f",
+      "size_bytes": 428076
+    },
+    {
+      "path": "tts-samples/melo-en-0-3.wav",
+      "lang": "en",
+      "voice": "0",
+      "prompt_index": 2,
+      "reference": "Take a short break, then send the project update when you are ready.",
+      "sample_rate": 44100,
+      "duration_s": 3.8848979591836734,
+      "synthesis_s": 2.7843120000034105,
+      "rtf": 0.7167014498853074,
+      "cpu_percent": 179.4,
+      "rss_mb": 594.765625,
+      "sha256": "929b8437c74ab3e5727b2177639d419a4e24b93bd7e3e51e39fd4e4ebdc679b4",
+      "size_bytes": 342692
+    },
+    {
+      "path": "tts-samples/melo-zh-0-1.wav",
+      "lang": "zh",
+      "voice": "0",
+      "prompt_index": 0,
+      "reference": "早上好。你的第一个会议九点开始，下午可以专心工作。",
+      "sample_rate": 44100,
+      "duration_s": 4.216621315192744,
+      "synthesis_s": 1.7122916669904953,
+      "rtf": 0.4060814426993963,
+      "cpu_percent": 197.2,
+      "rss_mb": 483.703125,
+      "sha256": "9fdec7628c1ea266374927c4e44b09262601912057500abe693f62227dea13ad",
+      "size_bytes": 371950
+    },
+    {
+      "path": "tts-samples/melo-zh-0-2.wav",
+      "lang": "zh",
+      "voice": "0",
+      "prompt_index": 1,
+      "reference": "代码审查已经准备好了。合并之前，请检查新的接口。",
+      "sample_rate": 44100,
+      "duration_s": 3.7637868480725625,
+      "synthesis_s": 1.8332949159957934,
+      "rtf": 0.48708786921199454,
+      "cpu_percent": 194.8,
+      "rss_mb": 492.890625,
+      "sha256": "472c52791ae6eb6740dc5cd4c6d9c4589adce0884c1ed63783e6136b05bb5eef",
+      "size_bytes": 332010
+    },
+    {
+      "path": "tts-samples/melo-zh-0-3.wav",
+      "lang": "zh",
+      "voice": "0",
+      "prompt_index": 2,
+      "reference": "先休息一会儿，准备好以后再发送项目进展。",
+      "sample_rate": 44100,
+      "duration_s": 3.436553287981859,
+      "synthesis_s": 2.2215001250006026,
+      "rtf": 0.6464326139709576,
+      "cpu_percent": 178.2,
+      "rss_mb": 495.484375,
+      "sha256": "b4a5d919c2fbf36e98f8507d0ab05b9790a797a0c214bb234734f379bd669eeb",
+      "size_bytes": 303148
+    }
+  ],
+  "briefs": [
+    {
+      "lang": "en",
+      "text": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then",
+      "word_count": 300,
+      "characters": 1684,
+      "duration_s": 99.18609977324263,
+      "synthesis_s": 44.72196554200491,
+      "rtf": 0.4508894456405425,
+      "rss_mb": 641.90625,
+      "input_chunks": [
+        "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request.",
+        " Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready.",
+        " Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning.",
+        " Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request.",
+        " Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready.",
+        " Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning.",
+        " Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request.",
+        " Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready.",
+        " Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning.",
+        " Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then"
+      ],
+      "characters_synthesized": 1684,
+      "first_chunk_s": 6.71263049999834,
+      "chunk_synthesis_s": [
+        6.71263049999834,
+        5.03041804098757,
+        2.7896993329923134,
+        3.4516025420016376,
+        6.407683625002392,
+        2.9247541670047212,
+        4.756006791998516,
+        3.774505125009455,
+        2.772517958001117,
+        6.10211820898985
+      ],
+      "mode": "bounded sentence groups, maximum 200 Latin or 80 Han characters; all input retained"
+    },
+    {
+      "lang": "zh",
+      "text": "早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。",
+      "word_count": null,
+      "characters": 552,
+      "duration_s": 91.71439909297052,
+      "synthesis_s": 52.089619499995024,
+      "rtf": 0.56795465068895,
+      "rss_mb": 676.53125,
+      "input_chunks": [
+        "早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。",
+        "你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。",
+        "你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。",
+        "你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。",
+        "你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。",
+        "你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。",
+        "你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。",
+        "你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。"
+      ],
+      "characters_synthesized": 552,
+      "first_chunk_s": 4.496182792005129,
+      "chunk_synthesis_s": [
+        4.496182792005129,
+        5.345149209009833,
+        5.153177582993521,
+        4.626381875001243,
+        6.637155124990386,
+        12.057433541995124,
+        8.688819874994806,
+        5.085306249995483
+      ],
+      "mode": "bounded sentence groups, maximum 200 Latin or 80 Han characters; all input retained"
+    }
+  ],
+  "voices": {
+    "en": "0",
+    "zh": "0"
+  },
+  "nice": 20,
+  "num_speakers": 1,
+  "prior_run": "survey-2026-10/diagnostics/tts-melo-1792783958.json",
+  "warmup_s": {
+    "en": 3.5150398339901585,
+    "zh": 1.5229869159957161
+  },
+  "process_peak_rss_bytes": 709394432
+}

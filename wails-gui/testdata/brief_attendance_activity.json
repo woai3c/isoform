@@ -1,0 +1,172 @@
+{
+  "description": "Recorded ActivityEvent wire shapes, with synthetic content and a fixed fixture day.",
+  "start": "2026-10-16T10:00:00Z",
+  "durationMinutes": 30,
+  "activity": {
+    "attended": [
+      {
+        "timestamp": 1792144920000,
+        "kind": "app_switch",
+        "appBundleId": "us.zoom.xos",
+        "appName": "Zoom",
+        "windowTitle": "Zoom Meeting"
+      },
+      {
+        "timestamp": 1792145040000,
+        "kind": "speech",
+        "appBundleId": "us.zoom.xos",
+        "appName": "Zoom",
+        "windowTitle": "Zoom Meeting",
+        "speechText": "Synthetic fixture words are deliberately not passed to the brief.",
+        "speechSource": "system_audio",
+        "speechInCall": true
+      },
+      {
+        "timestamp": 1792145160000,
+        "kind": "speech",
+        "appBundleId": "us.zoom.xos",
+        "appName": "Zoom",
+        "windowTitle": "Zoom Meeting",
+        "speechSource": "microphone",
+        "speechInCall": true
+      }
+    ],
+    "skipped": [
+      {
+        "timestamp": 1792144799999,
+        "kind": "device_in_use",
+        "device": "microphone",
+        "inUse": false
+      },
+      {
+        "timestamp": 1792144799999,
+        "kind": "device_in_use",
+        "device": "camera",
+        "inUse": false
+      },
+      {
+        "timestamp": 1792144800000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792144920000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792145040000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792145160000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792145280000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792145400000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792145520000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792145640000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792145760000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792145880000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792146000000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792146120000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792146240000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792146360000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      },
+      {
+        "timestamp": 1792146480000,
+        "kind": "keyboard",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review"
+      }
+    ],
+    "unknown": [
+      {
+        "timestamp": 1792144800000,
+        "kind": "session_state",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review",
+        "stateName": "sleep"
+      },
+      {
+        "timestamp": 1792146540000,
+        "kind": "session_state",
+        "appBundleId": "com.microsoft.VSCode",
+        "appName": "Code",
+        "windowTitle": "Isoform review",
+        "stateName": "wake"
+      }
+    ]
+  }
+}

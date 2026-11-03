@@ -1,0 +1,813 @@
+{
+  "dataset": "google/fleurs",
+  "revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+  "config": "de_de",
+  "split": "test",
+  "selection": "First 100 utterances in published test.tsv order; duplicate prompts retained",
+  "licence": "CC-BY-4.0",
+  "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/de_de",
+  "samples": [
+    {
+      "order": 0,
+      "id": "1855-17113436913741548046.wav",
+      "audio_path": "17113436913741548046.wav",
+      "reference": "löwenrudel agieren ähnlich wie wolfs- oder hunderudel tiere die den löwen aber nicht anderen großkatzen im verhalten überraschend ähneln und ebenso tödlich gegenüber ihrer beute sind",
+      "duration_s": 25.86,
+      "sha256": "a02f012a8c834438088f1e057e9ed4518634c658ef0ff04000fcea98cf852417"
+    },
+    {
+      "order": 1,
+      "id": "1855-10555751885736126606.wav",
+      "audio_path": "10555751885736126606.wav",
+      "reference": "löwenrudel agieren ähnlich wie wolfs- oder hunderudel tiere die den löwen aber nicht anderen großkatzen im verhalten überraschend ähneln und ebenso tödlich gegenüber ihrer beute sind",
+      "duration_s": 11.22,
+      "sha256": "0661f85b7e1f3e7bd87c64933bc713115cb544ce0c95686b754306135c469074"
+    },
+    {
+      "order": 2,
+      "id": "1855-13734019592211926155.wav",
+      "audio_path": "13734019592211926155.wav",
+      "reference": "löwenrudel agieren ähnlich wie wolfs- oder hunderudel tiere die den löwen aber nicht anderen großkatzen im verhalten überraschend ähneln und ebenso tödlich gegenüber ihrer beute sind",
+      "duration_s": 14.82,
+      "sha256": "0eab7066c50e3056b9837dc750b08e15e551d69dbd540951fcb92334b8ff3b2b"
+    },
+    {
+      "order": 3,
+      "id": "1701-4963712857525084701.wav",
+      "audio_path": "4963712857525084701.wav",
+      "reference": "ziegen wurden anscheinend bereits vor ungefähr 10.000 jahren im zāgros-gebirge im iran domestiziert",
+      "duration_s": 9.84,
+      "sha256": "16ff81a162ffae19dc41bc3c337fca575c55f6121963e9bed52f7582c96b3a76"
+    },
+    {
+      "order": 4,
+      "id": "1701-3653977734852118277.wav",
+      "audio_path": "3653977734852118277.wav",
+      "reference": "ziegen wurden anscheinend bereits vor ungefähr 10.000 jahren im zāgros-gebirge im iran domestiziert",
+      "duration_s": 16.14,
+      "sha256": "088441b3fdbcdc758bc4f26c8e09bced378c87a157d9a7013a88cfb29e4ffd61"
+    },
+    {
+      "order": 5,
+      "id": "1701-11725654714821576978.wav",
+      "audio_path": "11725654714821576978.wav",
+      "reference": "ziegen wurden anscheinend bereits vor ungefähr 10.000 jahren im zāgros-gebirge im iran domestiziert",
+      "duration_s": 11.22,
+      "sha256": "be7880bb525a2f6f5daac50c3c5940e762bf2113cef215450cb0bb23810de0b1"
+    },
+    {
+      "order": 6,
+      "id": "1980-12482370299689904904.wav",
+      "audio_path": "12482370299689904904.wav",
+      "reference": "leider fällt das studium von verkehrsflüssen schwer da man fahrerverhalten nicht mit hundertprozentiger sicherheit voraussagen kann",
+      "duration_s": 10.86,
+      "sha256": "3c1a7baa8f1b8947e0cea6d7e4f8e4e28030da016e830f1da5dc6a5162439fa5"
+    },
+    {
+      "order": 7,
+      "id": "1980-2561524221067958936.wav",
+      "audio_path": "2561524221067958936.wav",
+      "reference": "leider fällt das studium von verkehrsflüssen schwer da man fahrerverhalten nicht mit hundertprozentiger sicherheit voraussagen kann",
+      "duration_s": 8.52,
+      "sha256": "a7843b12a7f0f37e500fdc11695cd4c58d597c4175a41d1f839e2457a9085347"
+    },
+    {
+      "order": 8,
+      "id": "1944-14996476656149482093.wav",
+      "audio_path": "14996476656149482093.wav",
+      "reference": "es gibt familienstrände die manchmal überlaufen sind mit einer schönen einkaufspromenade entlang der küste das schwimmen ist hier sicher",
+      "duration_s": 12.18,
+      "sha256": "ab8362d1780de58a391b4e9d2813abccc26cb40dfaaa4c6f5aa6db0e08a18a41"
+    },
+    {
+      "order": 9,
+      "id": "1944-10347138311808731867.wav",
+      "audio_path": "10347138311808731867.wav",
+      "reference": "es gibt familienstrände die manchmal überlaufen sind mit einer schönen einkaufspromenade entlang der küste das schwimmen ist hier sicher",
+      "duration_s": 23.28,
+      "sha256": "a1ad9e2e3088c2b2ed115e7e5b82261b0d12796eaad6923e258aa0832da84c0c"
+    },
+    {
+      "order": 10,
+      "id": "1944-1175248235018156351.wav",
+      "audio_path": "1175248235018156351.wav",
+      "reference": "es gibt familienstrände die manchmal überlaufen sind mit einer schönen einkaufspromenade entlang der küste das schwimmen ist hier sicher",
+      "duration_s": 7.86,
+      "sha256": "7f57ca57c518f1ec27f1a88f14a74d1cbcf6d69683b0c0ea1d64d4d7e6da2c88"
+    },
+    {
+      "order": 11,
+      "id": "1713-14772366518870892058.wav",
+      "audio_path": "14772366518870892058.wav",
+      "reference": "während goma einigermaßen sicher ist sollte jeder aufenthalt außerhalb gomas sorgfältig geplant werden um den stand der in der provinz nord-kivu andauernden kämpfe zu erfahren",
+      "duration_s": 10.2,
+      "sha256": "862ec7751e557fece6b22ebfdf887b7e6a67de9a1dea1ed255ffbc9a6662362a"
+    },
+    {
+      "order": 12,
+      "id": "1713-10504450071805589678.wav",
+      "audio_path": "10504450071805589678.wav",
+      "reference": "während goma einigermaßen sicher ist sollte jeder aufenthalt außerhalb gomas sorgfältig geplant werden um den stand der in der provinz nord-kivu andauernden kämpfe zu erfahren",
+      "duration_s": 23.04,
+      "sha256": "39201b5e07a9e32f13b0d2a86992391c24daf9eeb9a7db3f9a578902903ea82f"
+    },
+    {
+      "order": 13,
+      "id": "1885-17340904394278275929.wav",
+      "audio_path": "17340904394278275929.wav",
+      "reference": "zwischen 22:00 und 11:00 uhr mdt wurde von den insassen im hof ein feuer gelegt",
+      "duration_s": 8.4,
+      "sha256": "60efb4dd4275c982364a7e0bff2cc57ac1a028b69c8bddd5fcc8bc014b9831f6"
+    },
+    {
+      "order": 14,
+      "id": "1885-3886596361103225573.wav",
+      "audio_path": "3886596361103225573.wav",
+      "reference": "zwischen 22:00 und 11:00 uhr mdt wurde von den insassen im hof ein feuer gelegt",
+      "duration_s": 6.18,
+      "sha256": "2395a1e500e63fcae75d66c07b2f4544a6b03daafe3ebeb4cbe8b6343f6ccb84"
+    },
+    {
+      "order": 15,
+      "id": "1724-3812261423674718843.wav",
+      "audio_path": "3812261423674718843.wav",
+      "reference": "sein ruhm als epizentrum des luxus begann ungefähr um 400 n chr. und dauerte bis ungefähr 1100 n chr. an",
+      "duration_s": 7.44,
+      "sha256": "fe85837e6bd2b3b28a5556cc8432d7aee07afe97f2e048e187c986ccfb40e90d"
+    },
+    {
+      "order": 16,
+      "id": "1724-12843660496630565389.wav",
+      "audio_path": "12843660496630565389.wav",
+      "reference": "sein ruhm als epizentrum des luxus begann ungefähr um 400 n chr. und dauerte bis ungefähr 1100 n chr. an",
+      "duration_s": 7.44,
+      "sha256": "92664b7d35251677be30a18620f9e10b55d706769b29dc80b3fbfa4865a5dc34"
+    },
+    {
+      "order": 17,
+      "id": "1864-16004810575340028273.wav",
+      "audio_path": "16004810575340028273.wav",
+      "reference": "frau kirchner kündigte ihre absicht als präsidentin zu kandidieren im argentinischen theater an dort begann sie 2005 auch ihre kampagne für den senat als mitglied der delegation der provinz buenos aires",
+      "duration_s": 18.24,
+      "sha256": "707141ff9ece5775268f206ee78f493951ad9904fe659a2a9e3438b5d90597e4"
+    },
+    {
+      "order": 18,
+      "id": "1864-1144628591089987683.wav",
+      "audio_path": "1144628591089987683.wav",
+      "reference": "frau kirchner kündigte ihre absicht als präsidentin zu kandidieren im argentinischen theater an dort begann sie 2005 auch ihre kampagne für den senat als mitglied der delegation der provinz buenos aires",
+      "duration_s": 18.12,
+      "sha256": "11db8a2b60e88f1bd7719c03fc963474999ed62bc324f2a7b9d6479eaa74f90a"
+    },
+    {
+      "order": 19,
+      "id": "1882-9450525503727057365.wav",
+      "audio_path": "9450525503727057365.wav",
+      "reference": "da kometen vor langer zeit mit der erde zusammenprallten versprechen sich die wissenschaftler einblicke wie planeten insbesondere die erde entstehen",
+      "duration_s": 12.84,
+      "sha256": "77c9da435a9559dbfcfcf086ea3bcbbea016024600c4626b7494871c21c6c8f6"
+    },
+    {
+      "order": 20,
+      "id": "1882-18026168807836015428.wav",
+      "audio_path": "18026168807836015428.wav",
+      "reference": "da kometen vor langer zeit mit der erde zusammenprallten versprechen sich die wissenschaftler einblicke wie planeten insbesondere die erde entstehen",
+      "duration_s": 10.8,
+      "sha256": "9b071ae5f8cde0894cc24b00c9dd97c75b7d11c1f6d2cee0a6ec362404195e01"
+    },
+    {
+      "order": 21,
+      "id": "1718-14743079206182242094.wav",
+      "audio_path": "14743079206182242094.wav",
+      "reference": "es gibt keine allgemeingültige definition dafür welche hergestellten gegenstände als antiquitäten gelten manche steuerbehörden definieren über 100 jahre alte waren als antiquitäten",
+      "duration_s": 14.52,
+      "sha256": "bf38c5136c3eb8f2f35dc011d0047296397e748c7e51f671a6e6ec3c545a5662"
+    },
+    {
+      "order": 22,
+      "id": "1718-13327484359514762408.wav",
+      "audio_path": "13327484359514762408.wav",
+      "reference": "es gibt keine allgemeingültige definition dafür welche hergestellten gegenstände als antiquitäten gelten manche steuerbehörden definieren über 100 jahre alte waren als antiquitäten",
+      "duration_s": 14.88,
+      "sha256": "2507188eb927add4aa95acdc55d042e5aa8ec834eee1bb45e9455c08511222d2"
+    },
+    {
+      "order": 23,
+      "id": "1757-4912300559226683422.wav",
+      "audio_path": "4912300559226683422.wav",
+      "reference": "nur mutationen in keimbahnzellen können an kinder weitergegeben werden während mutationen anderswo zum zelltod oder zu krebs führen können",
+      "duration_s": 19.44,
+      "sha256": "c7fcfd0b633f3d4dde24acd26a1e014f6f335f5982d8ce6feab759d215f35628"
+    },
+    {
+      "order": 24,
+      "id": "1757-6479202151955421212.wav",
+      "audio_path": "6479202151955421212.wav",
+      "reference": "nur mutationen in keimbahnzellen können an kinder weitergegeben werden während mutationen anderswo zum zelltod oder zu krebs führen können",
+      "duration_s": 14.7,
+      "sha256": "3d2b23b6d02d520280371df0b3011af5d1a6862d08797263374c2281c189fe55"
+    },
+    {
+      "order": 25,
+      "id": "1696-829120786432280030.wav",
+      "audio_path": "829120786432280030.wav",
+      "reference": "die zwei verbindungen reagieren miteinander und formen kristalle die laut forschern der hochschule die nierentätigkeit behindern können",
+      "duration_s": 7.32,
+      "sha256": "81d836465d9070fcc3a34dfebe1bdefa0c0b277444b0e2ac2bee5d63f38d9f37"
+    },
+    {
+      "order": 26,
+      "id": "1696-18208273162967463359.wav",
+      "audio_path": "18208273162967463359.wav",
+      "reference": "die zwei verbindungen reagieren miteinander und formen kristalle die laut forschern der hochschule die nierentätigkeit behindern können",
+      "duration_s": 17.7,
+      "sha256": "cd8accf3e153fe09f0ec5216421b187219a9155092dcd0db6a579dddf9d2a7ef"
+    },
+    {
+      "order": 27,
+      "id": "1674-16512809721737584620.wav",
+      "audio_path": "16512809721737584620.wav",
+      "reference": "in einigen gebieten genügt es wasser eine minute lang abzukochen in anderen müssen es mehrere minuten sein",
+      "duration_s": 12.06,
+      "sha256": "1beb63d92b736a698441f013bd64d60053c02e1a652ccc0527ffbbb9897988f1"
+    },
+    {
+      "order": 28,
+      "id": "1674-5206839124674557105.wav",
+      "audio_path": "5206839124674557105.wav",
+      "reference": "in einigen gebieten genügt es wasser eine minute lang abzukochen in anderen müssen es mehrere minuten sein",
+      "duration_s": 5.46,
+      "sha256": "dd9adf4228ed60662ae7e25f2abdd109bcd77c4e3f18b78d41675a7ebd526143"
+    },
+    {
+      "order": 29,
+      "id": "1674-8570942209470725152.wav",
+      "audio_path": "8570942209470725152.wav",
+      "reference": "in einigen gebieten genügt es wasser eine minute lang abzukochen in anderen müssen es mehrere minuten sein",
+      "duration_s": 6.18,
+      "sha256": "1dfba3023a88073a0acf6f163a83db42132b7cfe48cb3af4bac07650070cce56"
+    },
+    {
+      "order": 30,
+      "id": "1999-3543431813467030777.wav",
+      "audio_path": "3543431813467030777.wav",
+      "reference": "während der 1960er-jahre arbeitete brzezinski als berater für john f. kennedy sowie anschließend für die regierung rund um lyndon b. johnson",
+      "duration_s": 8.28,
+      "sha256": "c249296be13f6a6650f839ce6510fae3ccb32a8744ca754a5abb214df9cc672c"
+    },
+    {
+      "order": 31,
+      "id": "1709-11916043699055235066.wav",
+      "audio_path": "11916043699055235066.wav",
+      "reference": "der bericht steht fast jedem aspekt der gegenwärtigen politik der exekutive im hinblick auf den irak äußerst kritisch gegenüber und drängt auf einen sofortigen richtungswechsel",
+      "duration_s": 14.04,
+      "sha256": "75f44f8076111187486d3cc68a29bdea202a80ec3801c72984b4f751aca55078"
+    },
+    {
+      "order": 32,
+      "id": "1709-8597498256286704239.wav",
+      "audio_path": "8597498256286704239.wav",
+      "reference": "der bericht steht fast jedem aspekt der gegenwärtigen politik der exekutive im hinblick auf den irak äußerst kritisch gegenüber und drängt auf einen sofortigen richtungswechsel",
+      "duration_s": 15.36,
+      "sha256": "1594d84ed1e65fd4c6760375c06d61b35539b362c62ae8329ec7eb93872d5303"
+    },
+    {
+      "order": 33,
+      "id": "1709-6789004353973995727.wav",
+      "audio_path": "6789004353973995727.wav",
+      "reference": "der bericht steht fast jedem aspekt der gegenwärtigen politik der exekutive im hinblick auf den irak äußerst kritisch gegenüber und drängt auf einen sofortigen richtungswechsel",
+      "duration_s": 9.72,
+      "sha256": "46b993d717b9aece9a44dbd454dcacaf42ca681879df5879a296aae3f78c7c88"
+    },
+    {
+      "order": 34,
+      "id": "1784-1787482183202287422.wav",
+      "audio_path": "1787482183202287422.wav",
+      "reference": "grönland war spärlich besiedelt in den altnordischen sagen heißt es dass erik der rote wegen mordes aus island verbannt wurde als er weiter nach westen reiste fand er grönland und gab ihm den namen grönland",
+      "duration_s": 12.36,
+      "sha256": "8d77baef1a3ced46739261f5fc58729c1d5e92b7248e2378407f3ca64bfe8c6b"
+    },
+    {
+      "order": 35,
+      "id": "1784-14664874893999279163.wav",
+      "audio_path": "14664874893999279163.wav",
+      "reference": "grönland war spärlich besiedelt in den altnordischen sagen heißt es dass erik der rote wegen mordes aus island verbannt wurde als er weiter nach westen reiste fand er grönland und gab ihm den namen grönland",
+      "duration_s": 16.74,
+      "sha256": "95404ecff79ca530b5e2ad9097136d21e5b9bbb71d3d1dc9f7a0835a66fef6f9"
+    },
+    {
+      "order": 36,
+      "id": "1784-11113920537062054485.wav",
+      "audio_path": "11113920537062054485.wav",
+      "reference": "grönland war spärlich besiedelt in den altnordischen sagen heißt es dass erik der rote wegen mordes aus island verbannt wurde als er weiter nach westen reiste fand er grönland und gab ihm den namen grönland",
+      "duration_s": 11.16,
+      "sha256": "b82617d0129839547fd5d170293d92325bfe36d728f89c0c1a79c83e22b6b24c"
+    },
+    {
+      "order": 37,
+      "id": "1777-10243976286554101786.wav",
+      "audio_path": "10243976286554101786.wav",
+      "reference": "ottawa ist kanadas bezaubernde zweisprachige hauptstadt und zeichnet sich durch eine reihe von kunstgalerien und museen aus die kanadas vergangenheit und gegenwart präsentieren",
+      "duration_s": 14.88,
+      "sha256": "5611e136468d2cd0c02ad5904de39dec2b2452bb3713f3f005d4eab00a3ddf09"
+    },
+    {
+      "order": 38,
+      "id": "1777-152471765559000662.wav",
+      "audio_path": "152471765559000662.wav",
+      "reference": "ottawa ist kanadas bezaubernde zweisprachige hauptstadt und zeichnet sich durch eine reihe von kunstgalerien und museen aus die kanadas vergangenheit und gegenwart präsentieren",
+      "duration_s": 12.84,
+      "sha256": "dc6fb2352440a414fe0c52ee278dc9f090767710352b6d0541ebeaecb2c1a23b"
+    },
+    {
+      "order": 39,
+      "id": "1777-18015686419206803238.wav",
+      "audio_path": "18015686419206803238.wav",
+      "reference": "ottawa ist kanadas bezaubernde zweisprachige hauptstadt und zeichnet sich durch eine reihe von kunstgalerien und museen aus die kanadas vergangenheit und gegenwart präsentieren",
+      "duration_s": 9.48,
+      "sha256": "3e772e3a7472ca48bd9f4133147b5b8e9f8c4e96316591781c1188503e3cdf51"
+    },
+    {
+      "order": 40,
+      "id": "1897-7449746496897667416.wav",
+      "audio_path": "7449746496897667416.wav",
+      "reference": "im norden ist die region von der sahelzone begrenzt und im süden und westen vom atlantischen ozean",
+      "duration_s": 10.44,
+      "sha256": "76ce6ad6ed3017853463a5a52ef6e575c303da1e78698b8a214ed6e0341fd954"
+    },
+    {
+      "order": 41,
+      "id": "1897-1230554609171138786.wav",
+      "audio_path": "1230554609171138786.wav",
+      "reference": "im norden ist die region von der sahelzone begrenzt und im süden und westen vom atlantischen ozean",
+      "duration_s": 18.96,
+      "sha256": "fc4706b84a71766b14d273d57a51f1b3ff19af81ee7c803ff21c562876aa495b"
+    },
+    {
+      "order": 42,
+      "id": "1897-4397057978369044928.wav",
+      "audio_path": "4397057978369044928.wav",
+      "reference": "im norden ist die region von der sahelzone begrenzt und im süden und westen vom atlantischen ozean",
+      "duration_s": 9.84,
+      "sha256": "240f377d401a136d8dbac48c249b6eee304db3c69b20188288dd34b8d08a92f2"
+    },
+    {
+      "order": 43,
+      "id": "1663-7488275135478003184.wav",
+      "audio_path": "7488275135478003184.wav",
+      "reference": "das cochamó-tal – chiles wichtigstes kletterziel bekannt als der yosemite-nationalpark von südamerika mit einer vielzahl von großen granitwänden und -klippen",
+      "duration_s": 9.78,
+      "sha256": "cb20db629f9adb2ff5be27de133ba58b6025e1dab215d007206a58ec3713ec1e"
+    },
+    {
+      "order": 44,
+      "id": "1764-16481527399735957402.wav",
+      "audio_path": "16481527399735957402.wav",
+      "reference": "die teilnehmerzahl war so groß dass es nicht allen möglich war zugang zur bestattung auf dem petersplatz zu erhalten",
+      "duration_s": 8.04,
+      "sha256": "81ba527fcc53d5fc09ec5db4d7a843f575cde4ae1b72432cec853d07ea1cad9e"
+    },
+    {
+      "order": 45,
+      "id": "1764-322566282770044812.wav",
+      "audio_path": "322566282770044812.wav",
+      "reference": "die teilnehmerzahl war so groß dass es nicht allen möglich war zugang zur bestattung auf dem petersplatz zu erhalten",
+      "duration_s": 10.86,
+      "sha256": "d91d7400c1b8734457932c61c1c270447b1e586d129ff31e6171d83766880bff"
+    },
+    {
+      "order": 46,
+      "id": "1764-12096938210340365820.wav",
+      "audio_path": "12096938210340365820.wav",
+      "reference": "die teilnehmerzahl war so groß dass es nicht allen möglich war zugang zur bestattung auf dem petersplatz zu erhalten",
+      "duration_s": 6.18,
+      "sha256": "67cdc739f04fb5126a41efa095d7f6385d3032c660b163df57dfbbe7daa61873"
+    },
+    {
+      "order": 47,
+      "id": "1857-7747890228345208209.wav",
+      "audio_path": "7747890228345208209.wav",
+      "reference": "er fügte hinzu dass sie jedoch nicht dazu aufgefordert werden sollten verpflichtungen einzugehen die über ihren entwicklungsstand ihre verantwortung und ihre fähigkeiten hinausgehen",
+      "duration_s": 9.36,
+      "sha256": "6e7f591a96ec44af4d7c9868fe1198a37d3c607367e36b1a97d04acad385bc7f"
+    },
+    {
+      "order": 48,
+      "id": "1857-11906634980733046933.wav",
+      "audio_path": "11906634980733046933.wav",
+      "reference": "er fügte hinzu dass sie jedoch nicht dazu aufgefordert werden sollten verpflichtungen einzugehen die über ihren entwicklungsstand ihre verantwortung und ihre fähigkeiten hinausgehen",
+      "duration_s": 13.98,
+      "sha256": "2cbab33e5c337ef0fe518d79a433e9136ba2e45c078d039aa4f21e1c0a83c7f7"
+    },
+    {
+      "order": 49,
+      "id": "1857-15314143573599772462.wav",
+      "audio_path": "15314143573599772462.wav",
+      "reference": "er fügte hinzu dass sie jedoch nicht dazu aufgefordert werden sollten verpflichtungen einzugehen die über ihren entwicklungsstand ihre verantwortung und ihre fähigkeiten hinausgehen",
+      "duration_s": 21.6,
+      "sha256": "4d453de004450fd16a41fd34a27d83f426134b370e71d3f13f2e5cbb36bafb74"
+    },
+    {
+      "order": 50,
+      "id": "1986-12215366172446965404.wav",
+      "audio_path": "12215366172446965404.wav",
+      "reference": "die gegenwart eines echten unsichtbaren teams  larson und lafasto 1989 s. 109 ist auch ein einzigartiger bestandteil eines virtuellen teams",
+      "duration_s": 17.64,
+      "sha256": "6a336e3b446f3cfed700f581c86f9c890a02792552047f9200f0ab19a2f48692"
+    },
+    {
+      "order": 51,
+      "id": "1986-10989166449458270876.wav",
+      "audio_path": "10989166449458270876.wav",
+      "reference": "die gegenwart eines echten unsichtbaren teams  larson und lafasto 1989 s. 109 ist auch ein einzigartiger bestandteil eines virtuellen teams",
+      "duration_s": 16.68,
+      "sha256": "ba855ce676d940aab0cf9d3739a2d1b8fc40fa8f50139685dc1055c19a83814f"
+    },
+    {
+      "order": 52,
+      "id": "1986-3071694853075190575.wav",
+      "audio_path": "3071694853075190575.wav",
+      "reference": "die gegenwart eines echten unsichtbaren teams  larson und lafasto 1989 s. 109 ist auch ein einzigartiger bestandteil eines virtuellen teams",
+      "duration_s": 17.28,
+      "sha256": "888fe57848d615d77a0442879388ef0a618bb0bc74d7ed70d66f07f32da203fc"
+    },
+    {
+      "order": 53,
+      "id": "1824-15995646986316362748.wav",
+      "audio_path": "15995646986316362748.wav",
+      "reference": "das gizeh-plateau beziehungsweise die gizeh-nekropole  im ägyptischen tal der toten umfasst mehrere pyramiden von denen die große pyramide die größte ist mehrere kleine gräber mehrere tempel sowie die große sphinx",
+      "duration_s": 22.26,
+      "sha256": "a8184210231feca252ecb7b022453c08592a6dee79830b9fd4ce8429bd672064"
+    },
+    {
+      "order": 54,
+      "id": "1824-17466232517197398527.wav",
+      "audio_path": "17466232517197398527.wav",
+      "reference": "das gizeh-plateau beziehungsweise die gizeh-nekropole  im ägyptischen tal der toten umfasst mehrere pyramiden von denen die große pyramide die größte ist mehrere kleine gräber mehrere tempel sowie die große sphinx",
+      "duration_s": 15.84,
+      "sha256": "0a0c43d31ce66edbf0c4b52ee8594cffd912e424910e82de563602f5e721acd6"
+    },
+    {
+      "order": 55,
+      "id": "1824-1808370668876964323.wav",
+      "audio_path": "1808370668876964323.wav",
+      "reference": "das gizeh-plateau beziehungsweise die gizeh-nekropole  im ägyptischen tal der toten umfasst mehrere pyramiden von denen die große pyramide die größte ist mehrere kleine gräber mehrere tempel sowie die große sphinx",
+      "duration_s": 20.76,
+      "sha256": "1d6711fc5641fbf57d0090c5d7e2166f7fb7c235211c72c4f8a2195a606a3b06"
+    },
+    {
+      "order": 56,
+      "id": "1752-1368065425607103631.wav",
+      "audio_path": "1368065425607103631.wav",
+      "reference": "infolgedessen sind zwei fischarten ausgestorben und zwei weitere sind vom aussterben bedroht darunter der gila cypha",
+      "duration_s": 13.86,
+      "sha256": "37f69e057035f8b6d4b0e88b19454d6e23b1ebe352b7f7f2a9cef04852b5fbda"
+    },
+    {
+      "order": 57,
+      "id": "1752-9957275888441805405.wav",
+      "audio_path": "9957275888441805405.wav",
+      "reference": "infolgedessen sind zwei fischarten ausgestorben und zwei weitere sind vom aussterben bedroht darunter der gila cypha",
+      "duration_s": 7.5,
+      "sha256": "e0e676f5ca1d39b622ad17dc94021ee5fb90d7fbc7e7b8cc440ede28e9f56c9a"
+    },
+    {
+      "order": 58,
+      "id": "1752-16017599593113495706.wav",
+      "audio_path": "16017599593113495706.wav",
+      "reference": "infolgedessen sind zwei fischarten ausgestorben und zwei weitere sind vom aussterben bedroht darunter der gila cypha",
+      "duration_s": 16.26,
+      "sha256": "238b5f75a4d04abfde18145b623583675685021dadaffe7054b7375c3d0dc0b0"
+    },
+    {
+      "order": 59,
+      "id": "1839-2672131145166681460.wav",
+      "audio_path": "2672131145166681460.wav",
+      "reference": "betrachten sie die skiroute wie eine vergleichbare wanderroute",
+      "duration_s": 4.26,
+      "sha256": "1147e08b26ea30a267813760ca3b4aa2182b7a2e1423f4061675cabd2e0d81d1"
+    },
+    {
+      "order": 60,
+      "id": "1839-17194386507947520507.wav",
+      "audio_path": "17194386507947520507.wav",
+      "reference": "betrachten sie die skiroute wie eine vergleichbare wanderroute",
+      "duration_s": 7.68,
+      "sha256": "a9ead3b6ec517ca32d758586b041f1ae97fcb8bf42b5d52a3f7a5385fe3015de"
+    },
+    {
+      "order": 61,
+      "id": "1989-124264283562190227.wav",
+      "audio_path": "124264283562190227.wav",
+      "reference": "er war auch am stechen von geldscheinen für viele länder beteiligt. aktuelle beispiele seiner arbeit schließen die premierministerportraits auf der vorderseite der kanadischen 5- und 100-dollarnoten ein",
+      "duration_s": 17.82,
+      "sha256": "7a6b419950d71dd4df92a4237e1ff1af17c8c5111fb49f0a8333a9beba39fb59"
+    },
+    {
+      "order": 62,
+      "id": "1989-6437487662759955081.wav",
+      "audio_path": "6437487662759955081.wav",
+      "reference": "er war auch am stechen von geldscheinen für viele länder beteiligt. aktuelle beispiele seiner arbeit schließen die premierministerportraits auf der vorderseite der kanadischen 5- und 100-dollarnoten ein",
+      "duration_s": 10.8,
+      "sha256": "5e054b0f864b6fe52dba0377ccd07faa74a3ca56b5f5e38187b018cb5a412d98"
+    },
+    {
+      "order": 63,
+      "id": "1989-4532739142057364258.wav",
+      "audio_path": "4532739142057364258.wav",
+      "reference": "er war auch am stechen von geldscheinen für viele länder beteiligt. aktuelle beispiele seiner arbeit schließen die premierministerportraits auf der vorderseite der kanadischen 5- und 100-dollarnoten ein",
+      "duration_s": 11.64,
+      "sha256": "d4e0e1bbeed32bc3c5c4c8108c125c4e245a71627923c7c58352922aad2264b7"
+    },
+    {
+      "order": 64,
+      "id": "1951-3614715373037403768.wav",
+      "audio_path": "3614715373037403768.wav",
+      "reference": "im jahr 2002 wurde goma durch die lava des nyiragongo-vulkans zerstört die die meisten straßen der stadt insbesondere das stadtzentrum unter sich begrub",
+      "duration_s": 15.24,
+      "sha256": "0b329d8637b2735f3c6c4bc258a56ad6d300588c2d2e08d4848761a5074dde9f"
+    },
+    {
+      "order": 65,
+      "id": "1998-18028526040519304080.wav",
+      "audio_path": "18028526040519304080.wav",
+      "reference": "sie haben füße mit schuppen und krallen legen eier und laufen auf beiden hinterbeinen wie ein tyrannosaurus rex",
+      "duration_s": 9.96,
+      "sha256": "e529bebdc0ffbeaa8a4f2c4799780b465f3534c1c974bdd7bd1e4ad8ac345833"
+    },
+    {
+      "order": 66,
+      "id": "1998-9652470681716559570.wav",
+      "audio_path": "9652470681716559570.wav",
+      "reference": "sie haben füße mit schuppen und krallen legen eier und laufen auf beiden hinterbeinen wie ein tyrannosaurus rex",
+      "duration_s": 9.9,
+      "sha256": "3b1bfbe544af8a50b74720deb06d50a88af5d745bc48fd4ba15bc4eae7bfc5fc"
+    },
+    {
+      "order": 67,
+      "id": "1998-546161551020398535.wav",
+      "audio_path": "546161551020398535.wav",
+      "reference": "sie haben füße mit schuppen und krallen legen eier und laufen auf beiden hinterbeinen wie ein tyrannosaurus rex",
+      "duration_s": 17.76,
+      "sha256": "28659cbb5e5428371e5c914d503edcc5386d9be802d7dce5f235ecfddd9e53af"
+    },
+    {
+      "order": 68,
+      "id": "1807-5552436957235740608.wav",
+      "audio_path": "5552436957235740608.wav",
+      "reference": "italienisch ist auch die alltagssprache der meisten die im staat arbeiten während latein häufig bei religiösen zeremonien verwendet wird",
+      "duration_s": 11.76,
+      "sha256": "eece512e20d16c3acae6e74dd21ce5b60566043abf39d4bb77f1a171e74f97be"
+    },
+    {
+      "order": 69,
+      "id": "1807-14933254081141139593.wav",
+      "audio_path": "14933254081141139593.wav",
+      "reference": "italienisch ist auch die alltagssprache der meisten die im staat arbeiten während latein häufig bei religiösen zeremonien verwendet wird",
+      "duration_s": 7.56,
+      "sha256": "8e27e7f0097e8e846e1edd5d55e8f8b25ffa1e8983c9fbbf73c55db9b20ab353"
+    },
+    {
+      "order": 70,
+      "id": "1807-5586132529099956586.wav",
+      "audio_path": "5586132529099956586.wav",
+      "reference": "italienisch ist auch die alltagssprache der meisten die im staat arbeiten während latein häufig bei religiösen zeremonien verwendet wird",
+      "duration_s": 8.04,
+      "sha256": "3dafc047a902cf0a13b37a4ce828d1a93c2f5f3bc43969071fe91b1cb6a24990"
+    },
+    {
+      "order": 71,
+      "id": "1803-3943936982120727450.wav",
+      "audio_path": "3943936982120727450.wav",
+      "reference": "die feuchtigkeit auf ihren händen reagiert mit den äußeren schichten was sich komisch anfühlt und eine art schutzschicht bildet",
+      "duration_s": 10.8,
+      "sha256": "8a453af2bb1792744362d231da4da974406c95810a92a849264b34b99cf1058d"
+    },
+    {
+      "order": 72,
+      "id": "1803-6426875064818704687.wav",
+      "audio_path": "6426875064818704687.wav",
+      "reference": "die feuchtigkeit auf ihren händen reagiert mit den äußeren schichten was sich komisch anfühlt und eine art schutzschicht bildet",
+      "duration_s": 19.38,
+      "sha256": "3f64cfb8366fe6f185265881131ea064c9c608be3b458d00e790e87c5b646df4"
+    },
+    {
+      "order": 73,
+      "id": "1803-16164587263957019798.wav",
+      "audio_path": "16164587263957019798.wav",
+      "reference": "die feuchtigkeit auf ihren händen reagiert mit den äußeren schichten was sich komisch anfühlt und eine art schutzschicht bildet",
+      "duration_s": 11.28,
+      "sha256": "4742cc2bc15adf9d3e6ae4a28e3c570457659cb104a9b98475c0654860a23459"
+    },
+    {
+      "order": 74,
+      "id": "1795-4174379654895279374.wav",
+      "audio_path": "4174379654895279374.wav",
+      "reference": "seit 1988 müssen wahlurnen transparent sein damit wähler und beobachter bezeugen können dass zu beginn der wahl keine umschläge vorhanden sind und dass keine umschläge eingeworfen werden außer jene der ordnungsgemäß gezählten und autorisierten wähler",
+      "duration_s": 33.12,
+      "sha256": "d0de69332a81589b8958a6ca6fdfd32adfdab8b30a8284b6565d8035a54ddb5e"
+    },
+    {
+      "order": 75,
+      "id": "1795-15701810135013960619.wav",
+      "audio_path": "15701810135013960619.wav",
+      "reference": "seit 1988 müssen wahlurnen transparent sein damit wähler und beobachter bezeugen können dass zu beginn der wahl keine umschläge vorhanden sind und dass keine umschläge eingeworfen werden außer jene der ordnungsgemäß gezählten und autorisierten wähler",
+      "duration_s": 13.38,
+      "sha256": "c9b28c69643400ae313ecadf25d5a64b3c2e34390cb25d2e884bc07aabe00468"
+    },
+    {
+      "order": 76,
+      "id": "1795-15824620871868309906.wav",
+      "audio_path": "15824620871868309906.wav",
+      "reference": "seit 1988 müssen wahlurnen transparent sein damit wähler und beobachter bezeugen können dass zu beginn der wahl keine umschläge vorhanden sind und dass keine umschläge eingeworfen werden außer jene der ordnungsgemäß gezählten und autorisierten wähler",
+      "duration_s": 15.42,
+      "sha256": "c78d5dc5cd41a030898dc9c096df62740fe6a92eb69ef5cbdb4ab3a58f459a9a"
+    },
+    {
+      "order": 77,
+      "id": "1820-14746099547215924567.wav",
+      "audio_path": "14746099547215924567.wav",
+      "reference": "heutzutage schreiben menschen nachrichten auf computerbildschirmen ohne je in die nähe eines anspitzers kommen zu müssen",
+      "duration_s": 10.62,
+      "sha256": "22f1758ad818b088db51d3c8f622341d67299d1c2d19307f89b4d4ed191d6a73"
+    },
+    {
+      "order": 78,
+      "id": "1820-1999440860307920162.wav",
+      "audio_path": "1999440860307920162.wav",
+      "reference": "heutzutage schreiben menschen nachrichten auf computerbildschirmen ohne je in die nähe eines anspitzers kommen zu müssen",
+      "duration_s": 15.66,
+      "sha256": "ae64aa108e9064d5d47a602c11d4bb85e6f540922611acf2a6500ef31e6bb89a"
+    },
+    {
+      "order": 79,
+      "id": "1785-908881885657929661.wav",
+      "audio_path": "908881885657929661.wav",
+      "reference": "scaffolding ist keine lernmethode sondern vielmehr eine hilfe die individuen in einer neuartigen lernsituation unterstützt wie beispielsweise beim benutzen eines neuen computerprogramms oder beim beginn eines neuen projekts",
+      "duration_s": 13.02,
+      "sha256": "f21a6493f8876444a2e5e89c941fba0c191f6efc5eb9b3e984ce68b70c7d4049"
+    },
+    {
+      "order": 80,
+      "id": "1691-7451112490045072794.wav",
+      "audio_path": "7451112490045072794.wav",
+      "reference": "auf einigen routen setzen die größeren firmen ihre eigenen flugzeuge ein aber auf anderen routen und bei kleineren firmen traten schwierigkeiten auf",
+      "duration_s": 8.28,
+      "sha256": "a27a33db4422237b0590df029acc5d68dd1d907096de8deadb24681e60089539"
+    },
+    {
+      "order": 81,
+      "id": "1943-9405132888018435596.wav",
+      "audio_path": "9405132888018435596.wav",
+      "reference": "je geringer die anspannung ist desto positiver ist die vorhandene lebenskraft jeder mensch hat das potenzial absolute ruhe und zufriedenheit zu finden",
+      "duration_s": 13.32,
+      "sha256": "79de1ae3092972baa631d36c54331c3d5e7cf404eb7d88bf0eea0443ff3a0e0a"
+    },
+    {
+      "order": 82,
+      "id": "1943-6495654880794822049.wav",
+      "audio_path": "6495654880794822049.wav",
+      "reference": "je geringer die anspannung ist desto positiver ist die vorhandene lebenskraft jeder mensch hat das potenzial absolute ruhe und zufriedenheit zu finden",
+      "duration_s": 13.2,
+      "sha256": "1e5a0bf4ff8f04344cb49fc289844c99649884d042c98adea49a6b2f180bc5b1"
+    },
+    {
+      "order": 83,
+      "id": "1943-17429266042571921974.wav",
+      "audio_path": "17429266042571921974.wav",
+      "reference": "je geringer die anspannung ist desto positiver ist die vorhandene lebenskraft jeder mensch hat das potenzial absolute ruhe und zufriedenheit zu finden",
+      "duration_s": 27.78,
+      "sha256": "c88957e90a997e403b9bf99bb2d7f1f9773a83bd305a3529841ccc7a44c60726"
+    },
+    {
+      "order": 84,
+      "id": "1749-8985978690235631242.wav",
+      "audio_path": "8985978690235631242.wav",
+      "reference": "\"er wurde von den vichy\"\"-franzosen beherrscht. dies waren franzosen die im jahr 1940 mit den deutschen frieden geschlossen hatten und mit den eroberern arbeiteten anstatt sie zu bekämpfen.",
+      "duration_s": 22.74,
+      "sha256": "6b89fbb8f1f36c4badac1cb2cf18791184de5f14e8e35dbb365c57c86489e5e0"
+    },
+    {
+      "order": 85,
+      "id": "1749-6166714273643756278.wav",
+      "audio_path": "6166714273643756278.wav",
+      "reference": "\"er wurde von den vichy\"\"-franzosen beherrscht. dies waren franzosen die im jahr 1940 mit den deutschen frieden geschlossen hatten und mit den eroberern arbeiteten anstatt sie zu bekämpfen.",
+      "duration_s": 23.4,
+      "sha256": "7f9333d67521ac93185678fa8abe911e00f4afbef8d5b8e02467d05a31ae1d0f"
+    },
+    {
+      "order": 86,
+      "id": "1835-16429573754852689412.wav",
+      "audio_path": "16429573754852689412.wav",
+      "reference": "es wurde keine tsunami-warnung ausgegeben und laut der geophysikbehörde von jakarta wird es auch keine tsunami-warnung geben da das erdbeben die dafür notwendige stärke von 6,5 nicht erreichte",
+      "duration_s": 16.02,
+      "sha256": "d89d22f93aeb4f81713e997479429dbce99649cda6270720c58991569dddb3eb"
+    },
+    {
+      "order": 87,
+      "id": "1835-9077747670551316970.wav",
+      "audio_path": "9077747670551316970.wav",
+      "reference": "es wurde keine tsunami-warnung ausgegeben und laut der geophysikbehörde von jakarta wird es auch keine tsunami-warnung geben da das erdbeben die dafür notwendige stärke von 6,5 nicht erreichte",
+      "duration_s": 11.76,
+      "sha256": "062ac7f30029518931248b7f284e3882e0aa2135dc27ff0ad048048c6c2068ab"
+    },
+    {
+      "order": 88,
+      "id": "1865-12041023072861500629.wav",
+      "audio_path": "12041023072861500629.wav",
+      "reference": "die kreuzfahrten nach sankt petersburg bieten auch zeit für einen aufenthalt in der stadt. kreuzfahrtpassagiere sind von der visumpflicht befreit siehe bedingungen",
+      "duration_s": 12.48,
+      "sha256": "65ee54db1a473523d3d2308c80a3b4502c6c092a6f9b017302794f1f9ae0667b"
+    },
+    {
+      "order": 89,
+      "id": "1865-8144671235209175366.wav",
+      "audio_path": "8144671235209175366.wav",
+      "reference": "die kreuzfahrten nach sankt petersburg bieten auch zeit für einen aufenthalt in der stadt. kreuzfahrtpassagiere sind von der visumpflicht befreit siehe bedingungen",
+      "duration_s": 22.02,
+      "sha256": "70fec647e4a4591b874616417c3b62a6bd1b279118bc6f56f0224f7f9c61d5d8"
+    },
+    {
+      "order": 90,
+      "id": "1865-8447741725791647567.wav",
+      "audio_path": "8447741725791647567.wav",
+      "reference": "die kreuzfahrten nach sankt petersburg bieten auch zeit für einen aufenthalt in der stadt. kreuzfahrtpassagiere sind von der visumpflicht befreit siehe bedingungen",
+      "duration_s": 12.6,
+      "sha256": "e41f695be1ec02b4b10f0a3da8a23259f49d118e281e2846e3ff0bd0065018a7"
+    },
+    {
+      "order": 91,
+      "id": "1868-3230861239570803765.wav",
+      "audio_path": "3230861239570803765.wav",
+      "reference": "am anderen ende des spektrums verwandelt man sich in ein nicht wiederzuerkennendes individuum das alles anders machen muss als das team es gemacht hat und sich alles zu eigen macht",
+      "duration_s": 15.96,
+      "sha256": "76a6b436814d5d78bf6d615761c1e8edf1f99cdab2a0c08d44f3cc8ce103c251"
+    },
+    {
+      "order": 92,
+      "id": "1868-7087579253292808132.wav",
+      "audio_path": "7087579253292808132.wav",
+      "reference": "am anderen ende des spektrums verwandelt man sich in ein nicht wiederzuerkennendes individuum das alles anders machen muss als das team es gemacht hat und sich alles zu eigen macht",
+      "duration_s": 14.28,
+      "sha256": "f31724cdfe0a4b42a79473affe72e63e74452d4b5eea268ec2d57fcafd3d1f2d"
+    },
+    {
+      "order": 93,
+      "id": "1868-2959486676174874258.wav",
+      "audio_path": "2959486676174874258.wav",
+      "reference": "am anderen ende des spektrums verwandelt man sich in ein nicht wiederzuerkennendes individuum das alles anders machen muss als das team es gemacht hat und sich alles zu eigen macht",
+      "duration_s": 14.52,
+      "sha256": "d0be508065b56d99f6d569f766af6af6c7faf26f660b433ba9cce9ba4f2f214d"
+    },
+    {
+      "order": 94,
+      "id": "1825-9086428032084051145.wav",
+      "audio_path": "9086428032084051145.wav",
+      "reference": "wenn sie nahe am geschehen sein wollen müssen sie früh hingehen um einen campingplatz in der nähe der musik zu bekommen",
+      "duration_s": 7.92,
+      "sha256": "7e5069c8e7d74077769e8dc39663bac561e31677f6583071b6dde61e12967c03"
+    },
+    {
+      "order": 95,
+      "id": "1825-6588513159794967986.wav",
+      "audio_path": "6588513159794967986.wav",
+      "reference": "wenn sie nahe am geschehen sein wollen müssen sie früh hingehen um einen campingplatz in der nähe der musik zu bekommen",
+      "duration_s": 9.66,
+      "sha256": "9411d75fe5c323c759e7d3fbc62f0e01fc9d62f37d06dee6c717d55dffab8ab9"
+    },
+    {
+      "order": 96,
+      "id": "1825-17735539935306851809.wav",
+      "audio_path": "17735539935306851809.wav",
+      "reference": "wenn sie nahe am geschehen sein wollen müssen sie früh hingehen um einen campingplatz in der nähe der musik zu bekommen",
+      "duration_s": 6.0,
+      "sha256": "426cd47bc491e3cc7a6f0948ea3d871d10275ef1bd8d78896a582517425d00fa"
+    },
+    {
+      "order": 97,
+      "id": "1881-3310355866545863963.wav",
+      "audio_path": "3310355866545863963.wav",
+      "reference": "eine exkursion virtuell zu teilen ist auch eine tolle art um über eine reise zu reflektieren und erfahrungen mit zukünftigen klassen zu teilen",
+      "duration_s": 12.84,
+      "sha256": "5a1f462b31a270601eceaa128c152d1ed81ccf06f69519c977a3da461e009ad5"
+    },
+    {
+      "order": 98,
+      "id": "1881-13142023043335832537.wav",
+      "audio_path": "13142023043335832537.wav",
+      "reference": "eine exkursion virtuell zu teilen ist auch eine tolle art um über eine reise zu reflektieren und erfahrungen mit zukünftigen klassen zu teilen",
+      "duration_s": 11.04,
+      "sha256": "bf0039475756f1779262c216b9efcedf6db25d80257ba2963ad51d531388ac61"
+    },
+    {
+      "order": 99,
+      "id": "1780-1454742602800191156.wav",
+      "audio_path": "1454742602800191156.wav",
+      "reference": "mit kundalini-yoga wird die kundalini-energie aufklärungsenergie durch yoga-posen atemübungen mantras und visualisierungen erweckt",
+      "duration_s": 13.26,
+      "sha256": "1114ed860d1aae252a63b26d45e5fad0a2863eb42ffcc26836810c59d7aeed19"
+    }
+  ],
+  "reference_parsing": "Literal tab separation, csv.QUOTE_NONE; seven fields required. Do not parse embedded quote characters as CSV field delimiters.",
+  "source_tsv_sha256": "82fab72c58a347345675c238f2492bb997105a4ab45d69e2a2b34ed29082fa97"
+}

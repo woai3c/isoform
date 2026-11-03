@@ -1,0 +1,22 @@
+{
+    "description": "Synthetic redacted terminal-to-chat restatement; no personal trace data.",
+    "runs": [
+        {
+            "app": "iTerm2",
+            "bundle": "com.googlecode.iterm2",
+            "startMs": 1800000000000,
+            "endMs": 1800000060000,
+            "text": "mo: ~/.sample-agent/records uses 60.3 GB",
+            "title": "Inspect disk usage"
+        },
+        {
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "startMs": 1800000420000,
+            "endMs": 1800000480000,
+            "text": "Looking at ~/.sample-agent/records, it is 60GB",
+            "title": "Discuss disk usage",
+            "sent": true
+        }
+    ]
+}

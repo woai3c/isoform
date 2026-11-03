@@ -1,0 +1,499 @@
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
+import { Check } from 'lucide-react';
+import {
+    ConfirmMemoryEntry,
+    ForgetMemoryEntry,
+    GetMemoryForgetPreview,
+    NotQuiteMemoryEntry,
+    UndoConfirmMemoryEntry,
+    UndoMemoryWording,
+    UndoNotQuiteMemoryEntry,
+    type AboutYouBelief,
+} from '@/lib/wails-shim-app';
+import { SaveMemoryEntry } from '../../../wailsjs/go/main/App';
+import type { main } from '../../../wailsjs/go/models';
+import { memoryPoints } from '@/lib/memory-content';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { activeInterval } from '@/lib/app-activity';
+
+/** How long a one-click Forget waits for Undo before it runs. */
+export const FORGET_UNDO_MS = 10_000;
+
+export type ReviewResult =
+    | { kind: 'confirming' }
+    | { kind: 'confirmFailed' }
+    /** wasNotQuite: That's me on a Not quite belief; Undo puts Not quite back. */
+    | { kind: 'confirmed'; wasNotQuite?: boolean }
+    | { kind: 'asking' }
+    | { kind: 'saving' }
+    | { kind: 'answerFailed' }
+    | { kind: 'corrected'; wording: string }
+    | { kind: 'notQuite'; confirmedAt: number }
+    | { kind: 'pending'; until: number }
+    | { kind: 'forgetting' }
+    | { kind: 'forgotten'; days: number }
+    | { kind: 'forgetFailed' };
+
+export interface ReviewItem {
+    id: string;
+    text: string;
+    where: string;
+    communication?: boolean;
+    /** One of the portrait's confirm rows: That's me says the portrait can use it. */
+    portraitCandidate?: boolean;
+    status?: AboutYouBelief['status'];
+}
+
+/** The belief's first point in the person's words, or a new point. */
+export function rewordFirstPoint(content: string, text: string): string {
+    const point = memoryPoints(content)[0];
+    return point
+        ? content.slice(0, point.start) + text + content.slice(point.end)
+        : `${content.trimEnd()}\n- ${text}\n`;
+}
+
+/**
+ * That's me, Not quite and Forget for a belief (answer feedback v1.0.0
+ * section 6). Each answer becomes its line at once, with Undo until the
+ * person leaves the page. Not quite asks in place: words reword the belief,
+ * blank stops Isoform using it. Forget waits FORGET_UNDO_MS for Undo, then
+ * reads the removal preview and forgets with its token, the same path as the
+ * detail's reviewed Forget this. The page cancels it when it closes or goes
+ * behind Activity before then.
+ */
+export function useBeliefReview({
+    onConfirmed,
+    onForgotten,
+    onChanged,
+    contentOf,
+}: {
+    onConfirmed: (saved: main.MemoryEntry) => void;
+    onForgotten: (id: string) => void;
+    /** An answer or its Undo changed the belief: re-read at once. */
+    onChanged: () => void;
+    /** The belief's file, for Not quite with words. */
+    contentOf: (id: string) => string | undefined;
+}) {
+    const [results, setResults] = useState<Record<string, ReviewResult>>({});
+    const [now, setNow] = useState(() => Date.now());
+    const timers = useRef(new Map<string, number>());
+    const set = useCallback((id: string, result: ReviewResult) => {
+        setResults((prev) => ({ ...prev, [id]: result }));
+    }, []);
+    const clear = useCallback((id: string) => {
+        setResults((prev) => {
+            if (!(id in prev)) return prev;
+            const next = { ...prev };
+            delete next[id];
+            return next;
+        });
+    }, []);
+
+    const confirm = useCallback(async (id: string, wasNotQuite = false) => {
+        set(id, { kind: 'confirming' });
+        try {
+            const saved = await ConfirmMemoryEntry(id);
+            set(id, { kind: 'confirmed', wasNotQuite });
+            onConfirmed(saved);
+        } catch {
+            set(id, { kind: 'confirmFailed' });
+        }
+    }, [onConfirmed, set]);
+
+    const ask = useCallback((id: string) => set(id, { kind: 'asking' }), [set]);
+
+    /** Save from the Not quite field: words reword it, blank stops using it. */
+    const answerNotQuite = useCallback(async (id: string, words: string) => {
+        const wording = words.trim().replace(/\n+/g, ' ');
+        set(id, { kind: 'saving' });
+        try {
+            if (wording) {
+                const content = contentOf(id);
+                if (content === undefined) throw new Error('memory_unavailable');
+                const saved = await SaveMemoryEntry(id, rewordFirstPoint(content, wording));
+                set(id, { kind: 'corrected', wording });
+                onConfirmed(saved);
+            } else {
+                const confirmedAt = await NotQuiteMemoryEntry(id);
+                set(id, { kind: 'notQuite', confirmedAt });
+                onChanged();
+            }
+        } catch {
+            set(id, { kind: 'answerFailed' });
+        }
+    }, [contentOf, onChanged, onConfirmed, set]);
+
+    const runForget = useCallback(async (id: string) => {
+        timers.current.delete(id);
+        set(id, { kind: 'forgetting' });
+        try {
+            const preview = await GetMemoryForgetPreview(id);
+            await ForgetMemoryEntry(preview.memoryId, preview.confirmationToken);
+            set(id, { kind: 'forgotten', days: preview.retentionDays });
+            onForgotten(id);
+        } catch {
+            set(id, { kind: 'forgetFailed' });
+        }
+    }, [onForgotten, set]);
+    const runForgetRef = useRef(runForget);
+    runForgetRef.current = runForget;
+
+    const forget = useCallback((id: string) => {
+        if (timers.current.has(id)) return;
+        setNow(Date.now());
+        set(id, { kind: 'pending', until: Date.now() + FORGET_UNDO_MS });
+        timers.current.set(id, window.setTimeout(() => void runForgetRef.current(id), FORGET_UNDO_MS));
+    }, [set]);
+
+    /** Drop a card's state: Cancel, a pending Forget's Undo, or its belief handled elsewhere. */
+    const cancel = useCallback((id: string) => {
+        const timer = timers.current.get(id);
+        if (timer !== undefined) window.clearTimeout(timer);
+        timers.current.delete(id);
+        clear(id);
+    }, [clear]);
+
+    /** Undo an answer: the belief goes back to how it was, and the card opens again. */
+    const undo = useCallback(async (id: string) => {
+        const result = results[id];
+        if (!result) return;
+        try {
+            switch (result.kind) {
+                case 'confirmed':
+                    await UndoConfirmMemoryEntry(id);
+                    if (result.wasNotQuite) await NotQuiteMemoryEntry(id);
+                    break;
+                case 'notQuite':
+                    await UndoNotQuiteMemoryEntry(id, result.confirmedAt);
+                    break;
+                case 'corrected':
+                    onConfirmed(await UndoMemoryWording(id, result.wording));
+                    break;
+                case 'pending':
+                    cancel(id);
+                    return;
+                default:
+                    return;
+            }
+            clear(id);
+            onChanged();
+        } catch {
+            set(id, { kind: 'answerFailed' });
+        }
+    }, [cancel, clear, onChanged, onConfirmed, results, set]);
+
+    /** Every pending forget: the page closed or went behind Activity. */
+    const cancelPending = useCallback(() => {
+        const ids = [...timers.current.keys()];
+        for (const id of ids) cancel(id);
+    }, [cancel]);
+
+    const counting = Object.values(results).some((result) => result.kind === 'pending');
+    useEffect(() => {
+        // Only during a Forget's 10-second undo countdown, the progress the
+        // person is watching; stopped while the window is hidden.
+        if (!counting) return;
+        return activeInterval(() => setNow(Date.now()), 1000);
+    }, [counting]);
+
+    useEffect(() => () => {
+        for (const timer of timers.current.values()) window.clearTimeout(timer);
+        timers.current.clear();
+    }, []);
+
+    return { results, now, confirm, ask, answerNotQuite, forget, cancel, undo, cancelPending, retryForget: runForget };
+}
+
+export type BeliefReview = ReturnType<typeof useBeliefReview>;
+
+/** Whether a belief's buttons show: nothing answered yet, or it failed. */
+export function reviewOpen(result: ReviewResult | undefined) {
+    return !result || result.kind === 'confirming' || result.kind === 'confirmFailed';
+}
+
+/** The chip an answer leaves: Confirmed, Not quite, else the belief's own. */
+export function answeredStatus(result: ReviewResult | undefined, status: AboutYouBelief['status'] = 'inferred'): AboutYouBelief['status'] {
+    switch (result?.kind) {
+        case 'confirmed':
+        case 'corrected':
+            return 'confirmed';
+        case 'notQuite':
+            return 'not_quite';
+        default:
+            return status;
+    }
+}
+
+/** "today", "yesterday" or "on Oct 29" (zh: 今天, 昨天, 在 10月29日). */
+export function answerWhen(t: TFunction<'memory'>, language: string, at: number) {
+    const start = (time: number) => new Date(new Date(time).toDateString()).getTime();
+    const days = Math.round((start(Date.now()) - start(at)) / 86_400_000);
+    if (days <= 0) return t('aboutYou.portrait.when.today');
+    if (days === 1) return t('aboutYou.portrait.when.yesterday');
+    return t('aboutYou.portrait.when.date', { date: new Intl.DateTimeFormat(language, { month: 'short', day: 'numeric' }).format(new Date(at)) });
+}
+
+/** Inferred, Learned today, Confirmed or Not quite (outlined, muted). */
+export function BeliefChip({ status, className }: { status: AboutYouBelief['status']; className?: string }) {
+    const { t } = useTranslation('memory');
+    return (
+        <span
+            data-status={status}
+            className={cn(
+                'inline-flex h-5 flex-none items-center rounded-md px-2 text-[11px] font-semibold transition-colors duration-[160ms] motion-reduce:transition-none',
+                status === 'confirmed' && 'bg-success-bg text-success',
+                status === 'learned_today' && 'bg-accent-light text-accent',
+                status === 'inferred' && 'bg-surface-active text-muted',
+                status === 'not_quite' && 'border border-border text-muted',
+                className,
+            )}
+        >
+            {t(`aboutYou.status.${status}`)}
+        </span>
+    );
+}
+
+export function UndoLink({ onClick, buttonRef }: { onClick: () => void; buttonRef?: React.Ref<HTMLButtonElement> }) {
+    const { t } = useTranslation('memory');
+    return (
+        <button
+            ref={buttonRef}
+            type="button"
+            className="cursor-pointer rounded-sm border-0 bg-transparent p-0 font-semibold text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            onClick={onClick}
+        >
+            {t('aboutYou.review.undo')}
+        </button>
+    );
+}
+
+/** "What's closer? You can leave it blank." in place, one line growing to three. */
+export function NotQuiteField({ item, review }: { item: ReviewItem; review: BeliefReview }) {
+    const { t } = useTranslation('memory');
+    const fieldId = useId();
+    const [words, setWords] = useState('');
+    const saving = review.results[item.id]?.kind === 'saving';
+    const save = () => void review.answerNotQuite(item.id, words);
+    return (
+        <div className="rounded-[10px] bg-panel-warm p-3">
+            <label htmlFor={fieldId} className="mb-1.5 block text-[12.5px] text-muted">{t('aboutYou.review.notQuiteLabel')}</label>
+            <textarea
+                id={fieldId}
+                autoFocus
+                rows={1}
+                value={words}
+                disabled={saving}
+                placeholder={item.text}
+                onChange={(event) => setWords(event.target.value)}
+                onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                        event.preventDefault();
+                        save();
+                    } else if (event.key === 'Escape') {
+                        // Esc cancels the field, not the page.
+                        event.preventDefault();
+                        event.stopPropagation();
+                        review.cancel(item.id);
+                    }
+                }}
+                className="max-h-[calc(3*1.45em+18px)] min-h-[calc(1.45em+18px)] w-full resize-none rounded-lg border border-border bg-panel px-2.5 py-2 text-[13.5px] leading-[1.45] text-ink [field-sizing:content] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            />
+            <div className="mt-2 flex gap-1.5">
+                <Button size="sm" disabled={saving} aria-busy={saving} onClick={save}>{t('aboutYou.review.save')}</Button>
+                <Button size="sm" variant="outline" disabled={saving} onClick={() => review.cancel(item.id)}>{t('aboutYou.review.cancel')}</Button>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * The line an answer leaves, in the spot the buttons were, with Undo next
+ * (answer feedback sections 1 and 6). Focus moves to it when the pressed
+ * button goes; Undo is the next tab stop.
+ */
+export function ReviewOutcome({ item, review, className }: { item: ReviewItem; review: BeliefReview; className?: string }) {
+    const { t } = useTranslation(['memory', 'common']);
+    const result = review.results[item.id];
+    const outcome = useRef<HTMLDivElement>(null);
+    const undoButton = useRef<HTMLButtonElement>(null);
+    const kind = result?.kind;
+    useEffect(() => {
+        if (kind === 'pending') undoButton.current?.focus();
+        else if (kind && kind !== 'asking' && kind !== 'saving') outcome.current?.focus();
+    }, [kind]);
+    if (!result || reviewOpen(result) || result.kind === 'asking') return null;
+
+    let message: ReactNode = '';
+    let tone = 'text-muted';
+    switch (result.kind) {
+        case 'confirmed':
+            message = t(item.communication
+                ? 'aboutYou.review.communicationConfirmed'
+                : item.portraitCandidate ? 'aboutYou.review.portraitConfirmed' : 'aboutYou.review.confirmed');
+            tone = 'text-success';
+            break;
+        case 'corrected':
+            message = t('aboutYou.review.corrected');
+            tone = 'text-success';
+            break;
+        case 'notQuite':
+            message = t('aboutYou.review.stoppedUsing');
+            break;
+        case 'saving':
+            message = '';
+            break;
+        case 'answerFailed':
+            message = t('aboutYou.review.answerFailed');
+            tone = 'text-error';
+            break;
+        case 'pending':
+            message = t('aboutYou.review.forgetPending', { count: Math.round(FORGET_UNDO_MS / 1000) });
+            break;
+        case 'forgetting':
+            message = t('forget.forgetting');
+            break;
+        case 'forgotten':
+            message = t('aboutYou.review.forgotten', { count: result.days });
+            break;
+        case 'forgetFailed':
+            message = t('aboutYou.review.forgetFailed');
+            tone = 'text-error';
+            break;
+    }
+    const failed = result.kind === 'forgetFailed' || result.kind === 'answerFailed';
+    const undoable = result.kind === 'confirmed' || result.kind === 'corrected' || result.kind === 'notQuite';
+    return (
+        <div className={cn('answer-line flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px]', tone, className)}>
+            {(result.kind === 'confirmed' || result.kind === 'corrected') && <Check className="h-3.5 w-3.5 flex-none" aria-hidden="true" />}
+            {/* Announced once per change; the countdown below stays silent. */}
+            <div
+                ref={outcome}
+                tabIndex={-1}
+                role={failed ? 'alert' : 'status'}
+                aria-busy={result.kind === 'forgetting' || result.kind === 'saving'}
+                className={cn('outline-none', result.kind === 'pending' && 'sr-only')}
+            >
+                {message}
+            </div>
+            {result.kind === 'pending' && (
+                <span aria-hidden="true">
+                    {t('aboutYou.review.forgetPending', { count: Math.max(1, Math.ceil((result.until - review.now) / 1000)) })}
+                </span>
+            )}
+            {(undoable || result.kind === 'pending') && (
+                <>
+                    <span aria-hidden="true" className="text-muted">·</span>
+                    <UndoLink buttonRef={undoButton} onClick={() => void review.undo(item.id)} />
+                </>
+            )}
+            {result.kind === 'forgetFailed' && (
+                <Button size="sm" variant="secondary" onClick={() => void review.retryForget(item.id)}>
+                    {t('aboutYou.retry')}
+                </Button>
+            )}
+            {result.kind === 'answerFailed' && (
+                <Button size="sm" variant="secondary" onClick={() => review.cancel(item.id)}>
+                    {t('aboutYou.retry')}
+                </Button>
+            )}
+        </div>
+    );
+}
+
+function ReviewCard({ item, review }: { item: ReviewItem; review: BeliefReview }) {
+    const { t } = useTranslation(['memory', 'common']);
+    const quoteId = useId();
+    const result = review.results[item.id];
+    const open = reviewOpen(result);
+    const forgetting = result?.kind === 'pending' || result?.kind === 'forgetting' || result?.kind === 'forgotten';
+    const status = answeredStatus(result, item.status);
+
+    return (
+        <article
+            aria-labelledby={quoteId}
+            className={cn(
+                'flex flex-col gap-2.5 rounded-xl border border-border p-4',
+                open || result?.kind === 'asking' ? 'bg-panel' : 'bg-panel-warm',
+            )}
+        >
+            <div className="flex items-start gap-2">
+                {item.where && <span className="min-w-0 flex-1 text-xs text-muted">{item.where}</span>}
+                {!forgetting && <BeliefChip status={status} className="ml-auto" />}
+            </div>
+            <p id={quoteId} className={cn('m-0 text-sm leading-[1.45] text-ink break-words', forgetting && 'text-muted line-through')}>
+                {t('aboutYou.review.quote', { text: item.text })}
+            </p>
+            {open ? (
+                <>
+                    {result?.kind === 'confirmFailed' && (
+                        <p role="alert" className="m-0 text-[12.5px] text-error">{t('aboutYou.review.confirmFailed')}</p>
+                    )}
+                    <div className="mt-auto flex flex-wrap gap-1.5">
+                        <Button
+                            size="sm"
+                            disabled={result?.kind === 'confirming'}
+                            aria-busy={result?.kind === 'confirming'}
+                            onClick={() => void review.confirm(item.id)}
+                        >
+                            {t(result?.kind === 'confirming' ? 'aboutYou.review.confirming' : 'aboutYou.review.confirm')}
+                        </Button>
+                        <Button size="sm" variant="secondary" disabled={result?.kind === 'confirming'} onClick={() => review.ask(item.id)}>
+                            {t('aboutYou.review.notQuite')}
+                        </Button>
+                        <Button size="sm" variant="outline" disabled={result?.kind === 'confirming'} onClick={() => review.forget(item.id)}>
+                            {t('aboutYou.review.forget')}
+                        </Button>
+                    </div>
+                </>
+            ) : result?.kind === 'asking' || result?.kind === 'saving' ? (
+                <NotQuiteField item={item} review={review} />
+            ) : (
+                <ReviewOutcome item={item} review={review} className="mt-auto" />
+            )}
+        </article>
+    );
+}
+
+export function NewThisWeek({
+    items,
+    review,
+    headingId = 'about-you-review',
+    title,
+    hint,
+}: {
+    items: ReviewItem[];
+    review: BeliefReview;
+    headingId?: string;
+    /** The first days' "Check these first", in place of "New this week". */
+    title?: string;
+    /** The line beside that title, in place of the count left. */
+    hint?: string;
+}) {
+    const { t } = useTranslation(['memory', 'common']);
+    if (items.length === 0) return null;
+    const left = items.filter((item) => {
+        const kind = review.results[item.id]?.kind;
+        return !kind || kind === 'confirmFailed' || kind === 'forgetFailed' || kind === 'asking' || kind === 'answerFailed';
+    }).length;
+
+    return (
+        <section aria-labelledby={headingId} className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1.5">
+                <h2 id={headingId} className="m-0 text-lg font-semibold text-ink">{title ?? t('aboutYou.review.title')}</h2>
+                <span className="text-[13px] text-muted">
+                    {left > 0 ? hint ?? t('aboutYou.review.left', { count: left }) : t('aboutYou.review.allChecked')}
+                </span>
+            </div>
+            {/* 300px keeps That's me, Not quite and Forget on one row (about 250px
+                in English); narrower windows get one card per row. */}
+            <div data-testid="review-cards" className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))]">
+                {items.map((item) => (
+                    <ReviewCard key={item.id} item={item} review={review} />
+                ))}
+            </div>
+        </section>
+    );
+}

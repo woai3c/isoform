@@ -1,0 +1,758 @@
+{
+    "title": "Memory",
+    "writePlaceholder": "# Memory Title\n\nWrite your memory here...",
+    "header": {
+        "showSidebar": "Show sidebar",
+        "hideSidebar": "Hide sidebar",
+        "versions": "Versions",
+        "versionHistory": "Version history",
+        "compare": "Compare",
+        "compareDisabledTooltip": "Select a snapshot to compare against the current version",
+        "compareTooltip": "Compare this snapshot with the current version",
+        "exit": "Exit",
+        "edit": "Edit",
+        "editMemory": "Edit Memory",
+        "newMemory": "New Memory",
+        "save": "Save",
+        "saving": "Saving...",
+        "translate": "Translate",
+        "translating": "Translating...",
+        "translateCurrentTooltip": "Translate this memory to the current UI language",
+        "translateSelectedTooltip": "Translate the selected version to the current UI language",
+        "globalTranslate": "Translate memories",
+        "history": "History",
+        "viewHistory": "View version history",
+        "importFromAi": "Import from AI tools",
+        "reindex": "Re-index memory files",
+        "newFile": "New memory file",
+        "dreamTooltip": "Open Memory Dream — nightly consolidation"
+    },
+    "sidebar": {
+        "backToMemories": "Back to memories",
+        "loading": "Loading...",
+        "current": "current",
+        "noHistoryYet": "No history yet. Snapshots are saved when the memory is updated.",
+        "groupLabel": "Group",
+        "groupByDimension": "Kind",
+        "groupByDate": "Date",
+        "searching": "Searching...",
+        "noResults": "No results found",
+        "noFilesYet": "No memories yet",
+        "noFilesMatch": "No memories match",
+        "filterKind": "Filter by kind",
+        "allKinds": "All kinds"
+    },
+    "groups": {
+        "Today": "Today",
+        "Yesterday": "Yesterday",
+        "This Week": "This Week",
+        "This Month": "This Month",
+        "Earlier": "Earlier"
+    },
+    "dimensions": {
+        "user_insight": "Your habits and choices",
+        "topic_highlight": "Topics and people",
+        "deep_user_model": "Your working patterns",
+        "agentic_memory": "How Isoform helps you",
+        "custom": "A note you added",
+        "uncategorized": "Other memories"
+    },
+    "dimensionBadges": {
+        "user_insight": "User",
+        "topic_highlight": "Topic",
+        "deep_user_model": "Model",
+        "agentic_memory": "AI",
+        "custom": "Custom"
+    },
+    "newTemplate": "# New Memory\n\n",
+    "relativeTime": {
+        "today": "today",
+        "yesterday": "yesterday",
+        "lastWeek": "last week",
+        "daysAgo_one": "{{count}} day ago",
+        "daysAgo_other": "{{count}} days ago",
+        "weeksAgo_one": "{{count}} week ago",
+        "weeksAgo_other": "{{count}} weeks ago",
+        "monthsAgo_one": "{{count}} month ago",
+        "monthsAgo_other": "{{count}} months ago",
+        "yearsAgo_one": "{{count}} year ago",
+        "yearsAgo_other": "{{count}} years ago",
+        "unknown": "Learning date unavailable"
+    },
+    "history": {
+        "loadingSnapshot": "Loading snapshot...",
+        "noSnapshotsYet": "No snapshots yet.",
+        "selectSnapshotToPreview": "Select a snapshot to preview.",
+        "metadata": "Metadata",
+        "diff": "Diff",
+        "snapshot": "Snapshot",
+        "current": "Current",
+        "noChanges": "No changes — this snapshot matches the current version."
+    },
+    "toasts": {
+        "saved": {
+            "title": "Memory saved",
+            "body": "Saved as a user edit. Your changes take priority over observed memories."
+        },
+        "translated": {
+            "title": "Memory translated",
+            "body": "A snapshot was saved before replacing the current entry."
+        },
+        "translateFailed": {
+            "title": "Translation failed"
+        },
+        "globalTranslateStarted": {
+            "title": "Memory translation started",
+            "body": "Translating {{total}} memories to {{target}} in the background."
+        },
+        "globalTranslated": {
+            "title": "Memories translated",
+            "body": "{{translated}} / {{total}} memories translated to {{target}}. Failed: {{failed}}."
+        },
+        "saveFailed": {
+            "title": "Memory could not be saved",
+            "body": "Your changes are still here. Try saving again."
+        }
+    },
+    "globalTranslate": {
+        "title": "Translate memories",
+        "description": "Choose the target language for all current memory entries.",
+        "targetLabel": "Target language",
+        "scopeLabel": "Scope",
+        "confirm": "Translate",
+        "cancel": "Cancel",
+        "translating": "Translating...",
+        "progress": "Progress",
+        "targetNote": "This will translate to {{target}}.",
+        "customPlaceholder": "Language name, e.g. Japanese",
+        "customRequired": "Enter a target language first.",
+        "targets": {
+            "follow-ui": "Follow UI language",
+            "currentWithLanguage": "Follow UI language ({{language}})",
+            "zh-CN": "中文",
+            "en": "English",
+            "other": "Other language"
+        },
+        "scopes": {
+            "currentEntries": {
+                "label_one": "All current entries ({{count}})",
+                "label_other": "All current entries ({{count}})",
+                "description": "Translate every live memory entry. Each entry keeps a snapshot before it is replaced."
+            }
+        }
+    },
+    "rejectAttribution": {
+        "buttonTitle": "Wrong subject — this isn't about me",
+        "buttonAria": "Mark \"{{title}}\" as wrongly attributed",
+        "title": "Wrong subject?",
+        "description": "Correct who \"{{title}}\" is about, or review its removal before confirming. Rejection uses the same forget scope and temporary protection against relearning. The rejection reason is not saved.",
+        "reasonLabel": "Reason",
+        "presets": {
+            "reassignToContact": "This is real, but Isoform credited the wrong person — let me pick who actually said it.",
+            "aboutOtherPerson": "This is actually about another person, not me.",
+            "observedMedia": "This came from a video, article, or post I was watching — not something I did or said.",
+            "chatMisattribution": "This was something someone else said to me in a chat, not my own statement.",
+            "never_me": "This is just wrong — not me at all.",
+            "custom": "Other (describe below)"
+        },
+        "reassignPickerLabel": "Who actually said this?",
+        "reassignSubmit": "Reassign",
+        "reassignSuccessToast": "Got it — memory reassigned to {{name}}.",
+        "customLabel": "Reason",
+        "customPlaceholder": "Explain what's wrong about this memory...",
+        "additionalLabel": "Additional context (optional)",
+        "additionalPlaceholder": "Add any context for this correction...",
+        "cancel": "Cancel",
+        "submit": "Review removal",
+        "errorToast": "Could not reject memory: {{error}}"
+    },
+    "summary": {
+        "totalFiles": "Total files",
+        "totalSize": "Total size",
+        "chunksIndexed": "Chunks indexed",
+        "vectorSearch": "Vector search",
+        "active": "Active",
+        "inactive": "Inactive",
+        "activity": "Activity",
+        "recent": "Recent",
+        "new": "New",
+        "jumpToActivitySession": "Jump to activity session"
+    },
+    "empty": {
+        "title": "No memories yet",
+        "intro": "Memories are personal notes you create and edit. Unlike knowledge (which is auto-extracted), you control what goes here.",
+        "examples": {
+            "preferences": {
+                "label": "Preferences",
+                "desc": "Communication style, code conventions, and workflow habits"
+            },
+            "projectContext": {
+                "label": "Project context",
+                "desc": "Goals, constraints, team structure, and deadlines"
+            },
+            "instructions": {
+                "label": "Instructions",
+                "desc": "Standing rules Isoform should follow in future sessions"
+            },
+            "referenceNotes": {
+                "label": "Reference notes",
+                "desc": "URLs, credentials locations, environment details"
+            }
+        },
+        "vectorSearchActive": "Vector search: active",
+        "vectorSearchInactive": "Vector search: inactive",
+        "modelLabel": "Model: {{model}}",
+        "createFirst": "Create your first memory"
+    },
+    "sources": {
+        "activity": "Activity",
+        "manual": "Manual",
+        "user_edit": "User edited"
+    },
+    "dream": {
+        "title": "Memory Dream",
+        "description": "Nightly, Dream looks for exact duplicates, expired notes, and near-duplicate clusters in your memory. It archives the redundant ones (never deletes) so the surviving notes stay clean and useful.",
+        "tabs": {
+            "overview": "Overview",
+            "settings": "Settings",
+            "history": "Run history",
+            "archive": "Archive"
+        },
+        "status": {
+            "running": "Cycle in progress",
+            "idle": "Idle",
+            "nextRun": "Next run: {{when}}",
+            "noRunYet": "No cycle has run yet on this machine.",
+            "lastRun": "Last run: {{when}}",
+            "archiveCount_one": "{{count}} archived memory",
+            "archiveCount_other": "{{count}} archived memories",
+            "catchupHint": "Missed nights catch up on the next Isoform launch — no cycle is silently skipped."
+        },
+        "actions": {
+            "cancelling": "Cancelling…",
+            "preview": "Run preview",
+            "previewing": "Running preview…",
+            "commit": "Run now (live)",
+            "running": "Running…",
+            "cancel": "Cancel",
+            "saveSettings": "Save settings",
+            "saving": "Saving…",
+            "close": "Close",
+            "undo": "Undo this run",
+            "undoing": "Undoing…",
+            "restore": "Restore",
+            "restoring": "Restoring…"
+        },
+        "settings": {
+            "enabled": "Enable nightly cycle",
+            "enabledHelp": "When on, Dream runs at the scheduled time each day. When off, you can still trigger it manually.",
+            "dailyTime": "Scheduled time",
+            "dailyTimeHelp": "Local time. 03:00 is the default so the cycle doesn't compete with active use. If Isoform isn't running at this time, Dream catches up the next time you open Isoform that day — so you never lose a cycle.",
+            "dryRunOnly": "Preview-only mode",
+            "dryRunOnlyHelp": "Strongly recommended for the first two weeks. Scheduled runs produce a preview report instead of archiving anything. You commit a preview from the Overview tab.",
+            "llmEnabled": "Enable Layer 3 (Haiku-mediated merge)",
+            "llmEnabledHelp": "Layer 3 lets Haiku decide what to merge for clusters in the borderline similarity band. Costs tokens. Turn off to skip and run only the rule-based + tight-similarity layers.",
+            "similarityThreshold": "Auto-merge threshold",
+            "similarityThresholdHelp": "Cosine similarity at or above this is auto-merged without an LLM. Default 0.95 — strict on purpose; near-duplicates that share most but not all content stay safe.",
+            "llmMergeLow": "LLM-review lower bound",
+            "llmMergeLowHelp": "Pairs in [this, auto-merge] go to Haiku for review. Default 0.80.",
+            "llmBatchSize": "Cluster batch size",
+            "llmBatchSizeHelp": "Max memories sent to Haiku in one call. Bigger batches are cheaper per merge but slower per call. Default 8.",
+            "archiveRetentionDays": "Archive retention (days)",
+            "archiveRetentionDaysHelp": "Archived memories older than this are permanently deleted. Default 30.",
+            "advanced": "Advanced thresholds",
+            "advancedHint": "Don't change these unless you understand cosine similarity over text embeddings."
+        },
+        "preview": {
+            "heading": "Preview report",
+            "empty": "Nothing to consolidate. Your memory store is already clean.",
+            "summary_one": "{{count}} memory would be archived",
+            "summary_other": "{{count}} memories would be archived",
+            "synthSummary_one": "{{count}} new merged memory would be synthesized",
+            "synthSummary_other": "{{count}} new merged memories would be synthesized",
+            "examined_one": "{{count}} memory examined",
+            "examined_other": "{{count}} memories examined",
+            "oversizedSkipped_one": "{{count}} cluster too large; skipped for safety",
+            "oversizedSkipped_other": "{{count}} clusters too large; skipped for safety",
+            "rejectedSyntheses_one": "{{count}} proposed merge rejected by fact-coverage check",
+            "rejectedSyntheses_other": "{{count}} proposed merges rejected by fact-coverage check",
+            "archiveTable": "Would archive",
+            "synthesisTable": "Would synthesize",
+            "reasonExactDup": "Exact duplicate",
+            "reasonExpired": "Expired",
+            "reasonSimilarityMerge": "Near-duplicate",
+            "reasonLlmMerge": "Haiku-merged",
+            "skippedMessage": "Skipped: {{message}}"
+        },
+        "history": {
+            "empty": "No Dream runs recorded yet.",
+            "trigger": {
+                "scheduled": "Scheduled",
+                "manual": "Manual"
+            },
+            "status": {
+                "completed": "Completed",
+                "failed": "Failed",
+                "cancelled": "Cancelled",
+                "running": "Running"
+            },
+            "dryRunBadge": "Preview",
+            "counters": {
+                "examined": "Examined",
+                "exact": "Exact",
+                "expired": "Expired",
+                "similarity": "Similarity",
+                "llm": "Haiku",
+                "synthesized": "Synthesized",
+                "oversized": "Skipped (oversized)",
+                "rejected": "Rejected"
+            }
+        },
+        "archive": {
+            "empty": "Nothing archived yet.",
+            "subtitle": "Archived items are preserved as markdown files under <code>memory/.archive/</code>. Restore moves them back; the archive file is deleted on success.",
+            "restoreFailed": "Restore failed: {{error}}",
+            "restoreSuccess": "Restored.",
+            "table": {
+                "title": "Title",
+                "reason": "Reason",
+                "archivedAt": "Archived",
+                "mergedInto": "Merged into",
+                "actions": "Actions"
+            }
+        },
+        "toasts": {
+            "cancelFailed": "Could not cancel Dream: {{error}}",
+            "previewStarted": "Preview started — this may take a minute.",
+            "previewFailed": "Preview failed: {{error}}",
+            "runStarted": "Dream cycle started.",
+            "runFailed": "Run failed: {{error}}",
+            "settingsSaved": "Settings saved.",
+            "settingsFailed": "Save failed: {{error}}",
+            "undoSuccess_one": "Restored {{count}} memory.",
+            "undoSuccess_other": "Restored {{count}} memories.",
+            "undoFailed": "Undo failed: {{error}}"
+        },
+        "safety": {
+            "title": "How Dream protects your memories",
+            "items": [
+                "Dream archives memories instead of permanently deleting them. Removed entries move to memory/.archive/ as markdown files you can restore.",
+                "Memories you've manually edited (with version history) always win as survivor — Dream will never demote them.",
+                "Memories from different dimensions are never auto-merged across dimensions.",
+                "Every deletion is gated by a single-survivor coverage check: some specific surviving memory (kept or synthesized) must contain at least 85% of the deleted memory's distinct facts. This catches the symmetric-overlap case where two memories share most content but each carries a unique fact that would otherwise quietly disappear.",
+                "The vector-only fast path (cosine >= 0.95) is no longer trusted blindly — it runs the same coverage check, and on failure the cluster is demoted to Haiku review instead of auto-merging.",
+                "Clusters larger than 20 entries are skipped entirely (anti-hub defense) — they're usually transitive chains through a generic concept, not real redundancy.",
+                "Every cycle is reversible by run ID for 30 days."
+            ]
+        }
+    },
+    "editor": {
+        "label": "Memory text",
+        "attribution": "Your changes are saved as user edits and take priority over observed memories."
+    },
+    "correction": {
+        "title": "Correct this attribution?",
+        "description": "Confirm that \"{{title}}\" was wrongly attributed. The listed memory and derived entries will be removed; the reason is not saved.",
+        "confirm": "Confirm correction",
+        "correcting": "Correcting...",
+        "previewFailed": "The correction preview could not be loaded. Nothing has been changed. Try again.",
+        "failed": "The correction could not be completed, or the removal list changed. Refresh the preview and review it before trying again.",
+        "successTitle": "Attribution corrected"
+    },
+    "forget": {
+        "action": "Forget this",
+        "itemAction": "Forget \"{{title}}\"",
+        "title": "Forget this memory?",
+        "description": "Review what will be removed for \"{{title}}\" before confirming.",
+        "loading": "Checking this memory and its derived entries...",
+        "removes": "Will be permanently removed",
+        "kinds": {
+            "memory": "Memory",
+            "memory_archive": "Archived memory",
+            "memory_history": "Saved memory version",
+            "self_dream": "Self Dream",
+            "purpose_map": "Purpose Map",
+            "work_profile": "Work profile snapshot",
+            "memory_correction": "Saved attribution correction",
+            "shadow_learning": "Learning by comparison",
+            "background_learning": "Background learning"
+        },
+        "storedCopies": "Stored search embeddings: {{embeddings}}. Saved versions: {{versions}}.",
+        "sharedLearningScope": "Shared learning analyses and their supporting records are removed when listed. Memory files are removed only when listed as memory records.",
+        "suppression": "For {{days}} days, matching re-observations are blocked from memory, Dream and chat context.",
+        "scopeLimit": "Source activities and conversations, unrelated logs and external backups are not deleted.",
+        "irreversible": "This cannot be undone.",
+        "confirm": "Forget this",
+        "forgetting": "Forgetting...",
+        "previewFailed": "The removal preview could not be loaded. Nothing has been forgotten. Try again.",
+        "forgetFailed": "Forgetting could not be completed, or the removal list changed. Refresh the preview and review it before trying again.",
+        "refresh": "Refresh preview",
+        "successTitle": "Memory forgotten",
+        "successBody": "Removed {{records}}, {{embeddings}} and {{versions}}. Matching re-observations are blocked for {{days}} days. Source activities and conversations, unrelated logs and external backups remain.",
+        "recordCount_one": "{{count}} record",
+        "recordCount_other": "{{count}} records",
+        "embeddingCount_one": "{{count}} search embedding",
+        "embeddingCount_other": "{{count}} search embeddings",
+        "versionCount_one": "{{count}} saved version",
+        "versionCount_other": "{{count}} saved versions",
+        "recordTypes": {
+            "analysis": "Analysis",
+            "attempt": "Analysis attempt",
+            "evaluation": "Evaluation",
+            "decision": "Decision",
+            "compilation": "Compiled update",
+            "event": "Change event",
+            "evidence": "Supporting evidence",
+            "snapshot": "Snapshot",
+            "revision": "Revision",
+            "receipt": "Decision receipt",
+            "relation": "Relationship",
+            "hypothesis": "Hypothesis",
+            "entry": "Derived entry"
+        },
+        "matchingProtection": "Forgetting works offline using local fact hashes. Optional AI matching can also recognize reworded facts when available."
+    },
+    "searchPlaceholder": "Search memory text...",
+    "row": {
+        "empty": "No memory text yet",
+        "learned": "Learned {{when}}",
+        "edit": "Edit \"{{title}}\"",
+        "forget": "Forget",
+        "updated": "Updated {{when}}"
+    },
+    "support": {
+        "details": "Support details",
+        "id": "Memory ID",
+        "copyId": "Copy memory ID"
+    },
+    "kinds": {
+        "learned": "Something I learned about you",
+        "preference": "A preference",
+        "person": "A fact about a person"
+    },
+    "detail": {
+        "more": "More memory actions",
+        "points": "Memory points",
+        "staleDraft": "This memory changed while you were editing. Your draft is still here. Copy it before canceling, then choose a current point to edit.",
+        "pointLabel": "Memory point",
+        "addPoint": "Add a point",
+        "forgetPoint": "Forget point: {{point}}",
+        "why": "Why Isoform believes this",
+        "notRight": "Not right",
+        "details": "Details",
+        "kind": "Kind",
+        "dimension": "About",
+        "firstLearned": "First learned",
+        "lastUpdated": "Last updated",
+        "dateUnknown": "Date unavailable",
+        "dayBeforeYesterday": "the day before yesterday",
+        "lastTwoDays": "from your work over the last two days",
+        "since": "from your work since {{when}}",
+        "yourWork": "from your work",
+        "provenanceApps": "Learned {{range}}, mostly in {{apps}}.",
+        "provenance": "Learned {{range}}.",
+        "fromYou": "You added this memory.",
+        "updated": "Updated {{when}}.",
+        "noEvidence": "No activity evidence is available for this memory.",
+        "unreadable": "The original text is unavailable or protected by your privacy settings.",
+        "evidenceFailed": "Evidence could not be loaded. Close and reopen this memory to try again.",
+        "workToday": "from your work today",
+        "updatedMorning": "Updated this morning.",
+        "updatedAfternoon": "Updated this afternoon.",
+        "updatedEvening": "Updated this evening.",
+        "copyFailed": "The memory ID could not be copied. Try again."
+    },
+    "aboutYou": {
+        "eyebrow": "About you",
+        "title": "What Isoform believes about you",
+        "more": "More About you actions",
+        "dream": "Memory Dream",
+        "beliefs": "Beliefs",
+        "groupBy": "Group by",
+        "areas": {
+            "communication": "How you communicate",
+            "work": "Work",
+            "people": "People",
+            "tools": "Tools and apps",
+            "routines": "Routines",
+            "interests": "Interests",
+            "other": "Other"
+        },
+        "communication": {
+            "note": "Learned only from messages you sent. Drafts follow these.",
+            "sentMessages_one": "{{count}} message you sent",
+            "sentMessages_other": "{{count}} messages you sent",
+            "dateSingle": "{{date}}",
+            "dateRange": "{{first}} to {{last}}",
+            "dateFrom": "from {{date}}",
+            "dateUntil": "through {{date}}",
+            "withDates": "{{evidence}} · {{dates}}",
+            "withApps": "{{evidence}} · {{apps}}",
+            "evidenceNote": "Counted only from messages you sent. Isoform never uses what other people wrote for this, and never guesses your tone.",
+            "draftsTitle": "How a draft shows it",
+            "draftsFailed": "Could not load drafts that used this belief.",
+            "toApp": "To {{to}} · {{app}}",
+            "toOnly": "To {{to}}",
+            "written": "Written the way you write to {{name}}: {{details}}.",
+            "details": "{{language}}, {{sentences}}, {{greeting}}",
+            "sentences_one": "one sentence",
+            "sentences_other": "{{count}} sentences",
+            "greeting": "with a greeting",
+            "noGreeting": "no greeting",
+            "languages": {
+                "chinese": "Chinese",
+                "english": "English"
+            },
+            "change": "Change"
+        },
+        "loadFailed": "Could not load what Isoform believes about you.",
+        "retry": "Try again",
+        "reindexFailed": "Could not re-index memory files. Try again.",
+        "summary": {
+            "line": "{{beliefs}} {{confirmed}} {{local}}",
+            "beliefs_one": "{{count}} belief from {{span}} of your work.",
+            "beliefs_other": "{{count}} beliefs from {{span}} of your work.",
+            "beliefsToday_one": "{{count}} belief from today's work.",
+            "beliefsToday_other": "{{count}} beliefs from today's work.",
+            "confirmed_one": "You’ve confirmed {{count}}.",
+            "confirmed_other": "You’ve confirmed {{count}}.",
+            "noneConfirmed": "You haven’t confirmed any yet.",
+            "local": "Saved on this computer. You can correct or forget any of it.",
+            "empty": "Isoform writes what it learns about you here. The first notes come tonight."
+        },
+        "span": {
+            "days_one": "{{count}} day",
+            "days_other": "{{count}} days",
+            "weeks_one": "{{count}} week",
+            "weeks_other": "{{count}} weeks",
+            "months_one": "{{count}} month",
+            "months_other": "{{count}} months"
+        },
+        "duration": {
+            "minutes_one": "{{count}} minute",
+            "minutes_other": "{{count}} minutes",
+            "hours_one": "{{count}} hour",
+            "hours_other": "{{count}} hours"
+        },
+        "confidence_one": "Confidence {{count}} of 4",
+        "confidence_other": "Confidence {{count}} of 4",
+        "status": {
+            "confirmed": "Confirmed",
+            "learned_today": "Learned today",
+            "inferred": "Inferred",
+            "not_quite": "Not quite"
+        },
+        "portrait": {
+            "title": "Your portrait",
+            "name": "The {{first}} {{second}}",
+            "words": {
+                "blueprint": "Blueprint",
+                "steady": "Steady",
+                "curious": "Curious",
+                "practical": "Practical",
+                "builder": "Builder",
+                "author": "Author",
+                "conductor": "Conductor",
+                "connector": "Connector"
+            },
+            "meanings": {
+                "blueprint": "you plan ahead and reason from first principles",
+                "steady": "you plan ahead and build on what has worked before",
+                "curious": "you go with the flow and reason from first principles",
+                "practical": "you go with the flow and build on what has worked before",
+                "builder": "you go deep on one thing and keep your words brief",
+                "author": "you go deep on one thing and write in detail",
+                "conductor": "you keep many threads going and keep your words brief",
+                "connector": "you keep many threads going and write in detail"
+            },
+            "groups": {
+                "communication": "how you write",
+                "work": "how you work",
+                "people": "who you know",
+                "tools": "the tools you use",
+                "routines": "your routines",
+                "interests": "your interests",
+                "other": "everything else"
+            },
+            "whyName": "Why this name",
+            "whyRow": "{{word}}: {{meaning}}",
+            "whyFrom": "From {{groups}}",
+            "legendConfirmed": "You confirmed it",
+            "legendInferred": "Isoform inferred it",
+            "thatsMe": "That's me",
+            "notQuite": "Not quite",
+            "saidThatsYou": "You said that's you",
+            "undo": "Undo",
+            "meta": "From {{beliefs}} · updated {{when}}",
+            "beliefs_one": "{{count}} belief",
+            "beliefs_other": "{{count}} beliefs",
+            "notQuiteLabel": "What's off? You can leave it blank.",
+            "notQuitePlaceholder": "For example: I'm not slow on nos, I save them for Friday",
+            "save": "Save",
+            "cancel": "Cancel",
+            "rewriting": "Rewriting with your note. This version stays until then.",
+            "lately": "Lately",
+            "newVersion": "A new version is ready.",
+            "showIt": "Show it",
+            "forgotten": "One sentence rested on what you forgot, so it's gone. Isoform is rewriting the rest around it.",
+            "evidenceTitle": "Why Isoform says this",
+            "quote": "“{{text}}”",
+            "seen_one": "Seen once on {{days}}",
+            "seen_other": "Seen {{count}} times on {{days}}",
+            "days_one": "{{count}} day",
+            "days_other": "{{count}} days",
+            "seenWhere": "{{seen}} · {{apps}}",
+            "appSeparator": ", ",
+            "latelyFacts": "{{thisMonth}} a week this month · usually {{usual}}",
+            "showInBeliefs": "Show in Beliefs",
+            "learning": "On its way",
+            "learningLine_one": "Isoform writes it once it has seen enough of your work and your life. About {{count}} more day.",
+            "learningLine_other": "Isoform writes it once it has seen enough of your work and your life. About {{count}} more days.",
+            "learningBar": "{{beliefs}} of {{beliefsNeeded}} beliefs · {{days}} of {{daysNeeded}} days",
+            "writingTitle": "Writing your portrait",
+            "writingLine": "{{assistant}} is writing it now, about a minute. You'll get a notification.",
+            "failedTitle": "Couldn't write it yet",
+            "reasons": {
+                "limit": "{{assistant}} reached its limit until {{time}}. Isoform writes it then, by itself.",
+                "noAI": "Sign in to Claude Code or Codex, and Isoform writes it right away.",
+                "noAnswer": "{{assistant}} didn't answer. Isoform tries again at {{time}}.",
+                "unusable": "Couldn't write it yet. Isoform tries again at {{time}}.",
+                "unusableTitled": "Isoform tries again at {{time}}."
+            },
+            "signIn": "Sign in",
+            "shapeLine": "Isoform has your shape. To put it into words, it needs a little more to go on: confirm the ones below, or give it a few more days.",
+            "confirmRows": {
+                "title": "Confirm these and Isoform can say more",
+                "confirmed": "Confirmed",
+                "writing": "Writing with what you confirmed",
+                "notUsed": "Won't use it"
+            },
+            "assistants": {
+                "claudeCode": "Claude Code",
+                "codex": "Codex",
+                "fallback": "Your AI"
+            },
+            "tryNow": "Try now",
+            "workWithMe": {
+                "title": "How to work with me",
+                "sub": "Written for the people you work with. Only you see it until you copy it.",
+                "copy": "Copy",
+                "copied": "Copied",
+                "from": "From {{group}}",
+                "confirmed": "You confirmed this"
+            },
+            "saidThatsYouWhen": "You said that's you {{when}}",
+            "keeps": "Isoform keeps this version. Anything newer waits for you.",
+            "saidAnnounce_one": "You said that's you. The {{count}} belief under it is confirmed.",
+            "saidAnnounce_other": "You said that's you. The {{count}} beliefs under it are confirmed.",
+            "rewrittenNote": "Rewritten from your note: “{{note}}”",
+            "rewrittenNotQuite": "Rewritten after you said Not quite.",
+            "becauseOne": "Because you confirmed “{{belief}}”.",
+            "becauseMany": "Because you confirmed {{count}} beliefs.",
+            "phraseConfirmed": "Confirmed",
+            "when": {
+                "today": "today",
+                "yesterday": "yesterday",
+                "date": "on {{date}}"
+            }
+        },
+        "goals": {
+            "title": "Goals",
+            "add": "Add a goal",
+            "tracking": "Tracking",
+            "waiting": "Waiting on someone",
+            "done": "Done ({{count}})",
+            "held": "Only on this computer ({{count}})",
+            "empty": "No goals yet. Tell Isoform what you're working toward and it keeps track here.",
+            "createPrompt": "I want to set a new goal: ",
+            "loadFailed": "Isoform couldn't read your goals.",
+            "retry": "Try again",
+            "loading": "Loading your goals",
+            "detailLabel": "Goal"
+        },
+        "review": {
+            "title": "New this week",
+            "left_one": "{{count}} to check",
+            "left_other": "{{count}} to check",
+            "allChecked": "All checked",
+            "quote": "“{{text}}”",
+            "seen_one": "Seen once",
+            "seen_other": "Seen {{count}} times",
+            "where": "{{seen}} · {{apps}}",
+            "communicationWhere": "{{area}} · {{evidence}}",
+            "confirm": "That’s me",
+            "confirming": "Confirming...",
+            "notQuite": "Not quite",
+            "forget": "Forget",
+            "undo": "Undo",
+            "confirmed": "Confirmed. Isoform treats this as fact now.",
+            "communicationConfirmed": "Confirmed. Drafts will follow this.",
+            "forgetPending_one": "Forgetting in {{count}} second.",
+            "forgetPending_other": "Forgetting in {{count}} seconds.",
+            "forgotten_one": "Forgotten. Isoform won’t learn it again for {{count}} day.",
+            "forgotten_other": "Forgotten. Isoform won’t learn it again for {{count}} days.",
+            "confirmFailed": "Could not confirm this. Try again.",
+            "forgetFailed": "Could not forget this. Nothing was removed.",
+            "corrected": "Corrected. Isoform will use your wording.",
+            "portraitConfirmed": "Confirmed. Your portrait can use this now.",
+            "notQuiteLabel": "What’s closer? You can leave it blank.",
+            "save": "Save",
+            "cancel": "Cancel",
+            "stoppedUsing": "Isoform stopped using this.",
+            "answerFailed": "Could not save that. Try again."
+        },
+        "detail": {
+            "label": "Belief detail",
+            "close": "Close details",
+            "wrongSubject": "Wrong subject",
+            "editWording": "Edit wording",
+            "evidenceFailed": "Could not load why Isoform believes this.",
+            "seeInActivity": "See these moments in Activity",
+            "usesTitle": "Where Isoform uses it",
+            "usesNone": "Isoform has not used this yet.",
+            "usesFailed": "Could not load where Isoform uses this.",
+            "openSession": "Open where this was learned in Activity",
+            "confirmedWhen": "You confirmed this {{when}}.",
+            "notQuiteWhen": "You said not quite {{when}}. Isoform isn’t using it."
+        },
+        "evidence": {
+            "seen": "Seen {{when}} in {{app}}",
+            "withDuration": "{{seen}} · {{duration}}"
+        },
+        "uses": {
+            "chat_one": "Used once in chat answers",
+            "chat_other": "Used {{count}} times in chat answers",
+            "today_chat_one": "Used once in chats from Today",
+            "today_chat_other": "Used {{count}} times in chats from Today",
+            "brief_one": "Used once in your briefs",
+            "brief_other": "Used {{count}} times in your briefs",
+            "assistant_tool_one": "Looked up once by an assistant you use",
+            "assistant_tool_other": "Looked up {{count}} times by assistants you use",
+            "last": "last {{when}}"
+        },
+        "technical": {
+            "title": "Technical details",
+            "source": "Source",
+            "confidence": "Confidence",
+            "confidenceValue": "{{level}} of 4 · seen in {{sessions}} on {{days}}",
+            "sessions_one": "{{count}} session",
+            "sessions_other": "{{count}} sessions",
+            "days_one": "{{count}} day",
+            "days_other": "{{count}} days",
+            "files_one": "{{count}} file",
+            "files_other": "{{count}} files",
+            "chunks_one": "{{count}} chunk indexed",
+            "chunks_other": "{{count}} chunks indexed",
+            "vectorActive": "vector search active",
+            "vectorInactive": "vector search inactive"
+        },
+        "aboutFailed": "Could not load what is new this week or how sure Isoform is.",
+        "firstDay": {
+            "line_one": "{{count}} belief from your {{history}}. You haven't confirmed any yet.",
+            "line_other": "{{count}} beliefs from your {{history}}. You haven't confirmed any yet.",
+            "checkFirst": "Check these first",
+            "checkFirstHint": "The first three to confirm",
+            "source": "{{assistant}}, {{date}}"
+        }
+    }
+}

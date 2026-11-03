@@ -1,0 +1,6 @@
+build/bin/
+quick-chat-spotlight.exe
+# `go build ./...` from this directory produces a bare Mach-O/ELF binary
+# named after the package directory. Anchored with a leading slash so it
+# only matches the helper's own output, not anything in subdirectories.
+/quick-chat-spotlight

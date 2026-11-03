@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "hubPrivate": "2kg5L6Pl610cK_FpD-AH-wK0C1Bw2wNHnP34JdwE1B4",
+  "hubPublic": "p4VKLopDO3vDqo5mHdVgZQR8vAxix347UzNzCro5gTY",
+  "devicePrivate": "DUoZASaTbNKpj5GDNob1rvMvfUGFJJoA_7eV9yS6dmQ",
+  "devicePublic": "14S15WCPsa08GFY6oXgPRa8eIg7BjYLeTVquz0Ke_yE",
+  "hubId": "6f1c2e4a-7b3d-4c5e-9a1b-2d3e4f5a6b7c",
+  "deviceId": "0b9d6e2c-3f4a-4e5b-8c7d-1a2b3c4d5e6f",
+  "pairingId": "a7e3c1d2-5b4a-4f6e-8d9c-0e1f2a3b4c5d",
+  "secret": "_BBXiUdgk_Eq8hxiyXKOW3S7DdJo4sUZeN0Ig9sS3Z8",
+  "kPair": "pyqf_6iYBpQeT2tCsvxCLnwHSrOfvqeTd67olZ1emUc",
+  "claimToken": "hdbYOWQH17yQN4GPV0XoNEjc2i2i_0Gm_AEHepDmeKg",
+  "confirmCode": "171309",
+  "kD2H": "05YlMg8LWxyti4ZZ4Efs8n5kHqMVBgZAq0XDXDkNIn4",
+  "kH2D": "sw9a4k8SJKg1HpIih3JOXWeRrz8ZQ00jjN-8kAjT3fE",
+  "claim": {
+    "plaintext": "{\"deviceId\":\"0b9d6e2c-3f4a-4e5b-8c7d-1a2b3c4d5e6f\",\"deviceName\":\"Alex's iPhone\",\"devicePub\":\"14S15WCPsa08GFY6oXgPRa8eIg7BjYLeTVquz0Ke_yE\",\"bearerHash\":\"c544c0eb8c9c89470fac402c88cbad549bdd10e938a90243fa64c2f39e9f7eb0\",\"platform\":\"ios\",\"appVersion\":\"1.0 (12)\",\"scopes\":[\"brief:read\",\"brief:refresh\",\"presence:read\",\"push\"],\"pushEnvironment\":\"development\"}",
+    "ct": "8tncQiE6JpxLJeej3b8RW0taiOpSC9_7YF3K-zGq2-EE7a10ep_iECezKPs1Ipxqb45_HPd9NCEK5ag5f1DFFfaNuTbe4eE-kseO464xpurtdYrTXht-58avXcJNeMvK5qlS05HP6MiE9JAtzOezxe7k_TaRDsZ4ULkCWKZtlk6chcSTJYXb-BieZnjd4gKThbKA9C-FPyzP6vyw0jyRdDeD61z_08ovnnha7606E5qaGX832KpnNLlQjYSUkuAmBWLM48GXXxAFBK3BHEh0SaR9JANuJixUWUof27Wv81S-Mt_wAqbgZwMzmsxyqFoN-92NcLOY-B-F8mXM2cg9B4xOcn-iIkAD7rFV-4sDDWMCN64hsiJ7I4TgtQSqybj8r0YvMbh3vIVIl5yNMekaK8ifveR3G8ZMgHUFVl8P6hYUHUhSI_7OnNcbO2n0jxSAb7EdeEznrJV7gG4f6mCXt7laiPQI47YszGSvZUTN9-KJdw"
+  },
+  "approval": {
+    "plaintext": "{\"deviceId\":\"0b9d6e2c-3f4a-4e5b-8c7d-1a2b3c4d5e6f\",\"hubName\":\"Alex's MacBook Pro\",\"scopes\":[\"brief:read\",\"brief:refresh\",\"presence:read\",\"push\"],\"expiresAt\":\"2027-01-07T07:00:00Z\",\"hubPub\":\"p4VKLopDO3vDqo5mHdVgZQR8vAxix347UzNzCro5gTY\"}",
+    "ct": "Qegq-BY3u8RvBV7ApCefyenLhQdcq3JLr3pysD82pNom14-ZHIuPXczJ5l_zW4IM6mG3x6bYpSe2mNej2QoqeYwa0rZq4B3min4iMxJMm42nCWHnsfL-5Ae6PtRVX__MyTM9DU0IViyLRhdu9qnjwNMyycXrQ1wTOfcyV0PAwq7wVyigwZRkkzeee1T8DseJcJn-Rta6Wf6U3mpDbPFsIUNRm5GhyWuIrQZ-rYaYY3yHyf9sQSUtd17AkGgRx250A1woZsfsEwXmkxDR_uUrvd60FzLcswwVMIH9U1rET1Gl360rflU9vvTbunirAhUkiGd3cxV40kGO5j0"
+  },
+  "envelopes": [
+    {
+      "dir": "d2h",
+      "seq": 1,
+      "kind": "req",
+      "plaintext": "{\"id\":\"c4b8f1e0-2d3a-4b5c-9e8f-7a6b5c4d3e2f\",\"method\":\"GET\",\"path\":\"/brief/latest\",\"query\":\"\",\"body\":\"\"}",
+      "ct": "AwewoK1cEVnQ-GRHfhPP4L0OXEQsBK04shldTkzyY9YScEWxIbyDWZG8pMBlf7q0XpvN7Qc3Y2rdQ_iWG7bXqRbO4Ldk2JLubOg4QzIFdGGvKF3u23vbnA_cliPRngT1McmmJ7wxrtQdyoftL6jTnHSeDXjxYjN-"
+    },
+    {
+      "dir": "h2d",
+      "seq": 1,
+      "kind": "res",
+      "plaintext": "{\"id\":\"c4b8f1e0-2d3a-4b5c-9e8f-7a6b5c4d3e2f\",\"status\":200,\"body\":\"{\\\"ok\\\":true,\\\"data\\\":{}}\"}",
+      "ct": "-1DrN3EScxHwgP6mbyBeViwL54_ObXAcBXTgTcZKH8HBl_qvE8V9jtrCbkfTDIEfuY_7DvMT-u8EG7_hpYOAHFmCIw-58OBY31q7UtM594aNeE2slGTI6yCD9jaD7fG5osNzFV9DHQFN2F6eBQ"
+    },
+    {
+      "dir": "h2d",
+      "seq": 2,
+      "kind": "res",
+      "plaintext": "{\"id\":\"c4b8f1e0-2d3a-4b5c-9e8f-7a6b5c4d3e2f\",\"status\":200,\"body\":\"{\\\"data\\\":{\\\"chat\\\":{\\\"id\\\":\\\"main-chat\\\",\\\"state\\\":\\\"idle\\\",\\\"title\\\":\\\"Isoform\\\"},\\\"cursor\\\":2,\\\"hasMore\\\":false,\\\"items\\\":[{\\\"seq\\\":1,\\\"id\\\":\\\"moment-brief\\\",\\\"role\\\":\\\"system\\\",\\\"kind\\\":\\\"proactive\\\",\\\"text\\\":\\\"Your morning brief is ready.\\\",\\\"toolName\\\":\\\"main_chat_proactive\\\",\\\"at\\\":\\\"2026-10-16T18:00:00Z\\\",\\\"proactive\\\":{\\\"momentId\\\":\\\"moment-brief\\\",\\\"kind\\\":\\\"brief_ready\\\",\\\"headline\\\":\\\"Your morning brief is ready.\\\",\\\"body\\\":\\\"Open your brief when you have a moment.\\\",\\\"draft\\\":false,\\\"actionIds\\\":[\\\"open\\\",\\\"mute_kind\\\"],\\\"actionLabels\\\":{\\\"mute_kind\\\":\\\"Mute this kind\\\",\\\"open\\\":\\\"Play\\\"},\\\"target\\\":{\\\"kind\\\":\\\"today\\\"},\\\"evidence\\\":[{\\\"kind\\\":\\\"brief\\\",\\\"id\\\":\\\"brief-2026-10-16\\\",\\\"at\\\":\\\"2026-10-16T18:00:00Z\\\",\\\"target\\\":{\\\"kind\\\":\\\"today\\\"}}],\\\"state\\\":\\\"pending\\\",\\\"localized\\\":{\\\"en\\\":{\\\"headline\\\":\\\"Your brief is ready.\\\",\\\"body\\\":\\\"Your brief is ready.\\\",\\\"actionLabels\\\":{\\\"mute_kind\\\":\\\"Mute this kind\\\",\\\"open\\\":\\\"Play\\\"}},\\\"zh-CN\\\":{\\\"headline\\\":\\\"你的简报已经准备好了。\\\",\\\"body\\\":\\\"你的简报已经准备好了。\\\",\\\"actionLabels\\\":{\\\"mute_kind\\\":\\\"静音此类消息\\\",\\\"open\\\":\\\"播放\\\"}}}}},{\\\"seq\\\":2,\\\"id\\\":\\\"status-2026-10-16\\\",\\\"role\\\":\\\"system\\\",\\\"kind\\\":\\\"status\\\",\\\"text\\\":\\\"2 updates\\\",\\\"toolName\\\":\\\"main_chat_status\\\",\\\"at\\\":\\\"2026-10-16T18:00:00Z\\\",\\\"status\\\":{\\\"period\\\":\\\"2026-10-16T13:00:00-07:00\\\",\\\"entries\\\":[{\\\"id\\\":\\\"digest-1\\\",\\\"kind\\\":\\\"digest_done\\\",\\\"text\\\":\\\"Your digest is ready.\\\",\\\"localized\\\":{\\\"en\\\":\\\"Your updates are ready.\\\",\\\"zh-CN\\\":\\\"你的最新动态已准备好。\\\"},\\\"target\\\":{\\\"kind\\\":\\\"today\\\"}},{\\\"id\\\":\\\"capture-1\\\",\\\"kind\\\":\\\"capture_paused\\\",\\\"text\\\":\\\"Screen capture has been off for 20 minutes.\\\",\\\"localized\\\":{\\\"en\\\":\\\"Isoform stopped watching for a while.\\\",\\\"zh-CN\\\":\\\"Isoform 暂停观察了一会儿。\\\"},\\\"target\\\":{\\\"kind\\\":\\\"settings\\\",\\\"id\\\":\\\"activity\\\"}}]}}]},\\\"ok\\\":true}\"}",
+      "ct": "qcwk4WnYzvx9rNowK0TfEeZUMQ4wU1DHD7zsiYxrhU48l0lwk10oZlAvhTQlznPekSxs_4a7E1MCCdwLu17BuTmx5nbJh5XPMRfIA_ej3SzOpPiGm00T97BPng4DI0KA8kZUg_hevmZ1QSL1uw-vKJxWrtHQdRTZABmpD0xutFWrElIOLKKgDmnCCKh9-t1KwljTxgQqX7VtK9wQkYQ1JJ9Ucff9OP1zFvURl--S15tP2S7Ig5Ef8lDBCFdU5nvgRgEmDA-Jym1jFQltSaOFO5N_Yt_bxUJhlG9zoPCVeF4xYh2XAXM-9IAr8ltjjWJQJxjH-LQmPY1IV1cJItrlg2HX5ni1aXbPdsAvF7TmaejqXiFxLwuPwSUsaujQU8VtLevP4nsX-lqq37Gi6uX4AjvV_8t_sMYfXac3pc3psl8E5_NIkukFObI0jUXHWKs0CGISnr2-NCbR5ZSi7804gZYyiwCWJYaWjnDO_nwuSE1fDyvIMPayI2D0cYG-_IDeX6TIDYQPJ8J5o3bGkkt93Sn2-lhukUMzAGmHGZZlS9W7if1toh6RC49_JfqtbIwCu3u0mOgMsTc9sW36en27F1vFLCFPMj4CdiGt0b3S3gNyuqMPlmN6mEgrXvj7Y1nohm7n03lxfvn7VDSSxxruzPKEuqCobp_1M2ugRUlczRXe7c3aVzl2A6Zbbm02vX54NL6aLDS7kB7qsLcwqIcahVEqAKPeQMVQmsJ6Mn_SvB63DishMH1rPQuszohqAgtVY1QL4CcF3ol4g8cSYcr3uspX2iOVV1Pmti6-zlMa3dBRsegYJYJPjm9OL9H5UKeDD2rdngr1WjqVHY0OswkBhZBoVydV1_rfcuZ7l6RY_lBVZlPnbhCiETXsct-n-lH9hO6-fxFaZW6PbUkaAcEpZJOd-pbBD9MGBZfXydf4eFT660W2_V-O5xQ0S3GUTn6YH2ONL1cxZj2lBp8pOd-6FD4YxM2_VdXeN0DlhtA2AnOXlhO0fDhXFK0A4Lm4S38FVuOhiB5zlxwu1IZrlSYNtAjjaRxfWEXGC3YJR8Ktaux_KWUCxTlKtsRZOMsCa00vAjdtLx6tyDFBsp7pD6frKxFR1XF7jSaybLt0xu8AN-V-iXyezDOxFfXVnXBB8hNCkKGBXDb33aA8F_fgA5ku1vAbuEKTfhKHHKLrj511SyXCB43sZ_K8stxkeQYm_7TXT4SU6zYD4GOxUBZ2T5c6vJUfZY-Zuhv0uAyyg4bmp6Wc1Z4gh4y2x4lJ4ZHeKH2UDmAb6tkhsBOqjFa9kXRHmgApAWjXfCUDkUrl411GKH59vUVqMXyAHbLNP7FrK3KmsG80GN0Lpw80N7D_oyAkw5nZxaukx7pwP4ETQ1ihHzbwmTgJ18G28W7JP3GIMgSopHQ8A9kFJGbL2nxoRqmC1y8EBsKnlA1B-yWv3Fzf97yQM7huLtj7mK5LnGl8YxmawgxPMdvGGPVUEha86hWGEDFNU-asB97--QOD5SYZuBKtshCvfh5311YTsFcU2URatykh72pmbF7Vv3fTaSBgaoEu2NpFuGy8Qw8G9hUG0i_81aWPqTYQDLYLABnrCQtmJ4taixcOeV6znR5H_3qUDEu0gu6BTJcr0RMomL8NqsSRue1lUBU9w10r3JkC1OYyTIY2AYf3te6ZqrvBnQTTdxGtCgNuiCzrcCvNecpP6kKHVEskZ3YDs2ebsQRVqvErO7IyrzNWCSDjeJ0s5kGUBNSbkijzyWrm40VVqVpQ1zhLpsQZ0ZQE0jIut7u2QT0oVJMCn4h40DgLc4xVkI5-QvMfenJiOSmhGSaREBe3IagNCyuu5y1jq8_nVFSi5ULzHBEHvSniQW0cGxyVlObsbfpdo_EcGuJBfLgqy9F9G19LolCuouX-vyprvFDW9N6Eku_53UhYJ22baTYC8RUULfGo8_mw__HyJqwpRSG41JE7_e5MC1vYE7GEk3WEQD71sqiFTEa2mTrCm_epX1Zb3m2C8wgs-whD272DGbRv_NuY0c1dyBp_hPpfMlYVOOqysnjaS7EDOSMvvfzH-zjiR6UwXv-V3OWgcfXgti14Jizn5JKOhG4yLw6m2gkfLaciBviqVyqq1zUxdY6rLzaGJXbyvxElDg3ZceiLClQNiABH6LuN_eq7xtTgMzuG5ptKD4f_QogScQZivBTQLOZWINs1fB8UO-o-7ey-a_eJr-MAkjONC2BN04p8wOGRnE4w5_bk78ZeyxIsOajiAn4whHpgLUQztjwCZ8oaz2HdB6Qbr3tZV6iL5CkxqWgGfMF3xtSi4aa8iz9rJcUVpfowZFqVo4-1TqaSAqzPTsqH9k9iFI7U3RZsMKLsHVl4hb1nEkk1g6AALPupeQVyJ1Fu7DDuB2H_VtVH29k5qwh1YY62Ib3G24rnNQq6kxqqAaNxq0jGmghIqjkfyuGyLB_XheIe4sdTne9GhfueFtM6xFwKBrpa8uPp7fNosN4Trzl7uzT-XtPcTKk30r23Gu6vVsWZGokhOVB7hId5qsSinaJTwpKoxKSU4TfSMFIqxS8nQiRcBzzawWfQGQ2qjHe_3RRFmMPV8gqCmZwwUmNpBvS_Z1Hx_X4eJbx9OwiJ7-29MpNhcIY"
+    }
+  ],
+  "noticeSecret": "w00clXLUTIWv0nY5mEFnqBCl04smA_joJ0SP2J0N8l8",
+  "kNotice": "Q6GWraZGrAH3T-YpbTCqYLVoYe9MdUAY8hV7OpDpsBE",
+  "notice": {
+    "id": "5c1e7a2b-9d4f-4a3e-8b6c-7f0e1d2c3b4a",
+    "nonce": "a0LnuCBeWFirJEox",
+    "plaintext": "{\"v\":1,\"id\":\"5c1e7a2b-9d4f-4a3e-8b6c-7f0e1d2c3b4a\",\"kind\":\"decision_due\",\"title\":\"Approve sending the Q3 reply to Sam?\",\"body\":\"Sam has waited since 09:12.\",\"category\":\"YANSU_DECISION\",\"actions\":[{\"id\":\"approve\",\"label\":\"Approve\",\"auth\":true},{\"id\":\"decline\",\"label\":\"Decline\",\"auth\":false},{\"id\":\"open\",\"label\":\"Open\",\"auth\":false}],\"subjectId\":\"c4b8f1e0-2d3a-4b5c-9e8f-7a6b5c4d3e2f\",\"createdAt\":\"2026-10-09T18:00:00Z\",\"expiresAt\":\"2026-10-10T18:00:00Z\"}                                                         ",
+    "ct": "a0LnuCBeWFirJEoxEtDIroYR76cHmm4bnJ8K_yhOh9V0RSDfGI6J4_dAGDKBlBEL6sxcrrnirfkQtOaDZcjPkMPj9hC6v1wn2m5jP2fZknlCX3BruZQuZmh_5bDt1LdpJnc3uqhwsOP00m_db8eVqlLqAYHte3oxboSjRYf9F1CXmv4GHkmjR2tFhoZa5Czap9tNYcnEUrux3vHBpwhgJN31cUQVm9edPMfYBxoR8t6ZE_lcGqVejk-SKS5q60RtiEvKABwCJDLNFgJa43VWOsnRV42kliaZS225cwUKTII4O6g8yYuwnRXg0u7VTFrCIj_8G-AAcnkZQU-_MuGTAALvJIuFQnyZ6Nw97L3zud3tXTAAIRmF0eWQ_t1GJWE5yzh-k2TVYu6-nGuFSyBKA9fx-inrK-3oss-h-PKGoRDybVsYbHHLvBZMPYTGbCjLxuvSQ8UmEivS9gKC_urES9Mu38XuUMScON25aEDMaeV67mePsZtwz8DsRlcYuQ_p156BB0t6Kzx__GoKznB3xnDxM6pykeN-9zx3EUjX0fH8A5mh49_7d1o5Odbmv331hv7jZKsq_o8F019LirBS7q1pZgi3Vwx98Fuq9qmT3lzLMn8TSWPZB6-BvAq6kOb5cLO1o5VXvjTtDUjiBPH3oZjhgWtnN0xvunEEGFYtBLRd6-wzgIgsLR6VPJOsh3zmdAuNu3sOcTFditVq"
+  },
+  "remoteInvitation": {
+    "plaintext": "{\"v\":1,\"relay\":\"http://127.0.0.1:8791\",\"hub\":\"6f1c2e4a-7b3d-4c5e-9a1b-2d3e4f5a6b7c\",\"pairing\":\"a7e3c1d2-5b4a-4f6e-8d9c-0e1f2a3b4c5d\",\"secret\":\"_BBXiUdgk_Eq8hxiyXKOW3S7DdJo4sUZeN0Ig9sS3Z8\",\"hubPub\":\"p4VKLopDO3vDqo5mHdVgZQR8vAxix347UzNzCro5gTY\",\"exp\":1760000000,\"iroh\":\"endpointabcdefghijklmnopqrstuvwxyz\"}",
+    "link": "isoform://pair#eyJ2IjoxLCJyZWxheSI6Imh0dHA6Ly8xMjcuMC4wLjE6ODc5MSIsImh1YiI6IjZmMWMyZTRhLTdiM2QtNGM1ZS05YTFiLTJkM2U0ZjVhNmI3YyIsInBhaXJpbmciOiJhN2UzYzFkMi01YjRhLTRmNmUtOGQ5Yy0wZTFmMmEzYjRjNWQiLCJzZWNyZXQiOiJfQkJYaVVkZ2tfRXE4aHhpeVhLT1czUzdEZEpvNHNVWmVOMElnOXNTM1o4IiwiaHViUHViIjoicDRWS0xvcERPM3ZEcW81bUhkVmdaUVI4dkF4aXgzNDdVek56Q3JvNWdUWSIsImV4cCI6MTc2MDAwMDAwMCwiaXJvaCI6ImVuZHBvaW50YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoifQ"
+  },
+  "pushGatewayAuth": {
+    "gatewayPrivate": "BKgaclOYaWTxshLyGJRPqZeWzdW4g1t1ztxxzmGVqJ4",
+    "gatewayPublic": "qEyTJGK3XTo49qjSXuwg4tZoVKy8zTIJJ9fhOeZ21nE",
+    "hubPrivate": "jyr8_J4oE9c-aUY6M-HcPcjt1mY8c8EDStL2w_9C218",
+    "hubPublic": "-0eJRteJdnyWHNr5U5FMMNETdV7IbOGlF1F6tWhpPkc",
+    "hubKey": "0SCwdWc8tKZM1ZLYMnhB0623JArevXhGi7IlKlXYSSE",
+    "grantKey": "Qq8Nni4aqS9WPqvZqE04A4NCfae8bX7kbIyO9ulyEBc",
+    "body": "{\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"environment\":\"development\"}",
+    "timestamp": "1793548800",
+    "environment": "development",
+    "token": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "hubId": "6f1c2e4a-7b3d-4c5e-9a1b-2d3e4f5a6b7c",
+    "expiresAt": 1809254400,
+    "signature": "Z-WhejLWd45Bspas1VCejaF253BHS0YzgWw4eSJrVdE",
+    "grant": "AQAAAABr1wgAY3DxkHCMExkKGqEBQSuNgyAfrPBf6VcK8UGjRmOCQyc"
+  }
+}

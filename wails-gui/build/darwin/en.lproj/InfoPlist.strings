@@ -1,0 +1,10 @@
+/* Permission prompts. English is the source of truth; keep in step with
+   Info.plist, Info.dev.plist and zh-Hans.lproj/InfoPlist.strings. */
+"NSMicrophoneUsageDescription" = "Isoform uses the microphone for voice typing and, while listening is on, to hear what you say. Audio is transcribed on this computer.";
+"NSAudioCaptureUsageDescription" = "Isoform captures the sound your computer plays, such as the other side of a call, and transcribes it on this computer while listening is on.";
+"NSAppleEventsUsageDescription" = "Isoform sends you a text through Messages when it cannot reach your phone, and, while Mail is open, reads the headers of your recent mail (senders, recipients, subjects, dates and whether a message is read, flagged or answered, never the messages) to tell you who is waiting on a reply.";
+"NSContactsUsageDescription" = "Isoform reads names, phone numbers and email addresses so you can choose which contacts to import from this computer.";
+"NSCalendarsFullAccessUsageDescription" = "Isoform reads your calendars to prepare you for meetings and plan your day. It adds a hold only when you say so. Events are kept on this computer; what a task needs is sent to the AI you chose and to your paired phone.";
+"NSCalendarsUsageDescription" = "Isoform reads your calendars to prepare you for meetings and plan your day. It adds a hold only when you say so. Events are kept on this computer; what a task needs is sent to the AI you chose and to your paired phone.";
+"NSRemindersFullAccessUsageDescription" = "Isoform reads your reminders, open and recently completed, so open ones count as your commitments and it can tell you when one is slipping. Reminders are kept on this computer; open ones can appear in your brief on your paired phone, and what a task needs is sent to the AI you chose.";
+"NSRemindersUsageDescription" = "Isoform reads your reminders, open and recently completed, so open ones count as your commitments and it can tell you when one is slipping. Reminders are kept on this computer; open ones can appear in your brief on your paired phone, and what a task needs is sent to the AI you chose.";

@@ -1,0 +1,22 @@
+# Pre-commit configuration for the desktop app (wails-gui + yansu-agent)
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(ios/Packages/IrohLib/.*|.*\.md)$
+      - id: end-of-file-fixer
+        exclude: ^(ios/Packages/IrohLib/.*|.*pnpm-lock\.yaml|.*\.md)$
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+        # resvg's pinned WASM is required by Pages Functions without a build step.
+        exclude: ^website/functions/_vendor/resvg/index_bg\.wasm$
+      - id: check-merge-conflict
+
+  # Python formatting (asr-eval, helper scripts)
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        language_version: python3

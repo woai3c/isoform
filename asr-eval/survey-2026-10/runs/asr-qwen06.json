@@ -1,0 +1,1722 @@
+{
+  "started_unix": 1792783070.77727,
+  "elapsed_s": 182.53398609161377,
+  "host": "macOS-26.2-arm64-arm-64bit",
+  "nice": 20,
+  "process_peak_rss_bytes": 2331082752,
+  "packages": {
+    "sherpa-onnx": "1.13.8",
+    "numpy": "2.4.6",
+    "jiwer": "4.0.0",
+    "psutil": "7.2.2"
+  },
+  "results": {
+    "qwen06": {
+      "engine_info": {
+        "name": "Qwen3-ASR 0.6B int8 (sherpa-onnx)",
+        "model_dir": ".cache/october/qwen06",
+        "num_threads": 2,
+        "max_window_s": 18,
+        "language": "auto"
+      },
+      "datasets": {
+        "fleurs_zh": {
+          "dataset": "FLEURS Mandarin pilot",
+          "language": "zh",
+          "num_samples": 30,
+          "failed_samples": 0,
+          "accuracy": {
+            "wer": 0.0364,
+            "cer": 0.0542,
+            "mer": 0.0357
+          },
+          "performance": {
+            "model_load_s": 2.956,
+            "num_samples": 30,
+            "total_audio_s": 344.3,
+            "total_processing_s": 66.84,
+            "rtf_mean": 0.1977,
+            "rtf_corpus": 0.1941,
+            "rtf_median": 0.1962,
+            "rtf_p95": 0.2366,
+            "latency_mean_ms": 2227.9,
+            "latency_median_ms": 2228.9,
+            "latency_p95_ms": 3141.4,
+            "peak_memory_mb": 2213.4,
+            "avg_memory_mb": 1893.2,
+            "cpu_percent_mean": 180.0,
+            "memory_method": "process RSS sampled every 20 ms during inference; excludes Metal allocations not mapped in RSS"
+          },
+          "samples": [
+            {
+              "id": "1869-10104380129516909856",
+              "reference": "它 的 长 下 颚 上 布 满 了 70 多 颗 剃 刀 般 锋 利 的 牙 齿 上 颚 上 还 有 一 排 这 意 味 着 任 何 与 它 相 遇 的 东 西 都 无 路 可 逃",
+              "hypothesis": "它的长下颚上布满了七十多颗剃刀般锋利的牙齿，上颚上还有一排。这意味着任何与它相遇的东西都无路可逃。",
+              "duration_s": 15.46,
+              "error": null,
+              "wer": 0.044444444444444446,
+              "cer": 0.03333333333333333,
+              "mer": 0.043478260869565216
+            },
+            {
+              "id": "1779-10325559490685159122",
+              "reference": "特朗普与土耳其总统雷杰普·塔伊普·埃尔多安recep tayyip erdoğan通话后发表了声明",
+              "hypothesis": "特朗普与土耳其总统雷杰普·塔伊普·埃尔多安通话后发表了声明。",
+              "duration_s": 15.16,
+              "error": null,
+              "wer": 0.09375,
+              "cer": 0.2692307692307692,
+              "mer": 0.09375
+            },
+            {
+              "id": "1780-10369927130798325266",
+              "reference": "在 昆 达 里 尼 瑜 伽 中 昆 达 里 尼 能 量 启 迪 能 量 通 过 瑜 伽 姿 势 呼 吸 练 习 念 语 和 视 觉 形 象 被 唤 醒",
+              "hypothesis": "在昆达里尼瑜伽中，昆达里尼能量、启迪能量通过瑜伽姿势、呼吸练习、念语和视觉形象被唤醒。",
+              "duration_s": 15.68,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1661-1061358881165519725",
+              "reference": "他 没 有 设 定 削 减 数 额 只 是 表 示 将 根 据 中 国 的 经 济 产 出 来 决 定 数 额",
+              "hypothesis": "他没有设定削减数额，只是表示将根据中国的经济产出来决定数额。",
+              "duration_s": 7.74,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1686-10852536777113131618",
+              "reference": "因 此 一 个 组 织 在 共 同 努 力 克 服 障 碍 的 过 程 中 往 往 会 带 来 新 的 创 新 流 程 以 满 足 客 户 的 需 求",
+              "hypothesis": "因此，一个组织在共同努力克服障碍的过程中，往往会带来新的创新流程，以满足客户的需求。",
+              "duration_s": 8.22,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1711-11332085919094392943",
+              "reference": "这 些 理 论 研 究 为 什 么 某 些 人 想 要 做 他 们 所 做 的 事 情 以 及 他 们 所 处 的 环 境 中 哪 些 事 情 会 让 他 们 做 或 不 做 某 些 事 情",
+              "hypothesis": "这些理论研究：为什么某些人想要做他们所做的事情，以及他们所处的环境中哪些事情会让他们做或不做某些事情。",
+              "duration_s": 11.7,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1711-12460789112089593115",
+              "reference": "这 些 理 论 研 究 为 什 么 某 些 人 想 要 做 他 们 所 做 的 事 情 以 及 他 们 所 处 的 环 境 中 哪 些 事 情 会 让 他 们 做 或 不 做 某 些 事 情",
+              "hypothesis": "这些理论研究：为什么某些人想要做他们所做的事情，以及他们所处的环境中哪些事情会让他们做或不做某些事情。",
+              "duration_s": 9.84,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1812-1250603439964009503",
+              "reference": "虽 然 有 一 种 实 验 性 疫 苗 看 似 能 够 降 低 埃 博 拉 病 毒 的 死 亡 率 但 迄 今 为 止 还 没 明 确 证 明 任 何 药 物 适 合 治 疗 现 有 的 感 染",
+              "hypothesis": "虽然有一种实验性疫苗看似能够降低埃博拉病毒的死亡率，但迄今为止，还没明确证明任何药物适合治疗现有的感染。",
+              "duration_s": 11.28,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1847-12920606526708767779",
+              "reference": "他 受 到 了 新 加 坡 副 总 理 黄 根 成 的 欢 迎 并 与 新 加 坡 总 理 李 显 龙 探 讨 了 贸 易 和 恐 怖 主 义 问 题",
+              "hypothesis": "他受到了新加坡副总理黄耿诚的欢迎，并与新加坡总理李显龙探讨了贸易和恐怖主义问题。",
+              "duration_s": 12.52,
+              "error": null,
+              "wer": 0.05263157894736842,
+              "cer": 0.02666666666666667,
+              "mer": 0.05263157894736842
+            },
+            {
+              "id": "1687-12933878060487367144",
+              "reference": "由 于 分 离 和 重 组 变 异 在 每 一 代 的 两 个 库 之 间 来 回 变 动",
+              "hypothesis": "由于分离和重组，变异在每一代的两个库之间来回变动。",
+              "duration_s": 6.66,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1780-13272278541372870938",
+              "reference": "在 昆 达 里 尼 瑜 伽 中 昆 达 里 尼 能 量 启 迪 能 量 通 过 瑜 伽 姿 势 呼 吸 练 习 念 语 和 视 觉 形 象 被 唤 醒",
+              "hypothesis": "在《昆达里尼瑜伽》中，《昆达里尼能量》启迪能量，通过瑜伽姿势、呼吸练习、念语和视觉形象被唤醒。",
+              "duration_s": 11.4,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1687-13317583624503091010",
+              "reference": "由 于 分 离 和 重 组 变 异 在 每 一 代 的 两 个 库 之 间 来 回 变 动",
+              "hypothesis": "由于分离和重组，变异在每一代的两个库之间来回变动。",
+              "duration_s": 7.84,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1843-14716260585206763911",
+              "reference": "邓 迪 大 学 university of dundee 的 pamela ferguson 教 授 指 出 记 者 如 果 公 布 嫌 疑 人 的 照 片 等 信 息 的 话 似 乎 确 实 存 在 危 害 性",
+              "hypothesis": "邓迪大学的 Pamela Ferguson 教授指出：“记者如果公布嫌疑人的照片等信息的话，似乎确实存在危害性。”",
+              "duration_s": 8.64,
+              "error": null,
+              "wer": 0.125,
+              "cer": 0.2169811320754717,
+              "mer": 0.125
+            },
+            {
+              "id": "1779-149040922025982373",
+              "reference": "特朗普与土耳其总统雷杰普·塔伊普·埃尔多安recep tayyip erdoğan通话后发表了声明",
+              "hypothesis": "特朗普与土耳其总统雷杰普塔伊普·埃尔多安通话后发表了声明。",
+              "duration_s": 7.98,
+              "error": null,
+              "wer": 0.125,
+              "cer": 0.2948717948717949,
+              "mer": 0.125
+            },
+            {
+              "id": "1812-16272218284004703131",
+              "reference": "虽 然 有 一 种 实 验 性 疫 苗 看 似 能 够 降 低 埃 博 拉 病 毒 的 死 亡 率 但 迄 今 为 止 还 没 明 确 证 明 任 何 药 物 适 合 治 疗 现 有 的 感 染",
+              "hypothesis": "虽然有一种试验性疫苗看似能够降低埃博拉病毒的死亡率，但迄今为止还没有明确证明任何药物都适合治疗现有的感染。",
+              "duration_s": 10.86,
+              "error": null,
+              "wer": 0.061224489795918366,
+              "cer": 0.05154639175257732,
+              "mer": 0.058823529411764705
+            },
+            {
+              "id": "1686-16705376166490597497",
+              "reference": "因 此 一 个 组 织 在 共 同 努 力 克 服 障 碍 的 过 程 中 往 往 会 带 来 新 的 创 新 流 程 以 满 足 客 户 的 需 求",
+              "hypothesis": "因此，一个组织在共同努力克服障碍的过程中，往往会带来新的创新流程，以满足客户的需求。",
+              "duration_s": 11.34,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1847-16984178234391746055",
+              "reference": "他 受 到 了 新 加 坡 副 总 理 黄 根 成 的 欢 迎 并 与 新 加 坡 总 理 李 显 龙 探 讨 了 贸 易 和 恐 怖 主 义 问 题",
+              "hypothesis": "他受到了新加坡副总理黄耿成的欢迎，并与新加坡总理李显龙探讨了贸易的和恐怖主义问题。",
+              "duration_s": 8.1,
+              "error": null,
+              "wer": 0.05263157894736842,
+              "cer": 0.04,
+              "mer": 0.05128205128205128
+            },
+            {
+              "id": "1922-17791005930196814474",
+              "reference": "当 然 这 个 传 统 有 其 基 督 教 神 学 的 解 释 但 它 很 可 能 是 基 督 诞 生 以 前 就 存 在 的 一 种 庆 祝 春 天 祈 求 丰 收 的 仪 式",
+              "hypothesis": "当然，这个传统有其基督神学的解释，但它很可能是基督诞生以前就存在的一种庆祝春天、祈求丰收的仪式。",
+              "duration_s": 14.16,
+              "error": null,
+              "wer": 0.022222222222222223,
+              "cer": 0.02247191011235955,
+              "mer": 0.022222222222222223
+            },
+            {
+              "id": "1843-18085818397836204673",
+              "reference": "邓 迪 大 学 university of dundee 的 pamela ferguson 教 授 指 出 记 者 如 果 公 布 嫌 疑 人 的 照 片 等 信 息 的 话 似 乎 确 实 存 在 危 害 性",
+              "hypothesis": "邓迪大学的 Pamela Ferguson 教授指出：“记者如果公布嫌疑人的照片等信息的话，似乎确实存在危害性。”",
+              "duration_s": 15.08,
+              "error": null,
+              "wer": 0.125,
+              "cer": 0.2169811320754717,
+              "mer": 0.125
+            },
+            {
+              "id": "1661-1868048601472473390",
+              "reference": "他 没 有 设 定 削 减 数 额 只 是 表 示 将 根 据 中 国 的 经 济 产 出 来 决 定 数 额",
+              "hypothesis": "他没有设定削减数额，只是表示将根据中国的经济产出来决定数额。",
+              "duration_s": 12.96,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1870-2457828970653407656",
+              "reference": "场 景 在 金 字 塔 上 展 示 不 同 的 金 字 塔 被 点 亮",
+              "hypothesis": "场景在金字塔上展示不同的金字塔被点亮。",
+              "duration_s": 4.86,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1843-314154669869510753",
+              "reference": "邓 迪 大 学 university of dundee 的 pamela ferguson 教 授 指 出 记 者 如 果 公 布 嫌 疑 人 的 照 片 等 信 息 的 话 似 乎 确 实 存 在 危 害 性",
+              "hypothesis": "邓迪大学的帕梅拉·弗格森教授指出：“记者如果公布嫌疑人的照片等信息的话，似乎确实存在危害性。”",
+              "duration_s": 10.74,
+              "error": null,
+              "wer": 0.2,
+              "cer": 0.3113207547169811,
+              "mer": 0.19047619047619047
+            },
+            {
+              "id": "1869-3479937853441610528",
+              "reference": "它 的 长 下 颚 上 布 满 了 70 多 颗 剃 刀 般 锋 利 的 牙 齿 上 颚 上 还 有 一 排 这 意 味 着 任 何 与 它 相 遇 的 东 西 都 无 路 可 逃",
+              "hypothesis": "它的上下颚上布满了七十多颗剃刀般锋利的牙齿，上颚上还有一排。这意味着任何与它相遇的东西都无路可逃。",
+              "duration_s": 20.5,
+              "error": null,
+              "wer": 0.06666666666666667,
+              "cer": 0.044444444444444446,
+              "mer": 0.06521739130434782
+            },
+            {
+              "id": "1661-3834960506613691209",
+              "reference": "他 没 有 设 定 削 减 数 额 只 是 表 示 将 根 据 中 国 的 经 济 产 出 来 决 定 数 额",
+              "hypothesis": "他没有设定削减数额，只是表示将根据中国的经济产出来决定数额。",
+              "duration_s": 9.84,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1711-4048226328336996391",
+              "reference": "这 些 理 论 研 究 为 什 么 某 些 人 想 要 做 他 们 所 做 的 事 情 以 及 他 们 所 处 的 环 境 中 哪 些 事 情 会 让 他 们 做 或 不 做 某 些 事 情",
+              "hypothesis": "这些理论研究：为什么某些人想要做他们所做的事，以及他们所处的环境中，哪些事情会让他们做或不做某些事情。",
+              "duration_s": 17.08,
+              "error": null,
+              "wer": 0.020833333333333332,
+              "cer": 0.021052631578947368,
+              "mer": 0.020833333333333332
+            },
+            {
+              "id": "1687-6567034835218108721",
+              "reference": "由 于 分 离 和 重 组 变 异 在 每 一 代 的 两 个 库 之 间 来 回 变 动",
+              "hypothesis": "由于分离和重组，变异在每一代的两个库之间来回变动。",
+              "duration_s": 8.22,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1847-7669819575583671099",
+              "reference": "他 受 到 了 新 加 坡 副 总 理 黄 根 成 的 欢 迎 并 与 新 加 坡 总 理 李 显 龙 探 讨 了 贸 易 和 恐 怖 主 义 问 题",
+              "hypothesis": "他受到了新加坡副总理黄敦诚的欢迎，并与新加坡总理李显龙讨探讨了贸易和恐怖主义问题。",
+              "duration_s": 11.82,
+              "error": null,
+              "wer": 0.07894736842105263,
+              "cer": 0.05333333333333334,
+              "mer": 0.07692307692307693
+            },
+            {
+              "id": "1870-8424295226444731846",
+              "reference": "场 景 在 金 字 塔 上 展 示 不 同 的 金 字 塔 被 点 亮",
+              "hypothesis": "场景在金字塔上展示，不同的金字塔被点亮。",
+              "duration_s": 10.04,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "1922-9543874871524874019",
+              "reference": "当 然 这 个 传 统 有 其 基 督 教 神 学 的 解 释 但 它 很 可 能 是 基 督 诞 生 以 前 就 存 在 的 一 种 庆 祝 春 天 祈 求 丰 收 的 仪 式",
+              "hypothesis": "当然，这个传统有其基督教神学的解释，但它很可能是基督教诞生以前就存在的一种庆祝春天、祈求丰收的仪式。",
+              "duration_s": 16.7,
+              "error": null,
+              "wer": 0.022222222222222223,
+              "cer": 0.02247191011235955,
+              "mer": 0.021739130434782608
+            },
+            {
+              "id": "1780-9584200288013257239",
+              "reference": "在 昆 达 里 尼 瑜 伽 中 昆 达 里 尼 能 量 启 迪 能 量 通 过 瑜 伽 姿 势 呼 吸 练 习 念 语 和 视 觉 形 象 被 唤 醒",
+              "hypothesis": "在昆达里尼瑜伽中，昆达里尼能量、启迪能量通过瑜伽姿势、呼吸练习、念语和视觉形象被唤醒。",
+              "duration_s": 11.88,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            }
+          ],
+          "corpus_accuracy": {
+            "token_error_rate": 0.0373066424021838,
+            "character_error_rate": 0.10099337748344371,
+            "reference_tokens": 1099,
+            "reference_characters": 1208,
+            "token_substitutions": 15,
+            "token_deletions": 18,
+            "token_insertions": 8
+          }
+        },
+        "ascend_mixed": {
+          "dataset": "ASCEND strictly mixed pilot",
+          "language": "zh-en",
+          "num_samples": 30,
+          "failed_samples": 0,
+          "accuracy": {
+            "wer": 0.1224,
+            "cer": 0.1143,
+            "mer": 0.1146
+          },
+          "performance": {
+            "model_load_s": 2.956,
+            "num_samples": 30,
+            "total_audio_s": 120.72,
+            "total_processing_s": 19.67,
+            "rtf_mean": 0.1764,
+            "rtf_corpus": 0.1629,
+            "rtf_median": 0.1549,
+            "rtf_p95": 0.2952,
+            "latency_mean_ms": 655.7,
+            "latency_median_ms": 591.6,
+            "latency_p95_ms": 1261.7,
+            "peak_memory_mb": 1940.6,
+            "avg_memory_mb": 1933.7,
+            "cpu_percent_mean": 194.5,
+            "memory_method": "process RSS sampled every 20 ms during inference; excludes Metal allocations not mapped in RSS"
+          },
+          "samples": [
+            {
+              "id": "00331",
+              "reference": "一些文章评论的generation",
+              "hypothesis": "一些文章评论的 generation。",
+              "duration_s": 2.44,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00399",
+              "reference": "我的方法比较不一样是因为在做extra申请extra的时候不用选你要去哪一个department",
+              "hypothesis": "我的方案比较不一样，是因为在做exchange exchange的时候，不用选你要去哪一个 department。",
+              "duration_s": 6.08,
+              "error": null,
+              "wer": 0.16129032258064516,
+              "cer": 0.15384615384615385,
+              "mer": 0.16129032258064516
+            },
+            {
+              "id": "00413",
+              "reference": "对然后那时候 [UNK]",
+              "hypothesis": "对，然后那时候，他这个。",
+              "duration_s": 1.96,
+              "error": null,
+              "wer": 0.42857142857142855,
+              "cer": 0.3333333333333333,
+              "mer": 0.3333333333333333
+            },
+            {
+              "id": "00711",
+              "reference": "to to get a score to去把人挤走开然后然后去一些灌篮得分之类的",
+              "hypothesis": "to to get the score to去把人挤走开，然后然后去一些关栏得分之类的。",
+              "duration_s": 8.42,
+              "error": null,
+              "wer": 0.11538461538461539,
+              "cer": 0.08333333333333333,
+              "mer": 0.11538461538461539
+            },
+            {
+              "id": "00328",
+              "reference": "对这一块算比较easy the part然后",
+              "hypothesis": "对这一块算比较easy的part，然后。",
+              "duration_s": 4.82,
+              "error": null,
+              "wer": 0.08333333333333333,
+              "cer": 0.0967741935483871,
+              "mer": 0.08333333333333333
+            },
+            {
+              "id": "01142",
+              "reference": "computer language还有problem language的东西我还是不太懂",
+              "hypothesis": "编程语言，还有编程语言的东西，我还是不太懂。",
+              "duration_s": 3.64,
+              "error": null,
+              "wer": 0.5333333333333333,
+              "cer": 0.5535714285714286,
+              "mer": 0.42105263157894735
+            },
+            {
+              "id": "00258",
+              "reference": "对带我们认识new friends之类的",
+              "hypothesis": "对，带我们认识 new friends 之类的。",
+              "duration_s": 2.42,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00227",
+              "reference": "然后刚忘了讲你你是念什么major的",
+              "hypothesis": "然后，刚刚忘了讲你，你是念什么major的。",
+              "duration_s": 4.22,
+              "error": null,
+              "wer": 0.07142857142857142,
+              "cer": 0.06451612903225806,
+              "mer": 0.06666666666666667
+            },
+            {
+              "id": "00885",
+              "reference": "初中从小学我不知道你们是初中跟小学有没有uniforms",
+              "hypothesis": "初中从小学，我不知道你们是初中跟小学没有，universe。",
+              "duration_s": 4.4,
+              "error": null,
+              "wer": 0.09523809523809523,
+              "cer": 0.125,
+              "mer": 0.09523809523809523
+            },
+            {
+              "id": "00246",
+              "reference": "呃大概一千位的students",
+              "hypothesis": "呃，大概一千位的students。",
+              "duration_s": 2.84,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00266",
+              "reference": "呃food的啊或者是",
+              "hypothesis": "呃，富的啊，或者是。",
+              "duration_s": 2.44,
+              "error": null,
+              "wer": 0.14285714285714285,
+              "cer": 0.25,
+              "mer": 0.14285714285714285
+            },
+            {
+              "id": "01185",
+              "reference": "对反正我们就只能做一些这种比较entry level的东西",
+              "hypothesis": "对，反正我们就只能做一些这种比较原始、带货的东西。",
+              "duration_s": 3.5099375,
+              "error": null,
+              "wer": 0.2,
+              "cer": 0.2127659574468085,
+              "mer": 0.18181818181818182
+            },
+            {
+              "id": "01056",
+              "reference": "我觉得呢就是有smart phone没smart phone就是是一个类似于双刃剑",
+              "hypothesis": "我觉得呢，就是有Smartphone没Smartphone，就是是一个类似于双刃剑。",
+              "duration_s": 6.8,
+              "error": null,
+              "wer": 0.17391304347826086,
+              "cer": 0.03278688524590164,
+              "mer": 0.17391304347826086
+            },
+            {
+              "id": "01003",
+              "reference": "很大程度上是属于那种data driver",
+              "hypothesis": "很大程度上是属于那种data driver。",
+              "duration_s": 3.37025,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00976",
+              "reference": "就是still long way to go",
+              "hypothesis": "就是 still long way to go。",
+              "duration_s": 2.32,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00980",
+              "reference": "我们还是不能够trust AI",
+              "hypothesis": "我们还是不能够 trust AI。",
+              "duration_s": 2.66,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "01120",
+              "reference": "对我们有syntax的课",
+              "hypothesis": "对我们有Fintech的课。",
+              "duration_s": 1.85,
+              "error": null,
+              "wer": 0.14285714285714285,
+              "cer": 0.2777777777777778,
+              "mer": 0.14285714285714285
+            },
+            {
+              "id": "00438",
+              "reference": "还是做software的方向",
+              "hypothesis": "还是做software的方向。",
+              "duration_s": 2.08,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00431",
+              "reference": "然后我也面试了很多不同的professor",
+              "hypothesis": "然后我也面试了很多不同的Professor。",
+              "duration_s": 2.78,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00391",
+              "reference": "就是你在申请就是不认识American University或者就是Hong Kong的Singapore的",
+              "hypothesis": "就是你在申请，就是不认识American University，或者就是Hong Kong的，Singapore的。",
+              "duration_s": 7.32,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00675",
+              "reference": "就是说as a beginner you can play well at the first time",
+              "hypothesis": "That is, as a beginner, you can play well at first time.",
+              "duration_s": 4.2,
+              "error": null,
+              "wer": 0.2857142857142857,
+              "cer": 0.18181818181818182,
+              "mer": 0.2857142857142857
+            },
+            {
+              "id": "00578",
+              "reference": "嗯i i mean many girls",
+              "hypothesis": "I mean, many girls.",
+              "duration_s": 1.49,
+              "error": null,
+              "wer": 0.3333333333333333,
+              "cer": 0.19047619047619047,
+              "mer": 0.3333333333333333
+            },
+            {
+              "id": "00677",
+              "reference": "badminton是一个比较好学的就是说",
+              "hypothesis": "Benetton是一个比较好学的，就是说。",
+              "duration_s": 3.02,
+              "error": null,
+              "wer": 0.08333333333333333,
+              "cer": 0.16129032258064516,
+              "mer": 0.08333333333333333
+            },
+            {
+              "id": "00352",
+              "reference": "比较就是对我来说比较new但是又就是说比比较容易习惯",
+              "hypothesis": "比较就是对我来说比较new，但是又就是说比比较容易习惯。",
+              "duration_s": 6.88,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00649",
+              "reference": "学过tennis",
+              "hypothesis": "学过 tennis。",
+              "duration_s": 1.2701875,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "00256",
+              "reference": "就是会带我们组织一些activity",
+              "hypothesis": "就是会带我们组织一些activity。",
+              "duration_s": 2.98,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "01147",
+              "reference": "还有就是比如说会呃我们上次就我上次做的一个project是",
+              "hypothesis": "还有就是，比如说会，呃，我们上次就我上次做的一个project是。",
+              "duration_s": 5.78,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "01039",
+              "reference": "这个这个这个function它是被他的enemy他的被那些敌方的就是对手公司",
+              "hypothesis": "这个这个这个function，它是被它的enemy，它的被那些敌方的，就是对手公司。",
+              "duration_s": 9.5701875,
+              "error": null,
+              "wer": 0.07407407407407407,
+              "cer": 0.03125,
+              "mer": 0.07407407407407407
+            },
+            {
+              "id": "01104",
+              "reference": "还有ipod",
+              "hypothesis": "I will iPod.",
+              "duration_s": 1.22,
+              "error": null,
+              "wer": 0.6666666666666666,
+              "cer": 0.625,
+              "mer": 0.6666666666666666
+            },
+            {
+              "id": "00921",
+              "reference": "大四上学期好像是反正好像是六月份的时候才开始准备IELTS",
+              "hypothesis": "大四上学期，好像是，反正好像是六月份的时候才开始准备。I S。",
+              "duration_s": 7.94,
+              "error": null,
+              "wer": 0.08,
+              "cer": 0.05660377358490566,
+              "mer": 0.07692307692307693
+            }
+          ],
+          "corpus_accuracy": {
+            "token_error_rate": 0.10747663551401869,
+            "character_error_rate": 0.14627285513361463,
+            "reference_tokens": 428,
+            "reference_characters": 711,
+            "token_substitutions": 27,
+            "token_deletions": 9,
+            "token_insertions": 10
+          }
+        },
+        "ascend_test": {
+          "dataset": "ASCEND mixed pilot",
+          "language": "zh-en",
+          "num_samples": 30,
+          "failed_samples": 0,
+          "accuracy": {
+            "wer": 0.4033,
+            "cer": 0.2763,
+            "mer": 0.3315
+          },
+          "performance": {
+            "model_load_s": 2.956,
+            "num_samples": 30,
+            "total_audio_s": 44.39,
+            "total_processing_s": 12.24,
+            "rtf_mean": 0.3322,
+            "rtf_corpus": 0.2757,
+            "rtf_median": 0.3025,
+            "rtf_p95": 0.5505,
+            "latency_mean_ms": 407.9,
+            "latency_median_ms": 328.3,
+            "latency_p95_ms": 1089.5,
+            "peak_memory_mb": 1941.5,
+            "avg_memory_mb": 1764.3,
+            "cpu_percent_mean": 192.0,
+            "memory_method": "process RSS sampled every 20 ms during inference; excludes Metal allocations not mapped in RSS"
+          },
+          "samples": [
+            {
+              "id": "0",
+              "reference": "好的",
+              "hypothesis": "How the",
+              "duration_s": 0.64,
+              "error": null,
+              "wer": 1.0,
+              "cer": 2.0,
+              "mer": 1.0
+            },
+            {
+              "id": "1",
+              "reference": "呃",
+              "hypothesis": "呃。",
+              "duration_s": 0.781,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "2",
+              "reference": "what's your major and your hobbies",
+              "hypothesis": "What's your major and your hobby?",
+              "duration_s": 2.876,
+              "error": null,
+              "wer": 0.16666666666666666,
+              "cer": 0.09090909090909091,
+              "mer": 0.16666666666666666
+            },
+            {
+              "id": "3",
+              "reference": "e c e",
+              "hypothesis": "easy.",
+              "duration_s": 0.9,
+              "error": null,
+              "wer": 1.0,
+              "cer": 0.8,
+              "mer": 1.0
+            },
+            {
+              "id": "4",
+              "reference": "呃what's the呃",
+              "hypothesis": "That was the.",
+              "duration_s": 1.36,
+              "error": null,
+              "wer": 0.75,
+              "cer": 0.6153846153846154,
+              "mer": 0.75
+            },
+            {
+              "id": "5",
+              "reference": "ok I see",
+              "hypothesis": "Okay, I see.",
+              "duration_s": 0.84,
+              "error": null,
+              "wer": 0.3333333333333333,
+              "cer": 0.25,
+              "mer": 0.3333333333333333
+            },
+            {
+              "id": "6",
+              "reference": "yeah I see",
+              "hypothesis": "Yeah, I see.",
+              "duration_s": 0.99,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7",
+              "reference": "我们专业专业课程有一些是那个你们那个专业的",
+              "hypothesis": "我们专业，专业课上有一些人是那个你们那个专业的。",
+              "duration_s": 4.69,
+              "error": null,
+              "wer": 0.09523809523809523,
+              "cer": 0.07317073170731707,
+              "mer": 0.09090909090909091
+            },
+            {
+              "id": "8",
+              "reference": "呃不是",
+              "hypothesis": "呃，不是。",
+              "duration_s": 0.4,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "9",
+              "reference": "no我专业是那个i s m information systems management",
+              "hypothesis": "那我专业是那个ISM Information Systems Management。",
+              "duration_s": 4.03,
+              "error": null,
+              "wer": 0.3076923076923077,
+              "cer": 0.0784313725490196,
+              "mer": 0.3076923076923077
+            },
+            {
+              "id": "10",
+              "reference": "no bussiness school",
+              "hypothesis": "No business school.",
+              "duration_s": 1.8,
+              "error": null,
+              "wer": 0.3333333333333333,
+              "cer": 0.05263157894736842,
+              "mer": 0.3333333333333333
+            },
+            {
+              "id": "11",
+              "reference": "那呃",
+              "hypothesis": "那呃。",
+              "duration_s": 1.4,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "12",
+              "reference": "yeah m s c oh yeah I know [UNK] yeah",
+              "hypothesis": "Yeah, M S C. Oh yeah, I'm a master. Yeah, my.",
+              "duration_s": 3.44,
+              "error": null,
+              "wer": 0.4,
+              "cer": 0.35294117647058826,
+              "mer": 0.36363636363636365
+            },
+            {
+              "id": "13",
+              "reference": "full time student",
+              "hypothesis": "Full-time student, right?",
+              "duration_s": 0.99,
+              "error": null,
+              "wer": 1.0,
+              "cer": 0.4117647058823529,
+              "mer": 1.0
+            },
+            {
+              "id": "14",
+              "reference": "嗯嗯嗯",
+              "hypothesis": "嗯嗯嗯。",
+              "duration_s": 0.79,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "15",
+              "reference": "so where are you come from",
+              "hypothesis": "Where I come from.",
+              "duration_s": 1.34,
+              "error": null,
+              "wer": 0.5,
+              "cer": 0.38461538461538464,
+              "mer": 0.5
+            },
+            {
+              "id": "16",
+              "reference": "how about you",
+              "hypothesis": "好，吧，你。",
+              "duration_s": 0.7,
+              "error": null,
+              "wer": 1.0,
+              "cer": 0.8461538461538461,
+              "mer": 1.0
+            },
+            {
+              "id": "17",
+              "reference": "accident",
+              "hypothesis": "啊，是的。",
+              "duration_s": 1.01,
+              "error": null,
+              "wer": 3.0,
+              "cer": 1.0,
+              "mer": 1.0
+            },
+            {
+              "id": "18",
+              "reference": "南方人",
+              "hypothesis": "南方人。",
+              "duration_s": 0.83,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "19",
+              "reference": "南方人啊深圳",
+              "hypothesis": "南方人，呃，深圳。",
+              "duration_s": 1.76,
+              "error": null,
+              "wer": 0.16666666666666666,
+              "cer": 0.09090909090909091,
+              "mer": 0.16666666666666666
+            },
+            {
+              "id": "20",
+              "reference": "深圳",
+              "hypothesis": "深圳。",
+              "duration_s": 0.56,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "21",
+              "reference": "不是",
+              "hypothesis": "不是。",
+              "duration_s": 0.7,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "22",
+              "reference": "嗯哼因为感觉香港好多深圳人",
+              "hypothesis": "因为感觉香港好多都是深圳人。",
+              "duration_s": 3.08,
+              "error": null,
+              "wer": 0.3076923076923077,
+              "cer": 0.32,
+              "mer": 0.26666666666666666
+            },
+            {
+              "id": "23",
+              "reference": "不是我也是南方人",
+              "hypothesis": "不是，我也是南方人。",
+              "duration_s": 1.58,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "24",
+              "reference": "不是",
+              "hypothesis": "不是。",
+              "duration_s": 0.68,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "25",
+              "reference": "really uh close to Guangzhou Guangdong province",
+              "hypothesis": "位于呃， close to Guang Guangdong Province。",
+              "duration_s": 3.64,
+              "error": null,
+              "wer": 0.5714285714285714,
+              "cer": 0.2553191489361702,
+              "mer": 0.5
+            },
+            {
+              "id": "26",
+              "reference": "不是",
+              "hypothesis": "不是。",
+              "duration_s": 0.52,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "27",
+              "reference": "可是",
+              "hypothesis": "不是。",
+              "duration_s": 0.76,
+              "error": null,
+              "wer": 0.5,
+              "cer": 0.3333333333333333,
+              "mer": 0.5
+            },
+            {
+              "id": "28",
+              "reference": "ok福建",
+              "hypothesis": "OK，附件。",
+              "duration_s": 1.02,
+              "error": null,
+              "wer": 0.6666666666666666,
+              "cer": 0.3333333333333333,
+              "mer": 0.6666666666666666
+            },
+            {
+              "id": "29",
+              "reference": "yeah",
+              "hypothesis": "yeah.",
+              "duration_s": 0.28,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            }
+          ],
+          "corpus_accuracy": {
+            "token_error_rate": 0.3049645390070922,
+            "character_error_rate": 0.2770700636942675,
+            "reference_tokens": 141,
+            "reference_characters": 314,
+            "token_substitutions": 26,
+            "token_deletions": 9,
+            "token_insertions": 8
+          }
+        },
+        "librispeech_test_clean": {
+          "dataset": "LibriSpeech clean pilot",
+          "language": "en",
+          "num_samples": 30,
+          "failed_samples": 0,
+          "accuracy": {
+            "wer": 0.0255,
+            "cer": 0.0082,
+            "mer": 0.0255
+          },
+          "performance": {
+            "model_load_s": 2.956,
+            "num_samples": 30,
+            "total_audio_s": 217.7,
+            "total_processing_s": 27.85,
+            "rtf_mean": 0.1338,
+            "rtf_corpus": 0.1279,
+            "rtf_median": 0.127,
+            "rtf_p95": 0.1603,
+            "latency_mean_ms": 928.3,
+            "latency_median_ms": 748.9,
+            "latency_p95_ms": 2044.6,
+            "peak_memory_mb": 2165.3,
+            "avg_memory_mb": 2079.5,
+            "cpu_percent_mean": 197.7,
+            "memory_method": "process RSS sampled every 20 ms during inference; excludes Metal allocations not mapped in RSS"
+          },
+          "samples": [
+            {
+              "id": "6930-75918-0000",
+              "reference": "CONCORD RETURNED TO ITS PLACE AMIDST THE TENTS",
+              "hypothesis": "Concord returned to its place amidst the tents.",
+              "duration_s": 3.505,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0001",
+              "reference": "THE ENGLISH FORWARDED TO THE FRENCH BASKETS OF FLOWERS OF WHICH THEY HAD MADE A PLENTIFUL PROVISION TO GREET THE ARRIVAL OF THE YOUNG PRINCESS THE FRENCH IN RETURN INVITED THE ENGLISH TO A SUPPER WHICH WAS TO BE GIVEN THE NEXT DAY",
+              "hypothesis": "The English forwarded to the French baskets of flowers of which they had made a plentiful provision to greet the arrival of the young princess. The French, in return, invited the English to a supper which was to be given the next day.",
+              "duration_s": 14.225,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0002",
+              "reference": "CONGRATULATIONS WERE POURED IN UPON THE PRINCESS EVERYWHERE DURING HER JOURNEY",
+              "hypothesis": "Congratulations were poured in upon the princess everywhere during her journey.",
+              "duration_s": 5.025,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0003",
+              "reference": "FROM THE RESPECT PAID HER ON ALL SIDES SHE SEEMED LIKE A QUEEN AND FROM THE ADORATION WITH WHICH SHE WAS TREATED BY TWO OR THREE SHE APPEARED AN OBJECT OF WORSHIP THE QUEEN MOTHER GAVE THE FRENCH THE MOST AFFECTIONATE RECEPTION FRANCE WAS HER NATIVE COUNTRY AND SHE HAD SUFFERED TOO MUCH UNHAPPINESS IN ENGLAND FOR ENGLAND TO HAVE MADE HER FORGET FRANCE",
+              "hypothesis": "From the respect paid her on all sides, she seemed like a queen. And from the adoration with which she was treated by two or three, she appeared an object of worship. The queen mother gave the French the most affectionate reception. France was her native country, and she. He had suffered too much unhappiness in England for England to have made her forget France.",
+              "duration_s": 23.315,
+              "error": null,
+              "wer": 0.015625,
+              "cer": 0.0084985835694051,
+              "mer": 0.015384615384615385
+            },
+            {
+              "id": "6930-75918-0004",
+              "reference": "SHE TAUGHT HER DAUGHTER THEN BY HER OWN AFFECTION FOR IT THAT LOVE FOR A COUNTRY WHERE THEY HAD BOTH BEEN HOSPITABLY RECEIVED AND WHERE A BRILLIANT FUTURE OPENED BEFORE THEM",
+              "hypothesis": "She taught her daughter then by her own affection for it that love for a country where they had both been hospitably received and where a brilliant future opened for them.",
+              "duration_s": 11.065,
+              "error": null,
+              "wer": 0.03225806451612903,
+              "cer": 0.017341040462427744,
+              "mer": 0.03225806451612903
+            },
+            {
+              "id": "6930-75918-0005",
+              "reference": "THE COUNT HAD THROWN HIMSELF BACK ON HIS SEAT LEANING HIS SHOULDERS AGAINST THE PARTITION OF THE TENT AND REMAINED THUS HIS FACE BURIED IN HIS HANDS WITH HEAVING CHEST AND RESTLESS LIMBS",
+              "hypothesis": "The count had thrown himself back on his seat, leaning his shoulders against the partition of the tent, and remained thus, his face buried in his hands, with heaving chest and restless limbs.",
+              "duration_s": 13.16,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0006",
+              "reference": "THIS HAS INDEED BEEN A HARASSING DAY CONTINUED THE YOUNG MAN HIS EYES FIXED UPON HIS FRIEND",
+              "hypothesis": "This has indeed been a harassing day,\" continued the young man, his eyes fixed upon his friend.",
+              "duration_s": 5.85,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0007",
+              "reference": "YOU WILL BE FRANK WITH ME I ALWAYS AM",
+              "hypothesis": "You will be frank with me. I always am.",
+              "duration_s": 3.315,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0008",
+              "reference": "CAN YOU IMAGINE WHY BUCKINGHAM HAS BEEN SO VIOLENT I SUSPECT",
+              "hypothesis": "Can you imagine why Buckingham has been so violent? I suspect.",
+              "duration_s": 4.785,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0009",
+              "reference": "IT IS YOU WHO ARE MISTAKEN RAOUL I HAVE READ HIS DISTRESS IN HIS EYES IN HIS EVERY GESTURE AND ACTION THE WHOLE DAY",
+              "hypothesis": "It is you who are mistaken, Raoul. I have read his distress in his eyes, in his every gesture and action the whole day.",
+              "duration_s": 7.28,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0010",
+              "reference": "I CAN PERCEIVE LOVE CLEARLY ENOUGH",
+              "hypothesis": "I can perceive love clearly enough.",
+              "duration_s": 3.035,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0011",
+              "reference": "I AM CONVINCED OF WHAT I SAY SAID THE COUNT",
+              "hypothesis": "I am convinced of what I say,\" said the Count.",
+              "duration_s": 3.195,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0012",
+              "reference": "IT IS ANNOYANCE THEN",
+              "hypothesis": "It is annoyance then.",
+              "duration_s": 1.94,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0013",
+              "reference": "IN THOSE VERY TERMS I EVEN ADDED MORE",
+              "hypothesis": "In those very terms, I even added more.",
+              "duration_s": 2.94,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0014",
+              "reference": "BUT CONTINUED RAOUL NOT INTERRUPTED BY THIS MOVEMENT OF HIS FRIEND HEAVEN BE PRAISED THE FRENCH WHO ARE PRONOUNCED TO BE THOUGHTLESS AND INDISCREET RECKLESS EVEN ARE CAPABLE OF BRINGING A CALM AND SOUND JUDGMENT TO BEAR ON MATTERS OF SUCH HIGH IMPORTANCE",
+              "hypothesis": "But continued Row, not interrupted by this movement of his friend. Heaven be praised! The French, who are pronounced to be thoughtless and indiscreet, reckless even, are capable of bringing a calm and sound judgment to bear on matters of such high importance.",
+              "duration_s": 16.84,
+              "error": null,
+              "wer": 0.023255813953488372,
+              "cer": 0.011811023622047244,
+              "mer": 0.023255813953488372
+            },
+            {
+              "id": "6930-75918-0015",
+              "reference": "THUS IT IS THAT THE HONOR OF THREE IS SAVED OUR COUNTRY'S OUR MASTER'S AND OUR OWN",
+              "hypothesis": "Thus, it is that the honor of three is saved: our country, our masters, and our own.",
+              "duration_s": 6.38,
+              "error": null,
+              "wer": 0.058823529411764705,
+              "cer": 0.0125,
+              "mer": 0.058823529411764705
+            },
+            {
+              "id": "6930-75918-0016",
+              "reference": "YES I NEED REPOSE MANY THINGS HAVE AGITATED ME TO DAY BOTH IN MIND AND BODY WHEN YOU RETURN TO MORROW I SHALL NO LONGER BE THE SAME MAN",
+              "hypothesis": "Yes, I need repose. Many things have agitated me today, both in mind and body. When you return tomorrow, I shall no longer be the same man.",
+              "duration_s": 10.015,
+              "error": null,
+              "wer": 0.13793103448275862,
+              "cer": 0.014814814814814815,
+              "mer": 0.13793103448275862
+            },
+            {
+              "id": "6930-75918-0017",
+              "reference": "BUT IN THIS FRIENDLY PRESSURE RAOUL COULD DETECT THE NERVOUS AGITATION OF A GREAT INTERNAL CONFLICT",
+              "hypothesis": "But in this friendly pressure, Rowl could detect the nervous agitation of a great internal conflict.",
+              "duration_s": 6.16,
+              "error": null,
+              "wer": 0.0625,
+              "cer": 0.020202020202020204,
+              "mer": 0.0625
+            },
+            {
+              "id": "6930-75918-0018",
+              "reference": "THE NIGHT WAS CLEAR STARLIT AND SPLENDID THE TEMPEST HAD PASSED AWAY AND THE SWEET INFLUENCES OF THE EVENING HAD RESTORED LIFE PEACE AND SECURITY EVERYWHERE",
+              "hypothesis": "The night was clear, starlit, and splendid. The tempest had passed away, and the sweet influences of the evening had restored life, peace, and security everywhere.",
+              "duration_s": 10.81,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0019",
+              "reference": "UPON THE LARGE SQUARE IN FRONT OF THE HOTEL THE SHADOWS OF THE TENTS INTERSECTED BY THE GOLDEN MOONBEAMS FORMED AS IT WERE A HUGE MOSAIC OF JET AND YELLOW FLAGSTONES",
+              "hypothesis": "Upon the large square in front of the hotel, the shadows of the tents, intersected by the golden moonbeams, formed as it were a huge mosaic of jet and yellow flagstones.",
+              "duration_s": 11.6450625,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-75918-0020",
+              "reference": "BRAGELONNE WATCHED FOR SOME TIME THE CONDUCT OF THE TWO LOVERS LISTENED TO THE LOUD AND UNCIVIL SLUMBERS OF MANICAMP WHO SNORED AS IMPERIOUSLY AS THOUGH HE WAS WEARING HIS BLUE AND GOLD INSTEAD OF HIS VIOLET SUIT",
+              "hypothesis": "Bragelon watched for some time the conduct of the two lovers, listened to the loud and uncivil slumbers of Manicamp, who snored as imperiously as though he was wearing his blue and gold instead of his violet suit.",
+              "duration_s": 14.4,
+              "error": null,
+              "wer": 0.02631578947368421,
+              "cer": 0.009433962264150943,
+              "mer": 0.02631578947368421
+            },
+            {
+              "id": "6930-76324-0000",
+              "reference": "GOLIATH MAKES ANOTHER DISCOVERY",
+              "hypothesis": "Goliath makes another discovery.",
+              "duration_s": 3.025,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-76324-0001",
+              "reference": "THEY WERE CERTAINLY NO NEARER THE SOLUTION OF THEIR PROBLEM",
+              "hypothesis": "There were certainly no near the solution of their problem.",
+              "duration_s": 3.2,
+              "error": null,
+              "wer": 0.2,
+              "cer": 0.06779661016949153,
+              "mer": 0.2
+            },
+            {
+              "id": "6930-76324-0002",
+              "reference": "THE POOR LITTLE THINGS CRIED CYNTHIA THINK OF THEM HAVING BEEN TURNED TO THE WALL ALL THESE YEARS",
+              "hypothesis": "The poor little things cried, \"Cynthia, think of them having been turned to the wall all these years.\"",
+              "duration_s": 5.56,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-76324-0003",
+              "reference": "NOW WHAT WAS THE SENSE OF IT TWO INNOCENT BABIES LIKE THAT",
+              "hypothesis": "Now, what is the sense of it? Two innocent babies like that.",
+              "duration_s": 3.385,
+              "error": null,
+              "wer": 0.08333333333333333,
+              "cer": 0.034482758620689655,
+              "mer": 0.08333333333333333
+            },
+            {
+              "id": "6930-76324-0004",
+              "reference": "BUT JOYCE HAD NOT BEEN LISTENING ALL AT ONCE SHE PUT DOWN HER CANDLE ON THE TABLE AND FACED HER COMPANION",
+              "hypothesis": "But Joyce had not been listening. All at once, she put down her candle on the table and faced her companion.",
+              "duration_s": 6.15,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-76324-0005",
+              "reference": "THE TWIN BROTHER DID SOMETHING SHE DIDN'T LIKE AND SHE TURNED HIS PICTURE TO THE WALL",
+              "hypothesis": "The twin brother did something she didn't like, and she turned his picture to the wall.",
+              "duration_s": 5.035,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-76324-0006",
+              "reference": "HERS HAPPENED TO BE IN THE SAME FRAME TOO BUT SHE EVIDENTLY DIDN'T CARE ABOUT THAT",
+              "hypothesis": "Hers happened to be on the same frame too, but she evidently didn't care about it.",
+              "duration_s": 4.455,
+              "error": null,
+              "wer": 0.125,
+              "cer": 0.04938271604938271,
+              "mer": 0.125
+            },
+            {
+              "id": "6930-76324-0007",
+              "reference": "NOW WHAT HAVE YOU TO SAY CYNTHIA SPRAGUE",
+              "hypothesis": "Now, what have you to say, Cynthia Sprague?",
+              "duration_s": 2.82,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "6930-76324-0008",
+              "reference": "I THOUGHT WE WERE STUMPED AGAIN WHEN I FIRST SAW THAT PICTURE BUT IT'S BEEN OF SOME USE AFTER ALL",
+              "hypothesis": "I thought we were stumped again when I first saw that picture, but it's been of some use after all.",
+              "duration_s": 5.185,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            }
+          ],
+          "corpus_accuracy": {
+            "token_error_rate": 0.026490066225165563,
+            "character_error_rate": 0.009307520476545048,
+            "reference_tokens": 604,
+            "reference_characters": 2686,
+            "token_substitutions": 13,
+            "token_deletions": 2,
+            "token_insertions": 1
+          }
+        },
+        "librispeech_test_other": {
+          "dataset": "LibriSpeech other pilot",
+          "language": "en",
+          "num_samples": 30,
+          "failed_samples": 0,
+          "accuracy": {
+            "wer": 0.0321,
+            "cer": 0.0103,
+            "mer": 0.032
+          },
+          "performance": {
+            "model_load_s": 2.956,
+            "num_samples": 30,
+            "total_audio_s": 161.79,
+            "total_processing_s": 41.88,
+            "rtf_mean": 0.2561,
+            "rtf_corpus": 0.2589,
+            "rtf_median": 0.267,
+            "rtf_p95": 0.3378,
+            "latency_mean_ms": 1396.1,
+            "latency_median_ms": 1160.7,
+            "latency_p95_ms": 3350.1,
+            "peak_memory_mb": 2223.1,
+            "avg_memory_mb": 1888.4,
+            "cpu_percent_mean": 186.2,
+            "memory_method": "process RSS sampled every 20 ms during inference; excludes Metal allocations not mapped in RSS"
+          },
+          "samples": [
+            {
+              "id": "7902-96591-0000",
+              "reference": "I AM FROM THE CUTTER LYING OFF THE COAST",
+              "hypothesis": "I'm from the cutter lying off the coast.",
+              "duration_s": 2.095,
+              "error": null,
+              "wer": 0.2222222222222222,
+              "cer": 0.05,
+              "mer": 0.2222222222222222
+            },
+            {
+              "id": "7902-96591-0001",
+              "reference": "DON'T CRY HE SAID I WAS OBLIGED TO COME",
+              "hypothesis": "Don't cry,\" he said. \"I was obliged to come.\"",
+              "duration_s": 2.51,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0002",
+              "reference": "AND AND YOU HAVE NOT FOUND OUT ANYTHING CAME IN QUICK FRIGHTENED TONES",
+              "hypothesis": "And, and you have not found out anything,\" came in quick, frightened tones.",
+              "duration_s": 5.02,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0003",
+              "reference": "I WISH YOU WOULD BELIEVE ME THAT I AM IN AS GREAT TROUBLE ABOUT IT AS YOU ARE",
+              "hypothesis": "I wish you would believe me that I am in as great trouble about it as you are.",
+              "duration_s": 3.83,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0004",
+              "reference": "THAT MY FATHER SIR RISDON GRAEME HAS SMUGGLED GOODS HERE",
+              "hypothesis": "That my father, Sir Risden Graham, has smuggled goods here.",
+              "duration_s": 3.605,
+              "error": null,
+              "wer": 0.2,
+              "cer": 0.07142857142857142,
+              "mer": 0.2
+            },
+            {
+              "id": "7902-96591-0005",
+              "reference": "HE COULD NOT HELP IT HE HATES THE SMUGGLERS YOU SHALL NOT TELL",
+              "hypothesis": "He could not help it. He hates the smugglers. You shall not tell.",
+              "duration_s": 3.425,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0006",
+              "reference": "PRAY PRAY SAY YOU WILL NOT ARCHY WAS SILENT",
+              "hypothesis": "Pray, pray, say you will not. Archie was silent.",
+              "duration_s": 3.72,
+              "error": null,
+              "wer": 0.1111111111111111,
+              "cer": 0.046511627906976744,
+              "mer": 0.1111111111111111
+            },
+            {
+              "id": "7902-96591-0007",
+              "reference": "THEN AS ARCHY STOOD IN THE DARK LITERALLY AGHAST WITH ASTONISHMENT HE HEARD THE FAINT RUSTLING ONCE MORE AND AGAIN ALL WAS SILENT",
+              "hypothesis": "Then, as Archie stood in the dark, literally aghast with astonishment, he heard the faint rustling once more, and again, all was silent.",
+              "duration_s": 7.69,
+              "error": null,
+              "wer": 0.043478260869565216,
+              "cer": 0.015503875968992248,
+              "mer": 0.043478260869565216
+            },
+            {
+              "id": "7902-96591-0008",
+              "reference": "HE LAUGHED BUT IT WAS A CURIOUS KIND OF LAUGH FULL OF VEXATION INJURED AMOUR PROPRE AS THE FRENCH CALL OUR LOVE OF OUR OWN DIGNITY OF WHICH ARCHIBALD RAYSTOKE IN THE FULL FLUSH OF HIS YOUNG BELIEF IN HIS IMPORTANCE AS A BRITISH OFFICER HAD A PRETTY GOOD STOCK",
+              "hypothesis": "He laughed, but it was a curious kind of laugh, full of vexation, injured emola proper, as the French call our love of our own dignity, of which Archibald Raystoke, in the full flush of his young belief in his importance as a British officer, had a pretty good stock.",
+              "duration_s": 14.73,
+              "error": null,
+              "wer": 0.04,
+              "cer": 0.019305019305019305,
+              "mer": 0.04
+            },
+            {
+              "id": "7902-96591-0009",
+              "reference": "IT ALL COMES OF DRESSING UP IN THIS STUPID WAY LIKE A ROUGH FISHER LAD",
+              "hypothesis": "It all comes of dressing up in this stupid way, like a rough fisher lad.",
+              "duration_s": 3.99,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0010",
+              "reference": "COLD WATER CAME ON THIS IDEA DIRECTLY AS HE RECALLED THE FACT THAT THE DARKNESS WAS INTENSE AND CELIA COULD NOT HAVE SEEN HIM",
+              "hypothesis": "Cold water came on this idea directly as he recalled the fact that the darkness was intense and Celia could not have seen him.",
+              "duration_s": 6.81,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0011",
+              "reference": "I'LL SOON SHOW THEM THAT I AM NOT GOING TO BE PLAYED WITH",
+              "hypothesis": "I'll soon show them that I am not going to be played with.",
+              "duration_s": 2.93,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0012",
+              "reference": "FOR IT SUDDENLY OCCURRED TO HIM THAT HE WAS NOT ONLY A PRISONER BUT A PRISONER IN THE POWER OF A VERY RECKLESS SET OF PEOPLE WHO WOULD STOP AT NOTHING",
+              "hypothesis": "For it suddenly occurred to him that he was not only a prisoner, but a prisoner in the power of a very reckless set of people who would stop at nothing.",
+              "duration_s": 7.145,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0013",
+              "reference": "NO HE THOUGHT TO HIMSELF I DON'T BELIEVE THEY WOULD KILL ME BUT THEY WOULD KNOCK ME ABOUT",
+              "hypothesis": "No, he thought to himself, \"I don't believe they would kill me, but they would knock me about.\"",
+              "duration_s": 5.38,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0014",
+              "reference": "THE KICK HE HAD RECEIVED WAS A FORETASTE OF WHAT HE MIGHT EXPECT AND AFTER A LITTLE CONSIDERATION HE CAME TO THE CONCLUSION THAT HIS DUTY WAS TO ESCAPE AND GET BACK TO THE CUTTER AS QUICKLY AS HE COULD",
+              "hypothesis": "The kick he had received was a foretaste of what he might expect, and after a little consideration, he came to the conclusion that his duty was to escape and get back to the cutter as quickly as he could.",
+              "duration_s": 9.71,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0015",
+              "reference": "TO DO THIS HE MUST SCHEME LIE HID TILL MORNING THEN MAKE FOR THE NEAREST POINT AND SIGNAL FOR HELP UNLESS A BOAT'S CREW WERE ALREADY SEARCHING FOR HIM HOW TO ESCAPE",
+              "hypothesis": "To do this, he must scheme: lie hid till morning, then make for the nearest point and signal for help, unless a boat's crew were already searching for him. How to escape?",
+              "duration_s": 9.61,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0016",
+              "reference": "THE WINDOW WAS BARRED BUT HE WENT TO IT AND TRIED THE BARS ONE BY ONE TO FIND THEM ALL SOLIDLY FITTED INTO THE STONE SILL",
+              "hypothesis": "The window was barred, but he went to it and tried the bars one by one to find them all solidly fitted into the stone sill.",
+              "duration_s": 6.045,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0017",
+              "reference": "NEXT MOMENT AS HE FELT HIS WAY ABOUT HIS HAND TOUCHED AN OLD FASHIONED MARBLE MANTELPIECE FIREPLACE CHIMNEY",
+              "hypothesis": "Next moment, as he felt his way about, his hand touched an old-fashioned marble mantelpiece, fireplace, chimney.",
+              "duration_s": 6.675,
+              "error": null,
+              "wer": 0.1111111111111111,
+              "cer": 0.009345794392523364,
+              "mer": 0.1111111111111111
+            },
+            {
+              "id": "7902-96591-0018",
+              "reference": "YES IF OTHER WAYS FAILED HE COULD ESCAPE UP THE CHIMNEY",
+              "hypothesis": "Yes, if other ways failed, he could escape up the chimney.",
+              "duration_s": 3.11,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0019",
+              "reference": "NO THAT WAS TOO BAD HE COULD NOT DO THAT",
+              "hypothesis": "No, that was too bad. He could not do that.",
+              "duration_s": 2.365,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0020",
+              "reference": "SYMPATHY AND PITY FOR THE DWELLERS IN THE HOZE WERE COMPLETELY GONE NOW AND HE SET HIS TEETH FAST AND MENTALLY CALLED HIMSELF A WEAK IDIOT FOR EVER THINKING ABOUT SUCH PEOPLE",
+              "hypothesis": "Sympathy and pity for the dwellers in the hoes were completely gone now, and he set his teeth fast and mentally called himself a weak idiot for ever thinking about such people.",
+              "duration_s": 8.78,
+              "error": null,
+              "wer": 0.03125,
+              "cer": 0.011494252873563218,
+              "mer": 0.03125
+            },
+            {
+              "id": "7902-96591-0021",
+              "reference": "A NARROW TABLE AGAINST THE WALL IN TWO PLACES",
+              "hypothesis": "A narrow table against the wall in two places.",
+              "duration_s": 2.96,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0022",
+              "reference": "HE WENT AND TRIED TO FORCE HIS HEAD THROUGH RECALLING AS HE DID THAT WHERE A PERSON'S HEAD WOULD GO THE REST OF THE BODY WOULD PASS",
+              "hypothesis": "He went and tried to force his head through, recalling as he did that where a person's head would go, the rest of the body would pass.",
+              "duration_s": 5.87,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96591-0023",
+              "reference": "BUT THERE WAS NO CHANCE FOR HIS BODY THERE THE HEAD WOULD NOT GO FIRST",
+              "hypothesis": "But there was no chance for his body there, and the head would not go first.",
+              "duration_s": 3.365,
+              "error": null,
+              "wer": 0.06666666666666667,
+              "cer": 0.05714285714285714,
+              "mer": 0.0625
+            },
+            {
+              "id": "7902-96591-0024",
+              "reference": "A FELLOW WHO WAS SHUT UP IN PRISON FOR LIFE MIGHT DO IT HE SAID BUT NOT IN A CASE LIKE THIS",
+              "hypothesis": "A fellow who was shut up in prison for life might do it. He said, \"But not in a case like this.\"",
+              "duration_s": 5.145,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96592-0000",
+              "reference": "SURE YOU'VE LOOKED ROUND EVERYWHERE BOY YES FATHER QUITE",
+              "hypothesis": "Sure, you've looked round everywhere, boy. Yes, father. Quite.",
+              "duration_s": 4.21,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96592-0001",
+              "reference": "I'M GOING HOME TO BREAKFAST",
+              "hypothesis": "I'm going home to breakfast.",
+              "duration_s": 1.83,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96592-0002",
+              "reference": "SHALL I COME TOO FATHER NO",
+              "hypothesis": "Shall I come too, Father? No.",
+              "duration_s": 2.74,
+              "error": null,
+              "wer": 0.0,
+              "cer": 0.0,
+              "mer": 0.0
+            },
+            {
+              "id": "7902-96592-0003",
+              "reference": "STOP HERE TILL SIR RISDON COMES DOWN AND TELL HIM I'M VERY SORRY THAT WE SHOULD HAVE CLEARED OUT LAST NIGHT ONLY A BORN FOOL SAW JERRY NANDY'S LOBSTER BOAT COMING INTO THE COVE AND CAME RUNNING TO SAY IT WAS A PARTY FROM THE CUTTER YES FATHER",
+              "hypothesis": "Stop here till Sir Risdon comes down, and tell him I'm very sorry that we should have cleared out last night. Only a born fool saw Jerry and Nandy's lobster boat coming into the cove and came running to say it was a party from the cutter. Yes, Father.",
+              "duration_s": 12.17,
+              "error": null,
+              "wer": 0.020833333333333332,
+              "cer": 0.016666666666666666,
+              "mer": 0.02040816326530612
+            },
+            {
+              "id": "7902-96592-0004",
+              "reference": "TELL HIM NOT TO BE UNEASY TIS ALL RIGHT AND I'LL HAVE EVERYTHING CLEAR AWAY TO NIGHT",
+              "hypothesis": "Tell him not to be uneasy. Tis all right, and I'll have everything clear away tonight.",
+              "duration_s": 4.325,
+              "error": null,
+              "wer": 0.11764705882352941,
+              "cer": 0.012048192771084338,
+              "mer": 0.11764705882352941
+            }
+          ],
+          "corpus_accuracy": {
+            "token_error_rate": 0.022336769759450172,
+            "character_error_rate": 0.009369676320272573,
+            "reference_tokens": 582,
+            "reference_characters": 2348,
+            "token_substitutions": 9,
+            "token_deletions": 2,
+            "token_insertions": 2
+          }
+        }
+      }
+    }
+  },
+  "metal_peak_bytes": 0
+}

@@ -1,0 +1,217 @@
+{
+  "source": "https://huggingface.co/datasets/CAiRE/ASCEND/resolve/737e9800ae31be9932ba8464c80366559bd28424/main/test-00000-of-00001.parquet",
+  "licence": "CC-BY-SA-4.0",
+  "selection": "lowest SHA-256(id) among test utterances containing both Han and Latin script",
+  "samples": [
+    {
+      "id": "00331",
+      "audio_path": "00331.wav",
+      "reference": "一些文章评论的generation",
+      "duration_s": 2.44,
+      "sha256": "312268f670e92f94cb7bc83e172c383162f3e9624693204e6ab07caae0877939"
+    },
+    {
+      "id": "00399",
+      "audio_path": "00399.wav",
+      "reference": "我的方法比较不一样是因为在做extra申请extra的时候不用选你要去哪一个department",
+      "duration_s": 6.08,
+      "sha256": "0b11df57dd23d1f1a4d2f37e3af9c66c4fc7d6dc0552d1a231a3440c5d6b91bd"
+    },
+    {
+      "id": "00413",
+      "audio_path": "00413.wav",
+      "reference": "对然后那时候 [UNK]",
+      "duration_s": 1.96,
+      "sha256": "51f9f7e127a4944197ebe04d298dba8374c9f7884d71fe45840fd512b809df66"
+    },
+    {
+      "id": "00711",
+      "audio_path": "00711.wav",
+      "reference": "to to get a score to去把人挤走开然后然后去一些灌篮得分之类的",
+      "duration_s": 8.42,
+      "sha256": "1126c0419b407fd498e0ca1815f78390d5dcf049ed5bc38efe48de9970ca13c9"
+    },
+    {
+      "id": "00328",
+      "audio_path": "00328.wav",
+      "reference": "对这一块算比较easy the part然后",
+      "duration_s": 4.82,
+      "sha256": "7ff5eab0b28eb97a1e6f519eb6c4903cdbfde589c5714fafccbe8ae09455a0dd"
+    },
+    {
+      "id": "01142",
+      "audio_path": "01142.wav",
+      "reference": "computer language还有problem language的东西我还是不太懂",
+      "duration_s": 3.64,
+      "sha256": "676eca80e9c86a4eeab2057e7be37b666a981a92513d5ab3ba9490641a8da35d"
+    },
+    {
+      "id": "00258",
+      "audio_path": "00258.wav",
+      "reference": "对带我们认识new friends之类的",
+      "duration_s": 2.42,
+      "sha256": "fe80d3cd41949f60141295fe0f08d499702ee8099cf8824b0de5c58ebbd16a6b"
+    },
+    {
+      "id": "00227",
+      "audio_path": "00227.wav",
+      "reference": "然后刚忘了讲你你是念什么major的",
+      "duration_s": 4.22,
+      "sha256": "bb380314c84223610414e4ce7e010645ac8d96fcee594a47f873a63973b333e5"
+    },
+    {
+      "id": "00885",
+      "audio_path": "00885.wav",
+      "reference": "初中从小学我不知道你们是初中跟小学有没有uniforms",
+      "duration_s": 4.4,
+      "sha256": "a2e69c9657a0172aff51e7e253a1899ff38dfdb2aece1e7c7d8b282a00acdfc1"
+    },
+    {
+      "id": "00246",
+      "audio_path": "00246.wav",
+      "reference": "呃大概一千位的students",
+      "duration_s": 2.84,
+      "sha256": "5146a62c3eba2a4e3986afb2db926b9e8a2760fc15cb08207fae812c14119cea"
+    },
+    {
+      "id": "00266",
+      "audio_path": "00266.wav",
+      "reference": "呃food的啊或者是",
+      "duration_s": 2.44,
+      "sha256": "59aaddc711a756a54a4d5eb316ca05630b0129678798999385b1bf2f703c4e8a"
+    },
+    {
+      "id": "01185",
+      "audio_path": "01185.wav",
+      "reference": "对反正我们就只能做一些这种比较entry level的东西",
+      "duration_s": 3.5099375,
+      "sha256": "1a9003f145d72c42719186f2540f90603c91e25166a11beb23ee6524c7af3752"
+    },
+    {
+      "id": "01056",
+      "audio_path": "01056.wav",
+      "reference": "我觉得呢就是有smart phone没smart phone就是是一个类似于双刃剑",
+      "duration_s": 6.8,
+      "sha256": "0777d355b46f6ce426156b16e6b8b8660698994b3a26b3750c525f48d465b2d5"
+    },
+    {
+      "id": "01003",
+      "audio_path": "01003.wav",
+      "reference": "很大程度上是属于那种data driver",
+      "duration_s": 3.37025,
+      "sha256": "5b162a00f36ed14b3c441d6aba3090da465ac8dcf8e1aa0f91727bbabca00e6d"
+    },
+    {
+      "id": "00976",
+      "audio_path": "00976.wav",
+      "reference": "就是still long way to go",
+      "duration_s": 2.32,
+      "sha256": "6f728c53bec8a3e7802c58b31dd15d52789f085e1286223cb930abf37b35d450"
+    },
+    {
+      "id": "00980",
+      "audio_path": "00980.wav",
+      "reference": "我们还是不能够trust AI",
+      "duration_s": 2.66,
+      "sha256": "195ac2602b3ab31a9c9b3ca29562c0abe390a560134e15fe930413d9a68f609a"
+    },
+    {
+      "id": "01120",
+      "audio_path": "01120.wav",
+      "reference": "对我们有syntax的课",
+      "duration_s": 1.85,
+      "sha256": "156c8dd1a5c8e4e3444c627561d210ade58d7419b0d01842e7fa743c69d87aee"
+    },
+    {
+      "id": "00438",
+      "audio_path": "00438.wav",
+      "reference": "还是做software的方向",
+      "duration_s": 2.08,
+      "sha256": "6b1ad413c58bd3f6c8f90caef62e55f030091ef27d1ed5476662878c4e4c9e19"
+    },
+    {
+      "id": "00431",
+      "audio_path": "00431.wav",
+      "reference": "然后我也面试了很多不同的professor",
+      "duration_s": 2.78,
+      "sha256": "de72fd036c6fc1e4ad9236b71421688d61fded2cb39938136e719098974e685d"
+    },
+    {
+      "id": "00391",
+      "audio_path": "00391.wav",
+      "reference": "就是你在申请就是不认识American University或者就是Hong Kong的Singapore的",
+      "duration_s": 7.32,
+      "sha256": "68063a084c59e9b358d311e09323492d71312fcca9dcc98c867da08300a87edb"
+    },
+    {
+      "id": "00675",
+      "audio_path": "00675.wav",
+      "reference": "就是说as a beginner you can play well at the first time",
+      "duration_s": 4.2,
+      "sha256": "e43e8ed067513e2317b2c1fc789b3c686fbaf18bcf9ee63d67f2058a7d4b72a5"
+    },
+    {
+      "id": "00578",
+      "audio_path": "00578.wav",
+      "reference": "嗯i i mean many girls",
+      "duration_s": 1.49,
+      "sha256": "8aa59b6855882fc24eb74fda768071fde864151b60c174696c780825c36b89a2"
+    },
+    {
+      "id": "00677",
+      "audio_path": "00677.wav",
+      "reference": "badminton是一个比较好学的就是说",
+      "duration_s": 3.02,
+      "sha256": "0303eff2bd1986ddc7756361c77c88de4bb519e0cfe973c1fbe7221b344962e8"
+    },
+    {
+      "id": "00352",
+      "audio_path": "00352.wav",
+      "reference": "比较就是对我来说比较new但是又就是说比比较容易习惯",
+      "duration_s": 6.88,
+      "sha256": "d1daa5f7d89db94ba54b654afe7bd589e609f7bd7a4f912983e1529e24ce9fcd"
+    },
+    {
+      "id": "00649",
+      "audio_path": "00649.wav",
+      "reference": "学过tennis",
+      "duration_s": 1.2701875,
+      "sha256": "e9374c8f4803f60500978401ea02e576b1b38a0742cc0f4400b8ea09e661eea7"
+    },
+    {
+      "id": "00256",
+      "audio_path": "00256.wav",
+      "reference": "就是会带我们组织一些activity",
+      "duration_s": 2.98,
+      "sha256": "d000e6b2b428a0ac4f06bf6e92e54dc585f679169928ba14fc908848d386f690"
+    },
+    {
+      "id": "01147",
+      "audio_path": "01147.wav",
+      "reference": "还有就是比如说会呃我们上次就我上次做的一个project是",
+      "duration_s": 5.78,
+      "sha256": "a3d201c7a869805df8fdfb8c155424e100aff66e52cf7ff2bf69bf15515683f2"
+    },
+    {
+      "id": "01039",
+      "audio_path": "01039.wav",
+      "reference": "这个这个这个function它是被他的enemy他的被那些敌方的就是对手公司",
+      "duration_s": 9.5701875,
+      "sha256": "c3935be7ebd4ab281bca32441752efa492427fd719f0b36bdd818933dc2c9cad"
+    },
+    {
+      "id": "01104",
+      "audio_path": "01104.wav",
+      "reference": "还有ipod",
+      "duration_s": 1.22,
+      "sha256": "50ef3cf65c1e06998b9f84d94e7eadfb48a304187751ca39b8f1178ffab9ef1d"
+    },
+    {
+      "id": "00921",
+      "audio_path": "00921.wav",
+      "reference": "大四上学期好像是反正好像是六月份的时候才开始准备IELTS",
+      "duration_s": 7.94,
+      "sha256": "d33915c44be76b1ef13faa3c33bee80fd9c425efbdeca4d858d0905d4e48c40e"
+    }
+  ]
+}

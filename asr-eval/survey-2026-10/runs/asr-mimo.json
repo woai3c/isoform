@@ -1,0 +1,20 @@
+{
+  "status": "warmup_timeout",
+  "started_unix": 1792784991.239947,
+  "elapsed_s": 600.4003989696503,
+  "host": "macOS-26.2-arm64-arm-64bit",
+  "nice": 20,
+  "model": "mimo",
+  "framework": "mlx-audio 0.6.1",
+  "model_load_s": 7.55,
+  "mlx_cache_limit_bytes": 134217728,
+  "mlx_memory_limit_bytes": 8589934592,
+  "scored_utterances": 0,
+  "accuracy": null,
+  "rtf": null,
+  "sampled_process_physical_footprint_peak_gb": 7.8,
+  "memory_method": "macOS sample process physical footprint at 2026-10-23 12:54:38 -0700; rounded GB, distinct from RSS or Metal allocator peak",
+  "reason": "Warmup phase (two planned utterances) did not finish within the 600-second process deadline on the shared 16GB host; no scored utterances. Sampled stack waited in MLX evaluation / Metal submission. This does not establish a general model or runtime failure, nor prove the 8GiB limit caused the stall.",
+  "log": "\nEngine: MiMo V2.5 MLX 4-bit\n  Loading model...\n  Model loaded in 7.55s\n\n  FLEURS Mandarin pilot (30 samples, lang=zh)\n  Warming up (2 runs)...\n",
+  "results": {}
+}

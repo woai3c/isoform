@@ -1,0 +1,64 @@
+{
+  "id": "qwen17",
+  "repo": "mlx-community/Qwen3-ASR-1.7B-8bit",
+  "revision": "a8379a2e2f9e313c9292cdf1af4055ab56d50d55",
+  "files": [
+    {
+      "path": "chat_template.json",
+      "size_bytes": 1161,
+      "sha256": "75a8cfca24f00de72d796fbfed6858fc9614ef3dabd8696684cc3bc03a9c58ff",
+      "url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/chat_template.json"
+    },
+    {
+      "path": "config.json",
+      "size_bytes": 7188,
+      "sha256": "1b76b3b6c655fc54595da025f7a96474ad9fa86363303fbdd61a7d8483ccfaf7",
+      "url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/config.json"
+    },
+    {
+      "path": "generation_config.json",
+      "size_bytes": 142,
+      "sha256": "1da527824d81e07118facff437e03f2e24a23311e3bdeb2368973fe77e5f275c",
+      "url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/generation_config.json"
+    },
+    {
+      "path": "merges.txt",
+      "size_bytes": 1671853,
+      "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+      "url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/merges.txt"
+    },
+    {
+      "path": "model.safetensors",
+      "size_bytes": 2463307541,
+      "sha256": "bf304b009cc7eca79283056f787b44c952d24ac22cec787b39732bba3c23c13c",
+      "url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors"
+    },
+    {
+      "path": "model.safetensors.index.json",
+      "size_bytes": 78968,
+      "sha256": "0a5d0ec11188602242ff81a9969883d0fdeb98cd5d85cd1413089d897c201af5",
+      "url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors.index.json"
+    },
+    {
+      "path": "preprocessor_config.json",
+      "size_bytes": 330,
+      "sha256": "45e120a4eda2c20c5d7f2ea9354e63536bf35e27aa573fb7cdf78017b378770d",
+      "url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/preprocessor_config.json"
+    },
+    {
+      "path": "tokenizer_config.json",
+      "size_bytes": 12487,
+      "sha256": "4942d005604266809309cabc9f4e9cb89ce855d59b14681fdc0e1cc62ea26c4c",
+      "url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/tokenizer_config.json"
+    },
+    {
+      "path": "vocab.json",
+      "size_bytes": 2776833,
+      "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+      "url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/vocab.json"
+    }
+  ],
+  "licence_metadata": "apache-2.0",
+  "model_card_url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/blob/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/README.md",
+  "model_card_sha256": "b356d4bdfbe7287b06b9b5ad084d9557a24ca98ca277a839beb2e682037b08f6"
+}

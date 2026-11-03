@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Isoform</title>
+        <!-- Launch paints this before any CSS or script loads: the window is
+             never blank white (fresh-install rehearsal, 2026-10-27). Mirrors
+             --color-background in src/index.css (index-html.test.ts checks).
+             No remote stylesheet here: it would hold the first paint on the
+             network. -->
+        <style>
+            html, body { margin: 0; background: #f6f6f9; }
+            html[data-theme="onedark"], html[data-theme="onedark"] body { background: #121217; }
+        </style>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script>
+            // Apply saved theme before first paint to prevent flash
+            (function () {
+                var p = 'paper';
+                try { p = localStorage.getItem('yansu.theme') || 'paper'; } catch (e) {}
+                if (p === 'system') {
+                    p = matchMedia('(prefers-color-scheme:dark)').matches ? 'onedark' : 'paper';
+                }
+                // Migrate legacy theme IDs (iris, glass-dark, glass-light)
+                if (p === 'iris' || p === 'glass-light') p = 'paper';
+                else if (p === 'glass-dark') p = 'onedark';
+                document.documentElement.setAttribute('data-theme', p);
+                // Stay flat until the authoritative ui_state preference arrives.
+            })();
+        </script>
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
+</html>

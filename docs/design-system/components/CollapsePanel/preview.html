@@ -1,0 +1,14 @@
+<!-- @dsCard group="Layout" height=170 subtitle="Static rendition" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>CollapsePanel — preview</title></head>
+<body>
+<div class="yn-stage"><div class="yn-panel">
+  <button class="yn-trigger" aria-expanded="true">Processing · 3 steps<svg class="yn-ico" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+  <div class="yn-collapse" style="grid-template-rows:1fr;opacity:1"><div><p>Read the thread · Drafted a reply · Checked tone against your past replies</p></div></div>
+</div></div>
+<script>
+var t=document.querySelector('.yn-trigger'),p=document.querySelector('.yn-collapse');t.addEventListener('click',function(){var o=t.getAttribute('aria-expanded')!=='true';t.setAttribute('aria-expanded',o);p.style.gridTemplateRows=o?'1fr':'0fr';p.style.opacity=o?1:0;});
+</script>
+</body>
+</html>

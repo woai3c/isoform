@@ -1,0 +1,40 @@
+{
+  "recommended": {
+    "live": "qwen06",
+    "after-call": "qwen17",
+    "voice": "ming_tts",
+    "ocr": "apple-vision"
+  },
+  "voice_lines": {
+    "kokoro019": "GPL component: The current English voice, several presets.",
+    "melo": "The current compact Chinese and English voice.",
+    "kokoro11": "GPL component: Many Chinese voices, slower native synthesis in this pilot.",
+    "kokoro_mlx": "GPL component: Reads the brief in English and Chinese, with several voices.",
+    "ming_tts": "New bilingual expressive voices, with higher synthesis cost."
+  },
+  "voice_evidence": {
+    "kokoro019": "October pilot, three sentences/primary voice, Qwen3-ASR 1.7B verifier: en WER 0.0%; 300-word English 74.9s.",
+    "melo": "October pilot, three sentences/primary voice, Qwen3-ASR 1.7B verifier: en WER 2.3%, zh CER 1.6%; 300-word English 44.7s; 552-character Chinese 52.1s.",
+    "kokoro11": "October pilot, three sentences/primary voice, Qwen3-ASR 1.7B verifier: en WER 0.0%, zh CER 4.9%; 300-word English 90.9s; 552-character Chinese 165.1s.",
+    "kokoro_mlx": "October pilot, three sentences/primary voice, Qwen3-ASR 1.7B verifier: en WER 0.0%, zh CER 0.0%; 300-word English 8.3s; 552-character Chinese 9.5s.",
+    "ming_tts": "October pilot, three sentences/primary voice, Qwen3-ASR 1.7B verifier: en WER 0.0%, zh CER 0.0%; 300-word English 103.9s; 552-character Chinese 68.8s."
+  },
+  "runtimes": {
+    "sensevoice": "sherpa-onnx 1.13.8, CPU 2 threads",
+    "sensevoice_nano": "sherpa-onnx 1.13.8, CPU 2 threads",
+    "qwen06": "sherpa-onnx 1.13.8, CPU 2 threads",
+    "funasr_nano": "sherpa-onnx 1.13.8, CPU 2 threads",
+    "qwen17": "mlx-qwen3-asr 0.4.4, Metal GPU",
+    "mimo": "mlx-audio 0.6.1, Metal GPU; requires separate encoder",
+    "kokoro019": "sherpa-onnx 1.13.8, CPU 2 threads",
+    "melo": "sherpa-onnx 1.13.8, CPU 2 threads",
+    "kokoro11": "sherpa-onnx 1.13.8, CPU 2 threads",
+    "kokoro_mlx": "mlx-audio 0.6.1 / Misaki, Metal GPU",
+    "ming_tts": "mlx-audio 0.6.1, Metal GPU",
+    "ppocr6": "RapidOCR 3.10.0 / ONNX Runtime 1.31.0, CPU 2 threads",
+    "speaker-pack": "sherpa-onnx 1.13.8, CPU 1 thread/component"
+  },
+  "alternatives_without_gpl": {
+    "voice": "ming_tts"
+  }
+}

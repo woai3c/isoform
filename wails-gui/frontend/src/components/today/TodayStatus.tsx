@@ -1,0 +1,94 @@
+import { useTranslation } from "react-i18next";
+import type { MobileBriefHealth } from "@/lib/wails-shim-app";
+import { clockTime } from "@/lib/brief-time";
+import { Button } from "@/components/ui/button";
+import { RecordTodayAction } from "@/lib/wails-shim-app";
+import { TodayCaptureLine } from "./TodayCaptureLine";
+
+/** One quiet line under the status lines: a notice kind the user moved from
+ *  notifications to Today (RC 1). The text arrives ready to show. */
+export interface TodayQuietLine {
+    id: string;
+    text: string;
+}
+
+/**
+ * Says when a brief ran or runs, relative to today: "today at 7:02 AM",
+ * "yesterday at 6:00 PM", "tomorrow at 7:00 AM", otherwise the date and
+ * time, in the one clock Today uses.
+ */
+export function describeBriefTime(
+    iso: string,
+    now: Date,
+    t: (key: string, options?: Record<string, unknown>) => string,
+    language = "en",
+): string | null {
+    if (!iso) return null;
+    const when = new Date(iso);
+    if (Number.isNaN(when.getTime())) return null;
+    const time = clockTime(when, language, t);
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const dayDiff = Math.round((startOfDay(when) - startOfDay(now)) / 86_400_000);
+    if (dayDiff === 0) return t("status.todayAt", { time });
+    if (dayDiff === -1) return t("status.yesterdayAt", { time });
+    if (dayDiff === 1) return t("status.tomorrowAt", { time });
+    return `${when.toLocaleDateString(language, { weekday: "short", month: "short", day: "numeric" })} ${time}`;
+}
+
+/**
+ * The quiet status lines under the Today header: how the scheduled brief is
+ * doing (a missed brief's one Make it now is in its card, today-review
+ * v1.1.5 #2), what Isoform captured today, then one muted line per notice kind
+ * shown on Today instead. How often Isoform spoke up this week stays in
+ * Settings > Notifications (Claude Design, 2026-10-22). Renders nothing while
+ * all of them are unknown, so the header never shows an empty box. The
+ * spoken brief plays from the brief's own card (TodayBriefSection).
+ */
+export function TodayStatus({
+    brief,
+    capture,
+    quiet = [],
+    date,
+    onMissedWhy,
+}: {
+    brief: MobileBriefHealth | null;
+    date?: string;
+    /** Opens the missed brief's own detail (Tasks › Scheduled). */
+    onMissedWhy?: (slot: "morning" | "evening") => void;
+    now?: Date;
+    /** What Isoform captured today (describeTodayCapture), with the link to
+     *  its card in Settings. */
+    capture?: { text: string; onOpen?: () => void } | null;
+    /** Quieted notice kinds; each is a line only when it has words. */
+    quiet?: TodayQuietLine[];
+}) {
+    const { t, i18n } = useTranslation("today");
+    const tr = (key: string, options?: Record<string, unknown>) =>
+        t(key as never, options as never) as unknown as string;
+    const openWhy = (slot: "morning" | "evening") => {
+        if (!onMissedWhy) return;
+        const started = performance.now();
+        onMissedWhy(slot);
+        void RecordTodayAction("today", "T86", "open", "opened", Math.max(0, Math.round(performance.now() - started))).catch(() => {});
+    };
+    const pendingDate = brief?.pendingAt ? new Date(brief.pendingAt) : null;
+    const pending = brief?.enabled && (brief.pendingSlot === "morning" || brief.pendingSlot === "evening") && pendingDate && !Number.isNaN(pendingDate.getTime()) ? { slot: brief.pendingSlot, time: clockTime(pendingDate, i18n.language, tr) } : null;
+    const nextDate = brief?.enabled && brief.nextRunAt ? new Date(brief.nextRunAt) : null;
+    const next = nextDate && !Number.isNaN(nextDate.getTime()) ? clockTime(nextDate, i18n.language, tr) : null;
+
+    const quietLines = quiet.filter((line) => line.text.trim());
+    if (!date && !next && !pending && !capture && quietLines.length === 0) return null;
+
+    return (
+        <div
+            data-testid="today-status"
+            className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1 text-[12.5px] leading-snug text-muted"
+        >
+            {pending ? <span>{t(pending.slot === "morning" ? "status.missedMorning" : "status.missedEvening", { time: pending.time })}{onMissedWhy && <> · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium hover:no-underline" onClick={() => openWhy(pending.slot as "morning" | "evening")}>{t("status.why")}</Button></>}</span> : <span>{date}{date && next && " · "}{next && t("status.nextBriefAt", { time: next })}</span>}
+            {capture && <TodayCaptureLine text={capture.text} onOpen={capture.onOpen} />}
+            {quietLines.map((line) => (
+                <p key={line.id} data-testid="today-quiet-line">{line.text}</p>
+            ))}
+        </div>
+    );
+}

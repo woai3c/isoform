@@ -1,0 +1,67 @@
+import { useTranslation } from 'react-i18next';
+import type { TodayChatPreview, TodayContextCounts } from '@/lib/today-chat-navigation';
+
+function parseCounts(content: string | undefined): TodayContextCounts | null {
+    try {
+        const counts: unknown = JSON.parse(content ?? '');
+        if (!counts || typeof counts !== 'object' || Array.isArray(counts)) return null;
+        const { memories, activities, people } = counts as Record<string, unknown>;
+        if (![memories, activities, people].every((count) => typeof count === 'number' && Number.isSafeInteger(count) && count >= 0)) {
+            return null;
+        }
+        return { memories, activities, people } as TodayContextCounts;
+    } catch {
+        return null;
+    }
+}
+
+/** Only counts are rendered: malformed or additional payload fields stay hidden. */
+export function TodayContextStatus({ content }: { content?: string }) {
+    const { t } = useTranslation('chat');
+    const counts = parseCounts(content);
+    if (!counts) return null;
+
+    return (
+        <p data-today-context-status className="m-0 text-center text-[12px] leading-relaxed text-muted/70">
+            {t('todayContext.status', {
+                memories: t('todayContext.memories', { count: counts.memories }),
+                activities: t('todayContext.activities', { count: counts.activities }),
+                people: t('todayContext.people', { count: counts.people }),
+            })}
+        </p>
+    );
+}
+
+/** A draft preview is separate from the receipt of context actually sent. */
+export function TodayContextPreview({ preview }: { preview?: TodayChatPreview }) {
+    const { t } = useTranslation('chat');
+    const { t: tToday } = useTranslation('today');
+    if (!preview) return null;
+    if (preview.status === 'paused') {
+        return (
+            <p data-today-context-preview role="status" className="m-0 mb-2 text-[12px] leading-relaxed text-muted/70">
+                {tToday('contextNote.paused')}
+            </p>
+        );
+    }
+    if (preview.status === 'fallback') {
+        // The item's own context could not be prepared: say so quietly and
+        // name what the draft carries instead.
+        return (
+            <p data-today-context-preview role="status" className="m-0 mb-2 text-[12px] leading-relaxed text-muted/70">
+                {tToday(preview.counts ? 'contextNote.withBrief' : 'contextNote.withoutContext')}
+            </p>
+        );
+    }
+    const counts = preview.status === 'ready' ? preview.counts : null;
+    const message = counts
+        ? counts.memories + counts.activities + counts.people === 0
+            ? t('todayContext.empty')
+            : t('todayContext.preview', {
+                memories: t('todayContext.memories', { count: counts.memories }),
+                activities: t('todayContext.activities', { count: counts.activities }),
+                people: t('todayContext.people', { count: counts.people }),
+            })
+        : t(preview.status === 'loading' ? 'todayContext.loading' : 'todayContext.unavailable');
+    return <p data-today-context-preview role="status" className="m-0 mb-2 text-[12px] leading-relaxed text-muted/70">{message}</p>;
+}

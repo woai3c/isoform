@@ -1,0 +1,16 @@
+{
+  "site": "github",
+  "target_url": "https://github.com",
+  "final_url": "https://github.com/",
+  "title": "GitHub",
+  "framework": {
+    "nextjs": false,
+    "nuxt": false,
+    "react": false,
+    "vue2": false,
+    "vue3": false
+  },
+  "stores": [],
+  "top_strategy": "public",
+  "explored_at": "2026-03-20T13:16:01.516Z"
+}

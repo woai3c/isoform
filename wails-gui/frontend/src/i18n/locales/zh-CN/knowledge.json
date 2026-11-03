@@ -1,0 +1,355 @@
+{
+    "header": {
+        "label": "你的方法",
+        "heading": "你摸索出来的办法，随时可以再用",
+        "count_one": "从你的工作中整理出 {{count}} 条经验。",
+        "count_other": "从你的工作中整理出 {{count}} 条经验。",
+        "countThisWeek_one": "从你的工作中整理出 {{count}} 条经验，是本周保存的。",
+        "countThisWeek_other": "从你的工作中整理出 {{count}} 条经验，其中 {{week}} 条是本周的。",
+        "resurface": "同样的问题再出现时，Isoform 会把相应的经验找回来；看到你重复同一套做法时，也会替你记下来。"
+    },
+    "scope": {
+        "mine": "我的",
+        "topic": "主题",
+        "team": "团队",
+        "company": "公司"
+    },
+    "search": {
+        "label": "搜索经验",
+        "placeholder": "搜索经验"
+    },
+    "filterLabel": "按类型筛选",
+    "kinds": {
+        "all": "全部",
+        "decision": "决策",
+        "how_to": "做法",
+        "fix": "修复",
+        "gotcha": "陷阱",
+        "reference": "参考"
+    },
+    "reuse": {
+        "none": "还没用过",
+        "once": "用过 1 次",
+        "twice": "用过 2 次",
+        "many": "用过 {{count}} 次"
+    },
+    "when": {
+        "today": "今天",
+        "yesterday": "昨天"
+    },
+    "from": "{{when}} · {{apps}}",
+    "groups": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "thisWeek": "本周",
+        "thisMonth": "本月",
+        "earlier": "更早"
+    },
+    "states": {
+        "loading": "正在加载你的经验",
+        "loadFailed": "无法加载你的经验。",
+        "retry": "重试",
+        "noKind": "还没有「{{kind}}」类的经验。",
+        "noMatch": "没有符合搜索的经验。"
+    },
+    "match": {
+        "title": "你之前遇到过：{{title}}",
+        "bodyApp": "你正在 {{app}} 里遇到同一个错误，你{{when}}解决过它。",
+        "body": "你又遇到了同一个错误，你{{when}}解决过它。",
+        "when": {
+            "today": "今天早些时候",
+            "yesterday": "昨天",
+            "date": "在 {{date}}",
+            "unknown": "之前"
+        },
+        "show": "查看解决办法",
+        "dismiss": "不是同一个问题",
+        "dismissFailed": "没能保存。请重试。"
+    },
+    "candidate": {
+        "title_one": "这套同样的做法你已经做了 {{count}} 次。要记成做法吗？",
+        "title_other": "这套同样的做法你已经做了 {{count}} 次。要记成做法吗？",
+        "body_one": "「{{title}}」：同样的 {{count}} 个步骤，分别在 {{dates}}，{{each}}。",
+        "body_other": "「{{title}}」：同样的 {{count}} 个步骤，分别在 {{dates}}，{{each}}。",
+        "today": "今天",
+        "yesterday": "昨天",
+        "durationMin_one": "{{count}} 分钟",
+        "durationMin_other": "{{count}} 分钟",
+        "aboutEach": "每次约 {{duration}}",
+        "bannerLabel": "提议的做法",
+        "review": "查看做法",
+        "notHowTo": "不是做法",
+        "confirm": "记为做法",
+        "editSteps": "编辑步骤",
+        "undo": "撤销",
+        "confirmed": "已存进「你的方法」。",
+        "declined": "不作为做法。Isoform 不会再提议这套步骤。",
+        "actionFailed": "没能完成。请重试。",
+        "proposedToday": "今天提议",
+        "draftLabel": "做法草稿",
+        "editTitle": "编辑做法草稿",
+        "editTitleField": "标题",
+        "editStepsField": "步骤，每行一步",
+        "writtenDownTitle": "会记下什么",
+        "writtenDownBody_one": "标题、什么时候用它，以及上面的 {{count}} 个步骤。任何内容都不会离开这台电脑。",
+        "writtenDownBody_other": "标题、什么时候用它，以及上面的 {{count}} 个步骤。任何内容都不会离开这台电脑。",
+        "staysTitle": "什么留在原处",
+        "staysBody": "这些步骤所依据的屏幕画面、终端输出和时间点。它们留在「动态」里。"
+    },
+    "more": {
+        "page": "经验的更多操作",
+        "entry": "「{{title}}」的更多操作",
+        "groupByTime": "按保存时间分组",
+        "translateAll": "翻译全部经验",
+        "copyMarkdown": "复制 markdown",
+        "copied": "已复制 markdown",
+        "copyFailed": "无法复制 markdown。",
+        "translate": "翻译为应用语言",
+        "history": "版本历史",
+        "delete": "删除",
+        "ungroup": "全部放在一起显示"
+    },
+    "detail": {
+        "label": "经验详情",
+        "points": {
+            "decision": "规则",
+            "how_to": "步骤",
+            "fix": "步骤",
+            "gotcha": "该怎么做",
+            "reference": "要点"
+        },
+        "noPoints": "这条经验没有保存要点。完整内容在「技术细节」里。",
+        "origin": "来源",
+        "sources": {
+            "activity": "从你在这台电脑上的工作中学到。",
+            "conversation": "从你和 Isoform 的对话中学到。",
+            "meeting": "从会议记录中学到。",
+            "shadow_task_evaluation": "从 Isoform 和你一起核对过的工作中学到。",
+            "observed_one": "同样的步骤、同样的顺序，出现在 {{count}} 个会话中。",
+            "observed_other": "同样的步骤、同样的顺序，出现在 {{count}} 个会话中。",
+            "messages": "从你的 {{app}} 消息中学到。",
+            "other": "从你的工作中学到。"
+        },
+        "whenToUse": "什么时候用它",
+        "topic": "主题：{{name}}",
+        "cta": {
+            "decision": "加入智能体规则",
+            "how_to": "做成工作流程",
+            "fix": "做成一键修复",
+            "gotcha": "需要时提醒我"
+        },
+        "ask": "问问这条",
+        "edit": "编辑",
+        "translating": "正在翻译这条经验……",
+        "translateFailed": "无法翻译这条经验。{{error}}",
+        "deleteFailed": "无法删除这条经验。"
+    },
+    "prepare": {
+        "decision": "把这条加入我的智能体要遵守的规则：「{{title}}」。",
+        "how_to": "把「{{title}}」做成一个我可以运行的工作流程。",
+        "fix": "把「{{title}}」做成下次可以一键运行的修复。",
+        "gotcha": "下次「{{title}}」相关的情况出现时提醒我。",
+        "takeaway": "我保存的要点：{{takeaway}}",
+        "ask": "关于我的经验「{{title}}」："
+    },
+    "technical": {
+        "title": "技术细节",
+        "formatVersion": "格式版本 {{version}}",
+        "source": "来源：{{source}}",
+        "sessions_one": "{{count}} 个会话",
+        "sessions_other": "{{count}} 个会话",
+        "saved": "保存于 {{value}}",
+        "scope": "范围：{{scope}}",
+        "id": "ID {{id}}",
+        "topicId": "主题 {{id}}",
+        "fullEntry": "完整内容",
+        "activitySessions": "活动会话",
+        "session": "会话 {{n}}",
+        "fields": {
+            "type": "类型",
+            "timestamp": "保存时间",
+            "source": "来源",
+            "dimension": "维度",
+            "apps": "应用",
+            "kind": "类型标记",
+            "trigger": "什么时候用它"
+        }
+    },
+    "overview": {
+        "title": "概览",
+        "hint": "选一张卡片，查看它的要点和来源。",
+        "byWhen": "保存时间",
+        "topSources": "主要来源"
+    },
+    "translate": {
+        "action": "翻译",
+        "translating": "翻译中……",
+        "selectedTooltip": "将所选版本翻译为当前界面语言",
+        "failedTitle": "翻译失败",
+        "global": {
+            "title": "翻译经验",
+            "description": "一次性翻译所有当前经验。",
+            "targetLabel": "目标语言",
+            "scopeLabel": "范围",
+            "submit": "开始翻译",
+            "translating": "翻译中……",
+            "cancel": "取消",
+            "entriesCount": "{{count}} 个条目",
+            "inProgress": "正在后台翻译全部经验……",
+            "startFailed": "无法开始翻译。{{error}}",
+            "customPlaceholder": "语言名称",
+            "customHint": "可输入任何模型能理解的语言名称。",
+            "customRequired": "请先输入目标语言。",
+            "startedTitle": "经验翻译已开始",
+            "startedBody": "正在后台将 {{total}} 个条目翻译为 {{target}}。",
+            "doneTitle": "经验已翻译",
+            "doneBody": "已将 {{translated}} / {{total}} 个条目翻译为 {{target}}。失败：{{failed}}。",
+            "languageNames": {
+                "en": "English",
+                "zh-CN": "中文"
+            },
+            "targets": {
+                "ui": "跟随界面语言（{{language}}）",
+                "zh": "中文",
+                "en": "English",
+                "custom": "其他语言"
+            },
+            "targetDescriptions": {
+                "ui": "使用当前界面语言。",
+                "zh": "将本批条目翻译为中文。",
+                "en": "将本批条目翻译为 English。",
+                "custom": "将本批条目翻译为其他语言。"
+            },
+            "scopes": {
+                "entries": "所有当前条目"
+            },
+            "scopeDescriptions": {
+                "entries": "翻译 {{count}} 个当前经验条目。"
+            }
+        }
+    },
+    "history": {
+        "versionHistory": "版本历史",
+        "loading": "加载中……",
+        "loadingSnapshot": "加载快照中……",
+        "current": "当前版本",
+        "noHistoryYet": "暂无历史。翻译和更新前会自动保存快照。",
+        "selectSnapshot": "选择一个版本以预览。",
+        "exit": "退出"
+    },
+    "emptyState": {
+        "heading": "还没有经验",
+        "description": "你做出的决定、做法和修复会在这里出现。",
+        "categories": {
+            "technical": {
+                "label": "技术洞见",
+                "desc": "工作中发现的模式、变通方案与非显而易见的行为"
+            },
+            "decisions": {
+                "label": "决策与理由",
+                "desc": "架构选择及其背后的推理"
+            },
+            "failures": {
+                "label": "失败模式",
+                "desc": "遇到过的错误以及解决方式"
+            },
+            "gotchas": {
+                "label": "API 与供应商陷阱",
+                "desc": "怪异行为、未公开特性以及集成技巧"
+            }
+        },
+        "footer": "持续使用 Isoform，条目会随时间逐渐出现在这里。"
+    },
+    "deleteDialog": {
+        "title": "删除这条经验",
+        "description": "删除「{{title}}」？该操作无法撤销。",
+        "confirm": "删除"
+    },
+    "edit": {
+        "editing": "编辑 markdown",
+        "save": "保存",
+        "saving": "保存中……",
+        "cancel": "取消",
+        "label": "经验的 markdown",
+        "writePlaceholder": "编辑这条经验的 markdown 内容。保存前会先生成一份当前内容的快照。",
+        "savedTitle": "经验已更新",
+        "savedBody": "你的修改已保存，上一版本已存入历史。",
+        "saveFailedTitle": "保存失败"
+    },
+    "playbooks": {
+        "export": "导出",
+        "exportDone": "已导出到 {{path}}",
+        "exportFailed": "导出失败:{{error}}",
+        "import": "导入",
+        "importDone": "已导入「{{title}}」",
+        "importFailed": "导入失败:{{error}}",
+        "version": "v{{version}}",
+        "trigger": "适用场景",
+        "scripts": "脚本",
+        "scriptsHint": "此操作手册附带的辅助脚本。步骤中会按名称引用它们；执行时运行的就是这里展示的内容。",
+        "runFailed": "无法执行操作手册：{{error}}",
+        "edit": "编辑",
+        "editTitleLabel": "标题",
+        "editDescriptionLabel": "描述",
+        "editTriggerLabel": "适用场景",
+        "editBodyLabel": "内容",
+        "save": "保存",
+        "saveFailed": "保存失败：{{error}}",
+        "cancel": "取消",
+        "delete": "删除",
+        "deleteFailed": "删除失败：{{error}}",
+        "deleteConfirmTitle": "删除操作手册",
+        "deleteConfirmStart": "确定要删除",
+        "deleteConfirmEnd": " 吗？",
+        "deleteConfirmFallback": "这个操作手册",
+        "generate": "从最近的工作生成",
+        "generateLast1": "最近 24 小时",
+        "generateLast3": "最近 3 天",
+        "generateLast7": "最近 7 天",
+        "create": "创建操作手册",
+        "authoring": "正在创建操作手册……",
+        "trajectoryTitle": "创建进度",
+        "readerEmpty": "该操作手册暂无内容。",
+        "sourceTriage": "来自活动",
+        "sourceManual": "手动生成",
+        "sourceImported": "导入",
+        "sourceObserved": "从你的浏览器学到",
+        "statusDraft": "草稿",
+        "statusConfirmed": "已确认",
+        "runNow": "立即运行",
+        "runNowStarted": "正在运行，Isoform 会把结果发给你。",
+        "runNowFailed": "无法运行：{{error}}",
+        "runInChat": "在聊天中运行",
+        "sitesChanged": "这个操作手册要打开的页面有变化。请先在下方查看，然后再试一次。",
+        "heldUnapproved": "步骤在加入批准之前已有改动。打开并保存即可批准。",
+        "suggestion": {
+            "accepted": "Isoform 会在 {{runTime}} 查看 {{site}}，并把数字发给你。",
+            "declined": "好的，Isoform 不会再问 {{site}} 的事。",
+            "acceptFailed": "无法设置：{{error}}",
+            "declineFailed": "无法保存你的回答：{{error}}"
+        },
+        "sectionTitle": "Isoform 可以替你做这些",
+        "count_one": "{{count}} 个操作手册",
+        "count_other": "{{count}} 个操作手册",
+        "when": {
+            "weekdays": "工作日 {{time}}",
+            "daily": "每天 {{time}}",
+            "onRequest": "你需要时运行"
+        },
+        "lastRun": "上次运行：{{day}}",
+        "day": {
+            "today": "今天",
+            "yesterday": "昨天"
+        },
+        "back": "返回你的方法",
+        "more": "此操作手册的更多操作",
+        "generateStarted": "正在从你最近的工作中创建操作手册，完成后会显示在这里。",
+        "generateFailed": "无法开始创建操作手册：{{error}}"
+    },
+    "firstDay": {
+        "line_one": "来自你 {{history}}的 {{count}} 条经验。Isoform 看到你工作后会有更多。",
+        "line_other": "来自你 {{history}}的 {{count}} 条经验。Isoform 看到你工作后会有更多。",
+        "fromSession": "来自 {{date}} 的 {{assistant}} 会话",
+        "fromClaudeMd": "来自你的 CLAUDE.md"
+    }
+}

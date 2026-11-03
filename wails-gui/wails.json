@@ -1,0 +1,32 @@
+{
+    "name": "Isoform",
+    "outputfilename": "Yansu",
+    "frontend:install": "pnpm install",
+    "frontend:build": "pnpm run build",
+    "frontend:dev:watcher": "pnpm run dev",
+    "frontend:dev:serverUrl": "auto",
+    "frontend:dir": "frontend",
+    "go:build": "go build",
+    "reloaddirs": ".",
+    "debounceMS": 500,
+    "postBuildHooks": {
+        "darwin/*": "bash ../../scripts/sign-dev-build.sh ${bin}"
+    },
+    "author": {
+        "name": "Isoform, Inc"
+    },
+    "info": {
+        "companyName": "Isoform, Inc",
+        "productName": "Isoform",
+        "productVersion": "0.1.301",
+        "copyright": "Copyright 2026 Isoform, Inc",
+        "comments": "Isoform, Copyright 2026 Isoform, Inc",
+        "protocols": [
+            {
+                "scheme": "yansu",
+                "description": "Isoform deep link",
+                "role": "Editor"
+            }
+        ]
+    }
+}

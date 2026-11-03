@@ -1,0 +1,260 @@
+{
+  "prior_accuracy": {
+    "en": {
+      "metric": "WER",
+      "error_rate": 0.05604042259990813,
+      "cer": 0.03611951588502269,
+      "wer": 0.05604042259990813,
+      "character_edits": {
+        "substitutions": 104,
+        "deletions": 218,
+        "insertions": 60,
+        "reference_units": 10576
+      },
+      "word_edits": {
+        "substitutions": 96,
+        "deletions": 22,
+        "insertions": 4,
+        "reference_units": 2177
+      }
+    },
+    "zh": {
+      "metric": "CER",
+      "error_rate": 0.09623981067578227,
+      "cer": 0.09623981067578227,
+      "wer": 0.9988388969521045,
+      "character_edits": {
+        "substitutions": 117,
+        "deletions": 238,
+        "insertions": 11,
+        "reference_units": 3803
+      },
+      "word_edits": {
+        "substitutions": 157,
+        "deletions": 3284,
+        "insertions": 0,
+        "reference_units": 3445
+      }
+    },
+    "ja": {
+      "metric": "CER",
+      "error_rate": 0.057624460995687965,
+      "cer": 0.057624460995687965,
+      "wer": 0.7859327217125383,
+      "character_edits": {
+        "substitutions": 188,
+        "deletions": 69,
+        "insertions": 37,
+        "reference_units": 5102
+      },
+      "word_edits": {
+        "substitutions": 111,
+        "deletions": 141,
+        "insertions": 5,
+        "reference_units": 327
+      }
+    },
+    "ko": {
+      "metric": "CER",
+      "error_rate": 0.037563667232597624,
+      "cer": 0.037563667232597624,
+      "wer": 0.1349934469200524,
+      "character_edits": {
+        "substitutions": 74,
+        "deletions": 96,
+        "insertions": 7,
+        "reference_units": 4712
+      },
+      "word_edits": {
+        "substitutions": 109,
+        "deletions": 84,
+        "insertions": 13,
+        "reference_units": 1526
+      }
+    },
+    "es": {
+      "metric": "WER",
+      "error_rate": 0.03177795655671762,
+      "cer": 0.011543184609087188,
+      "wer": 0.03177795655671762,
+      "character_edits": {
+        "substitutions": 27,
+        "deletions": 61,
+        "insertions": 53,
+        "reference_units": 12215
+      },
+      "word_edits": {
+        "substitutions": 43,
+        "deletions": 22,
+        "insertions": 14,
+        "reference_units": 2486
+      }
+    },
+    "fr": {
+      "metric": "WER",
+      "error_rate": 0.06692456479690523,
+      "cer": 0.02612384638285204,
+      "wer": 0.06692456479690523,
+      "character_edits": {
+        "substitutions": 97,
+        "deletions": 168,
+        "insertions": 86,
+        "reference_units": 13436
+      },
+      "word_edits": {
+        "substitutions": 126,
+        "deletions": 36,
+        "insertions": 11,
+        "reference_units": 2585
+      }
+    },
+    "de": {
+      "metric": "WER",
+      "error_rate": 0.17966903073286053,
+      "cer": 0.053765060240963856,
+      "wer": 0.17966903073286053,
+      "character_edits": {
+        "substitutions": 54,
+        "deletions": 423,
+        "insertions": 237,
+        "reference_units": 13280
+      },
+      "word_edits": {
+        "substitutions": 81,
+        "deletions": 324,
+        "insertions": 51,
+        "reference_units": 2538
+      }
+    }
+  },
+  "corrected_accuracy": {
+    "en": {
+      "metric": "WER",
+      "error_rate": 0.05604042259990813,
+      "cer": 0.03611951588502269,
+      "wer": 0.05604042259990813,
+      "character_edits": {
+        "substitutions": 104,
+        "deletions": 218,
+        "insertions": 60,
+        "reference_units": 10576
+      },
+      "word_edits": {
+        "substitutions": 96,
+        "deletions": 22,
+        "insertions": 4,
+        "reference_units": 2177
+      }
+    },
+    "zh": {
+      "metric": "CER",
+      "error_rate": 0.09623981067578227,
+      "cer": 0.09623981067578227,
+      "wer": 0.9988388969521045,
+      "character_edits": {
+        "substitutions": 117,
+        "deletions": 238,
+        "insertions": 11,
+        "reference_units": 3803
+      },
+      "word_edits": {
+        "substitutions": 157,
+        "deletions": 3284,
+        "insertions": 0,
+        "reference_units": 3445
+      }
+    },
+    "ja": {
+      "metric": "CER",
+      "error_rate": 0.057624460995687965,
+      "cer": 0.057624460995687965,
+      "wer": 0.7859327217125383,
+      "character_edits": {
+        "substitutions": 188,
+        "deletions": 69,
+        "insertions": 37,
+        "reference_units": 5102
+      },
+      "word_edits": {
+        "substitutions": 111,
+        "deletions": 141,
+        "insertions": 5,
+        "reference_units": 327
+      }
+    },
+    "ko": {
+      "metric": "CER",
+      "error_rate": 0.03139683895771038,
+      "cer": 0.03139683895771038,
+      "wer": 0.11764705882352941,
+      "character_edits": {
+        "substitutions": 74,
+        "deletions": 66,
+        "insertions": 7,
+        "reference_units": 4682
+      },
+      "word_edits": {
+        "substitutions": 109,
+        "deletions": 54,
+        "insertions": 13,
+        "reference_units": 1496
+      }
+    },
+    "es": {
+      "metric": "WER",
+      "error_rate": 0.03177795655671762,
+      "cer": 0.011543184609087188,
+      "wer": 0.03177795655671762,
+      "character_edits": {
+        "substitutions": 27,
+        "deletions": 61,
+        "insertions": 53,
+        "reference_units": 12215
+      },
+      "word_edits": {
+        "substitutions": 43,
+        "deletions": 22,
+        "insertions": 14,
+        "reference_units": 2486
+      }
+    },
+    "fr": {
+      "metric": "WER",
+      "error_rate": 0.06692456479690523,
+      "cer": 0.02612384638285204,
+      "wer": 0.06692456479690523,
+      "character_edits": {
+        "substitutions": 97,
+        "deletions": 168,
+        "insertions": 86,
+        "reference_units": 13436
+      },
+      "word_edits": {
+        "substitutions": 126,
+        "deletions": 36,
+        "insertions": 11,
+        "reference_units": 2585
+      }
+    },
+    "de": {
+      "metric": "WER",
+      "error_rate": 0.0646900269541779,
+      "cer": 0.03107649599012955,
+      "wer": 0.0646900269541779,
+      "character_edits": {
+        "substitutions": 55,
+        "deletions": 111,
+        "insertions": 237,
+        "reference_units": 12968
+      },
+      "word_edits": {
+        "substitutions": 81,
+        "deletions": 12,
+        "insertions": 51,
+        "reference_units": 2226
+      }
+    }
+  },
+  "inference_repeated": false,
+  "reason": "Correct literal FLEURS TSV field parsing; source text itself is not edited."
+}

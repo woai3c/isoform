@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=600, initial-scale=1.0" />
+    </head>
+    <body>
+        <div id="root"></div>
+        <script>
+            // Imports can subscribe to native events before the fixture renders.
+            // Keep that work inside this fixture, away from the desktop bridge.
+            window.go = {
+                main: { App: new Proxy({}, { get: () => async () => null }) },
+            };
+            window.runtime = {
+                EventsOn: () => () => {},
+                EventsEmit: () => {},
+            };
+        </script>
+        <script type="module" src="/e2e/setup-v2.tsx"></script>
+    </body>
+</html>

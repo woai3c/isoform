@@ -1,0 +1,12 @@
+{
+  "platform": "macOS-26.2-arm64-arm-64bit",
+  "cpu": "Apple M4",
+  "memory_bytes": 17179869184,
+  "cpu_cores": 10,
+  "asr_live_screening_rtf_max": 0.25,
+  "asr_after_call_screening_rtf_max": 1.0,
+  "speed_threshold_provenance": "Survey screening assumptions, not a previously specified product SLA. Applied to every supported language, not just pooled throughput.",
+  "voice_first_sentence_max_s": 2.0,
+  "voice_rtf_max_exclusive": 1.0,
+  "timing_scope": "Warm complete utterance/sentence decode, batch size one; loads and first-call warmup retained separately. Shared host, nice >=10, one model process at a time."
+}

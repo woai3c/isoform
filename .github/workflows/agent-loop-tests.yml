@@ -1,0 +1,317 @@
+name: Agent Loop Tests
+
+# Test strategy for the native Anthropic agent loop:
+#
+# - `unit` runs on every PR/push that touches `yansu-agent/**` or
+#   `wails-gui/**`. No credentials, sub-minute runtime. Covers the
+#   scripted-SSE loop tests (silent-turn recovery, tool-use fan-out,
+#   tolerant_json repair), the per-tool unit tests (Edit fuzzy matcher,
+#   Bash guards, FS paths), and the wails-gui Go package. This tier MUST
+#   stay green to merge.
+#
+# - `agent-macos` runs the complete yansu-agent suite on macOS without
+#   live credentials, including platform-specific process and tool tests.
+#
+# - `live` hits the real Yansu gateway with every TestLive_* scenario
+#   in `yansu-agent/agent/native_live_test.go`. It costs tokens and is
+#   somewhat non-deterministic, so it only runs when:
+#     * a PR/push actually touches `yansu-agent/agent/**` (the loop,
+#       runner, tools, and live test file) — this is the auto-trigger
+#       that gates changes to the loop's behavior against reality
+#     * nightly schedule — catches gateway regressions the unit tests
+#       can't see (billing token scrub, cache_control drift, etc.)
+#     * manual dispatch with `run_live: true` — for force-running before
+#       a risky merge or after a gateway incident
+#   Requires repo secrets:
+#     YANSU_ANTHROPIC_URL   — e.g. https://dashboard.yansu.ai/anthropic
+#     YANSU_ANTHROPIC_TOKEN — a Yansu session token
+
+on:
+  # All automatic triggers (push / pull_request / schedule) are
+  # temporarily disabled to stop both unit and live E2E from firing
+  # on PRs, merges, and the nightly cron. Re-enable by uncommenting
+  # the blocks below. workflow_dispatch is kept so the suite can
+  # still be run on demand from the Actions tab.
+  # push:
+  #   branches: [main, develop]
+  #   paths:
+  #     - 'yansu-agent/**'
+  #     - 'wails-gui/**'
+  #     - '.github/workflows/agent-loop-tests.yml'
+  # pull_request:
+  #   branches: [main, develop]
+  #   paths:
+  #     - 'yansu-agent/**'
+  #     - 'wails-gui/**'
+  #     - '.github/workflows/agent-loop-tests.yml'
+  workflow_dispatch:
+    inputs:
+      run_live:
+        description: 'Also run the live E2E suite against the real gateway (burns tokens)'
+        type: boolean
+        default: false
+  # schedule:
+  #   # 17:00 Beijing / 09:00 UTC — nightly health check on the gateway.
+  #   # Adjust or drop if token cost matters more than early-warning signal.
+  #   - cron: '0 9 * * *'
+
+concurrency:
+  group: agent-loop-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Path detector: figures out whether this PR/push actually touches
+  # the loop, so we only burn tokens on changes that can affect it.
+  detect-changes:
+    name: Detect loop changes
+    runs-on: ubuntu-latest
+    outputs:
+      loop: ${{ steps.filter.outputs.loop }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # paths-filter needs history to compare base vs head. Depth 2
+          # is enough for PRs; push events use GITHUB_BASE_REF.
+          fetch-depth: 2
+
+      - name: Filter paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            loop:
+              - 'yansu-agent/agent/**'
+              - '.github/workflows/agent-loop-tests.yml'
+
+  # ── Unit tests: always run on push/PR matching the top-level paths.
+  # Pure in-process Go tests — scripted SSE via httptest, no network,
+  # no credentials, no flakes.
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          # yansu-agent requires 1.23, wails-gui requires 1.24 — use the
+          # higher of the two for the combined job.
+          go-version: '1.24'
+          cache-dependency-path: |
+            yansu-agent/go.sum
+            wails-gui/go.sum
+
+      - name: yansu-agent — download modules
+        working-directory: yansu-agent
+        run: go mod download
+
+      - name: yansu-agent — go vet
+        working-directory: yansu-agent
+        run: go vet ./...
+
+      - name: yansu-agent — unit tests
+        working-directory: yansu-agent
+        # -count=1 bypasses the test result cache so every CI run is
+        # honest. -race catches the kind of per-session-worker data
+        # races the loop's goroutine fan-out is susceptible to.
+        run: go test -count=1 -race -timeout 120s ./agent/... ./ksync/... ./internal/...
+
+      - name: wails-gui — download modules
+        working-directory: wails-gui
+        run: go mod download
+
+      - name: Configure git identity for worktree tests
+        # internal/worktree tests (TestUniqueBranchName*) init real git
+        # repos and commit into them. The CI runner has no global
+        # user.name / user.email, so `git commit` bails with "Author
+        # identity unknown". Set a throwaway identity in the runner's
+        # global config — only affects the CI job.
+        run: |
+          git config --global user.email "ci-agent-loop@yansu.local"
+          git config --global user.name "Agent Loop CI"
+
+      - name: wails-gui — unit tests (pure-Go leaf packages)
+        working-directory: wails-gui
+        # Most of wails-gui imports Wails/WebKit/Cocoa CGo and only
+        # builds on darwin. Restrict the CI run to the pure-Go leaf
+        # packages whose logic was touched during the refactor
+        # (storage migrations, worktree helpers incl. the new
+        # Translator hook, persistence service).
+        #
+        # CGO_ENABLED stays at its default (1) because `-race` requires
+        # cgo. The listed leaf packages don't themselves import any
+        # darwin-only CGo, so enabling cgo is safe on ubuntu-latest.
+        run: go test -count=1 -race -timeout 120s ./storage/... ./internal/worktree/... ./internal/persistence/...
+
+  agent-macos:
+    name: Full agent tests (macOS)
+    runs-on: macos-14
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare test temporary directory
+        shell: bash
+        run: |
+          # Keep socket paths short and policy-test homes outside the
+          # always-writable /tmp and /var/tmp trees. Canonical spelling
+          # also keeps fixture authority grants aligned with tool paths.
+          mkdir -p "$GITHUB_WORKSPACE/work/t"
+          test_tmp=$(cd "$GITHUB_WORKSPACE/work/t" && pwd -P)
+          echo "TMPDIR=$test_tmp" >> "$GITHUB_ENV"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.5'
+          cache-dependency-path: yansu-agent/go.sum
+
+      - name: Record macOS toolchain
+        run: |
+          sw_vers
+          uname -m
+          go version
+
+      - name: yansu-agent - full macOS tests
+        working-directory: yansu-agent
+        shell: bash
+        run: go test -count=1 -json ./... | tee "$RUNNER_TEMP/agent-macos-tests.jsonl"
+
+      - name: Save macOS test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-macos-test-results
+          path: ${{ runner.temp }}/agent-macos-tests.jsonl
+          if-no-files-found: warn
+
+  # The large fixture stays out of the regular race suite. Run it explicitly
+  # on macOS so its actual Bash invocation also exercises Seatbelt.
+  guard-large-library:
+    name: macOS large Library guard regression
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: yansu-agent/go.sum
+
+      - name: Ensure ripgrep is available
+        run: |
+          if ! command -v rg >/dev/null 2>&1; then
+            brew install ripgrep
+          fi
+          rg --version
+
+      - name: Run 300,000-entry Library guard regression
+        working-directory: yansu-agent
+        env:
+          GOMAXPROCS: '2'
+          GOFLAGS: '-p=1'
+        run: |
+          guard_home="$(mktemp -d /tmp/yansu-guard-ci.XXXXXX)"
+          trap 'rm -rf "$guard_home"' EXIT
+          mkdir -p "$guard_home/tmp"
+          # Retain setup-go caches while isolating every test's HOME and data.
+          GOCACHE="$(go env GOCACHE)" GOMODCACHE="$(go env GOMODCACHE)" \
+            HOME="$guard_home" TMPDIR="$guard_home/tmp" YANSU_AGENT_HOME= \
+            YANSU_TEST_LARGE_LIBRARY=1 \
+            go test -count=1 -v -timeout 15m \
+              -run '^TestProtectedToolsLargeLibraryBudget$' ./agent/tools
+
+  # ── Live E2E: auto-fires on any PR/push that touches the loop
+  # (`yansu-agent/agent/**`), plus nightly schedule and manual dispatch.
+  # Does NOT run when only unrelated files (docs, wails-gui) changed.
+  live:
+    name: Live E2E tests
+    needs: [detect-changes, unit]
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.run_live) ||
+      (
+        (github.event_name == 'push' || github.event_name == 'pull_request') &&
+        needs.detect-changes.outputs.loop == 'true' &&
+        (github.event_name != 'pull_request' ||
+         github.event.pull_request.head.repo.full_name == github.repository)
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: yansu-agent/go.sum
+
+      - name: yansu-agent — download modules
+        working-directory: yansu-agent
+        run: go mod download
+
+      - name: yansu-agent — live E2E suite
+        working-directory: yansu-agent
+        env:
+          YANSU_LIVE_TEST: '1'
+          ANTHROPIC_BASE_URL: ${{ secrets.YANSU_ANTHROPIC_URL }}
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.YANSU_ANTHROPIC_TOKEN }}
+          YANSU_LIVE_MODEL: sonnet
+        run: |
+          if [ -z "$ANTHROPIC_BASE_URL" ] || [ -z "$ANTHROPIC_AUTH_TOKEN" ]; then
+            echo "::error::Missing YANSU_ANTHROPIC_URL or YANSU_ANTHROPIC_TOKEN repo secret."
+            exit 1
+          fi
+          # -count=1 to skip test cache. 20m wall timeout is the outer
+          # job cap; individual tests have their own per-test timeouts
+          # (max is 180s for the multi-step chains).
+          go test -count=1 -tags=live -v -run 'TestLive_' -timeout 20m ./agent/
+
+      - name: Collect test logs on failure
+        if: failure()
+        run: |
+          echo "Live suite failed. The TestLive_* tests print their own"
+          echo "tool_counts and final_text summaries — scroll up in the"
+          echo "'Live E2E suite' step above for the first failing test."
+          echo ""
+          echo "Common failure modes:"
+          echo "  - 'SILENT COMPLETION REGRESSION' — the nudge-recovery path in"
+          echo "    yansu-agent/agent/native/loop.go has regressed."
+          echo "  - 'expected ≥2 tool_use before first tool_result' — model"
+          echo "    started serializing parallel tool calls; check if the"
+          echo "    gateway changed something on its end before blaming the"
+          echo "    loop."
+          echo "  - 'gateway ... does not surface prompt-side token counts'"
+          echo "    is a SKIP, not a failure."
+
+  # ── Fork PR notice: forks don't get repo secrets, so live can't run.
+  # Print a clear message in the check summary so the PR author knows
+  # they'll need a maintainer to manually run the live suite.
+  live-skipped-fork-pr:
+    name: Live E2E tests (skipped — fork PR)
+    needs: detect-changes
+    if: >-
+      github.event_name == 'pull_request' &&
+      needs.detect-changes.outputs.loop == 'true' &&
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain
+        run: |
+          echo "::notice::This PR comes from a fork and cannot access repo"
+          echo "secrets, so the live E2E suite against the real Yansu gateway"
+          echo "did not run. A maintainer can run it manually via Actions →"
+          echo "Agent Loop Tests → Run workflow (run_live: true) after an"
+          echo "initial code review."

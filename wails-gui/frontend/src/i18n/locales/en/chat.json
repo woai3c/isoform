@@ -1,0 +1,771 @@
+{
+    "todayContext": {
+        "status": "Context: {{memories}}, {{activities}}, {{people}}",
+        "memories_one": "{{count}} memory",
+        "memories_other": "{{count}} memories",
+        "activities_one": "{{count}} activity",
+        "activities_other": "{{count}} activities",
+        "people_one": "{{count}} person",
+        "people_other": "{{count}} people",
+        "preview": "Isoform adds what it knows about this: {{memories}}, {{activities}}, {{people}}",
+        "empty": "Isoform adds what it knows about this: nothing on file yet",
+        "loading": "Isoform is checking what it knows about this.",
+        "unavailable": "Isoform could not check what it knows about this. Try opening the item from Today again.",
+        "reviewBeforeSending": "Review before sending"
+    },
+    "messageActions": {
+        "speak": "Read aloud",
+        "stop": "Stop"
+    },
+    "ttsDownload": {
+        "chinese": "Chinese voice",
+        "english": "English voice",
+        "downloading": "Downloading {{language}} model… {{percent}}%",
+        "starting": "Starting the local model download…",
+        "progressDetail": "{{downloaded}} of {{total}} · {{speed}}/s",
+        "preparing": "{{language}} model downloaded. Loading it now…",
+        "ready": "{{language}} is ready",
+        "failed": "Voice model download failed",
+        "retry": "Check your connection, then click Read aloud again to retry."
+    },
+    "welcome": {
+        "heading": "What's on your mind?",
+        "subheading": "Say anything. Isoform takes it from here."
+    },
+    "automationResultQuote": {
+        "title": "Run output"
+    },
+    "deliverables": {
+        "title": "Delivered files",
+        "open": "Open {{name}}",
+        "openAria": "Open delivered file {{name}}",
+        "openButton": "Open",
+        "moreActions": "More actions for {{name}}",
+        "fileLabel": "File",
+        "loadingApps": "Loading apps…",
+        "revealInFinder": "Reveal in {{fileManager}}",
+        "pendingLabel": "Pending output",
+        "pendingHint": "Available once the task completes",
+        "unavailableLabel": "Unavailable",
+        "unavailableHint": "This file no longer exists"
+    },
+    "errors": {
+        "quotaPeriod": {
+            "title": "{{period}} usage limit reached",
+            "body": "Usage resets at the start of the next {{periodLower}} period. See how much each assistant has left on the Assistant page."
+        },
+        "quotaGeneric": {
+            "title": "Usage limit reached",
+            "body": "Usage resets soon. See how much each assistant has left and when it resets on the Assistant page."
+        },
+        "subscription": {
+            "title": "Your assistant's account needs attention",
+            "body": "The provider turned this request down because of billing or access on that account. Check the account with the provider, or see each assistant's usage on the Assistant page."
+        },
+        "server": {
+            "title": "Service temporarily unavailable",
+            "body": "The AI service is having a moment. Please try again shortly."
+        },
+        "network": {
+            "title": "Connection problem",
+            "body": "We couldn't reach the AI service. Check your connection and try again."
+        },
+        "requestTooLarge": {
+            "title": "Too much content for one request",
+            "body": "This task piled up more than the model can take in a single request — usually large screenshots or files. Start a new chat, or break it into smaller steps with fewer or smaller screenshots."
+        },
+        "unknown": {
+            "title": "Something went wrong",
+            "body": "We hit an unexpected error. Please try again."
+        },
+        "period": {
+            "daily": "Daily",
+            "weekly": "Weekly",
+            "monthly": "Monthly",
+            "dailyLower": "daily",
+            "weeklyLower": "weekly",
+            "monthlyLower": "monthly"
+        },
+        "actions": {
+            "openSettings": "Open settings",
+            "seeUsage": "See usage",
+            "setUp": "Set up",
+            "signIn": "Sign in",
+            "tryAgain": "Try again",
+            "details": "Details",
+            "hide": "Hide"
+        },
+        "line": "{{title}}. {{body}}",
+        "cause": {
+            "noAssistantBox": "Isoform needs an AI to answer.",
+            "noAssistantKept": "Didn't send: no AI is signed in.",
+            "signedOut": "Sign in to {{ai}} again.",
+            "usageDaily": "{{ai}}'s daily limit is used up.",
+            "usageWeekly": "{{ai}}'s weekly limit is used up.",
+            "usageMonthly": "{{ai}}'s monthly limit is used up.",
+            "usageLimit": "{{ai}}'s limit is used up.",
+            "runnerUnavailable": "Couldn't start it: {{ai}} isn't available on your computer.",
+            "network": "Couldn't reach {{ai}}. Check your connection.",
+            "server": "{{ai}} is having trouble right now.",
+            "assistantError": "{{ai}} stopped with an error.",
+            "assistantErrorUnknown": "Your AI stopped with an error.",
+            "yourAI": "your AI",
+            "yourAICapital": "Your AI",
+            "separator": " · "
+        },
+        "failedSend": {
+            "line": "Didn't send",
+            "edit": "Edit"
+        }
+    },
+    "tools": {
+        "answerDetails": "How Isoform worked this out",
+        "steps_one": "{{count}} step",
+        "steps_other": "{{count}} steps",
+        "workingTail": "Working",
+        "completedTail": "Completed",
+        "preparingTitle": "Preparing call",
+        "preparingFallback": "tool",
+        "running": {
+            "read": "Reading files",
+            "write": "Writing files",
+            "edit": "Editing files",
+            "bash": "Running command",
+            "grep": "Searching code",
+            "glob": "Matching files",
+            "webFetch": "Browsing the web",
+            "webSearch": "Searching the web",
+            "applyPatch": "Applying patch",
+            "repl": "Running code",
+            "agent": "Delegating to sub-agent",
+            "toolSearch": "Loading tools",
+            "skill": "Running skill",
+            "todoWrite": "Updating todos",
+            "taskCreate": "Creating tasks",
+            "taskGet": "Reading tasks",
+            "taskList": "Listing tasks",
+            "taskOutput": "Reading task output",
+            "taskStop": "Stopping tasks",
+            "taskUpdate": "Updating tasks",
+            "lsp": "Querying code intelligence",
+            "sleep": "Waiting",
+            "askUserQuestion": "Asking a question",
+            "notebookEdit": "Editing notebook",
+            "enterPlanMode": "Entering plan mode",
+            "exitPlanMode": "Exiting plan mode",
+            "enterWorktree": "Entering worktree",
+            "exitWorktree": "Exiting worktree",
+            "sendMessage": "Sending message",
+            "brief": "Sending brief",
+            "cronCreate": "Scheduling tasks",
+            "cronDelete": "Cancelling schedules",
+            "cronList": "Listing schedules",
+            "remoteTrigger": "Triggering remote",
+            "default": "Using {{name}}",
+            "defaultNoName": "Using tool",
+            "mcp": "Calling {{name}}"
+        },
+        "done": {
+            "read": "Read files",
+            "write": "Wrote files",
+            "edit": "Edited files",
+            "bash": "Ran command",
+            "grep": "Searched code",
+            "glob": "Matched files",
+            "webFetch": "Browsed the web",
+            "webSearch": "Searched the web",
+            "applyPatch": "Applied patch",
+            "repl": "Ran code",
+            "agent": "Delegated to sub-agent",
+            "toolSearch": "Loaded tools",
+            "skill": "Ran skill",
+            "todoWrite": "Updated todos",
+            "taskCreate": "Created tasks",
+            "taskGet": "Read tasks",
+            "taskList": "Listed tasks",
+            "taskOutput": "Read task output",
+            "taskStop": "Stopped tasks",
+            "taskUpdate": "Updated tasks",
+            "lsp": "Queried code intelligence",
+            "sleep": "Waited",
+            "askUserQuestion": "Asked a question",
+            "notebookEdit": "Edited notebook",
+            "enterPlanMode": "Entered plan mode",
+            "exitPlanMode": "Exited plan mode",
+            "enterWorktree": "Entered worktree",
+            "exitWorktree": "Exited worktree",
+            "sendMessage": "Sent message",
+            "brief": "Sent brief",
+            "cronCreate": "Scheduled tasks",
+            "cronDelete": "Cancelled schedules",
+            "cronList": "Listed schedules",
+            "remoteTrigger": "Triggered remote",
+            "default": "Used {{name}}",
+            "defaultNoName": "Used tool",
+            "mcp": "Called {{name}}"
+        }
+    },
+    "mainChat": {
+        "channel": {
+            "mail": "Mail",
+            "slack": "Slack"
+        },
+        "engagementSlot": {
+            "morning": "morning",
+            "evening": "evening",
+            "onRequest": "on-request"
+        },
+        "report": {
+            "engagement": {
+                "commitment_slipping": {
+                    "summary": "A commitment needs attention.",
+                    "detail": "{{title}} is due {{due}} with no progress yet."
+                },
+                "meeting_ended": {
+                    "summary": "Your meeting notes are ready.",
+                    "detail": "{{title}}: {{decisions}} decisions, {{followups}} follow-ups."
+                },
+                "person_reappeared": {
+                    "summary": "Someone you know came up.",
+                    "detail": "{{name}} came up in {{where}}. Want a note?"
+                },
+                "goal_check_in": {
+                    "summary": "A quick check on a goal.",
+                    "detail": "You set \"{{title}}\". How is it going?"
+                },
+                "work_finished": {
+                    "summary": "Work finished.",
+                    "detail": "{{title}} is ready to review. Nothing was sent."
+                },
+                "work_blocked": {
+                    "summary": "Work is waiting on you.",
+                    "detail": "{{title}} needs {{question}}"
+                },
+                "brief_ready": {
+                    "summary": "Your brief is ready.",
+                    "detail": "Your {{slot}} brief is ready."
+                },
+                "brief_missed": {
+                    "summary": "Your brief did not arrive.",
+                    "detail": "Your {{slot}} brief didn't run at {{time}}.",
+                    "detailReason": "Your {{slot}} brief didn't run: {{reason}}.",
+                    "detailNoTime": "Your {{slot}} brief didn't run."
+                },
+                "schedule_missed": {
+                    "summary": "A schedule did not run.",
+                    "detail": "\"{{title}}\" didn't run twice in a row. Open it in Tasks to see why."
+                },
+                "suggestion": {
+                    "summary": "Isoform has a suggestion.",
+                    "detail": "You did \"{{title}}\" {{count}} times. Want Isoform to take it on?"
+                },
+                "topic_finds": {
+                    "summary": "Something new on a topic you follow.",
+                    "detail": "New on {{topic}}: {{title}}"
+                },
+                "learned_to_confirm": {
+                    "summary": "Isoform learned something.",
+                    "detail": "{{statement}} Keep this?"
+                },
+                "capture_paused": {
+                    "summary": "Isoform stopped watching for a while.",
+                    "detail": "{{what}} has been off for {{duration}}. Turn it back on?"
+                },
+                "meeting_prep": {
+                    "summary": "A meeting is about to start.",
+                    "detail": "{{title}} starts in {{minutes}} min {{place}} {{people}}."
+                },
+                "calendar_conflict": {
+                    "summary": "Something on your calendar needs a look.",
+                    "detail": "{{summary}}"
+                },
+                "meeting_followup": {
+                    "summary": "A meeting left you follow-ups.",
+                    "detail": "{{title}}: {{followups}} follow-ups for you, {{decisions}} decisions."
+                },
+                "waiting_on_reply": {
+                    "summary": "Someone is waiting on your reply."
+                },
+                "playbook_suggested": {
+                    "summary": "Isoform can take a routine off your hands.",
+                    "detail": "You open {{site}} most days around {{time}}. Want Isoform to check it for you and send you the numbers?"
+                },
+                "playbook_result": {
+                    "summary": "A playbook finished.",
+                    "detail": "{{title}}: {{result}}"
+                },
+                "reminder": {
+                    "summary": "A reminder from Isoform.",
+                    "detail": "Reminder: {{title}}"
+                }
+            },
+            "handoff": {
+                "completed": "“{{title}}” is done. The result is ready to review.",
+                "needs_review": "“{{title}}” needs review. Its success criteria or evidence could not be confirmed.",
+                "aborted": "“{{title}}” stopped before finishing.",
+                "blocked": "“{{title}}” is blocked and needs you.",
+                "active": "“{{title}}” is waiting to start.",
+                "in_progress": "Isoform is working on “{{title}}”.",
+                "stale": "“{{title}}” expired before it started."
+            },
+            "schedule": {
+                "ok": "“{{title}}” ran and produced a result.",
+                "error": "“{{title}}” failed on its last run.",
+                "created": "Added “{{title}}” to your schedules.",
+                "changed": "Changed when “{{title}}” runs.",
+                "changedWhen": "“{{title}}” is now set to {{when}}.",
+                "paused": "Paused “{{title}}”.",
+                "resumed": "Resumed “{{title}}”.",
+                "started": "Started “{{title}}” now.",
+                "removed": "Removed the “{{title}}” schedule.",
+                "changedOnce": "“{{title}}” will now run once, on {{when}}."
+            },
+            "meeting": {
+                "ready": "Meeting notes from your {{title}} call are ready."
+            },
+            "side_chat": {
+                "brought_back": "Brought back from the side chat “{{title}}”."
+            },
+            "message_send": {
+                "sent": "Sent via {{channel}}, {{time}}"
+            }
+        },
+        "action": {
+            "review": "Review",
+            "open": "Open",
+            "needsYou": "Needs you"
+        },
+        "origin": {
+            "title": "Branched from the chat",
+            "openMain": "Open chat"
+        },
+        "fallback": {
+            "handoff": "Untitled work",
+            "schedule": "A schedule",
+            "meeting": "Meeting",
+            "sideChat": "Side chat"
+        },
+        "item": {
+            "brief": "Morning and evening brief",
+            "briefMorning": "Morning brief",
+            "briefEvening": "Evening brief",
+            "news": "Daily News"
+        },
+        "confirm": {
+            "question": "Remove the “{{title}}” schedule? Its run history goes with it.",
+            "remove": "Remove",
+            "keep": "Keep",
+            "removed": "Removed the “{{title}}” schedule.",
+            "kept": "Kept the “{{title}}” schedule.",
+            "expired": "This request to remove “{{title}}” expired. Ask again to remove it.",
+            "gone": "“{{title}}” was already removed.",
+            "failed": "That did not work. Try again, or remove it in Tasks."
+        },
+        "texted": {
+            "label": "From text",
+            "labelAt": "From text, {{time}}",
+            "use": "Use as my message",
+            "note": "Texted to Isoform from your number. Anyone can make a text look as if it came from your number, so Isoform does not act on it unless you use it as your message."
+        },
+        "card": {
+            "button": {
+                "openPrep": "Open prep",
+                "openInCalendar": "Open in Calendar",
+                "showBoth": "Show both",
+                "takeMeThere": "Take me there",
+                "showThread": "Show the thread",
+                "openInActivity": "Open in Activity",
+                "review": "Review",
+                "notNow": "Not now",
+                "openFile": "Open {{file}}",
+                "answer": "Answer",
+                "stop": "Stop",
+                "findTime": "Find time",
+                "holdIt": "Hold it",
+                "showName": "Show {{name}}",
+                "showWhatsNew": "Show what's new",
+                "doIt": "Do it",
+                "play": "Play",
+                "readIt": "Read it",
+                "readWeek": "Read your week",
+                "makeItNow": "Make it now",
+                "runItNow": "Run it now",
+                "showWhy": "Show why",
+                "resume": "Resume",
+                "done": "Done",
+                "allow": "Allow",
+                "keepBoth": "Keep both",
+                "show": "Show",
+                "right": "Right",
+                "thatsMe": "That's me",
+                "notQuite": "Not quite"
+            }
+        },
+        "relativeDay": {
+            "today": "today",
+            "tomorrow": "tomorrow",
+            "yesterday": "yesterday",
+            "wasDue": "was due {{day}}"
+        },
+        "observationPause": {
+            "paused": "Observing paused since {{time}}.",
+            "resumed": "Observing again at {{time}}.",
+            "pausedFromTo": "Observing paused from {{start}} to {{end}}.",
+            "pausedAt": "Observing paused at {{time}}.",
+            "captureFromTo": "Capture paused from {{start}} to {{end}}.",
+            "capturePausedAt": "Capture paused at {{time}}.",
+            "captureNotice": "Capture was paused.",
+            "captureResumed": "Capture resumed at {{time}}.",
+            "resume": "Resume",
+            "failed": "Could not resume observing. Try again."
+        },
+        "proactive": {
+            "revalidating": "Refreshing this item…",
+            "findTimeChecking": "Checking your calendar…",
+            "findTimeFailed": "Couldn't check your calendar. Try again later.",
+            "findTimeNoneChecked": "I couldn't find a free block on your {{calendars}} calendars in that period.",
+            "findTimeNoneCheckedGeneric": "I couldn't find a free block on the calendars on this computer in that period.",
+            "findTimeNextWeek": "Next week you're free {{times}}.",
+            "findTimeNextWeekNone": "Next week has no free block of an hour or more.",
+            "findTimeNone": "I couldn't find an open block in the next few workdays.",
+            "findTimeRange": "{{start}} to {{end}}",
+            "findTimeAnswer": "You're free {{times}}.",
+            "findTimeChecked": "On your {{calendars}} calendars, you're free {{times}}.",
+            "findTimeCheckedGeneric": "On the calendars on this computer, you're free {{times}}.",
+            "findTimeBrowserOnly": "Your {{calendars}} calendar is only in your browser, so check it there.",
+            "copyDraft": "Copy draft",
+            "sendTo": "Send to {{recipient}} · {{channel}}",
+            "draftSentHeld": "Sent to {{name}} ·",
+            "draftSent": "Sent to {{name}}",
+            "draftSentAt": "Sent to {{name}} · {{time}}",
+            "undoSend": "Undo",
+            "draftRefused": "Didn't send.",
+            "draftUnknown": "Couldn't confirm it sent. Check Sent in Mail first.",
+            "editDraft": "Edit",
+            "editLabel": "Your reply",
+            "editCancel": "Cancel",
+            "draftCopied": "Draft copied.",
+            "draftTo": "To",
+            "draftSubject": "Subject",
+            "communication": {
+                "written": "Written the way you write to {{name}}: {{details}}.",
+                "details": "{{language}}, {{sentences}}, {{greeting}}",
+                "sentences_one": "one sentence",
+                "sentences_other": "{{count}} sentences",
+                "greeting": "with a greeting",
+                "noGreeting": "no greeting",
+                "languages": {
+                    "chinese": "Chinese",
+                    "english": "English"
+                },
+                "change": "Change"
+            },
+            "done": "Done.",
+            "requestDetails": "Request details",
+            "permissionTool": "Tool: {{tool}}",
+            "permissionAnswered": "Answered.",
+            "permissionExpired": "This request is no longer active.",
+            "failed": "That did not work. Please try again.",
+            "openFailed": "I could not open that. Please try again.",
+            "workDetails": "Work result",
+            "correction": {
+                "label": "What should Isoform understand instead?",
+                "placeholder": "Write the corrected understanding",
+                "save": "Save correction",
+                "cancel": "Cancel"
+            },
+            "eventDetails": "Event details",
+            "closePanel": "Close details",
+            "openInUpcoming": "Open in Tasks",
+            "returnToPlace": "Return to {{app}}",
+            "showThread": "Show the thread",
+            "eventWhen": "{{start}} to {{end}}",
+            "privateEvent": "Private event",
+            "moreActions": "More actions",
+            "results": {
+                "suggestion_add_to_upcoming": "Scheduled. You will find it in Tasks.",
+                "suggestion_do_once": "Added as a one-time task.",
+                "suggestion_not_now": "Not now",
+                "learned_to_confirm_keep": "Kept.",
+                "learned_to_confirm_correct": "Correction saved.",
+                "reminder_done": "Marked done.",
+                "reminder_not_now": "Not now",
+                "capture_paused_resume_capture": "Capture resumed.",
+                "schedule_missed_run_now": "Schedule started.",
+                "brief_missed_make_it_now": "Brief requested."
+            },
+            "sourceFrom": "From {{source}}",
+            "sourceAt": "From {{source}} · {{time}}",
+            "leftOffIn": "Left off in {{app}} · {{when}}",
+            "meetingStarted": "{{title}} at {{time}}",
+            "source": {
+                "mail": "Mail",
+                "calendar": "Calendar",
+                "commitment": "your commitments",
+                "observing": "Observing",
+                "brief": "your brief",
+                "tasks": "Tasks",
+                "slack": "Slack",
+                "suggestion": "your work patterns",
+                "topic": "your topics",
+                "playbook": "Playbook",
+                "person": "Who you know"
+            },
+            "workStopped": "Stopped.",
+            "workUpdated": "Updated.",
+            "muteKind": "Mute this kind",
+            "notForMe": "Not for me",
+            "held": {
+                "started": "Started",
+                "notNow": "Not now",
+                "muted": "Muted",
+                "scheduled": "Added to Scheduled",
+                "undo": "Undo",
+                "edit": "Edit"
+            },
+            "calendarFailed": "Couldn't open Calendar. Try again",
+            "howYouDoThings": "How you do things"
+        },
+        "status": {
+            "summary_one": "{{count}} background update",
+            "summary_other": "{{count}} background updates"
+        },
+        "view": {
+            "title": "Chat",
+            "filterLabel": "Show",
+            "everything": "All",
+            "hideUpdates": "Hide updates",
+            "showUpdates": "Show updates",
+            "hiddenWhileFiltered": "Updates hidden while filtered",
+            "hideFailed": "Could not save that. Try again.",
+            "summaryTitle": "In your chat today",
+            "summarySeparator": " · ",
+            "summaryConversations_one": "{{count}} with you",
+            "summaryConversations_other": "{{count}} with you",
+            "summaryFinished_one": "{{count}} finished",
+            "summaryFinished_other": "{{count}} finished",
+            "summaryRoutine_one": "{{count}} routine, folded",
+            "summaryRoutine_other": "{{count}} routine, folded",
+            "summaryFailed": "Could not count what your chat holds today.",
+            "retry": "Try again",
+            "showEverything": "Show everything",
+            "today": "Today",
+            "yesterday": "Yesterday",
+            "foldSummary_one": "{{count}} update from Isoform",
+            "foldSummary_other": "{{count}} updates from Isoform",
+            "foldNote": "Routine updates fold here. Mute a kind or show it as a quiet line on Today from Settings › Notifications.",
+            "isoform": "Isoform",
+            "briefLoadFailed": "Could not load this brief.",
+            "topicTags": "Topics",
+            "chipsLabel": "Prepared requests",
+            "notePrepared": "Prepared for you. Nothing is sent until you press Send.",
+            "notePreparedAnswer": "Prepared from the answer above. Nothing is sent until you press Send.",
+            "detachTopic": "Remove {{name}} from the box",
+            "topicChecking": "Checking this topic...",
+            "topicBusy": "Isoform is still answering in your chat. Stop it, or send about this topic when it finishes.",
+            "scope": "Choose chat scope",
+            "wholeChat": "Whole chat",
+            "more": "More",
+            "itemPanel": "Item"
+        },
+        "openAnswers": {
+            "aroundResult": "I'll let you know when it's settled, around {{time}}.",
+            "aroundStatus": "I'll check again around {{time}}.",
+            "reply": "Not yet. I'll let you know when {{who}} replies.",
+            "settled": "I'll let you know when it's settled.",
+            "brief": "I'll put it in tomorrow's brief.",
+            "sawIt": "You saw it at {{time}}.",
+            "gaveUpWithWho": "{{who}} hasn't replied in a week, so I've stopped checking.",
+            "gaveUp": "I've stopped checking.",
+            "change": "Change",
+            "noNeed": "No need",
+            "aroundChoice": "Around {{time}}",
+            "settledChoice": "Only when it's settled",
+            "briefChoice": "In tomorrow's brief",
+            "ask": "Want me to let you know when it's settled?",
+            "letMeKnow": "Let me know",
+            "askSend": "Let me know when it's settled.",
+            "error": "Could not update this. Try again.",
+            "youAsked": "You asked · {{time}}",
+            "fromSource": "From {{source}} · {{time}}",
+            "notForMe": "Not for me",
+            "learnedTopic": "Got it. I'll stop offering these on {{topic}}.",
+            "learned": "Got it. I'll stop offering these.",
+            "undo": "Undo"
+        },
+        "answered": "You answered: {{answer}}",
+        "change": "Change",
+        "taskClosed": "That window is closed, so here's the thread.",
+        "replyDraft": {
+            "label": "Draft",
+            "send": "Send",
+            "edit": "Edit",
+            "close": "Close"
+        }
+    },
+    "setup": {
+        "kicker": "Getting set up",
+        "progress": "{{done}} of {{total}}",
+        "grant": "Turn on {{name}}",
+        "notNow": "Not now",
+        "requesting": "Waiting for macOS",
+        "openSettings": "Open System Settings",
+        "waitingSettings": "Turn on {{name}} in System Settings, then come back here. I'll notice on my own.",
+        "name": {
+            "title": "What should I call you?",
+            "body": "I'll use it when I talk to you. You can change it any time from your name at the bottom left.",
+            "placeholder": "Your name",
+            "save": "Save",
+            "saveError": "Your name was not saved. Try again.",
+            "alreadyStored": "I already have you down as {{name}}. Which should I use?",
+            "useTyped": "Call me {{name}}",
+            "keepStored": "Keep {{name}}"
+        },
+        "assistant": {
+            "title": "Pick the assistant I think with",
+            "body": "I use an AI you already have, like Claude or Codex, to read, write and plan. Without one I can watch and remember, but I can't answer you.",
+            "openSettings": "Choose in Settings",
+            "waiting": "Once your assistant is ready, I'll pick it up here."
+        },
+        "permissions": {
+            "screen_recording": {
+                "title": "Let me see your screen",
+                "body": "So I can follow the work in front of you and pick up where you left off."
+            },
+            "accessibility": {
+                "title": "Let me know which app you're in",
+                "body": "So I know which window you're working in and can click through apps on your behalf."
+            },
+            "microphone": {
+                "title": "Let me hear your meetings",
+                "body": "So I can take notes during calls and listen when you talk to me."
+            },
+            "system_audio": {
+                "title": "Let me hear the other side of calls",
+                "body": "With Record meetings automatically on, meeting notes include what everyone said, not just you."
+            },
+            "calendars": {
+                "title": "Let me see your calendar",
+                "body": "So I can prepare you before meetings and plan around your day."
+            },
+            "notifications": {
+                "title": "Let me tap you on the shoulder",
+                "body": "So I can let you know when work is finished or waiting on you."
+            },
+            "contacts": {
+                "title": "Let me know who's who",
+                "body": "So I can put names to the people in your meetings and messages."
+            }
+        },
+        "names": {
+            "screen_recording": "Screen Recording",
+            "accessibility": "Accessibility",
+            "microphone": "Microphone",
+            "system_audio": "System Audio Recording",
+            "calendars": "Calendars",
+            "notifications": "Notifications",
+            "contacts": "Contacts"
+        },
+        "record": {
+            "granted": "{{name}} is on",
+            "notNow": "{{name}}: not now",
+            "assistantReady": "Assistant ready",
+            "assistantNotNow": "Assistant: not now",
+            "done": "Setup finished",
+            "name": "I'll call you {{name}}",
+            "nameNotNow": "Your name: not now"
+        },
+        "tryAgain": "Try again"
+    },
+    "permissionQuestion": {
+        "planRejected": "Plan rejected.",
+        "answered": "Answered: {{answer}}",
+        "title": "Question from agent",
+        "other": "Other",
+        "skip": "Not now",
+        "placeholder": "Type your answer...",
+        "send": "Send answer"
+    },
+    "sendFailure": "Send not confirmed.",
+    "quickChat": {
+        "brand": "Isoform",
+        "title": "Quick Chat",
+        "openInApp": "Open in Isoform",
+        "placeholder": "Message Isoform",
+        "followupPlaceholder": "Refine or confirm…",
+        "detected": "{{app}} – Detected",
+        "voiceInput": "Voice input",
+        "send": "Send",
+        "stopRecording": "Click to stop recording",
+        "runTool": "Run {{tool}}?",
+        "permissionRequested": "The agent is requesting permission.",
+        "build": "Build",
+        "resultReceived": "Result received.",
+        "compactionFailed": "Context compaction failed",
+        "compactionFailedDetail": "Context compaction failed: {{error}}",
+        "compacting": "Compacting context…",
+        "compacted": "Context compacted.",
+        "connectionLost": "Connection lost.",
+        "historyUnavailable": "Response history couldn't be loaded.",
+        "streamError": "Stream error",
+        "tool": "tool"
+    },
+    "stream": {
+        "openProject": "Open a project to get started.",
+        "newMessages": "New messages",
+        "newReplies_one": "{{count}} new reply",
+        "newReplies_other": "{{count}} new replies",
+        "newRepliesShort": "{{count}}",
+        "jumpToNewest": "Jump to newest replies"
+    },
+    "firstRead": {
+        "label": "What I see so far",
+        "yes": "That's me",
+        "no": "Not quite",
+        "confirmed": "You said that's you",
+        "undo": "Undo",
+        "portrait": "Your portrait in About you starts from this.",
+        "off": "What's off?",
+        "send": "Send",
+        "failed": "Couldn't update this first read. Try again.",
+        "helps": "How I'll help",
+        "upNext": "Up next",
+        "offerOne": "One thing I can take off your plate",
+        "offers": "{{count}} things I can take off your plate",
+        "offerDetail": "In Tasks › Up next, each with what I saw. Nothing starts until you say Do it.",
+        "see": "See them"
+    },
+    "projectThread": {
+        "folder": "Folder {{path}}",
+        "changedFiles": "Changed files",
+        "moreFiles": "+{{count}} more",
+        "steps": "Steps",
+        "command": {
+            "running": "Running · {{command}} · {{elapsed}}",
+            "finished": "Finished · {{command}}",
+            "stopped": "Stopped · {{command}}",
+            "failed": "Exited with {{code}} · {{command}}",
+            "unreadable": "Couldn't read this thread's running steps."
+        }
+    },
+    "failure": {
+        "loadChat": "Couldn't load your chat.",
+        "loadTopic": "Couldn't load this topic.",
+        "loadSpotlight": "Couldn't load this chat.",
+        "streamStopped": "The answer stopped.",
+        "save": "Didn't save.",
+        "answer": "Your answer didn't go through.",
+        "still": "Still didn't work.",
+        "start": "Couldn't start it.",
+        "finder": "Couldn't show {{file}} in Finder.",
+        "openFile": "Couldn't open {{file}}.",
+        "openIt": "Couldn't open it.",
+        "done": "Couldn't add this to Done.",
+        "brief": "Couldn't play your brief.",
+        "calendar": "Couldn't open Calendar.",
+        "systemSettings": "Couldn't open System Settings.",
+        "systemSettingsPath": "System Settings › Privacy & Security › {{name}}",
+        "check": "Couldn't check this.",
+        "confirmSent": "Couldn't confirm it sent"
+    }
+}

@@ -1,0 +1,155 @@
+{
+  "status": "superseded; earlier brief chunking, do not use for recommendations",
+  "run": {
+    "status": "complete",
+    "model": "kokoro11",
+    "host": "macOS-26.2-arm64-arm-64bit",
+    "load_s": 0.9890712089982117,
+    "samples": [
+      {
+        "path": "tts-samples/kokoro11-en-0-1.wav",
+        "lang": "en",
+        "voice": "0",
+        "prompt_index": 0,
+        "reference": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work.",
+        "sample_rate": 24000,
+        "duration_s": 4.339333333333333,
+        "synthesis_s": 2.851531417007209,
+        "rtf": 0.6571358312353377,
+        "cpu_percent": 155.7,
+        "rss_mb": 546.90625,
+        "sha256": "e271cf7f88861814a797ba4fccf5f53567fd3cdac1d828d88677caf3dc45c2b4"
+      },
+      {
+        "path": "tts-samples/kokoro11-en-0-2.wav",
+        "lang": "en",
+        "voice": "0",
+        "prompt_index": 1,
+        "reference": "The code review is ready. Please check the new API before merging the pull request.",
+        "sample_rate": 24000,
+        "duration_s": 4.631458333333334,
+        "synthesis_s": 2.973935749992961,
+        "rtf": 0.6421164859865148,
+        "cpu_percent": 154.7,
+        "rss_mb": 550.671875,
+        "sha256": "7d2e831cb6b0f3f1d6d0af140773c561a1076312a9d6756f0e2a0de0e5fd9600"
+      },
+      {
+        "path": "tts-samples/kokoro11-en-0-3.wav",
+        "lang": "en",
+        "voice": "0",
+        "prompt_index": 2,
+        "reference": "Take a short break, then send the project update when you are ready.",
+        "sample_rate": 24000,
+        "duration_s": 3.0070833333333336,
+        "synthesis_s": 1.7237635829951614,
+        "rtf": 0.5732343909087415,
+        "cpu_percent": 156.0,
+        "rss_mb": 551.15625,
+        "sha256": "f22315e1ef933661f53ca8d7e4c9ecf4588e479ad6b9de250266f5dec0bc649a"
+      },
+      {
+        "path": "tts-samples/kokoro11-en-1-1.wav",
+        "lang": "en",
+        "voice": "1",
+        "prompt_index": 0,
+        "reference": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work.",
+        "sample_rate": 24000,
+        "duration_s": 4.754583333333334,
+        "synthesis_s": 4.013970208005048,
+        "rtf": 0.84423174999668,
+        "cpu_percent": 138.2,
+        "rss_mb": 563.140625,
+        "sha256": "50e6c17bd396726d67bcfb5bb426e8e34d2c817a692958cc907d204bf972789d"
+      },
+      {
+        "path": "tts-samples/kokoro11-zh-3-1.wav",
+        "lang": "zh",
+        "voice": "3",
+        "prompt_index": 0,
+        "reference": "早上好。你的第一个会议九点开始，下午可以专心工作。",
+        "sample_rate": 24000,
+        "duration_s": 5.382333333333333,
+        "synthesis_s": 5.469275999988895,
+        "rtf": 1.0161533411758645,
+        "cpu_percent": 149.4,
+        "rss_mb": 415.109375,
+        "sha256": "af5b2b9c2e1b097a06dcef39277295e5b37d8fe23150de8c10a3bc7d580a8512"
+      },
+      {
+        "path": "tts-samples/kokoro11-zh-3-2.wav",
+        "lang": "zh",
+        "voice": "3",
+        "prompt_index": 1,
+        "reference": "代码审查已经准备好了。合并之前，请检查新的接口。",
+        "sample_rate": 24000,
+        "duration_s": 5.54075,
+        "synthesis_s": 5.7580504170036875,
+        "rtf": 1.0392185926099693,
+        "cpu_percent": 148.1,
+        "rss_mb": 422.8125,
+        "sha256": "1253834d35ca814314ea10077c95b053d28ee88568469b1b5a6e8ce08027a79b"
+      },
+      {
+        "path": "tts-samples/kokoro11-zh-3-3.wav",
+        "lang": "zh",
+        "voice": "3",
+        "prompt_index": 2,
+        "reference": "先休息一会儿，准备好以后再发送项目进展。",
+        "sample_rate": 24000,
+        "duration_s": 4.29475,
+        "synthesis_s": 4.328545750002377,
+        "rtf": 1.0078690843477216,
+        "cpu_percent": 141.6,
+        "rss_mb": 426.078125,
+        "sha256": "7586be7acc11612233c76fc62ef2b7e45b0193da572aa58e0aba05770539006f"
+      },
+      {
+        "path": "tts-samples/kokoro11-zh-58-1.wav",
+        "lang": "zh",
+        "voice": "58",
+        "prompt_index": 0,
+        "reference": "早上好。你的第一个会议九点开始，下午可以专心工作。",
+        "sample_rate": 24000,
+        "duration_s": 5.593166666666667,
+        "synthesis_s": 5.558352333988296,
+        "rtf": 0.9937755595795398,
+        "cpu_percent": 145.6,
+        "rss_mb": 428.5625,
+        "sha256": "b209d028bfe828367b825df4f431453e2c3abecb4ba48193ea81c4cb4dbc1ef4"
+      }
+    ],
+    "briefs": [
+      {
+        "lang": "en",
+        "text": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then",
+        "word_count": 300,
+        "characters": 1684,
+        "duration_s": 82.29333333333334,
+        "synthesis_s": 94.21257129099104,
+        "rtf": 1.144838439213274,
+        "rss_mb": 563.796875
+      },
+      {
+        "lang": "zh",
+        "text": "早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。",
+        "word_count": null,
+        "characters": 552,
+        "duration_s": 119.62941666666667,
+        "synthesis_s": 87.35665070799587,
+        "rtf": 0.7302271727313101,
+        "rss_mb": 463.109375
+      }
+    ],
+    "voices": {
+      "en": "0",
+      "zh": "3"
+    },
+    "num_speakers": 103,
+    "warmup_s": {
+      "en": 3.257862500002375,
+      "zh": 5.427681041008327
+    },
+    "process_peak_rss_bytes": 591183872
+  }
+}

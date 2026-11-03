@@ -1,0 +1,106 @@
+/*
+ * Spotlight CSS — share main UI's full theme so the reused chat
+ * components (StreamCard, ProcessingBlock, MarkdownContent, Composer,
+ * etc.) render with the IDENTICAL color / font / animation tokens as
+ * the main program. Earlier the spotlight defined its own minimal
+ * @theme with different values (e.g. terracotta-tinted --color-panel-user
+ * vs main UI's #ececea gray) — that's why the user message bubble was
+ * invisible: same Tailwind class name, very different generated color.
+ *
+ * Importing main UI's CSS pulls in:
+ *   - @import "tailwindcss"
+ *   - @source "../index.html" + "./**\/*.{js,ts,jsx,tsx}" (main UI scan)
+ *   - the full @theme block (~200 tokens)
+ *   - all keyframes (rise-in, pulse-slow, etc)
+ *   - base resets, scrollbar styles
+ *   - the body { background: var(--color-background) } rule
+ *
+ * The body rule is the only thing that fights the spotlight's
+ * translucent overlay window. We override it below + add an explicit
+ * @source that covers main UI's src from the spotlight project root
+ * (the imported file's @source paths resolve relative to itself, which
+ * already covers main UI; this duplicate is defensive).
+ */
+@import "../../../frontend/src/index.css";
+
+@source "../../../frontend/src/**/*.{ts,tsx,html}";
+
+/*
+ * Body backgrounds:
+ *   - Windows: WebviewIsTransparent is false, so the WebView2 surface
+ *     itself paints opaque. Any pixel the .pill / .conv card doesn't
+ *     cover (the 1px sliver at the top of the viewport that DWM /
+ *     WS_THICKFRAME leaves, or the four rounded-corner cutouts)
+ *     exposes whatever body paints. Body transparent reveals
+ *     WebView2's default white — that's the "white edge" dark-mode
+ *     users see across the top of the pill. Painting body with
+ *     --spotlight-surface fills that gap so the surface reads as
+ *     seamless. App.tsx tags <html> with `platform-windows` so this
+ *     rule only fires on Windows.
+ *   - macOS: WindowIsTranslucent + WebviewIsTransparent, so body
+ *     must stay transparent — CSS border-radius on .pill / .conv
+ *     paints the only opaque pixels, and the corners outside the
+ *     card need to alpha-composite through to the OS-level vibrancy.
+ *     Filling body would defeat the rounded look.
+ * The `!important` overrides main UI's `body { background: var(--color-background) }`
+ * rule that the @import drags in.
+ */
+html,
+body,
+#root {
+    background: transparent !important;
+    overflow: hidden;
+}
+html.platform-windows,
+html.platform-windows body,
+html.platform-windows #root {
+    background: var(--spotlight-surface) !important;
+}
+
+/*
+ * Disable the global text-selection lock main UI applies on body —
+ * the spotlight is a chat surface, users want to copy AI replies.
+ * Inputs already opt back in via main UI's `input, textarea, ...`
+ * selector, but the chat content itself needs `auto`.
+ */
+body {
+    -webkit-user-select: auto;
+    user-select: auto;
+}
+
+/*
+ * Legacy spotlight token aliases.
+ *
+ * The pill-form UI (PillInput.tsx, DetectionChip.tsx) was authored
+ * before we adopted main UI's --color-* token names — it uses
+ * var(--bg) / var(--ink) / var(--border) / var(--accent) etc. inline.
+ * After importing main UI's index.css those variables are no longer
+ * defined, so PillInput falls back to its CSS fallback values (mostly
+ * `transparent`/empty), and the entire pill renders as a transparent
+ * strip on top of the Wails translucent backdrop — that's the "form 1
+ * became blurry sky" symptom.
+ *
+ * Re-aliasing them here keeps the pill working without rewriting it
+ * in Tailwind. New code should use the main UI tokens directly.
+ */
+:root {
+    --bg: var(--color-background);
+    --panel: var(--color-panel);
+    --border: var(--color-border);
+    --ink: var(--color-ink);
+    --ink-soft: var(--color-muted);
+    --muted: var(--color-muted);
+    --accent: var(--color-accent);
+    --accent-soft: var(--color-accent-light);
+    --info: var(--color-info);
+    --info-soft: var(--color-info-bg);
+    --send-bg: var(--color-solid-btn-bg);
+    --shadow: var(--shadow-card);
+    --radius-pill: 24px;
+    --radius-card: 14px;
+    --radius-chip: 999px;
+
+    /* Keep native and WebView surfaces on the shared panel token. */
+    --spotlight-surface: var(--color-panel);
+    --spotlight-chrome-icon: var(--color-icon-subtle);
+}

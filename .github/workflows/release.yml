@@ -1,0 +1,195 @@
+name: Desktop Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (X.Y.Z or X.Y.Z-beta.N)
+        type: string
+        required: true
+      channel:
+        description: Update channel
+        type: choice
+        options: [stable, beta]
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      channel: ${{ steps.version.outputs.channel }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_CHANNEL: ${{ inputs.channel }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then version="${GITHUB_REF_NAME#v}"; channel=stable
+          else version="$INPUT_VERSION"; channel="$INPUT_CHANNEL"; fi
+          base='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+          if [[ "$channel" == stable ]]; then [[ "$version" =~ ^${base}$ ]]
+          elif [[ "$channel" == beta ]]; then [[ "$version" =~ ^${base}-beta\.(0|[1-9][0-9]*)$ ]]
+          else exit 1; fi
+          printf 'version=%s\nchannel=%s\n' "$version" "$channel" >> "$GITHUB_OUTPUT"
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/desktop_release.py notes --output notes.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-release-notes
+          path: notes.txt
+
+  build:
+    needs: prepare
+    runs-on: macos-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: arm64
+            arch: arm64
+          - target: amd64
+            arch: x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wails-gui/go.mod
+          cache-dependency-path: |
+            wails-gui/go.sum
+            yansu-agent/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: wails-gui/frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: |
+            wails-gui/frontend/pnpm-lock.yaml
+            wails-gui/quick-chat-spotlight/frontend/pnpm-lock.yaml
+      - name: Install build tools
+        run: |
+          brew install create-dmg
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+          pnpm --dir wails-gui/frontend install --frozen-lockfile
+          pnpm --dir wails-gui/quick-chat-spotlight/frontend install --frozen-lockfile
+      - name: Prepare temporary signing and notary profile
+        env:
+          CERT_B64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          API_KEY_B64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          for name in CERT_B64 CERT_PASSWORD API_KEY_ID API_ISSUER_ID API_KEY_B64 APPLE_TEAM_ID; do
+            [[ -n "${!name}" ]] || { echo "::error::Missing required signing or notary secret: $name"; exit 1; }
+          done
+          [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "::error::Invalid Apple team ID"; exit 1; }
+          cert="$RUNNER_TEMP/developer-id.p12"
+          key="$RUNNER_TEMP/notary-key.p8"
+          keychain="$RUNNER_TEMP/isoform-release.keychain-db"
+          keychain_password=$(openssl rand -hex 32)
+          echo "::add-mask::$keychain_password"
+          printf '%s' "$CERT_B64" | base64 -D > "$cert"
+          printf '%s' "$API_KEY_B64" | base64 -D > "$key"
+          chmod 600 "$cert" "$key"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$cert" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          security default-keychain -d user -s "$keychain"
+          identity=$(security find-identity -v -p codesigning "$keychain" | grep -F "($APPLE_TEAM_ID)" | sed -n 's/.*"\(Developer ID Application:.*\)".*/\1/p' | head -1)
+          [[ -n "$identity" ]] || { echo '::error::Developer ID for the configured team missing'; exit 1; }
+          xcrun notarytool store-credentials isoform-ci --key "$key" --key-id "$API_KEY_ID" --issuer "$API_ISSUER_ID" --keychain "$keychain"
+          rm -f "$cert" "$key"
+          printf 'APPLE_SIGNING_IDENTITY=%s\nAPPLE_TEAM_ID=%s\nAPPLE_NOTARY_KEYCHAIN_PROFILE=isoform-ci\n' "$identity" "$APPLE_TEAM_ID" >> "$GITHUB_ENV"
+      - name: Build, sign, notarize and staple
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          TARGET: ${{ matrix.target }}
+          CGO_ENABLED: '1'
+          CC: clang
+          CXX: clang++
+        run: |
+          set -euo pipefail
+          ./wails-gui/scripts/build-wails.sh --platform "darwin/$TARGET" --version "$VERSION" --dmg 2>&1 | tee "$RUNNER_TEMP/build.log"
+      - name: Verify app, DMG, Apple logs and updater archive
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          app_id=$(sed -n 's/.*Isoform\.app: submitted, submission id \([0-9a-fA-F-]*\).*/\1/p' "$RUNNER_TEMP/build.log" | tail -1)
+          dmg_id=$(sed -n 's/.*DMG: submitted, submission id \([0-9a-fA-F-]*\).*/\1/p' "$RUNNER_TEMP/build.log" | tail -1)
+          [[ -n "$app_id" && -n "$dmg_id" ]]
+          ./scripts/release/verify-artifact.sh "wails-gui/build/bin/Isoform-$VERSION-darwin-$ARCH.dmg" "wails-gui/build/bin/Isoform-$VERSION-darwin-$ARCH.app.tar.gz" "$app_id" "$dmg_id" "$ARCH" isoform-ci "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos-${{ matrix.arch }}
+          if-no-files-found: error
+          path: |
+            wails-gui/build/bin/*.dmg
+            wails-gui/build/bin/*.app.tar.gz
+      - name: Remove temporary signing material
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/developer-id.p12" "$RUNNER_TEMP/notary-key.p8"
+          if [[ -f "$RUNNER_TEMP/isoform-release.keychain-db" ]]; then
+            security delete-keychain "$RUNNER_TEMP/isoform-release.keychain-db"
+          fi
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-macos-*
+          path: artifacts
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-release-notes
+          path: artifacts
+      - name: Generate feed and checksums
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+        run: python3 .github/scripts/desktop_release.py manifest --version "$VERSION" --channel "$CHANNEL" --repository yubozhao/isoform-releases --notes artifacts/notes.txt --artifacts artifacts
+      - name: Publish and smoke-check feed and archives
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+        run: |
+          [[ -n "$GH_TOKEN" ]] || { echo '::error::RELEASES_REPO_TOKEN is missing'; exit 1; }
+          ./scripts/release/publish-artifacts.sh "$VERSION" "$CHANNEL" artifacts

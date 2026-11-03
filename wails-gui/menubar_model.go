@@ -1,0 +1,438 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"math"
+	"strings"
+	"sync/atomic"
+	"time"
+)
+
+const menuBarMaxWaiting = 3
+
+// The badge is a local presentation receipt, never a resolution of the work.
+// Retain ids, not a count: replacing one waiting item must light the dot again.
+type menuBarAttention struct{ seen map[string]bool }
+
+// Match the render-tier account boundary: an enabled identity disappearing
+// resets private presentation state; changing only its quota does not.
+type menuBarAccountIdentity struct{ provider, kind, name string }
+type menuBarAccountPrivacy struct {
+	signedIn map[menuBarAccountIdentity]bool
+}
+
+func (s *menuBarAccountPrivacy) update(accounts []ModelAccount) bool {
+	current := make(map[menuBarAccountIdentity]bool)
+	for _, account := range accounts {
+		if account.On {
+			current[menuBarAccountIdentity{account.Provider, account.Kind, account.Name}] = true
+		}
+	}
+	withdrawn := s.signedIn == nil
+	for id := range s.signedIn {
+		withdrawn = withdrawn || !current[id]
+	}
+	s.signedIn = current
+	return withdrawn
+}
+
+type menuBarIconState struct {
+	Opacity   float64 `json:"opacity"`
+	Dot       bool    `json:"dot"`
+	Highlight bool    `json:"highlight"`
+}
+
+func (s *menuBarAttention) icon(paused, open bool, ids []string) menuBarIconState {
+	next := make(map[string]bool, len(ids))
+	state := menuBarIconState{Opacity: 1, Highlight: open}
+	if paused {
+		state.Opacity = .45
+	}
+	for _, id := range ids {
+		next[id] = open || s.seen[id]
+		state.Dot = state.Dot || !next[id]
+	}
+	s.seen = next
+	return state
+}
+
+type menuBarMenuItem struct {
+	ID        string            `json:"id"`
+	Title     string            `json:"title"`
+	Key       string            `json:"key,omitempty"`
+	Modifiers []string          `json:"modifiers,omitempty"`
+	Children  []menuBarMenuItem `json:"children,omitempty"`
+	Separator bool              `json:"separator,omitempty"`
+}
+
+// English is the source of truth for native chrome.
+// The 1.0 popover copy (Isoform design, 2026-10-27,
+// docs/handoff-2026-10-26/menu-bar-popover-1.0): existing app strings are
+// reused word for word.
+var menuBarCopy = map[string]map[string]string{
+	"en": {
+		"open": "Open Isoform", "make": "Make my brief now", "pause15": "Pause for 15 minutes", "resumeMenu": "Resume observing",
+		"settingsMenu": "Settings…", "quit": "Quit Isoform",
+		"observing": "Observing", "paused": "Observing paused", "off": "Observing is off", "starting": "Starting…",
+		"pause": "Pause 15 min", "resume": "Resume", "turnOn": "Turn on",
+		"morning": "Hear your morning brief", "evening": "Hear your evening brief", "brief": "Hear your brief", "week": "Hear your week",
+		"readMorning": "Read your morning brief", "readEvening": "Read your evening brief", "read": "Read your brief",
+		"noRecording": "{time} · no recording", "none": "No brief yet today", "next": "Next brief tomorrow at {time}", "nextToday": "Next brief today at {time}",
+		"making": "Making your brief…", "makingMeta": "About a minute", "playing": "{elapsed} of {length}",
+		"waiting": "Waiting on you", "seeAll": "See all {n} in Chat", "empty": "Nothing is waiting on you.",
+		"failed": "Could not load what is waiting on you. Your chat still has everything.",
+		"update": "Isoform {version} is ready", "restart": "Restart",
+		"models":   "Downloading models · {percent}%",
+		"settings": "Settings", "footerQuit": "Quit", "onThisMac": "On this computer", "openShortcut": "⌘⇧I",
+		"label": "Isoform, {state}, {n} waiting on you", "labelNone": "Isoform, {state}",
+		"actionFailed": "Could not complete that action. Open Isoform to try again.",
+	},
+	"zh-CN": {
+		"open": "打开 Isoform", "make": "立即生成简报", "pause15": "暂停 15 分钟", "resumeMenu": "恢复观察",
+		"settingsMenu": "设置…", "quit": "退出 Isoform",
+		"observing": "观察中", "paused": "观察已暂停", "off": "观察已关闭", "starting": "正在启动…",
+		"pause": "暂停 15 分钟", "resume": "恢复", "turnOn": "打开",
+		"morning": "收听早间简报", "evening": "收听晚间简报", "brief": "收听简报", "week": "收听你的一周",
+		"readMorning": "阅读早间简报", "readEvening": "阅读晚间简报", "read": "阅读简报",
+		"noRecording": "{time} · 没有录音", "none": "今天还没有简报", "next": "下一份在明天{time}", "nextToday": "下一份在今天{time}",
+		"making": "正在生成简报…", "makingMeta": "大约一分钟", "playing": "{elapsed} / {length}",
+		"waiting": "等你处理", "seeAll": "在聊天中查看全部 {n} 项", "empty": "没有等你处理的事。",
+		"failed": "没能读取等你处理的事。聊天里的内容都还在。",
+		"update": "Isoform {version} 已就绪", "restart": "重新启动",
+		"models":   "正在下载模型 · {percent}%",
+		"settings": "设置", "footerQuit": "退出", "onThisMac": "在这台电脑上", "openShortcut": "⌘⇧I",
+		"label": "Isoform，{state}，{n} 项等你处理", "labelNone": "Isoform，{state}",
+		"actionFailed": "无法完成操作。请打开 Isoform 重试。",
+	},
+}
+
+func menuBarWords(lang string) map[string]string { return menuBarCopy[normalizeUILanguage(lang)] }
+
+func menuBarFill(template string, values ...string) string {
+	for i := 0; i+1 < len(values); i += 2 {
+		template = strings.ReplaceAll(template, "{"+values[i]+"}", values[i+1])
+	}
+	return template
+}
+
+// menuBarMenu is the short native menu for right-click and Control-click.
+// The observation-state line, the Library submenu and Pause for 1 hour left
+// it in 1.0; the global privacy shortcut (Control-Option-Command-E) is its
+// own event tap and keeps working.
+func menuBarMenu(lang string, paused bool) []menuBarMenuItem {
+	w := menuBarWords(lang)
+	pause := menuBarMenuItem{ID: "pause15", Title: w["pause15"]}
+	if paused {
+		pause = menuBarMenuItem{ID: "resume", Title: w["resumeMenu"]}
+	}
+	sep := menuBarMenuItem{Separator: true}
+	return []menuBarMenuItem{
+		{ID: "open", Title: w["open"], Key: "i", Modifiers: []string{"command", "shift"}},
+		{ID: "make", Title: w["make"]}, sep,
+		pause, sep,
+		{ID: "settings", Title: w["settingsMenu"], Key: ",", Modifiers: []string{"command"}},
+		{ID: "quit", Title: w["quit"], Key: "q", Modifiers: []string{"command"}},
+	}
+}
+
+type menuBarWaitingItem struct {
+	ID        string `json:"id"`
+	SessionID string `json:"sessionId"`
+	Title     string `json:"title"`
+	Detail    string `json:"detail"`
+}
+
+// menuBarBrief is the popover's brief row: ready (with a recording), read
+// (no recording; opens Today), none (nothing yet today) or making.
+type menuBarBrief struct {
+	Kind    string  `json:"kind"`
+	ID      string  `json:"id,omitempty"`
+	Title   string  `json:"title"`
+	Meta    string  `json:"meta"`
+	Seconds float64 `json:"seconds,omitempty"`
+}
+
+type menuBarView struct {
+	Language string            `json:"language"`
+	Theme    string            `json:"theme"`
+	Words    map[string]string `json:"words"`
+	// Status is observing, paused, off or starting; State is its words.
+	Status     string               `json:"status"`
+	State      string               `json:"state"`
+	Paused     bool                 `json:"paused"`
+	Waiting    int                  `json:"waiting"`
+	Items      []menuBarWaitingItem `json:"items"`
+	WaitingIDs []string             `json:"-"`
+	Brief      menuBarBrief         `json:"brief"`
+	// Update is the downloaded update's version, shown only then.
+	Update string `json:"update,omitempty"`
+	// Models is "Downloading models · 64%" while the local models setup
+	// confirmed are still downloading (setup v2.2.0 §2); empty otherwise.
+	Models string            `json:"models,omitempty"`
+	Menu   []menuBarMenuItem `json:"menu"`
+	Icon   menuBarIconState  `json:"icon"`
+	// Label is the icon's VoiceOver label: the state and the count.
+	Label string `json:"label"`
+	Error string `json:"error,omitempty"`
+	// Loading marks the first second after launch, before the first read:
+	// "Starting…" and placeholders the size of real rows, never "Loading…"
+	// or a claim such as "Nothing is waiting on you".
+	Loading bool `json:"loading,omitempty"`
+	// WaitingPending shows placeholders for what is waiting when a read
+	// failed after the last list was withdrawn (a privacy change): no
+	// error, since an earlier read worked, and no stale rows.
+	WaitingPending bool `json:"waitingPending,omitempty"`
+}
+
+// menuBarObservationStarted is set once launch has started observing (the
+// activity_start task), whether or not observing is on.
+var menuBarObservationStarted atomic.Bool
+
+// menuBarWaitingMemory is the last waiting list a read produced, in memory
+// only (titles are personal content and are never written to disk). A
+// refresh that is slow or fails keeps showing it; the error is only for a
+// launch where no read has worked yet.
+//
+// It also decides when the list is read at all. The five-second status tick
+// refreshes the header and the brief row; the waiting list is read only
+// after something that can change it (a main-chat write, the popover
+// opening, a privacy withdraw, another language), after a failed read once
+// menuBarWaitingRetry has passed, and otherwise once menuBarWaitingMaxAge
+// old, since cards can expire on their own.
+type menuBarWaitingMemory struct {
+	succeeded bool
+	held      bool
+	dirty     bool
+	language  string
+	waiting   int
+	ids       []string
+	items     []menuBarWaitingItem
+	readAt    time.Time
+	retryAt   time.Time
+}
+
+const (
+	menuBarWaitingMaxAge = 15 * time.Minute
+	menuBarWaitingRetry  = 30 * time.Second
+)
+
+// begin says whether this refresh reads the waiting list, and takes the
+// change it reads: one that lands during the read marks it again.
+func (m *menuBarWaitingMemory) begin(now time.Time, language string) bool {
+	if now.Before(m.retryAt) {
+		return false
+	}
+	if m.held && !m.dirty && m.language == language && now.Sub(m.readAt) < menuBarWaitingMaxAge {
+		return false
+	}
+	m.dirty = false
+	return true
+}
+
+// changed marks the held list as out of date; the next refresh reads it.
+func (m *menuBarWaitingMemory) changed() { m.dirty = true }
+
+// settle records a good read, or puts the held list into a view that did
+// not read one (read false) or whose read failed.
+func (m *menuBarWaitingMemory) settle(view *menuBarView, read bool, err error, now time.Time) {
+	if read && err == nil {
+		m.succeeded, m.held, m.language, m.waiting = true, true, view.Language, view.Waiting
+		m.ids = append([]string(nil), view.WaitingIDs...)
+		m.items = append([]menuBarWaitingItem(nil), view.Items...)
+		m.readAt, m.retryAt = now, time.Time{}
+		return
+	}
+	if read {
+		m.dirty, m.retryAt = true, now.Add(menuBarWaitingRetry)
+	}
+	view.Error, view.WaitingPending = "", false
+	view.Waiting, view.WaitingIDs, view.Items = 0, nil, []menuBarWaitingItem{}
+	switch {
+	case m.held && m.language == view.Language:
+		view.Waiting = m.waiting
+		view.WaitingIDs = append([]string(nil), m.ids...)
+		view.Items = append([]menuBarWaitingItem(nil), m.items...)
+	case m.succeeded:
+		view.WaitingPending = true
+	default:
+		view.Error = view.Words["failed"]
+	}
+	view.Label = menuBarLabel(view.Words, view.State, view.Waiting)
+}
+
+// withdraw drops the held list after a privacy or source change; the next
+// good read fills it again.
+func (m *menuBarWaitingMemory) withdraw() {
+	m.held, m.waiting, m.ids, m.items = false, 0, nil, nil
+}
+
+func menuBarDuration(seconds float64) string {
+	if seconds <= 0 || math.IsNaN(seconds) || math.IsInf(seconds, 0) {
+		return ""
+	}
+	total := int(math.Round(seconds))
+	return fmt.Sprintf("%d:%02d", total/60, total%60)
+}
+func menuBarLine(s string) string { return strings.Join(strings.Fields(s), " ") }
+func menuBarWaitingItems(page MainChatWaitingPage, lang string) []menuBarWaitingItem {
+	items := []menuBarWaitingItem{}
+	for i := len(page.Items) - 1; i >= 0 && len(items) < menuBarMaxWaiting; i-- {
+		row := page.Items[i]
+		var card mainChatProactive
+		if json.Unmarshal([]byte(row.ToolInput), &card) != nil || mainChatProactiveRowClass(card, time.Now()) != MainChatRowWaiting {
+			continue
+		}
+		title, detail := card.Headline, card.Body
+		if copy, ok := card.Localized[normalizeUILanguage(lang)]; ok {
+			title, detail = copy.Headline, copy.Body
+		}
+		items = append(items, menuBarWaitingItem{ID: row.ID, SessionID: page.SessionID, Title: menuBarLine(title), Detail: menuBarLine(detail)})
+	}
+	return items
+}
+
+func menuBarLabel(w map[string]string, state string, waiting int) string {
+	if waiting == 0 {
+		return menuBarFill(w["labelNone"], "state", state)
+	}
+	return menuBarFill(w["label"], "state", state, "n", fmt.Sprint(waiting))
+}
+
+// menuBarBriefRow picks the brief row's state from the newest brief, whether
+// one is being made, and the next scheduled slot.
+func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, hasLatest, building bool, nextRunAt string, now time.Time) menuBarBrief {
+	if building {
+		return menuBarBrief{Kind: "making", Title: w["making"], Meta: w["makingMeta"]}
+	}
+	today := now.Local().Format("2006-01-02")
+	// The current brief, whatever its date: it stays until the next arrives.
+	if hasLatest {
+		// The kind the title names (design section 1): a brief someone asked
+		// for is "Brief", whatever its hour.
+		kind := mobileBriefPackageKind(latest)
+		at := observationMenuClock(mobileBriefAsOfTime(latest).Local(), lang)
+		// Play only where the words are too: a recording never plays alone.
+		if latest.Audio != nil && latest.Audio.Bytes > 0 && latest.Audio.Status == mobileBriefAudioStatusOK && len(latest.Narrative) > 0 {
+			title := w["brief"]
+			if kind == mobileBriefKindWeek || kind == mobileBriefSlotMorning || kind == mobileBriefSlotEvening {
+				title = w[kind]
+			}
+			meta := at
+			if length := menuBarDuration(latest.Audio.DurationSeconds); length != "" {
+				meta += " · " + length
+			}
+			return menuBarBrief{Kind: "ready", ID: latest.BriefID, Title: title, Meta: meta, Seconds: latest.Audio.DurationSeconds}
+		}
+		title := w["read"]
+		switch kind {
+		case mobileBriefSlotMorning:
+			title = w["readMorning"]
+		case mobileBriefSlotEvening:
+			title = w["readEvening"]
+		}
+		return menuBarBrief{Kind: "read", ID: latest.BriefID, Title: title, Meta: menuBarFill(w["noRecording"], "time", at)}
+	}
+	row := menuBarBrief{Kind: "none", Title: w["none"]}
+	if next, err := time.Parse(time.RFC3339, nextRunAt); err == nil {
+		next = next.Local()
+		key := "next"
+		if next.Format("2006-01-02") == today {
+			key = "nextToday"
+		}
+		row.Meta = menuBarFill(w[key], "time", observationMenuClock(next, lang))
+	}
+	return row
+}
+
+// Reuse the existing read projections, including current source/privacy gates.
+// No new queue, stored copy of personal content, or inferred authority. This
+// runs in the background refresh only; a click never waits on it.
+func (a *App) menuBarView(lang string, readWaiting bool) (perfValue menuBarView, perfErr error) {
+	if readWaiting {
+		// Only refreshes that read the waiting list are logged; the
+		// five-second status tick is not.
+		defer logPageBinding("menuBarView", time.Now(), &perfValue)
+	}
+	w := menuBarWords(lang)
+	doing := a.GetDoingNow()
+	paused := doing.Kind == doingNowPaused
+	observing := a.isActivityMonitorRunning() || a.backgroundListeningRunningNow()
+	view := menuBarView{Language: lang, Theme: currentThemePreference(), Words: w, Paused: paused, Items: []menuBarWaitingItem{}}
+	switch {
+	case paused:
+		view.Status, view.State = "paused", observingMenuText(doing, observing, lang)
+	case observing:
+		view.Status, view.State = "observing", w["observing"]
+	case !menuBarObservationStarted.Load():
+		// Launch starts observing a little after the window: until then
+		// the header says so instead of "Observing is off".
+		view.Status, view.State = "starting", w["starting"]
+	default:
+		view.Status, view.State = "off", w["off"]
+	}
+	view.Menu = menuBarMenu(lang, paused)
+	view.Label = menuBarLabel(w, view.State, 0)
+	if status := a.GetUpdateStatus(); status.Status == "update-downloaded" && status.Version != "" {
+		view.Update = status.Version
+	}
+	view.Models = a.menuBarModels(w)
+	// The launch preload can run before startup starts the brief service.
+	if svc := a.ensureMobileBriefService(); svc != nil {
+		latest, ok := svc.LatestMobileBrief()
+		building := false
+		if b, can := svc.(mobileBriefBuilding); can {
+			building = b.Building()
+		}
+		view.Brief = menuBarBriefRow(w, lang, latest, ok, building, svc.Health().NextRunAt, time.Now())
+	} else {
+		view.Brief = menuBarBrief{Kind: "none", Title: w["none"]}
+	}
+	if !readWaiting {
+		return view, nil
+	}
+	// The in-memory waiting state (count and newest cards, kept by
+	// main-chat writes, expiry and privacy withdrawals) once it is ready;
+	// the slow reads only before its first compute.
+	if state := a.GetMainChatWaiting(); state.Ready {
+		view.Waiting = state.Count
+		view.Items = menuBarWaitingItems(MainChatWaitingPage{SessionID: state.SessionID, Items: state.Items}, lang)
+		view.WaitingIDs = make([]string, 0, len(state.Items))
+		for _, item := range state.Items {
+			view.WaitingIDs = append(view.WaitingIDs, item.ID)
+		}
+		view.Label = menuBarLabel(w, view.State, view.Waiting)
+		return view, nil
+	}
+	overview, err := a.GetMainChatOverview()
+	if err != nil {
+		return view, err
+	}
+	view.Waiting, view.WaitingIDs = overview.Waiting, overview.WaitingItemIDs
+	view.Label = menuBarLabel(w, view.State, view.Waiting)
+	page, err := a.ListMainChatWaitingItems("", 50)
+	if err != nil {
+		return view, err
+	}
+	view.Items = menuBarWaitingItems(page, lang)
+	// Overview bounds its id list. Include the displayed newest rows as well,
+	// so a replacement still lights the dot in a large waiting queue.
+	for _, item := range view.Items {
+		view.WaitingIDs = append(view.WaitingIDs, item.ID)
+	}
+	return view, nil
+}
+
+// menuBarModels is the popover's model download line, or "" when nothing
+// setup confirmed is downloading. Deferred jobs (Later) are not shown.
+func (a *App) menuBarModels(w map[string]string) string {
+	manager, err := a.setupModelManager()
+	if err != nil {
+		return ""
+	}
+	percent, active := manager.Progress()
+	if !active {
+		return ""
+	}
+	return menuBarFill(w["models"], "percent", fmt.Sprint(percent))
+}

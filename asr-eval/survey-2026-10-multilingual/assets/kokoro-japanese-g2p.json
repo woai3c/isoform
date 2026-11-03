@@ -1,0 +1,20 @@
+{
+  "id": "kokoro-japanese-g2p",
+  "package": "unidic-lite",
+  "version": "1.0.8",
+  "installed_size_bytes": 260468912,
+  "files": [
+    {
+      "path": "unidic-lite-1.0.8.tar.gz",
+      "size_bytes": 47356746,
+      "sha256": "db9d4572d9fdd4d00a97949d4b0741ec480ee05a7e7e2e32f547500dae27b245",
+      "url": "https://files.pythonhosted.org/packages/55/2b/8cf7514cb57d028abcef625afa847d60ff1ffbf0049c36b78faa7c35046f/unidic-lite-1.0.8.tar.gz"
+    }
+  ],
+  "licence": "MIT wrapper; UniDic dictionary distributed under selected BSD-3-Clause option",
+  "licence_evidence": [
+    "https://github.com/polm/unidic-lite/blob/master/LICENSE",
+    "https://github.com/polm/unidic-lite/blob/master/LICENSE.unidic"
+  ],
+  "verification": "Downloaded archive SHA-256; installed package/dictionary size measured in this environment."
+}

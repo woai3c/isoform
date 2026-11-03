@@ -1,0 +1,578 @@
+{
+  "models": {
+    "sensevoice": {
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "yue"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/FunAudioLLM/SenseVoiceSmall"
+      ],
+      "language_note": "Licence remains pending; five languages, not six."
+    },
+    "sensevoice_nano": {
+      "languages": [
+        "zh",
+        "en",
+        "ja"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512/blob/272c57b82523ada6fd87095e955f8e29100979ab/README.md"
+      ],
+      "language_note": "Original Nano checkpoint, distinct from the separate 31-language MLT checkpoint."
+    },
+    "funasr_nano": {
+      "languages": [
+        "zh",
+        "en",
+        "ja"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512/blob/272c57b82523ada6fd87095e955f8e29100979ab/README.md"
+      ],
+      "language_note": "Original Nano checkpoint, distinct from the separate 31-language MLT checkpoint."
+    },
+    "qwen06": {
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "hu",
+        "mk",
+        "ro"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/Qwen/Qwen3-ASR-1.7B/blob/7278e1e70fe206f11671096ffdd38061171dd6e5/README.md"
+      ],
+      "language_note": "30 languages plus 22 Chinese dialect/accent labels; dialect labels are not counted as 22 additional languages."
+    },
+    "qwen17": {
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "hu",
+        "mk",
+        "ro"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/Qwen/Qwen3-ASR-1.7B/blob/7278e1e70fe206f11671096ffdd38061171dd6e5/README.md"
+      ],
+      "language_note": "30 languages plus 22 Chinese dialect/accent labels; dialect labels are not counted as 22 additional languages."
+    },
+    "mimo": {
+      "languages": [
+        "zh",
+        "en",
+        "yue"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/XiaomiMiMo/MiMo-V2.5-ASR/blob/98641d537df521ac6df05f74090475694d9510b7/README.md"
+      ],
+      "language_note": "Publisher lists Mandarin, English and Cantonese; conversion tag only lists zh/en. Part-1 warmup deadline is not an accuracy result."
+    },
+    "mimo-audio-tokenizer": {
+      "languages": [],
+      "language_scope": "language-independent support",
+      "language_evidence": [
+        "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer"
+      ],
+      "language_note": "Audio codec, not an independently selectable recognizer."
+    },
+    "kokoro019": {
+      "languages": [
+        "en"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/hexgrad/Kokoro-82M"
+      ],
+      "language_note": "Pinned English-only v0.19 artifact."
+    },
+    "melo": {
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2"
+      ],
+      "language_note": "The pinned zh_en checkpoint has one speaker. Other Melo languages require different checkpoints; German is not in the upstream family."
+    },
+    "kokoro11": {
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh"
+      ],
+      "language_note": "Pinned v1.1 Chinese/English artifact; do not infer v1.0 voice coverage."
+    },
+    "kokoro_mlx": {
+      "languages": [
+        "en",
+        "es",
+        "fr",
+        "hi",
+        "it",
+        "ja",
+        "pt",
+        "zh"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/hexgrad/Kokoro-82M"
+      ],
+      "language_note": "Eight languages, nine locale codes (US/UK English); no German. The conversion card en-only tag is incomplete; runtime and included voice packs establish the evaluated paths."
+    },
+    "ming_tts": {
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/inclusionAI/Ming-3.0-tts-0.5B"
+      ],
+      "language_note": "Multilingual prompt required beyond Chinese/English. Built-in English presets are reused across languages in this pilot."
+    },
+    "parakeet-v2": {
+      "languages": [
+        "en"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2"
+      ],
+      "language_note": "English only; v3 is a different checkpoint."
+    },
+    "whisper-turbo": {
+      "languages": [
+        "en",
+        "zh",
+        "de",
+        "es",
+        "ru",
+        "ko",
+        "fr",
+        "ja",
+        "pt",
+        "tr",
+        "pl",
+        "ca",
+        "nl",
+        "ar",
+        "sv",
+        "it",
+        "id",
+        "hi",
+        "fi",
+        "vi",
+        "he",
+        "uk",
+        "el",
+        "ms",
+        "cs",
+        "ro",
+        "da",
+        "hu",
+        "ta",
+        "no",
+        "th",
+        "ur",
+        "hr",
+        "bg",
+        "lt",
+        "la",
+        "mi",
+        "ml",
+        "cy",
+        "sk",
+        "te",
+        "fa",
+        "lv",
+        "bn",
+        "sr",
+        "az",
+        "sl",
+        "kn",
+        "et",
+        "mk",
+        "br",
+        "eu",
+        "is",
+        "hy",
+        "ne",
+        "mn",
+        "bs",
+        "kk",
+        "sq",
+        "sw",
+        "gl",
+        "mr",
+        "pa",
+        "si",
+        "km",
+        "sn",
+        "yo",
+        "so",
+        "af",
+        "oc",
+        "ka",
+        "be",
+        "tg",
+        "sd",
+        "gu",
+        "am",
+        "yi",
+        "lo",
+        "uz",
+        "fo",
+        "ht",
+        "ps",
+        "tk",
+        "nn",
+        "mt",
+        "sa",
+        "lb",
+        "my",
+        "bo",
+        "tl",
+        "mg",
+        "as",
+        "tt",
+        "haw",
+        "ln",
+        "ha",
+        "ba",
+        "jw",
+        "su",
+        "yue"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://github.com/openai/whisper/blob/main/whisper/tokenizer.py"
+      ],
+      "language_note": "100 language tokens in large-v3/turbo, including Cantonese; language-token presence is not an accuracy guarantee."
+    },
+    "kokoro-english-g2p": {
+      "languages": [
+        "en"
+      ],
+      "language_scope": "support asset",
+      "language_evidence": [
+        "https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.8.0"
+      ],
+      "language_note": "English pronunciation support, not a TTS voice."
+    },
+    "apple-vision": {
+      "languages": [
+        "en-US",
+        "fr-FR",
+        "it-IT",
+        "de-DE",
+        "es-ES",
+        "pt-BR",
+        "zh-Hans",
+        "zh-Hant",
+        "yue-Hans",
+        "yue-Hant",
+        "ko-KR",
+        "ja-JP",
+        "ru-RU",
+        "uk-UA",
+        "th-TH",
+        "vi-VT",
+        "ar-SA",
+        "ars-SA",
+        "tr-TR",
+        "id-ID",
+        "cs-CZ",
+        "da-DK",
+        "nl-NL",
+        "no-NO",
+        "nn-NO",
+        "nb-NO",
+        "ms-MY",
+        "pl-PL",
+        "ro-RO",
+        "sv-SE"
+      ],
+      "language_scope": "system API reported on this host",
+      "language_evidence": [
+        "https://developer.apple.com/documentation/vision/vnrecognizetextrequest/supportedrecognitionlanguages()"
+      ],
+      "language_note": "Query supportedRecognitionLanguages at runtime. Part-2 automatic detection fixes the CJK configuration failure; the app is unchanged by this evaluation."
+    },
+    "apple-documents": {
+      "languages": [
+        "en",
+        "fr",
+        "it",
+        "de",
+        "es",
+        "pt",
+        "zh",
+        "zh-TW",
+        "yue-CN",
+        "yue",
+        "ko",
+        "ja",
+        "ru",
+        "uk",
+        "th",
+        "vi-VT",
+        "ar-SA",
+        "ars",
+        "tr",
+        "id",
+        "cs",
+        "da",
+        "nl",
+        "no",
+        "nn",
+        "nb",
+        "ms",
+        "pl",
+        "ro",
+        "sv"
+      ],
+      "language_scope": "system API reported on this host",
+      "language_evidence": [
+        "https://developer.apple.com/documentation/vision/recognizedocumentsrequest"
+      ],
+      "language_note": "Queried separately from VNRecognizeTextRequest on macOS 26.2. Accuracy beyond English/Chinese was not measured for this request type."
+    },
+    "ppocr6": {
+      "languages": [
+        "zh-Hans",
+        "zh-Hant",
+        "en",
+        "fr",
+        "de",
+        "it",
+        "es",
+        "pt",
+        "nl",
+        "pl",
+        "ro",
+        "cs",
+        "sv",
+        "no",
+        "da",
+        "fi",
+        "hu",
+        "tr",
+        "vi",
+        "id",
+        "ms",
+        "az",
+        "af",
+        "bs",
+        "hr",
+        "cy",
+        "et",
+        "ga",
+        "is",
+        "ku",
+        "lt",
+        "lv",
+        "mt",
+        "mi",
+        "oc",
+        "sk",
+        "sl",
+        "sq",
+        "sw",
+        "tl",
+        "uz",
+        "la",
+        "sr-Latn",
+        "ca",
+        "eu",
+        "gl",
+        "lb",
+        "rm",
+        "qu"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/version3.x/algorithm/PP-OCRv6/PP-OCRv6.en.md"
+      ],
+      "language_note": "Tiny tier excludes Japanese and Korean; the small/medium 50-language list must not be attached to this artifact."
+    },
+    "speaker-pack": {
+      "languages": [],
+      "language_scope": "language-independent support",
+      "language_evidence": [
+        "https://github.com/k2-fsa/sherpa-onnx"
+      ],
+      "language_note": "VAD/segmentation/embeddings do not transcribe languages. Multilingual diarization quality is not established by the part-1 two-speaker smoke test."
+    },
+    "after-call-none": {
+      "languages": [],
+      "language_scope": "disabled; inherits live transcript",
+      "language_evidence": [
+        "https://github.com/example/isoform/blob/aeeb952f/docs/setup/handoff.md"
+      ],
+      "language_note": "No second model; language capability comes from the selected live recognizer."
+    },
+    "granite-ctc": {
+      "languages": [
+        "en",
+        "fr",
+        "de",
+        "es",
+        "pt",
+        "it",
+        "ja"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/blob/1dd23f46f6d4e6eae2531982ba2e33220086dd97/README.md"
+      ],
+      "language_note": "October 21 multilingual weights; no Mandarin/Korean input ASR."
+    },
+    "chatterbox": {
+      "languages": [
+        "ar",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "fi",
+        "fr",
+        "he",
+        "hi",
+        "it",
+        "ja",
+        "ko",
+        "ms",
+        "nl",
+        "no",
+        "pl",
+        "pt",
+        "ru",
+        "sv",
+        "sw",
+        "tr",
+        "zh"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/blob/03565773edd72e949572557597af8063bb49a18a/README.md"
+      ],
+      "language_note": "23 languages; reference voices are prior-survey synthetic presets, not real-person clones."
+    },
+    "cosyvoice3": {
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "de",
+        "es",
+        "fr",
+        "it",
+        "ru"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md"
+      ],
+      "language_note": "Nine languages; requires a speaker reference and speech tokenizer, not only LLM weights."
+    },
+    "s3tokenizer": {
+      "languages": [],
+      "language_scope": "language-independent support",
+      "language_evidence": [
+        "https://huggingface.co/mlx-community/S3TokenizerV2/blob/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/README.md"
+      ],
+      "language_note": ""
+    },
+    "s3tokenizer3": {
+      "languages": [],
+      "language_scope": "language-independent support",
+      "language_evidence": [
+        "https://huggingface.co/mlx-community/S3TokenizerV3"
+      ],
+      "language_note": "Required speech codec for CosyVoice 3, separate from text tokenization."
+    },
+    "kokoro-japanese-g2p": {
+      "languages": [
+        "ja"
+      ],
+      "language_scope": "support asset",
+      "language_evidence": [
+        "https://pypi.org/project/unidic-lite/1.0.8/"
+      ],
+      "language_note": "UniDic-lite dictionary for the explicitly configured Misaki/Cutlet Japanese frontend; not a separate TTS model."
+    }
+  }
+}

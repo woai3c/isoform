@@ -1,0 +1,46 @@
+# TLS in front of the relay (docker-compose.yml). Caddy obtains and renews
+# the Let's Encrypt certificate for RELAY_DOMAIN, forwards HTTP and the
+# WebSocket upgrade on /v1/hub/ws to the relay on the shared loopback, and
+# replaces any X-Forwarded-For a client sent with the client's own address,
+# so the relay's per-address limits count the right peer.
+{
+	email {$CADDY_ACME_EMAIL}
+	servers {
+		# Bodies are capped by the relay (64 KiB JSON, 16 MiB attachments);
+		# Caddy only bounds the time a slow client may take.
+		timeouts {
+			read_header 10s
+			idle 2m
+		}
+	}
+}
+
+{$RELAY_DOMAIN} {
+	# No browser ever talks to the relay, so refuse to be embedded anywhere.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	reverse_proxy 127.0.0.1:8791 {
+		# Long-polls wait 25s; hub sockets stay open with pings every 30s.
+		transport http {
+			response_header_timeout 60s
+		}
+	}
+	log {
+		output stderr
+		# JSON lines; addresses and user agents are not needed to run the relay.
+		format filter {
+			wrap json
+			fields {
+				request>remote_ip delete
+				request>client_ip delete
+				request>headers>User-Agent delete
+				request>headers>Authorization delete
+				request>headers>X-Yansu-Hub delete
+				request>headers>X-Yansu-Claim delete
+			}
+		}
+	}
+}

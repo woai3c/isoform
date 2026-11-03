@@ -1,0 +1,101 @@
+datasets:
+  librispeech_test_clean:
+    name: "LibriSpeech test-clean"
+    language: "en"
+    source: "openslr/librispeech_asr"
+    split: "test.clean"
+    description: "Clean read English speech from audiobooks"
+
+  librispeech_test_other:
+    name: "LibriSpeech test-other"
+    language: "en"
+    source: "openslr/librispeech_asr"
+    split: "test.other"
+    description: "Challenging English speech with varied accents and noise"
+
+  fleurs_zh:
+    name: "FLEURS zh_cn"
+    language: "zh"
+    source: "google/fleurs"
+    subset: "cmn_hans_cn"
+    split: "test"
+    description: "Mandarin Chinese read speech"
+
+  ascend_test:
+    name: "ASCEND test"
+    language: "zh-en"
+    source: "CAiRE/ASCEND"
+    split: "test"
+    description: "Mandarin-English code-switching conversational speech"
+
+  # Common Voice was moved off HuggingFace (Oct 2025) to Mozilla Data Collective.
+  # To add noisy/diverse datasets, consider:
+  #   - GigaSpeech (speechcolab/gigaspeech, needs HF agreement)
+  #   - VoxPopuli (facebook/voxpopuli, CC0, European Parliament speech)
+  #   - AISHELL-1 (AISHELL/AISHELL-1, Apache 2.0, Chinese studio recordings)
+
+engines:
+  sensevoice:
+    name: "SenseVoice (sherpa-onnx)"
+    type: "sherpa_sensevoice"
+    model_dir: "./.cache/sherpa"
+    num_threads: 2
+
+  whisper_large_v3:
+    name: "Whisper large-v3 (MLX)"
+    type: "whisper_mlx"
+    model: "mlx-community/whisper-large-v3-mlx"
+
+  whisper_large_v3_turbo:
+    name: "Whisper large-v3-turbo (MLX)"
+    type: "whisper_mlx"
+    model: "mlx-community/whisper-large-v3-turbo"
+
+  qwen3_asr:
+    name: "Qwen3-ASR-1.7B (MLX 8-bit)"
+    type: "qwen3_asr"
+    model: "mlx-community/Qwen3-ASR-1.7B-8bit"
+
+  paraformer_zh:
+    name: "Paraformer-zh (sherpa-onnx)"
+    type: "sherpa_paraformer"
+    model_dir: "~/.cache/asr-eval/paraformer-zh"
+    num_threads: 2
+
+  mimo_v2_asr:
+    name: "MiMo-V2.5-ASR (MLX 4-bit)"
+    type: "mimo_asr"
+    model: "mlx-community/MiMo-V2.5-ASR-MLX-4bit"
+
+  parakeet_tdt_v2:
+    name: "Parakeet TDT v2 (MLX, EN only)"
+    type: "parakeet_mlx"
+    model: "mlx-community/parakeet-tdt-0.6b-v2"
+
+  mega_asr:
+    name: "Mega-ASR (MLX, noise-robust)"
+    type: "mlx_audio"
+    model: "mlx-community/Mega-ASR-bf16"
+
+  whisper_large_v3_full:
+    name: "Whisper large-v3 full (MLX)"
+    type: "whisper_mlx"
+    model: "mlx-community/whisper-large-v3-mlx"
+
+metrics:
+  accuracy:
+    - wer    # Word Error Rate
+    - cer    # Character Error Rate
+    - mer    # Match Error Rate
+  performance:
+    - rtf            # Real-Time Factor (processing time / audio duration)
+    - latency_ms     # Per-utterance latency in milliseconds
+    - peak_memory_mb # Peak RSS memory during inference
+    - model_load_s   # Model loading time in seconds
+
+evaluation:
+  max_samples_per_dataset: null  # null = use all, set integer to limit
+  warmup_runs: 2                 # discard first N runs for timing
+  num_threads: 2
+  data_dir: "./data_prep/cache"
+  results_dir: "./results"

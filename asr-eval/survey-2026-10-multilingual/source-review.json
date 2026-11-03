@@ -1,0 +1,339 @@
+{
+  "reviewed_on": "2026-10-23",
+  "note": "Publisher/conversion declarations, distinct from runtime licences and measured coverage. Full cards are linked at the fetched revision.",
+  "models": [
+    {
+      "repo": "FunAudioLLM/Fun-ASR-Nano-2512",
+      "revision": "272c57b82523ada6fd87095e955f8e29100979ab",
+      "card_url": "https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512/blob/272c57b82523ada6fd87095e955f8e29100979ab/README.md",
+      "licence_metadata": "apache-2.0",
+      "language_metadata": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "yue",
+        "vi",
+        "id",
+        "th",
+        "ms",
+        "tl",
+        "ar",
+        "hi",
+        "multilingual"
+      ],
+      "card_sha256": "c6b3c162768ab8482d65aabb836d2216b137b5fe10276c2dbc3e21c362d741e1"
+    },
+    {
+      "repo": "FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
+      "revision": "29e01c4e8d000f4bcd70751be16fa94bf3d85a18",
+      "card_url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md",
+      "licence_metadata": "apache-2.0",
+      "language_metadata": [
+        "zh",
+        "en",
+        "fr",
+        "es",
+        "ja",
+        "ko",
+        "it",
+        "ru",
+        "de"
+      ],
+      "card_sha256": "d4ec0fe1342b60a424ce1cd8971c670d26be38068a96148bcb6a1b8a334c3088"
+    },
+    {
+      "repo": "Qwen/Qwen3-ASR-1.7B",
+      "revision": "7278e1e70fe206f11671096ffdd38061171dd6e5",
+      "card_url": "https://huggingface.co/Qwen/Qwen3-ASR-1.7B/blob/7278e1e70fe206f11671096ffdd38061171dd6e5/README.md",
+      "licence_metadata": "apache-2.0",
+      "language_metadata": null,
+      "card_sha256": "5058416891bc47a2051557765997e8c42f8eb78a0e33c3e775bd17d4b0ba4d50"
+    },
+    {
+      "repo": "ibm-granite/granite-speech-5.0-470m-turboctc",
+      "revision": "1dd23f46f6d4e6eae2531982ba2e33220086dd97",
+      "card_url": "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/blob/1dd23f46f6d4e6eae2531982ba2e33220086dd97/README.md",
+      "licence_metadata": "apache-2.0",
+      "language_metadata": [
+        "multilingual",
+        "en",
+        "fr",
+        "de",
+        "es",
+        "pt",
+        "it",
+        "ja"
+      ],
+      "card_sha256": "5a7f12bfee3bb82051df616fe55bae0fd987b43a6106c91c8ce0c006b9c07f62"
+    },
+    {
+      "repo": "mlx-community/Ming-3.0-tts-0.5B-8bit",
+      "revision": "d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad",
+      "card_url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/blob/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/README.md",
+      "licence_metadata": "mit",
+      "language_metadata": [
+        "zh",
+        "en",
+        "de",
+        "es",
+        "fr",
+        "ko",
+        "ja"
+      ],
+      "card_sha256": "0af63591f3ab08d8e057330477928692ce8a4234618aacd4f2a0095c5d50bda9"
+    },
+    {
+      "repo": "mlx-community/S3TokenizerV2",
+      "revision": "e0c9886f0e1c35ae85b1f27277416fb19fc72bec",
+      "card_url": "https://huggingface.co/mlx-community/S3TokenizerV2/blob/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/README.md",
+      "licence_metadata": null,
+      "language_metadata": null,
+      "card_sha256": "7114249e13d3487e1b3d7f5f91fefdce746679342dca7afc8e52b1617b66bea5"
+    },
+    {
+      "repo": "mlx-community/chatterbox-fp16",
+      "revision": "4923fcca09086356aeab5191a2348c5a17a23694",
+      "card_url": "https://huggingface.co/mlx-community/chatterbox-fp16/blob/4923fcca09086356aeab5191a2348c5a17a23694/README.md",
+      "licence_metadata": "apache-2.0",
+      "language_metadata": [
+        "ar",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "fi",
+        "fr",
+        "he",
+        "hi",
+        "it",
+        "ja",
+        "ko",
+        "ms",
+        "nl",
+        "no",
+        "pl",
+        "pt",
+        "ru",
+        "sv",
+        "sw",
+        "tr",
+        "zh"
+      ],
+      "card_sha256": "34b739a691ce529e53ea2766003090bb567a8885dfbeb61295a043fad84be393"
+    },
+    {
+      "repo": "mlx-community/chatterbox-multilingual-v3",
+      "revision": "03565773edd72e949572557597af8063bb49a18a",
+      "card_url": "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/blob/03565773edd72e949572557597af8063bb49a18a/README.md",
+      "licence_metadata": "mit",
+      "language_metadata": [
+        "ar",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "fi",
+        "fr",
+        "he",
+        "hi",
+        "it",
+        "ja",
+        "ko",
+        "ms",
+        "nl",
+        "no",
+        "pl",
+        "pt",
+        "ru",
+        "sv",
+        "sw",
+        "tr",
+        "zh"
+      ],
+      "card_sha256": "46c84fad9fced28abe32cd11a0ed6eb05ca25df722893bf4c3ddc7a03bd94343"
+    }
+  ],
+  "temporary_source_receipts": [
+    {
+      "name": "FunAudioLLM--Fun-ASR-MLT-Nano-2512.md",
+      "sha256": "38249e94fc304da13798cf4481f25b0d81afcb6e7e1a0ae32e63cbbe91efcc5f",
+      "size_bytes": 13857
+    },
+    {
+      "name": "FunAudioLLM--Fun-ASR-Nano-2512.json",
+      "sha256": "f7a0ddb5e75d65cc81dafe1e68a9c9139badb8d415af1da98261fa80ac3cb557",
+      "size_bytes": 6685
+    },
+    {
+      "name": "FunAudioLLM--Fun-ASR-Nano-2512.md",
+      "sha256": "c6b3c162768ab8482d65aabb836d2216b137b5fe10276c2dbc3e21c362d741e1",
+      "size_bytes": 14586
+    },
+    {
+      "name": "FunAudioLLM--Fun-CosyVoice3-0.5B-2512.json",
+      "sha256": "976055f8079e0d0e2826601bb640296412b045fb94e834477517dd177072ea61",
+      "size_bytes": 6607
+    },
+    {
+      "name": "FunAudioLLM--Fun-CosyVoice3-0.5B-2512.md",
+      "sha256": "d4ec0fe1342b60a424ce1cd8971c670d26be38068a96148bcb6a1b8a334c3088",
+      "size_bytes": 11982
+    },
+    {
+      "name": "Qwen--Qwen3-ASR-1.7B.json",
+      "sha256": "5873f574aec5e1efc248c63dacf99e586786c603aee71373ba6f4b60d34c704a",
+      "size_bytes": 7625
+    },
+    {
+      "name": "Qwen--Qwen3-ASR-1.7B.md",
+      "sha256": "5058416891bc47a2051557765997e8c42f8eb78a0e33c3e775bd17d4b0ba4d50",
+      "size_bytes": 57456
+    },
+    {
+      "name": "ResembleAI--chatterbox.md",
+      "sha256": "6ac86d5ec7e85a9cf6566a34c6aae60ac1d50a6fceccade4c2aa57cfa6f590b4",
+      "size_bytes": 10081
+    },
+    {
+      "name": "XiaomiMiMo--MiMo-V2.5-ASR.md",
+      "sha256": "c4ce7a248d5857bd8acfb23d159b592bfa325026976a7434f27b05f140a2fdc9",
+      "size_bytes": 8022
+    },
+    {
+      "name": "chatterbox.md",
+      "sha256": "46c84fad9fced28abe32cd11a0ed6eb05ca25df722893bf4c3ddc7a03bd94343",
+      "size_bytes": 1289
+    },
+    {
+      "name": "cosyvoice3.md",
+      "sha256": "add0e80566de516be80e3e346b48f4a383de3e2e7decdd46a309a3100a5d159e",
+      "size_bytes": 1950
+    },
+    {
+      "name": "ibm-granite--granite-speech-5.0-470m-turboctc.json",
+      "sha256": "79e8f81f00f75d2a71f075802073efc50c3b13a2fd939f13b1bf3e0e45b4e488",
+      "size_bytes": 4801
+    },
+    {
+      "name": "ibm-granite--granite-speech-5.0-470m-turboctc.md",
+      "sha256": "5a7f12bfee3bb82051df616fe55bae0fd987b43a6106c91c8ce0c006b9c07f62",
+      "size_bytes": 9889
+    },
+    {
+      "name": "inclusionAI--Ming-3.0-tts-0.5B.md",
+      "sha256": "67388eca2e66e557601dccf7a76076154176f3a7dbb4a7f75f63a7543db591c0",
+      "size_bytes": 54491
+    },
+    {
+      "name": "kokoro_mlx.md",
+      "sha256": "31766be53abd2b182fea067461e935eb6399dbe0e1ce8d165afb1f1c64895b30",
+      "size_bytes": 536
+    },
+    {
+      "name": "ming_tts.md",
+      "sha256": "0af63591f3ab08d8e057330477928692ce8a4234618aacd4f2a0095c5d50bda9",
+      "size_bytes": 4360
+    },
+    {
+      "name": "mlx-community--Kokoro-82M-bf16.md",
+      "sha256": "31766be53abd2b182fea067461e935eb6399dbe0e1ce8d165afb1f1c64895b30",
+      "size_bytes": 536
+    },
+    {
+      "name": "mlx-community--MiMo-V2.5-ASR-MLX-4bit.md",
+      "sha256": "a53ab32e78d34fbb6b107ac881bfe4286756c75d668d58694e2dbb2f295b6c7b",
+      "size_bytes": 3376
+    },
+    {
+      "name": "mlx-community--Ming-3.0-tts-0.5B-8bit.json",
+      "sha256": "8a0d64d00edc57b1189cbe290ffa50aa4e72f17c61a2bf80b54f0bbb4d4ee2e4",
+      "size_bytes": 6800
+    },
+    {
+      "name": "mlx-community--Ming-3.0-tts-0.5B-8bit.md",
+      "sha256": "0af63591f3ab08d8e057330477928692ce8a4234618aacd4f2a0095c5d50bda9",
+      "size_bytes": 4360
+    },
+    {
+      "name": "mlx-community--S3TokenizerV2.json",
+      "sha256": "8d3b2b35b6df649179739d0d9b80fa77dc5bf791901c3d1576f3bfef539946e9",
+      "size_bytes": 1754
+    },
+    {
+      "name": "mlx-community--S3TokenizerV2.md",
+      "sha256": "7114249e13d3487e1b3d7f5f91fefdce746679342dca7afc8e52b1617b66bea5",
+      "size_bytes": 459
+    },
+    {
+      "name": "mlx-community--chatterbox-fp16.json",
+      "sha256": "03385eff13a488236fa8859e144c43632934429533d23e28684cb1f7386cf36e",
+      "size_bytes": 3083
+    },
+    {
+      "name": "mlx-community--chatterbox-fp16.md",
+      "sha256": "34b739a691ce529e53ea2766003090bb567a8885dfbeb61295a043fad84be393",
+      "size_bytes": 2486
+    },
+    {
+      "name": "mlx-community--chatterbox-multilingual-v3.json",
+      "sha256": "65781d2dfef7e4d60f5e5085c365ac927fc3234dc85f54aab3bb123b8cc1fd5f",
+      "size_bytes": 2722
+    },
+    {
+      "name": "mlx-community--chatterbox-multilingual-v3.md",
+      "sha256": "46c84fad9fced28abe32cd11a0ed6eb05ca25df722893bf4c3ddc7a03bd94343",
+      "size_bytes": 1289
+    },
+    {
+      "name": "myshell-ai--MeloTTS-Chinese.md",
+      "sha256": "40b5b860bacbb3947cbef838719e660d2fe4961eba5b484290b4bedc0253e208",
+      "size_bytes": 4445
+    },
+    {
+      "name": "myshell-ai--MeloTTS-French.md",
+      "sha256": "9dc9689f01138d924637c81b7b0b83cf67df1da5733c29c0d17fc510f73a9a01",
+      "size_bytes": 4431
+    },
+    {
+      "name": "myshell-ai--MeloTTS-Japanese.md",
+      "sha256": "63f3b23befdef4149208bef067f24de11d1932fa61898156928ee5644ae8de29",
+      "size_bytes": 4412
+    },
+    {
+      "name": "myshell-ai--MeloTTS-Spanish.md",
+      "sha256": "e0e6a57a8d37968b9ea9578ed383cab0cd56b41286de9bb24880ebb10129bf99",
+      "size_bytes": 4493
+    },
+    {
+      "name": "openai--whisper-large-v3-turbo.md",
+      "sha256": "aaef74a740faca90fa1899c4233ebe17f2093b9846d0acf16d9131bf650e9585",
+      "size_bytes": 21196
+    },
+    {
+      "name": "s3tokenizer.md",
+      "sha256": "7114249e13d3487e1b3d7f5f91fefdce746679342dca7afc8e52b1617b66bea5",
+      "size_bytes": 459
+    },
+    {
+      "name": "s3tokenizer3.md",
+      "sha256": "8bb868ba43174b84e5d9e70e789b95e501dbbb1735e0e25cc3836d1a58de0e90",
+      "size_bytes": 491
+    },
+    {
+      "name": "whisper.md",
+      "sha256": "78f2d3dc65072211d957fc1b646c2d96e8e8f96dd45ceb2ac5f2643d0c5c05da",
+      "size_bytes": 359
+    }
+  ],
+  "family_scope_review": [
+    {
+      "repo": "FunAudioLLM/Fun-ASR-MLT-Nano-2512",
+      "source": "https://huggingface.co/FunAudioLLM/Fun-ASR-MLT-Nano-2512/blob/main/README.md",
+      "card_sha256": "38249e94fc304da13798cf4481f25b0d81afcb6e7e1a0ae32e63cbbe91efcc5f",
+      "decision": "Distinct 31-language checkpoint. It adds Korean but does not declare Spanish, French or German, so it cannot meet the seven-language global job and is not substituted for the measured original three-language Nano checkpoint."
+    }
+  ]
+}

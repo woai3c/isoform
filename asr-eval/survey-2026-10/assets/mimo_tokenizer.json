@@ -1,0 +1,37 @@
+{
+  "id": "mimo_tokenizer",
+  "repo": "mlx-community/MiMo-Audio-Tokenizer",
+  "revision": "6d451ed9a73024b4d33b87afa69e0dfd40d8f306",
+  "files": [
+    {
+      "path": "LICENSE",
+      "size_bytes": 1062,
+      "sha256": "427391785870db4e7f412c5cc67b2a9c0830376238a01dac7ace21ffaca99ddb",
+      "url": "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/LICENSE"
+    },
+    {
+      "path": "config.json",
+      "size_bytes": 1287,
+      "sha256": "22791de2210e3b704631917ac9f7fc71470ca592efbfe2795f48042364815997",
+      "url": "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/config.json"
+    },
+    {
+      "path": "mlx_manifest.json",
+      "size_bytes": 277,
+      "sha256": "05eab14ddf22b2a83d48a2017a4ce403c9295283de86b2867206fa5fde1e6bdd",
+      "url": "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/mlx_manifest.json"
+    },
+    {
+      "path": "model.safetensors",
+      "size_bytes": 2575648345,
+      "sha256": "7ce3493b01ac8b2c873256cdfe26ad049ea521b290cf65532afcfb1c9661a5c1",
+      "url": "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/model.safetensors"
+    },
+    {
+      "path": "model.safetensors.index.json",
+      "size_bytes": 31812,
+      "sha256": "c75fbe1843bc82711a327ca05f0b5ccf52188c5732e8aa7a42ae2568efbcd1bc",
+      "url": "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/model.safetensors.index.json"
+    }
+  ]
+}

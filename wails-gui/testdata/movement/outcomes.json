@@ -1,0 +1,190 @@
+{
+    "description": "Synthetic capture fixtures; no personal traces or message history.",
+    "cases": [
+        {
+            "name": "sent to agent",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "Please inspect ~/.sample-agent/records at 60 GB",
+            "click": "Send",
+            "status": "reported",
+            "reason": "message_sent"
+        },
+        {
+            "name": "return to agent",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "Please inspect ~/.sample-agent/records",
+            "key": "Return",
+            "status": "reported",
+            "reason": "message_sent",
+            "capture": "ax_field_diff"
+        },
+        {
+            "name": "draft is not sent",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "Please inspect ~/.sample-agent/records",
+            "status": ""
+        },
+        {
+            "name": "explicit completion",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "I am done with ~/.sample-agent/records",
+            "click": "Send",
+            "status": "done",
+            "reason": "user_completed"
+        },
+        {
+            "name": "future completion not asserted",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "When I am done with ~/.sample-agent/records I will report back",
+            "click": "Send",
+            "status": "reported",
+            "reason": "message_sent"
+        },
+        {
+            "name": "merge result",
+            "app": "Browser",
+            "bundle": "com.example.browser",
+            "text": "~/.sample-agent/records",
+            "click": "Merge",
+            "status": "done",
+            "reason": "completion_click"
+        },
+        {
+            "name": "different token",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "Please inspect /var/unrelated",
+            "click": "Send",
+            "status": ""
+        },
+        {
+            "name": "private window",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "~/.sample-agent/records",
+            "click": "Send",
+            "private": true,
+            "status": ""
+        },
+        {
+            "name": "secure input",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "~/.sample-agent/records",
+            "click": "Send",
+            "secure": true,
+            "status": ""
+        },
+        {
+            "name": "mail Return is a newline",
+            "app": "Mail",
+            "bundle": "com.apple.mail",
+            "text": "~/.sample-agent/records",
+            "key": "Return",
+            "capture": "ax_field_diff",
+            "status": ""
+        },
+        {
+            "name": "Gmail Return is a newline",
+            "app": "Chrome",
+            "bundle": "com.google.Chrome",
+            "window": "Gmail",
+            "text": "~/.sample-agent/records",
+            "key": "Return",
+            "capture": "ax_field_diff",
+            "status": ""
+        },
+        {
+            "name": "Return lacks field provenance",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "~/.sample-agent/records",
+            "key": "Return",
+            "status": ""
+        },
+        {
+            "name": "Shift Return is a newline",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "~/.sample-agent/records",
+            "key": "Return",
+            "capture": "ax_field_diff",
+            "modifiers": 131072,
+            "status": ""
+        },
+        {
+            "name": "completion is a question",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "I am done with ~/.sample-agent/records?",
+            "click": "Send",
+            "status": "reported",
+            "reason": "message_sent"
+        },
+        {
+            "name": "completion is conditional",
+            "app": "Claude",
+            "bundle": "com.anthropic.claudefordesktop",
+            "text": "I am done when ~/.sample-agent/records is smaller",
+            "click": "Send",
+            "status": "reported",
+            "reason": "message_sent"
+        },
+        {
+            "name": "browser reports named destination",
+            "app": "Chrome",
+            "bundle": "com.google.Chrome",
+            "window": "Claude",
+            "text": "Please inspect ~/.sample-agent/records",
+            "click": "Send",
+            "status": "reported",
+            "reason": "message_sent",
+            "target": "Claude",
+            "url": "https://claude.ai/chat/synthetic"
+        },
+        {
+            "name": "brand pricing page is not chat",
+            "app": "Chrome",
+            "bundle": "com.google.Chrome",
+            "window": "Claude API pricing - Google Chrome",
+            "text": "~/.sample-agent/records",
+            "click": "Submit",
+            "status": "done",
+            "reason": "completion_click"
+        },
+        {
+            "name": "mail merge page title fallback",
+            "app": "Chrome",
+            "bundle": "com.google.Chrome",
+            "window": "Mail merge ~/.sample-agent/records - Google Chrome",
+            "click": "Merge",
+            "status": "done",
+            "reason": "completion_click"
+        },
+        {
+            "name": "brand title lacks source host",
+            "app": "Chrome",
+            "bundle": "com.google.Chrome",
+            "window": "Claude",
+            "text": "~/.sample-agent/records",
+            "click": "Send",
+            "status": ""
+        },
+        {
+            "name": "lookalike host is not chat",
+            "app": "Chrome",
+            "bundle": "com.google.Chrome",
+            "window": "Claude",
+            "url": "https://claude.ai.example.invalid/chat/example",
+            "text": "~/.sample-agent/records",
+            "click": "Submit",
+            "status": "done",
+            "reason": "completion_click"
+        }
+    ]
+}

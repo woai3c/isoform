@@ -1,0 +1,52 @@
+{
+  "id": "sensevoice_nano",
+  "release_asset_created_at": "2026-01-05T02:18:59Z",
+  "transport": {
+    "path": "sherpa-onnx-sense-voice-funasr-nano-int8-2025-12-17.tar.bz2",
+    "size_bytes": 187693225,
+    "sha256": "257936ea9a64cbe33200274e6367fc26d373ff6ca58b996b15108ffd6b9f6148",
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-funasr-nano-int8-2025-12-17.tar.bz2"
+  },
+  "files": [
+    {
+      "path": "README.md",
+      "size_bytes": 1916,
+      "sha256": "3e998b4288e7d1c096cf77afb5635448e0f80f3e52a0f6449981dbcee2a2e0bb"
+    },
+    {
+      "path": "model.int8.onnx",
+      "size_bytes": 263531902,
+      "sha256": "9dc6e72aa8bc6f5966cf2857a0ce3a425b1d72e91500e147d66329f407c017a1"
+    },
+    {
+      "path": "test_wavs/en.wav",
+      "size_bytes": 228908,
+      "sha256": "33163bf101abe508ec5b98cfd10594f8a96d168c28754505c2b6bd57f6599672"
+    },
+    {
+      "path": "test_wavs/ja.wav",
+      "size_bytes": 230444,
+      "sha256": "469240211260fa208167152d42f38202de31c43626ab70bf40adeb0dc685f7f8"
+    },
+    {
+      "path": "test_wavs/ko.wav",
+      "size_bytes": 147500,
+      "sha256": "e952a5dd203ddfbd37a6e9d080d38de8e00e27a2e436ad0706cd53ada6dcbb78"
+    },
+    {
+      "path": "test_wavs/yue.wav",
+      "size_bytes": 164780,
+      "sha256": "19b95161284cfd8eae05bc556ccaad0c5e0cb77e763b37b751773749224d6372"
+    },
+    {
+      "path": "test_wavs/zh.wav",
+      "size_bytes": 178988,
+      "sha256": "c0e13539aeee0c6f0f94fb19ed09525d7a640b8ef08f8c3971b1b8d63bdb7cf7"
+    },
+    {
+      "path": "tokens.txt",
+      "size_bytes": 939815,
+      "sha256": "2db4bb25d046e8849e336c9465e248e1694914d996c58c71bdeca18cfb722992"
+    }
+  ]
+}

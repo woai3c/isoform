@@ -1,0 +1,29 @@
+services:
+  isoform-push-gateway:
+    image: isoform-push-gateway
+    build:
+      context: ../..
+      dockerfile: deploy/isoform-push-gateway/Dockerfile
+    restart: unless-stopped
+    environment:
+      ISOFORM_PUSH_GATEWAY_ADDR: 0.0.0.0:8792
+      ISOFORM_PUSH_GATEWAY_BEHIND_TLS_PROXY: "true"
+      ISOFORM_PUSH_GATEWAY_TRUSTED_PROXIES: "${ISOFORM_PUSH_GATEWAY_TRUSTED_PROXIES:-}"
+      ISOFORM_PUSH_GATEWAY_KEY_FILE: /run/secrets/gateway-key
+      ISOFORM_RELAY_APNS_KEY_FILE: /run/secrets/apns-key
+      ISOFORM_RELAY_APNS_KEY_ID: ${ISOFORM_RELAY_APNS_KEY_ID:?set APNs key ID}
+      ISOFORM_RELAY_APNS_TEAM_ID: ${ISOFORM_RELAY_APNS_TEAM_ID:?set APNs team ID}
+      ISOFORM_RELAY_APNS_TOPIC: ${ISOFORM_RELAY_APNS_TOPIC:?set APNs bundle ID}
+      ISOFORM_RELAY_APNS_ENVIRONMENT: ${ISOFORM_RELAY_APNS_ENVIRONMENT:?development or production}
+    volumes:
+      - ${ISOFORM_RELAY_APNS_KEY_FILE:?set path to APNs .p8 key}:/run/secrets/apns-key:ro
+      - ${ISOFORM_PUSH_GATEWAY_KEY_FILE:?set path to gateway key}:/run/secrets/gateway-key:ro
+    ports:
+      - "127.0.0.1:8792:8792"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

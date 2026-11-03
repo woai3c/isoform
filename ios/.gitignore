@@ -1,0 +1,9 @@
+.build/
+.build-visual-fix/
+.build-compatibility/
+.build-distribution/
+.build-wireless/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.build-demo/

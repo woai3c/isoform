@@ -1,0 +1,10 @@
+name = "release-redirect"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+# Routes /latest/* on release.yansu.app to this worker.
+# All other paths (e.g. /v0.2.0/*, /version.json) bypass the worker
+# and hit the R2 custom domain directly.
+[[routes]]
+pattern = "release.yansu.app/latest/*"
+zone_name = "yansu.app"

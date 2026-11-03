@@ -1,0 +1,217 @@
+{
+  "source": "https://datasets-server.huggingface.co/rows?dataset=openslr/librispeech_asr&config=clean&split=test&offset=0&length=30",
+  "licence": "CC-BY-4.0",
+  "selection": "first N in published order",
+  "samples": [
+    {
+      "id": "6930-75918-0000",
+      "audio_path": "6930-75918-0000.wav",
+      "reference": "CONCORD RETURNED TO ITS PLACE AMIDST THE TENTS",
+      "duration_s": 3.505,
+      "sha256": "103c3f15eb3715ebc6243d142244128a3ac39b6bfae315baa6b8dc4a8be14aa8"
+    },
+    {
+      "id": "6930-75918-0001",
+      "audio_path": "6930-75918-0001.wav",
+      "reference": "THE ENGLISH FORWARDED TO THE FRENCH BASKETS OF FLOWERS OF WHICH THEY HAD MADE A PLENTIFUL PROVISION TO GREET THE ARRIVAL OF THE YOUNG PRINCESS THE FRENCH IN RETURN INVITED THE ENGLISH TO A SUPPER WHICH WAS TO BE GIVEN THE NEXT DAY",
+      "duration_s": 14.225,
+      "sha256": "7a0c28ad2cca523cd7e7d72e360a3f314eeb905688358dbf6f150c0a87b87f76"
+    },
+    {
+      "id": "6930-75918-0002",
+      "audio_path": "6930-75918-0002.wav",
+      "reference": "CONGRATULATIONS WERE POURED IN UPON THE PRINCESS EVERYWHERE DURING HER JOURNEY",
+      "duration_s": 5.025,
+      "sha256": "ca418189ed1db4ce1bf5e6940d51a9ce870d4d52f3ef9019ccdbb2189d1a0a9c"
+    },
+    {
+      "id": "6930-75918-0003",
+      "audio_path": "6930-75918-0003.wav",
+      "reference": "FROM THE RESPECT PAID HER ON ALL SIDES SHE SEEMED LIKE A QUEEN AND FROM THE ADORATION WITH WHICH SHE WAS TREATED BY TWO OR THREE SHE APPEARED AN OBJECT OF WORSHIP THE QUEEN MOTHER GAVE THE FRENCH THE MOST AFFECTIONATE RECEPTION FRANCE WAS HER NATIVE COUNTRY AND SHE HAD SUFFERED TOO MUCH UNHAPPINESS IN ENGLAND FOR ENGLAND TO HAVE MADE HER FORGET FRANCE",
+      "duration_s": 23.315,
+      "sha256": "166d138dc95c706e4eedbebb48f4ac4c8cb1b77ea796c0bc650da518308657e2"
+    },
+    {
+      "id": "6930-75918-0004",
+      "audio_path": "6930-75918-0004.wav",
+      "reference": "SHE TAUGHT HER DAUGHTER THEN BY HER OWN AFFECTION FOR IT THAT LOVE FOR A COUNTRY WHERE THEY HAD BOTH BEEN HOSPITABLY RECEIVED AND WHERE A BRILLIANT FUTURE OPENED BEFORE THEM",
+      "duration_s": 11.065,
+      "sha256": "af568c26be7892254398fc5ecc6a346dc28c3e5ef1123aa6cdf8a8dda3ce1c57"
+    },
+    {
+      "id": "6930-75918-0005",
+      "audio_path": "6930-75918-0005.wav",
+      "reference": "THE COUNT HAD THROWN HIMSELF BACK ON HIS SEAT LEANING HIS SHOULDERS AGAINST THE PARTITION OF THE TENT AND REMAINED THUS HIS FACE BURIED IN HIS HANDS WITH HEAVING CHEST AND RESTLESS LIMBS",
+      "duration_s": 13.16,
+      "sha256": "414a1c8dcd58e71e979682b965d2c60768f74646c6417ffea18f840701352d63"
+    },
+    {
+      "id": "6930-75918-0006",
+      "audio_path": "6930-75918-0006.wav",
+      "reference": "THIS HAS INDEED BEEN A HARASSING DAY CONTINUED THE YOUNG MAN HIS EYES FIXED UPON HIS FRIEND",
+      "duration_s": 5.85,
+      "sha256": "b4ee5871dbb5084f596aa076453afc255f1416c83aec19d05e324ef4e062fc4d"
+    },
+    {
+      "id": "6930-75918-0007",
+      "audio_path": "6930-75918-0007.wav",
+      "reference": "YOU WILL BE FRANK WITH ME I ALWAYS AM",
+      "duration_s": 3.315,
+      "sha256": "c6c28e12656aff6cec3484ed10cfc625d17d62f63a065b91ad3c510716e2c7e0"
+    },
+    {
+      "id": "6930-75918-0008",
+      "audio_path": "6930-75918-0008.wav",
+      "reference": "CAN YOU IMAGINE WHY BUCKINGHAM HAS BEEN SO VIOLENT I SUSPECT",
+      "duration_s": 4.785,
+      "sha256": "01333d888f243ad4dcb166d6a3164c7c1e835bf65f9d92f15a59b63bec6792eb"
+    },
+    {
+      "id": "6930-75918-0009",
+      "audio_path": "6930-75918-0009.wav",
+      "reference": "IT IS YOU WHO ARE MISTAKEN RAOUL I HAVE READ HIS DISTRESS IN HIS EYES IN HIS EVERY GESTURE AND ACTION THE WHOLE DAY",
+      "duration_s": 7.28,
+      "sha256": "0db8cfc26adedbb02e1b9606ae5e24500697fee0a1f4e11fe49db83c3a3c10e6"
+    },
+    {
+      "id": "6930-75918-0010",
+      "audio_path": "6930-75918-0010.wav",
+      "reference": "I CAN PERCEIVE LOVE CLEARLY ENOUGH",
+      "duration_s": 3.035,
+      "sha256": "59b07a4b926d378030f2de5bd64f9a8318b3bff3942e7a6e359832c6a38152dc"
+    },
+    {
+      "id": "6930-75918-0011",
+      "audio_path": "6930-75918-0011.wav",
+      "reference": "I AM CONVINCED OF WHAT I SAY SAID THE COUNT",
+      "duration_s": 3.195,
+      "sha256": "f5413a1368750191bbb12ced5bb5c7f605594254359ddbc8410941d9793c29a5"
+    },
+    {
+      "id": "6930-75918-0012",
+      "audio_path": "6930-75918-0012.wav",
+      "reference": "IT IS ANNOYANCE THEN",
+      "duration_s": 1.94,
+      "sha256": "fd64fa604791bb9e8adfee8278d4d86ac5cdfa79efeb4a61cd69b81b2a627e2f"
+    },
+    {
+      "id": "6930-75918-0013",
+      "audio_path": "6930-75918-0013.wav",
+      "reference": "IN THOSE VERY TERMS I EVEN ADDED MORE",
+      "duration_s": 2.94,
+      "sha256": "70ca35882b0be82fd315b7599bbdf20606017bd8b7a3daddb8be92879cd35dd9"
+    },
+    {
+      "id": "6930-75918-0014",
+      "audio_path": "6930-75918-0014.wav",
+      "reference": "BUT CONTINUED RAOUL NOT INTERRUPTED BY THIS MOVEMENT OF HIS FRIEND HEAVEN BE PRAISED THE FRENCH WHO ARE PRONOUNCED TO BE THOUGHTLESS AND INDISCREET RECKLESS EVEN ARE CAPABLE OF BRINGING A CALM AND SOUND JUDGMENT TO BEAR ON MATTERS OF SUCH HIGH IMPORTANCE",
+      "duration_s": 16.84,
+      "sha256": "1386cea0157763a917b46f4881d3f8c139158fb4ae1756098e720aaeba35b13d"
+    },
+    {
+      "id": "6930-75918-0015",
+      "audio_path": "6930-75918-0015.wav",
+      "reference": "THUS IT IS THAT THE HONOR OF THREE IS SAVED OUR COUNTRY'S OUR MASTER'S AND OUR OWN",
+      "duration_s": 6.38,
+      "sha256": "174fc19452413e326b0d6eca2ad5f659eadef0f4ddb325884687dd64beb970c7"
+    },
+    {
+      "id": "6930-75918-0016",
+      "audio_path": "6930-75918-0016.wav",
+      "reference": "YES I NEED REPOSE MANY THINGS HAVE AGITATED ME TO DAY BOTH IN MIND AND BODY WHEN YOU RETURN TO MORROW I SHALL NO LONGER BE THE SAME MAN",
+      "duration_s": 10.015,
+      "sha256": "7dd7b99b09b009ffc8c6961eb4cd055cc001cd5fcf2dd2e2e45fea7f7f9c2677"
+    },
+    {
+      "id": "6930-75918-0017",
+      "audio_path": "6930-75918-0017.wav",
+      "reference": "BUT IN THIS FRIENDLY PRESSURE RAOUL COULD DETECT THE NERVOUS AGITATION OF A GREAT INTERNAL CONFLICT",
+      "duration_s": 6.16,
+      "sha256": "936666f499ebc4d374b1959e2bdf8b314770be30d9d81475594d48222219d0f4"
+    },
+    {
+      "id": "6930-75918-0018",
+      "audio_path": "6930-75918-0018.wav",
+      "reference": "THE NIGHT WAS CLEAR STARLIT AND SPLENDID THE TEMPEST HAD PASSED AWAY AND THE SWEET INFLUENCES OF THE EVENING HAD RESTORED LIFE PEACE AND SECURITY EVERYWHERE",
+      "duration_s": 10.81,
+      "sha256": "b2b90c9c9f7c688545ef9390a6e42d724d3ef46749da9a3566fa9578deee35ba"
+    },
+    {
+      "id": "6930-75918-0019",
+      "audio_path": "6930-75918-0019.wav",
+      "reference": "UPON THE LARGE SQUARE IN FRONT OF THE HOTEL THE SHADOWS OF THE TENTS INTERSECTED BY THE GOLDEN MOONBEAMS FORMED AS IT WERE A HUGE MOSAIC OF JET AND YELLOW FLAGSTONES",
+      "duration_s": 11.6450625,
+      "sha256": "f40231364b38057d9b7397907d48cc608eff5c3ef091d79aa3f84bb8d53180b4"
+    },
+    {
+      "id": "6930-75918-0020",
+      "audio_path": "6930-75918-0020.wav",
+      "reference": "BRAGELONNE WATCHED FOR SOME TIME THE CONDUCT OF THE TWO LOVERS LISTENED TO THE LOUD AND UNCIVIL SLUMBERS OF MANICAMP WHO SNORED AS IMPERIOUSLY AS THOUGH HE WAS WEARING HIS BLUE AND GOLD INSTEAD OF HIS VIOLET SUIT",
+      "duration_s": 14.4,
+      "sha256": "8ad4edbf25b6f8642776f5cd5d46cf421b1ff037db7294bef2e1713e76e846c3"
+    },
+    {
+      "id": "6930-76324-0000",
+      "audio_path": "6930-76324-0000.wav",
+      "reference": "GOLIATH MAKES ANOTHER DISCOVERY",
+      "duration_s": 3.025,
+      "sha256": "428b6bd1ef1f1bba4486d4717ab9b3431b20330a97e2cf6690d5d2454d38dab7"
+    },
+    {
+      "id": "6930-76324-0001",
+      "audio_path": "6930-76324-0001.wav",
+      "reference": "THEY WERE CERTAINLY NO NEARER THE SOLUTION OF THEIR PROBLEM",
+      "duration_s": 3.2,
+      "sha256": "eefb6e09630915d2d0e8ed41b8f4386de0912e6d7b51b188b90e69d2edf7febf"
+    },
+    {
+      "id": "6930-76324-0002",
+      "audio_path": "6930-76324-0002.wav",
+      "reference": "THE POOR LITTLE THINGS CRIED CYNTHIA THINK OF THEM HAVING BEEN TURNED TO THE WALL ALL THESE YEARS",
+      "duration_s": 5.56,
+      "sha256": "f90e2dcc1a49b2177fbe1381ced13201ecc2b0f5dbd86efc21cf5a172c0f81d6"
+    },
+    {
+      "id": "6930-76324-0003",
+      "audio_path": "6930-76324-0003.wav",
+      "reference": "NOW WHAT WAS THE SENSE OF IT TWO INNOCENT BABIES LIKE THAT",
+      "duration_s": 3.385,
+      "sha256": "32d0fc1390c1094c4ba1ee7a92eeb8936c7be6ec996c7facb1129c09d9f3570f"
+    },
+    {
+      "id": "6930-76324-0004",
+      "audio_path": "6930-76324-0004.wav",
+      "reference": "BUT JOYCE HAD NOT BEEN LISTENING ALL AT ONCE SHE PUT DOWN HER CANDLE ON THE TABLE AND FACED HER COMPANION",
+      "duration_s": 6.15,
+      "sha256": "c41b0ceb00f27161f451ad241a48c790d6c0c49f3272fbaa57de2fea76a29548"
+    },
+    {
+      "id": "6930-76324-0005",
+      "audio_path": "6930-76324-0005.wav",
+      "reference": "THE TWIN BROTHER DID SOMETHING SHE DIDN'T LIKE AND SHE TURNED HIS PICTURE TO THE WALL",
+      "duration_s": 5.035,
+      "sha256": "e4fae11ead32d4d2fdf297b589313812c31992eed041ddc1b74bc555e307d53f"
+    },
+    {
+      "id": "6930-76324-0006",
+      "audio_path": "6930-76324-0006.wav",
+      "reference": "HERS HAPPENED TO BE IN THE SAME FRAME TOO BUT SHE EVIDENTLY DIDN'T CARE ABOUT THAT",
+      "duration_s": 4.455,
+      "sha256": "b15a8765c2c5c485a2125e4dc4609f278ba6be5776029ea082eb2fa94554423d"
+    },
+    {
+      "id": "6930-76324-0007",
+      "audio_path": "6930-76324-0007.wav",
+      "reference": "NOW WHAT HAVE YOU TO SAY CYNTHIA SPRAGUE",
+      "duration_s": 2.82,
+      "sha256": "ac2c769ff5e206b4e5095de59e2e108bc63ed8ea36fce80da0cf3669c8dc0d65"
+    },
+    {
+      "id": "6930-76324-0008",
+      "audio_path": "6930-76324-0008.wav",
+      "reference": "I THOUGHT WE WERE STUMPED AGAIN WHEN I FIRST SAW THAT PICTURE BUT IT'S BEEN OF SOME USE AFTER ALL",
+      "duration_s": 5.185,
+      "sha256": "e465b2737191afd072a172eed850e4304b868592e5377122dba247e65787c2bb"
+    }
+  ]
+}

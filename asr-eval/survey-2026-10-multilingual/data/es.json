@@ -1,0 +1,813 @@
+{
+  "dataset": "google/fleurs",
+  "revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+  "config": "es_419",
+  "split": "test",
+  "selection": "First 100 utterances in published test.tsv order; duplicate prompts retained",
+  "licence": "CC-BY-4.0",
+  "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/es_419",
+  "samples": [
+    {
+      "order": 0,
+      "id": "1770-7285658688146080595.wav",
+      "audio_path": "7285658688146080595.wav",
+      "reference": "esto parece tener sentido ya que en la tierra no se percibe su movimiento ¿cierto?",
+      "duration_s": 7.68,
+      "sha256": "04bf4876d16ba5a867f093ba5b34e93f4b82fc8250e78cce90932950d5035132"
+    },
+    {
+      "order": 1,
+      "id": "1770-3716529552379606516.wav",
+      "audio_path": "3716529552379606516.wav",
+      "reference": "esto parece tener sentido ya que en la tierra no se percibe su movimiento ¿cierto?",
+      "duration_s": 7.44,
+      "sha256": "b0b1d02fc89815a2a80e03c9f9e5ab0c458967c43861cb6e3c89e77cbc9d77ea"
+    },
+    {
+      "order": 2,
+      "id": "1770-10084850086754329587.wav",
+      "audio_path": "10084850086754329587.wav",
+      "reference": "esto parece tener sentido ya que en la tierra no se percibe su movimiento ¿cierto?",
+      "duration_s": 8.58,
+      "sha256": "54f941743dbd5d484a3f4b2b72a5621d4ebb00c0e2c65d8a896bc05adc95a205"
+    },
+    {
+      "order": 3,
+      "id": "1942-4963359825952343829.wav",
+      "audio_path": "4963359825952343829.wav",
+      "reference": "construimos nuestras casas a partir de las plantas y con ellas también fabricamos ropa la mayoría de los alimentos que ingerimos son plantas sin ellas los animales no sobrevivirían",
+      "duration_s": 13.44,
+      "sha256": "011f675e190477fd183e77ee7622c875e35f49fc8b28b70409e0bce8b055299f"
+    },
+    {
+      "order": 4,
+      "id": "1942-951698268676408262.wav",
+      "audio_path": "951698268676408262.wav",
+      "reference": "construimos nuestras casas a partir de las plantas y con ellas también fabricamos ropa la mayoría de los alimentos que ingerimos son plantas sin ellas los animales no sobrevivirían",
+      "duration_s": 12.96,
+      "sha256": "dac0b8643022d3e90617bd9c3d1cb8f9cd78bbfed08dabcec6dfa0c1580e26fd"
+    },
+    {
+      "order": 5,
+      "id": "1991-5047945814639237534.wav",
+      "audio_path": "5047945814639237534.wav",
+      "reference": "durante esta fase de la historia de europa la iglesia católica que había acumulado riqueza y poder fue cuestionada",
+      "duration_s": 9.12,
+      "sha256": "32be06884ef68ba2a6ebbb7e543c29ed040682aa19bba6293d725910ce38811d"
+    },
+    {
+      "order": 6,
+      "id": "1991-476260369020497509.wav",
+      "audio_path": "476260369020497509.wav",
+      "reference": "durante esta fase de la historia de europa la iglesia católica que había acumulado riqueza y poder fue cuestionada",
+      "duration_s": 7.32,
+      "sha256": "058f582f5006a2cad2ead03b2cd57cab1203319424cc3c88b707170edf58221b"
+    },
+    {
+      "order": 7,
+      "id": "1991-4659369048390038198.wav",
+      "audio_path": "4659369048390038198.wav",
+      "reference": "durante esta fase de la historia de europa la iglesia católica que había acumulado riqueza y poder fue cuestionada",
+      "duration_s": 8.88,
+      "sha256": "a7ed6495b4441851e7f2fe432112e2db15f7a4da6c72e29caa24072e5bd5c0ff"
+    },
+    {
+      "order": 8,
+      "id": "1870-11137049735103408221.wav",
+      "audio_path": "11137049735103408221.wav",
+      "reference": "las escenas se proyectan en las pirámides y todas ellas son iluminadas",
+      "duration_s": 6.72,
+      "sha256": "d1a253590ed0e56869961bd40579a70bf2fd0ccabe052e0c405208c10c8501f4"
+    },
+    {
+      "order": 9,
+      "id": "1870-5539777671848636280.wav",
+      "audio_path": "5539777671848636280.wav",
+      "reference": "las escenas se proyectan en las pirámides y todas ellas son iluminadas",
+      "duration_s": 11.76,
+      "sha256": "b16e3bda6831b7d3210e4ecec2d9188b6248a7eb9a9778bcfb71f8f12cd144ca"
+    },
+    {
+      "order": 10,
+      "id": "1870-16226798311994470335.wav",
+      "audio_path": "16226798311994470335.wav",
+      "reference": "las escenas se proyectan en las pirámides y todas ellas son iluminadas",
+      "duration_s": 6.96,
+      "sha256": "1a03f43da0dc851f749384315ddfd77dedc6dd4888ac0715c2df1a30589d90b1"
+    },
+    {
+      "order": 11,
+      "id": "1687-12431219804763611753.wav",
+      "audio_path": "12431219804763611753.wav",
+      "reference": "la segregación y la recombinación barajan la variación entre uno y otro generación tras generación",
+      "duration_s": 7.68,
+      "sha256": "2084f7c17eaf8e5101aaf3625765fc5f2e771eb3276e6f574abd8331fd648bfc"
+    },
+    {
+      "order": 12,
+      "id": "1687-1528362042872231265.wav",
+      "audio_path": "1528362042872231265.wav",
+      "reference": "la segregación y la recombinación barajan la variación entre uno y otro generación tras generación",
+      "duration_s": 10.26,
+      "sha256": "2aadfe529a6911460c5912272bf1a3ea623a1fbc0655b6a438e2409ab09e07ff"
+    },
+    {
+      "order": 13,
+      "id": "1687-6008807196010902161.wav",
+      "audio_path": "6008807196010902161.wav",
+      "reference": "la segregación y la recombinación barajan la variación entre uno y otro generación tras generación",
+      "duration_s": 9.48,
+      "sha256": "3407d2d25959316f845d99c0bd9bd70234adc572fadbb06768d95ea73b01e226"
+    },
+    {
+      "order": 14,
+      "id": "1840-8992992823346849455.wav",
+      "audio_path": "8992992823346849455.wav",
+      "reference": "en muchas otras ciudades italianas así como en todo el mundo en particular en polonia se llevaron a cabo montajes parecidos que vieron muchísimas personas",
+      "duration_s": 11.52,
+      "sha256": "848c2170a5e8dee37cdaeab08444127a64e54ec9397598de25e3ecc41fc1ba40"
+    },
+    {
+      "order": 15,
+      "id": "1840-6158217301207724840.wav",
+      "audio_path": "6158217301207724840.wav",
+      "reference": "en muchas otras ciudades italianas así como en todo el mundo en particular en polonia se llevaron a cabo montajes parecidos que vieron muchísimas personas",
+      "duration_s": 12.72,
+      "sha256": "5b3e9bb7535c9c560c3a87110ac384011d763f1b7d0a05052acfb58ca2cb5c18"
+    },
+    {
+      "order": 16,
+      "id": "1840-12891000630106928825.wav",
+      "audio_path": "12891000630106928825.wav",
+      "reference": "en muchas otras ciudades italianas así como en todo el mundo en particular en polonia se llevaron a cabo montajes parecidos que vieron muchísimas personas",
+      "duration_s": 10.56,
+      "sha256": "739ff1b929db4e2f552bedaed8e1bf08ae030a4a69e4154a4326ad05f1db3683"
+    },
+    {
+      "order": 17,
+      "id": "1733-5690239332349956695.wav",
+      "audio_path": "5690239332349956695.wav",
+      "reference": "contiene 78 recomendaciones de las cuales la número uno es la adopción de una nueva iniciativa antes del final del año con el propósito de proteger las fronteras de irak de operaciones hostiles y para restaurar los vínculos diplomáticos con sus vecinos",
+      "duration_s": 18.48,
+      "sha256": "ef341e4b309318d336f7777c850d403c842dd37243e5d4e03913dfd6018b1f6f"
+    },
+    {
+      "order": 18,
+      "id": "1733-1139090966481665172.wav",
+      "audio_path": "1139090966481665172.wav",
+      "reference": "contiene 78 recomendaciones de las cuales la número uno es la adopción de una nueva iniciativa antes del final del año con el propósito de proteger las fronteras de irak de operaciones hostiles y para restaurar los vínculos diplomáticos con sus vecinos",
+      "duration_s": 19.14,
+      "sha256": "74583438ef8ba9493b5c264f9c3777c616b3ddaaa926f84a3cbeee7d1e0163a0"
+    },
+    {
+      "order": 19,
+      "id": "1733-13202283063543505716.wav",
+      "audio_path": "13202283063543505716.wav",
+      "reference": "contiene 78 recomendaciones de las cuales la número uno es la adopción de una nueva iniciativa antes del final del año con el propósito de proteger las fronteras de irak de operaciones hostiles y para restaurar los vínculos diplomáticos con sus vecinos",
+      "duration_s": 17.04,
+      "sha256": "7f73694be6cb2533fd843b4507f4dbb1a7a080a76d5dafa6a753c39c46e04428"
+    },
+    {
+      "order": 20,
+      "id": "1941-6965860545953972563.wav",
+      "audio_path": "6965860545953972563.wav",
+      "reference": "estas parejas podrían elegir planificar la adopción de un bebé",
+      "duration_s": 6.0,
+      "sha256": "0dcc47de2826def982b9f3527233caecb6e84c2280009a52a285a72ba6d819f6"
+    },
+    {
+      "order": 21,
+      "id": "1941-7946325407015007317.wav",
+      "audio_path": "7946325407015007317.wav",
+      "reference": "estas parejas podrían elegir planificar la adopción de un bebé",
+      "duration_s": 8.28,
+      "sha256": "c601b686e003299cba794e395e2b32fcff5521c9a3fc836ac8a090d7aca23c1e"
+    },
+    {
+      "order": 22,
+      "id": "1941-13263628108069204267.wav",
+      "audio_path": "13263628108069204267.wav",
+      "reference": "estas parejas podrían elegir planificar la adopción de un bebé",
+      "duration_s": 5.64,
+      "sha256": "4cc16195f49fd7f5ce320a00f23f01ef765bb5839fb981fdef924fa68a18de91"
+    },
+    {
+      "order": 23,
+      "id": "1697-3422631223145518136.wav",
+      "audio_path": "3422631223145518136.wav",
+      "reference": "no ha podido tomarse medicamentos para aliviar el dolor porque está prohibido su uso en los juegos",
+      "duration_s": 7.2,
+      "sha256": "79169375a31626be6de77f8c05e3ad76619aa1b2b66c701fb05ba416913e94d2"
+    },
+    {
+      "order": 24,
+      "id": "1697-10236991702517253859.wav",
+      "audio_path": "10236991702517253859.wav",
+      "reference": "no ha podido tomarse medicamentos para aliviar el dolor porque está prohibido su uso en los juegos",
+      "duration_s": 7.68,
+      "sha256": "f990625f6139861e41053ab34e07e3e1ad3aeab4cc6f8282d88d0e868dc0c88c"
+    },
+    {
+      "order": 25,
+      "id": "1697-7461214454383855121.wav",
+      "audio_path": "7461214454383855121.wav",
+      "reference": "no ha podido tomarse medicamentos para aliviar el dolor porque está prohibido su uso en los juegos",
+      "duration_s": 7.68,
+      "sha256": "776b86b87fdfcc77a5cd37eb1f60cddd76b96595779b6b6da71709818be44ebe"
+    },
+    {
+      "order": 26,
+      "id": "1842-14669643489012015479.wav",
+      "audio_path": "14669643489012015479.wav",
+      "reference": "dado que el plumaje de los dinosaurios no tiene un eje bien desarrollado denominado raquis pero sí presenta otros rasgos de las plumas cerdas y bárbulas los investigadores llegaron a la conclusión de que es probable que el raquis sea el resultado de un desarrollo evolutivo posterior de estas otras características",
+      "duration_s": 17.88,
+      "sha256": "933377bf24132a85b53166b8022a500385d58b7ef60eb80f37065add542deb2c"
+    },
+    {
+      "order": 27,
+      "id": "1842-4958404299087648193.wav",
+      "audio_path": "4958404299087648193.wav",
+      "reference": "dado que el plumaje de los dinosaurios no tiene un eje bien desarrollado denominado raquis pero sí presenta otros rasgos de las plumas cerdas y bárbulas los investigadores llegaron a la conclusión de que es probable que el raquis sea el resultado de un desarrollo evolutivo posterior de estas otras características",
+      "duration_s": 21.78,
+      "sha256": "c58d0f7b75142935b850875ea3fb7931277bcb434e3426d40e7bce506ed1afa9"
+    },
+    {
+      "order": 28,
+      "id": "1842-17736040977613383649.wav",
+      "audio_path": "17736040977613383649.wav",
+      "reference": "dado que el plumaje de los dinosaurios no tiene un eje bien desarrollado denominado raquis pero sí presenta otros rasgos de las plumas cerdas y bárbulas los investigadores llegaron a la conclusión de que es probable que el raquis sea el resultado de un desarrollo evolutivo posterior de estas otras características",
+      "duration_s": 23.28,
+      "sha256": "c54ab794822d3a0926333a767c1f34753d49c6348b5b20ac1cab29fb8e6402ee"
+    },
+    {
+      "order": 29,
+      "id": "1668-16217310890815300034.wav",
+      "audio_path": "16217310890815300034.wav",
+      "reference": "también puede ser conveniente comprar una wild card que permite la entrada a selecciones de parques en sudáfrica o a todos los parques nacionales del país",
+      "duration_s": 12.6,
+      "sha256": "acd4b600bae1a8272fac979af19d6225ec00f1bd79281bd12e5213868508b564"
+    },
+    {
+      "order": 30,
+      "id": "1748-10931675615482490825.wav",
+      "audio_path": "10931675615482490825.wav",
+      "reference": "los equipos de rescate antincendios lograron extinguir el fuego a las 11:35 p m",
+      "duration_s": 8.64,
+      "sha256": "6e82a99dc8c92c6e048092348ce46036c885254ae0c8260210c90a6c519d273b"
+    },
+    {
+      "order": 31,
+      "id": "1748-16282454599824569244.wav",
+      "audio_path": "16282454599824569244.wav",
+      "reference": "los equipos de rescate antincendios lograron extinguir el fuego a las 11:35 p m",
+      "duration_s": 7.26,
+      "sha256": "53bd145b43ae5acfa19614d390e0703c94b357ee88e006d4f54e9f35908b699b"
+    },
+    {
+      "order": 32,
+      "id": "1748-7925448969135716002.wav",
+      "audio_path": "7925448969135716002.wav",
+      "reference": "los equipos de rescate antincendios lograron extinguir el fuego a las 11:35 p m",
+      "duration_s": 6.84,
+      "sha256": "b591d6ca7e2d08b94f52b683628cd132af119dbbee04d0f016f24da434f36ff9"
+    },
+    {
+      "order": 33,
+      "id": "1715-9586878389582095098.wav",
+      "audio_path": "9586878389582095098.wav",
+      "reference": "si bien los anuncios habituales en el metro solo se exhiben en catalán las interrupciones no planificados se realizan en una gran variedad de idiomas a través de un programa automático en una gran variedad de idiomas entre ello español inglés francés árabe y japonés",
+      "duration_s": 18.66,
+      "sha256": "15ee29ddfe70973fbff93d74f4237d8ff492feccf0b4bc268c29b6c89c5a2b66"
+    },
+    {
+      "order": 34,
+      "id": "1688-1934738271656370362.wav",
+      "audio_path": "1934738271656370362.wav",
+      "reference": "desde siempre la función de la marina ha sido garantizar que su país conserve la facultad de trasladar a su población y mercancías a la vez que interfiere con la capacidad del enemigo para hacer lo propio",
+      "duration_s": 15.3,
+      "sha256": "4c6e6492d4d115c83168d8633ebe74fc3a1197da57b11f5171db2bb0cb0d3ee4"
+    },
+    {
+      "order": 35,
+      "id": "1688-10354312288366679631.wav",
+      "audio_path": "10354312288366679631.wav",
+      "reference": "desde siempre la función de la marina ha sido garantizar que su país conserve la facultad de trasladar a su población y mercancías a la vez que interfiere con la capacidad del enemigo para hacer lo propio",
+      "duration_s": 15.72,
+      "sha256": "86b2cbd5ef42e9fe8a05f8d9277d7bfbeac3277c237fef1f636ab8b80e4b9112"
+    },
+    {
+      "order": 36,
+      "id": "1688-906503251543565707.wav",
+      "audio_path": "906503251543565707.wav",
+      "reference": "desde siempre la función de la marina ha sido garantizar que su país conserve la facultad de trasladar a su población y mercancías a la vez que interfiere con la capacidad del enemigo para hacer lo propio",
+      "duration_s": 15.24,
+      "sha256": "61af83b676025b29e2600142a9f371ad8daaf6b9970e53220aa2240312c6826b"
+    },
+    {
+      "order": 37,
+      "id": "1907-17636596177265663971.wav",
+      "audio_path": "17636596177265663971.wav",
+      "reference": "al poco tiempo de desatarse las hostilidades los británicos comenzaron un bloqueo naval a alemania",
+      "duration_s": 8.34,
+      "sha256": "3b2126a3161aef2f5038c7aabba9b12c4408735622b30de95eeecee5c89bfa9c"
+    },
+    {
+      "order": 38,
+      "id": "1907-16414171760289130340.wav",
+      "audio_path": "16414171760289130340.wav",
+      "reference": "al poco tiempo de desatarse las hostilidades los británicos comenzaron un bloqueo naval a alemania",
+      "duration_s": 9.54,
+      "sha256": "727a651d3a92ae3426efea3a13ce195f66441735fb892c61df319ce29645f3ae"
+    },
+    {
+      "order": 39,
+      "id": "1940-6581855941279867439.wav",
+      "audio_path": "6581855941279867439.wav",
+      "reference": "en definitiva no debería causarnos sorpresa si nuestros propios predecesores resolvían sus «problemas proteicos» del mismo modo que los chimpancés de la sabana en la actualidad",
+      "duration_s": 12.48,
+      "sha256": "e848ef5fcf1999b58ec5ff2f03eeb20221d81652c489dd1361efd2dfa6ca72c4"
+    },
+    {
+      "order": 40,
+      "id": "1940-7488282182587039571.wav",
+      "audio_path": "7488282182587039571.wav",
+      "reference": "en definitiva no debería causarnos sorpresa si nuestros propios predecesores resolvían sus «problemas proteicos» del mismo modo que los chimpancés de la sabana en la actualidad",
+      "duration_s": 14.64,
+      "sha256": "5f8e253febe73d6cef5683da1536acaf2d9cc2cb8e07f13912a00f72c583fc1c"
+    },
+    {
+      "order": 41,
+      "id": "1940-331253613014384662.wav",
+      "audio_path": "331253613014384662.wav",
+      "reference": "en definitiva no debería causarnos sorpresa si nuestros propios predecesores resolvían sus «problemas proteicos» del mismo modo que los chimpancés de la sabana en la actualidad",
+      "duration_s": 13.92,
+      "sha256": "d69258592ec9dd43c960345818a94bf61a5e0563cafa5a24825e1daae060283b"
+    },
+    {
+      "order": 42,
+      "id": "1826-14270137861388940483.wav",
+      "audio_path": "14270137861388940483.wav",
+      "reference": "después del accidente trasladaron a gibson a un hospital pero falleció al poco tiempo",
+      "duration_s": 10.56,
+      "sha256": "224869811db01c77034f68c2ab21e9bea7ba302b94554b3cfbc222f91c603f6f"
+    },
+    {
+      "order": 43,
+      "id": "1826-7917257148703104668.wav",
+      "audio_path": "7917257148703104668.wav",
+      "reference": "después del accidente trasladaron a gibson a un hospital pero falleció al poco tiempo",
+      "duration_s": 8.4,
+      "sha256": "467779b2b8eea29983333b941f9d74e9e6838cc380597b418466cc34c0e63b13"
+    },
+    {
+      "order": 44,
+      "id": "1826-6946646945570353038.wav",
+      "audio_path": "6946646945570353038.wav",
+      "reference": "después del accidente trasladaron a gibson a un hospital pero falleció al poco tiempo",
+      "duration_s": 10.14,
+      "sha256": "989f3049db8d3662e600febc6e23a589708e4261c268d9ac3f8bea7a889a6b69"
+    },
+    {
+      "order": 45,
+      "id": "1815-4570903375997816310.wav",
+      "audio_path": "4570903375997816310.wav",
+      "reference": "la bomba atómica opera en base al principio de que se requiere energía para conformar un núcleo con gran cantidad de protones y neutrones",
+      "duration_s": 10.26,
+      "sha256": "4dc3a4827589473a49762c5e4d83286e434b1b778c573b7f89a6fc74463a972e"
+    },
+    {
+      "order": 46,
+      "id": "1815-2944888522761088622.wav",
+      "audio_path": "2944888522761088622.wav",
+      "reference": "la bomba atómica opera en base al principio de que se requiere energía para conformar un núcleo con gran cantidad de protones y neutrones",
+      "duration_s": 10.14,
+      "sha256": "419010e13cc79150a9cd975d547a82ca70d7c2be95139d191c01a435b121f9f8"
+    },
+    {
+      "order": 47,
+      "id": "1815-6187969749969606638.wav",
+      "audio_path": "6187969749969606638.wav",
+      "reference": "la bomba atómica opera en base al principio de que se requiere energía para conformar un núcleo con gran cantidad de protones y neutrones",
+      "duration_s": 10.2,
+      "sha256": "cf764d32bc2283ec14abdc48839198e656e838992fc09d77351227ce44664b76"
+    },
+    {
+      "order": 48,
+      "id": "1751-16652523740856193080.wav",
+      "audio_path": "16652523740856193080.wav",
+      "reference": "la cuestión que dio origen al debate fue la controversia en torno al presupuesto destinado al socorro y reconstrucción posteriores al huracán katrina medida que algunos conservadores fiscales etiquetaron en torno de broma como el «acuerdo de nueva orleans de bush»",
+      "duration_s": 19.02,
+      "sha256": "682c1f37da68f3f0301770ba3d2495de06bdc50972d7cb7ab9f2c56c25f8cb36"
+    },
+    {
+      "order": 49,
+      "id": "1751-3165183570881615798.wav",
+      "audio_path": "3165183570881615798.wav",
+      "reference": "la cuestión que dio origen al debate fue la controversia en torno al presupuesto destinado al socorro y reconstrucción posteriores al huracán katrina medida que algunos conservadores fiscales etiquetaron en torno de broma como el «acuerdo de nueva orleans de bush»",
+      "duration_s": 19.92,
+      "sha256": "aa258ea4bc9bdf7b9ef04d5feef275b0d1e38c28caebacfa06d288ef60407fe6"
+    },
+    {
+      "order": 50,
+      "id": "1716-1378067436955121301.wav",
+      "audio_path": "1378067436955121301.wav",
+      "reference": "según la página web de noticias de entretenimiento tmz el fotógrafo detuvo el vehículo del lado contrario del bulevar sepulveda e intentó tomar fotografías de la parada policial antes de cruzar la calle y seguir lo que causó que el agente de la patrulla caminera de california que realizaba la detención de vehículos le diera dos veces la orden de volver a cruzar",
+      "duration_s": 24.48,
+      "sha256": "0923f7c86d32556a9c959a4bfe208ce3d3b56134ad3776ef1d42aa572ee2c66c"
+    },
+    {
+      "order": 51,
+      "id": "1716-8534628782326212080.wav",
+      "audio_path": "8534628782326212080.wav",
+      "reference": "según la página web de noticias de entretenimiento tmz el fotógrafo detuvo el vehículo del lado contrario del bulevar sepulveda e intentó tomar fotografías de la parada policial antes de cruzar la calle y seguir lo que causó que el agente de la patrulla caminera de california que realizaba la detención de vehículos le diera dos veces la orden de volver a cruzar",
+      "duration_s": 23.76,
+      "sha256": "c4f3fb0ac71cd481b76c42a920ad3d5adc09467df2121fb520f56a4d3cf0cd42"
+    },
+    {
+      "order": 52,
+      "id": "1723-16446183822893392228.wav",
+      "audio_path": "16446183822893392228.wav",
+      "reference": "en 1889 el puerto fue el escenario de un nefasto enfrentamiento naval cuando siete barcos alemanes americanos y e ingleses se negaron a salir del puerto",
+      "duration_s": 13.32,
+      "sha256": "8608b84aec59a87c1a8f604c3d078b10ec2a75ab2fb87dba4dd72b7315eadab5"
+    },
+    {
+      "order": 53,
+      "id": "1723-5665886738819863936.wav",
+      "audio_path": "5665886738819863936.wav",
+      "reference": "en 1889 el puerto fue el escenario de un nefasto enfrentamiento naval cuando siete barcos alemanes americanos y e ingleses se negaron a salir del puerto",
+      "duration_s": 13.74,
+      "sha256": "a211973593b89ad021e09c8ad56d6bf8cc6b4cc96b2b235dca29065829ad79a8"
+    },
+    {
+      "order": 54,
+      "id": "1902-3403486107983659935.wav",
+      "audio_path": "3403486107983659935.wav",
+      "reference": "en un principio se lo trasladó al hospital james paget de great yarmouth",
+      "duration_s": 8.4,
+      "sha256": "ff7d3d85a534e28fa9c9140e5d6397ed3638bc01093802c362da08d5dfabdc64"
+    },
+    {
+      "order": 55,
+      "id": "1902-8540833323946780189.wav",
+      "audio_path": "8540833323946780189.wav",
+      "reference": "en un principio se lo trasladó al hospital james paget de great yarmouth",
+      "duration_s": 8.7,
+      "sha256": "38ba48d11e7064761f542483593957ed5f669c69478548ba1ee318dc769d9839"
+    },
+    {
+      "order": 56,
+      "id": "1902-14705372636713338140.wav",
+      "audio_path": "14705372636713338140.wav",
+      "reference": "en un principio se lo trasladó al hospital james paget de great yarmouth",
+      "duration_s": 9.84,
+      "sha256": "e4c836b534d7899429d0ae690f0317ff4eeb0d10879694e3c1f2fb7f08c83408"
+    },
+    {
+      "order": 57,
+      "id": "2005-8800278107896366203.wav",
+      "audio_path": "8800278107896366203.wav",
+      "reference": "sin embargo hay muchas características en las aves que todavía las asemejan a los dinosaurios",
+      "duration_s": 6.06,
+      "sha256": "a92082c50e13f58ff0cdcb8c485768ff81327d5b5a5014ae717884d256f41c71"
+    },
+    {
+      "order": 58,
+      "id": "2005-17235186473689871579.wav",
+      "audio_path": "17235186473689871579.wav",
+      "reference": "sin embargo hay muchas características en las aves que todavía las asemejan a los dinosaurios",
+      "duration_s": 9.42,
+      "sha256": "b7dbe33e59082dc95d1dd9aeab060fe0f2066ab71b040aa5d9daded49e655f3c"
+    },
+    {
+      "order": 59,
+      "id": "2005-3098223863013106026.wav",
+      "audio_path": "3098223863013106026.wav",
+      "reference": "sin embargo hay muchas características en las aves que todavía las asemejan a los dinosaurios",
+      "duration_s": 8.52,
+      "sha256": "9932bcede289ec215cb187be89f9c27a5aa7f089d067544c89c5e7e90778cce0"
+    },
+    {
+      "order": 60,
+      "id": "1698-12937561755889799165.wav",
+      "audio_path": "12937561755889799165.wav",
+      "reference": "todo en el universo está hecho de materia compuesta por partículas pequeñas denominadas átomos",
+      "duration_s": 7.08,
+      "sha256": "bff3a7266ca6c6aa97c994516d36a2bcdd96f72fdc791eba867d972676795cb4"
+    },
+    {
+      "order": 61,
+      "id": "1698-12740665256570638981.wav",
+      "audio_path": "12740665256570638981.wav",
+      "reference": "todo en el universo está hecho de materia compuesta por partículas pequeñas denominadas átomos",
+      "duration_s": 10.32,
+      "sha256": "1f09a67cc79aadb71ade3d01867efa07ba44188107b8c88851abcdb627754538"
+    },
+    {
+      "order": 62,
+      "id": "1698-12071480564303619372.wav",
+      "audio_path": "12071480564303619372.wav",
+      "reference": "todo en el universo está hecho de materia compuesta por partículas pequeñas denominadas átomos",
+      "duration_s": 8.4,
+      "sha256": "ad381e525126862d5e6245be7a9cd60ff5b48a886e1b3869e85c5d40264164b9"
+    },
+    {
+      "order": 63,
+      "id": "1969-15529629029987624112.wav",
+      "audio_path": "15529629029987624112.wav",
+      "reference": "indica que la posición más efectiva donde colocar el objeto central es la intersección que se forma entre las líneas horizontales y verticales que dividen la imagen en tercios ver ejemplo",
+      "duration_s": 13.62,
+      "sha256": "c1f70615d38c66c93ac9bd135d1e49bcf85ddfd998056720339e96ece7524e9b"
+    },
+    {
+      "order": 64,
+      "id": "1969-4474568049594320076.wav",
+      "audio_path": "4474568049594320076.wav",
+      "reference": "indica que la posición más efectiva donde colocar el objeto central es la intersección que se forma entre las líneas horizontales y verticales que dividen la imagen en tercios ver ejemplo",
+      "duration_s": 13.2,
+      "sha256": "4a09f125c955bd8c1c3bf0ba3b4438765b520bcf390839ae8b0dbf318c59627a"
+    },
+    {
+      "order": 65,
+      "id": "1969-17175691719508788120.wav",
+      "audio_path": "17175691719508788120.wav",
+      "reference": "indica que la posición más efectiva donde colocar el objeto central es la intersección que se forma entre las líneas horizontales y verticales que dividen la imagen en tercios ver ejemplo",
+      "duration_s": 19.02,
+      "sha256": "d3312c1c09796df65ba5cb1118a81bebbe28b4aed196de66bd70fe3b684ac9ec"
+    },
+    {
+      "order": 66,
+      "id": "1794-10192388533260519980.wav",
+      "audio_path": "10192388533260519980.wav",
+      "reference": "se puede definir a una civilización como una cultura específica de la que forma parte un extenso grupo de personas que viven y trabajan en conjunto es decir una sociedad",
+      "duration_s": 12.12,
+      "sha256": "920432a55b7e8eb606c8fea177ad4bb61f871e2dd49462e1de231c3d9a8274ef"
+    },
+    {
+      "order": 67,
+      "id": "1794-18094294817753880701.wav",
+      "audio_path": "18094294817753880701.wav",
+      "reference": "se puede definir a una civilización como una cultura específica de la que forma parte un extenso grupo de personas que viven y trabajan en conjunto es decir una sociedad",
+      "duration_s": 14.28,
+      "sha256": "343483b7acc67f15eab3cad2ee52df04e7648334821d024033d6c29316613f7c"
+    },
+    {
+      "order": 68,
+      "id": "1794-17923407320188669949.wav",
+      "audio_path": "17923407320188669949.wav",
+      "reference": "se puede definir a una civilización como una cultura específica de la que forma parte un extenso grupo de personas que viven y trabajan en conjunto es decir una sociedad",
+      "duration_s": 13.56,
+      "sha256": "2feb38251a8f2d994457dfc56eebcf9ba02c2dea922959b140cd36f898e5bc6b"
+    },
+    {
+      "order": 69,
+      "id": "1856-14594904913337735156.wav",
+      "audio_path": "14594904913337735156.wav",
+      "reference": "finlandia es un excelente destino para navegar: la «tierra de los mil lagos» cuenta además con miles de islas tanto en los lagos como en los archipiélagos costeros",
+      "duration_s": 12.36,
+      "sha256": "528a38e0f7d50b19863f7668b602a06da8625669c8336cd3c162266d42b799fb"
+    },
+    {
+      "order": 70,
+      "id": "1856-16755314422343266116.wav",
+      "audio_path": "16755314422343266116.wav",
+      "reference": "finlandia es un excelente destino para navegar: la «tierra de los mil lagos» cuenta además con miles de islas tanto en los lagos como en los archipiélagos costeros",
+      "duration_s": 12.84,
+      "sha256": "d934a7ac2bdbc2e5abbe06fecb9dff8862cb7c77663f16407f36af89c2dc6377"
+    },
+    {
+      "order": 71,
+      "id": "1856-17316909833273376528.wav",
+      "audio_path": "17316909833273376528.wav",
+      "reference": "finlandia es un excelente destino para navegar: la «tierra de los mil lagos» cuenta además con miles de islas tanto en los lagos como en los archipiélagos costeros",
+      "duration_s": 11.34,
+      "sha256": "8b98146d8dffc2d321c712cd28b7a95dd6493aba17dbfb8f0f8b40a32ff572df"
+    },
+    {
+      "order": 72,
+      "id": "1998-1055543750158319893.wav",
+      "audio_path": "1055543750158319893.wav",
+      "reference": "tienen extremidades escamadas y con garras ponen huevos y se desplazan sobre sus patas traseras al igual que el t-rex",
+      "duration_s": 10.32,
+      "sha256": "c8086fe56a1dceca6b711e6dcb1c01448158cf63a84369c06c9b6004024f7ea4"
+    },
+    {
+      "order": 73,
+      "id": "1998-11446090305483352693.wav",
+      "audio_path": "11446090305483352693.wav",
+      "reference": "tienen extremidades escamadas y con garras ponen huevos y se desplazan sobre sus patas traseras al igual que el t-rex",
+      "duration_s": 10.92,
+      "sha256": "d48c7f5ee7a67cea4a6735d8243728dc5b281e3f088408ba30394dfe277e05c2"
+    },
+    {
+      "order": 74,
+      "id": "1998-13336204726204293744.wav",
+      "audio_path": "13336204726204293744.wav",
+      "reference": "tienen extremidades escamadas y con garras ponen huevos y se desplazan sobre sus patas traseras al igual que el t-rex",
+      "duration_s": 10.14,
+      "sha256": "7f7d736967d5ee5808ead22a2abb04f3174ea022b6685c6b65b22f68ce0434bb"
+    },
+    {
+      "order": 75,
+      "id": "1974-6313830349319504539.wav",
+      "audio_path": "6313830349319504539.wav",
+      "reference": "siguiendo la misma línea se exige que los hombres usen pantalones que cubran las rodillas",
+      "duration_s": 7.08,
+      "sha256": "f7c6de9af086a85a67c962c27e0282552083ab0b2898de77d835b6bb3dea1b42"
+    },
+    {
+      "order": 76,
+      "id": "1974-17338017146263095856.wav",
+      "audio_path": "17338017146263095856.wav",
+      "reference": "siguiendo la misma línea se exige que los hombres usen pantalones que cubran las rodillas",
+      "duration_s": 6.36,
+      "sha256": "ac62d802f69309d01265c77eacc5ceef67a5a24927c1fb2a457a1f14a5e51f30"
+    },
+    {
+      "order": 77,
+      "id": "1974-12463752136739687822.wav",
+      "audio_path": "12463752136739687822.wav",
+      "reference": "siguiendo la misma línea se exige que los hombres usen pantalones que cubran las rodillas",
+      "duration_s": 7.56,
+      "sha256": "e396b47d0a0e617f31143063dc920fe45c303bfa5795ee3c7f1e010ae023995e"
+    },
+    {
+      "order": 78,
+      "id": "1726-12407835781220509066.wav",
+      "audio_path": "12407835781220509066.wav",
+      "reference": "los viajes de estudio constituyen una parte importante de todo salón de clases es muy frecuente que una docente desee llevar a sus estudiantes a sitios a los que no es posible llegar en autobús",
+      "duration_s": 15.84,
+      "sha256": "2292332263d16368bbb947b721e7256664163947f91f57f556c8176171699708"
+    },
+    {
+      "order": 79,
+      "id": "1726-12095024367747195456.wav",
+      "audio_path": "12095024367747195456.wav",
+      "reference": "los viajes de estudio constituyen una parte importante de todo salón de clases es muy frecuente que una docente desee llevar a sus estudiantes a sitios a los que no es posible llegar en autobús",
+      "duration_s": 12.66,
+      "sha256": "543ae6b4b380f9d859ac42cb69278127a25c1e94798b2779cb988462e9d6452a"
+    },
+    {
+      "order": 80,
+      "id": "1726-4449702173565377672.wav",
+      "audio_path": "4449702173565377672.wav",
+      "reference": "los viajes de estudio constituyen una parte importante de todo salón de clases es muy frecuente que una docente desee llevar a sus estudiantes a sitios a los que no es posible llegar en autobús",
+      "duration_s": 14.28,
+      "sha256": "74bc6af9f4c1d8e01d636981692e8031fc5a01d17a24f23f63f152455e40cb20"
+    },
+    {
+      "order": 81,
+      "id": "1845-17655926579840606601.wav",
+      "audio_path": "17655926579840606601.wav",
+      "reference": "viajaron de vuelta hacia parís en un carruaje rodeados por una muchedumbre que gritaban y lanzaban amenazas contra el rey y la reina",
+      "duration_s": 11.46,
+      "sha256": "4b2962d1cb176167e0ed7fb34f5142484690f1b46890625da87544c3919a145c"
+    },
+    {
+      "order": 82,
+      "id": "1845-5976712425457562576.wav",
+      "audio_path": "5976712425457562576.wav",
+      "reference": "viajaron de vuelta hacia parís en un carruaje rodeados por una muchedumbre que gritaban y lanzaban amenazas contra el rey y la reina",
+      "duration_s": 11.16,
+      "sha256": "7aca2b3c32fb185b87c5be4fea21e7c066dc635e006eeb02204c78d6ec0f5d5a"
+    },
+    {
+      "order": 83,
+      "id": "1845-13330508669354901250.wav",
+      "audio_path": "13330508669354901250.wav",
+      "reference": "viajaron de vuelta hacia parís en un carruaje rodeados por una muchedumbre que gritaban y lanzaban amenazas contra el rey y la reina",
+      "duration_s": 10.68,
+      "sha256": "019d7cbf8235649f7d933b0288eadd050fedf35d247aa6af09c38ae427bbd218"
+    },
+    {
+      "order": 84,
+      "id": "1947-10525086999452368592.wav",
+      "audio_path": "10525086999452368592.wav",
+      "reference": "previo al arribo de las fuerzas de paz haití no había enfrentado problemas asociados a la enfermedad desde el siglo xix",
+      "duration_s": 8.88,
+      "sha256": "5653e0842cebb17fe495ac09b2d3a19d39fa41bedc60eefd38f039e1dfcb5e4a"
+    },
+    {
+      "order": 85,
+      "id": "1935-4399757122636727836.wav",
+      "audio_path": "4399757122636727836.wav",
+      "reference": "no obstante eso no es cierto si bien el reverso del documento contiene algo escrito no se trata de un mapa de un tesoro",
+      "duration_s": 9.12,
+      "sha256": "ad9ca5410dc1f347888347dbf59dd8a3a13185e8fd1c588b05facde3902ccfca"
+    },
+    {
+      "order": 86,
+      "id": "1935-9765777486071990470.wav",
+      "audio_path": "9765777486071990470.wav",
+      "reference": "no obstante eso no es cierto si bien el reverso del documento contiene algo escrito no se trata de un mapa de un tesoro",
+      "duration_s": 10.44,
+      "sha256": "147e23f3d313cc05c0dacb89b05e9b52c0a14da15eb19b1c64d77f35ce6289d4"
+    },
+    {
+      "order": 87,
+      "id": "1935-3568790690383882323.wav",
+      "audio_path": "3568790690383882323.wav",
+      "reference": "no obstante eso no es cierto si bien el reverso del documento contiene algo escrito no se trata de un mapa de un tesoro",
+      "duration_s": 10.14,
+      "sha256": "3562e9fe3706906a3bd374e2ea1737115e65978d41e3cfc47cf40d37ee015614"
+    },
+    {
+      "order": 88,
+      "id": "1779-6228421468350475548.wav",
+      "audio_path": "6228421468350475548.wav",
+      "reference": "el anuncio se hizo tras la conversación telefónica que trump mantuvo con con el presidente de turquía recep tayyip erdoğan",
+      "duration_s": 10.08,
+      "sha256": "9bf1d55ea32b7e3e1bab202b5eaed50d27110a94f64e3286ca6f82913b6293a4"
+    },
+    {
+      "order": 89,
+      "id": "1779-6689103602670635209.wav",
+      "audio_path": "6689103602670635209.wav",
+      "reference": "el anuncio se hizo tras la conversación telefónica que trump mantuvo con con el presidente de turquía recep tayyip erdoğan",
+      "duration_s": 10.02,
+      "sha256": "cb9be2ef2e0660b92487f5e0dd129d84b46bc5136146b3a0c27b8278667c9aa7"
+    },
+    {
+      "order": 90,
+      "id": "1779-10800534950017924150.wav",
+      "audio_path": "10800534950017924150.wav",
+      "reference": "el anuncio se hizo tras la conversación telefónica que trump mantuvo con con el presidente de turquía recep tayyip erdoğan",
+      "duration_s": 9.84,
+      "sha256": "a30fc7c07b68445ef08e016981ef55271e496ec5a49065bae2f10076a210f3d9"
+    },
+    {
+      "order": 91,
+      "id": "1963-9106809788017666522.wav",
+      "audio_path": "9106809788017666522.wav",
+      "reference": "planchar la ropa cuando aún está húmeda puede ayudar a secarla muchos hoteles cuentan con plancha y una tabla para prestar a los viajeros incluso si uno no se encuentra en la habitación",
+      "duration_s": 12.54,
+      "sha256": "c75d12478ca0b701e25189e4b19214753260f6c841899c4838fc234668ee72e8"
+    },
+    {
+      "order": 92,
+      "id": "1963-3951303296320567478.wav",
+      "audio_path": "3951303296320567478.wav",
+      "reference": "planchar la ropa cuando aún está húmeda puede ayudar a secarla muchos hoteles cuentan con plancha y una tabla para prestar a los viajeros incluso si uno no se encuentra en la habitación",
+      "duration_s": 13.5,
+      "sha256": "efbe0473740df06425d0c0bc2535dccb1b6d5c632b2d58c59ddaf5713a014b72"
+    },
+    {
+      "order": 93,
+      "id": "1963-3019606775440707033.wav",
+      "audio_path": "3019606775440707033.wav",
+      "reference": "planchar la ropa cuando aún está húmeda puede ayudar a secarla muchos hoteles cuentan con plancha y una tabla para prestar a los viajeros incluso si uno no se encuentra en la habitación",
+      "duration_s": 11.76,
+      "sha256": "2973ed46ee400dc5afbf851bcec5cb13c01513f91625032145a36e63ed60229c"
+    },
+    {
+      "order": 94,
+      "id": "1771-3667933852121849716.wav",
+      "audio_path": "3667933852121849716.wav",
+      "reference": "hay que tener en cuenta que si bien las actuaciones musicales puede que hayan finalizado en otras zonas del festival podrían continuar hasta altas horas de la madrugada",
+      "duration_s": 11.64,
+      "sha256": "68053e24d5ae9c758351fcc59c5957fc8c29e620762877f7dc76b69778bda607"
+    },
+    {
+      "order": 95,
+      "id": "1771-7384452383807636114.wav",
+      "audio_path": "7384452383807636114.wav",
+      "reference": "hay que tener en cuenta que si bien las actuaciones musicales puede que hayan finalizado en otras zonas del festival podrían continuar hasta altas horas de la madrugada",
+      "duration_s": 12.72,
+      "sha256": "9aa8bd3bc48e4dd53d4fe4f2075b3bb92c87faf1aa017ac4272eea9c4222ed44"
+    },
+    {
+      "order": 96,
+      "id": "1771-14337275116056221781.wav",
+      "audio_path": "14337275116056221781.wav",
+      "reference": "hay que tener en cuenta que si bien las actuaciones musicales puede que hayan finalizado en otras zonas del festival podrían continuar hasta altas horas de la madrugada",
+      "duration_s": 12.12,
+      "sha256": "d5368be30f8538198b263fffc2a0f76b8a7e61e8834db3fe9debd8edb3682f2e"
+    },
+    {
+      "order": 97,
+      "id": "1663-11366613032038636511.wav",
+      "audio_path": "11366613032038636511.wav",
+      "reference": "el valle de cochamó es el destino para escalar más popular de chile y es conocido como el yosemite de sudamérica con variedad de extensos muros y riscos de granito",
+      "duration_s": 15.42,
+      "sha256": "2133b23d87ba032443d28fec6ce460ecc7b2bbd5dce6c31fffda43eb7c14f794"
+    },
+    {
+      "order": 98,
+      "id": "1663-11665155111644513093.wav",
+      "audio_path": "11665155111644513093.wav",
+      "reference": "el valle de cochamó es el destino para escalar más popular de chile y es conocido como el yosemite de sudamérica con variedad de extensos muros y riscos de granito",
+      "duration_s": 13.08,
+      "sha256": "d838510a27aff335e9a11114c5c72a65ab9a24e6b50c3f67aaa67a716ec3107b"
+    },
+    {
+      "order": 99,
+      "id": "1663-5506732277853263290.wav",
+      "audio_path": "5506732277853263290.wav",
+      "reference": "el valle de cochamó es el destino para escalar más popular de chile y es conocido como el yosemite de sudamérica con variedad de extensos muros y riscos de granito",
+      "duration_s": 14.94,
+      "sha256": "4623f6df087fb7d33a05141ab4453db31430fd1f34445a1349cede768a340904"
+    }
+  ],
+  "reference_parsing": "Literal tab separation, csv.QUOTE_NONE; seven fields required. Do not parse embedded quote characters as CSV field delimiters.",
+  "source_tsv_sha256": "d107a93a4f54a18ac25cd470bb4cdadce14fb075b0c1d1542258e274d209ec09"
+}

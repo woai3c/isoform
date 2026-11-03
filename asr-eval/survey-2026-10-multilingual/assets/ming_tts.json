@@ -1,0 +1,79 @@
+{
+  "id": "ming_tts",
+  "repo": "mlx-community/Ming-3.0-tts-0.5B-8bit",
+  "revision": "d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad",
+  "files": [
+    {
+      "path": "LICENSE",
+      "size_bytes": 1067,
+      "sha256": "2872f1918dfc04fdeb7f5d66d8d1b773594c9375e7c8f7bda39780bb97ad4fba",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/LICENSE"
+    },
+    {
+      "path": "added_tokens.json",
+      "size_bytes": 1785,
+      "sha256": "34394b1e16d7da2db16618bd43a0f970902ade0075480bcd812fe62d559ec319",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/added_tokens.json"
+    },
+    {
+      "path": "campplus.safetensors",
+      "size_bytes": 27699096,
+      "sha256": "a479586bd8f8f96cdb414eaa2fa07c6cd54d6d1636562e2d75a0211cb3b0a6fd",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/campplus.safetensors"
+    },
+    {
+      "path": "config.json",
+      "size_bytes": 6087,
+      "sha256": "8ea3e685a870fd1a535d3b4a4c975fc20c4fca56e67acdef06fe40004064c73b",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/config.json"
+    },
+    {
+      "path": "configuration.json",
+      "size_bytes": 51,
+      "sha256": "6720b8448f6ad5b4631689a60857bdeb238053a37f6cc6a5936eb50c2a3b9296",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/configuration.json"
+    },
+    {
+      "path": "merges.txt",
+      "size_bytes": 1671853,
+      "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/merges.txt"
+    },
+    {
+      "path": "model.safetensors",
+      "size_bytes": 1573366591,
+      "sha256": "e88a4b53cb5b705703e961389f3d7f0e8b72c240b4dad796bf9961cc018971fc",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/model.safetensors"
+    },
+    {
+      "path": "model.safetensors.index.json",
+      "size_bytes": 201850,
+      "sha256": "f59991abebed1a4f798a9488568af496d925e6eea507450aa8051a06f475a2ce",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/model.safetensors.index.json"
+    },
+    {
+      "path": "special_tokens_map.json",
+      "size_bytes": 2726,
+      "sha256": "2c2ec51b9da5db654ac20de8310350d0c9c1a65918ae0181b80dacd2919b4fc3",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/special_tokens_map.json"
+    },
+    {
+      "path": "tokenizer.json",
+      "size_bytes": 11431389,
+      "sha256": "87d54ca3b44ea2f822ba39a0a45cb1b61644bd6606d9d3536dea75367bffb06d",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/tokenizer.json"
+    },
+    {
+      "path": "tokenizer_config.json",
+      "size_bytes": 16260,
+      "sha256": "12d6162c815edef24f8606e65b60d43fe0d92b0a4e150a0db8fa01c523aaf36a",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/tokenizer_config.json"
+    },
+    {
+      "path": "vocab.json",
+      "size_bytes": 2776833,
+      "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+      "url": "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/vocab.json"
+    }
+  ]
+}

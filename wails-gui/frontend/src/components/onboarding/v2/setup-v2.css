@@ -1,0 +1,1273 @@
+/* First-run setup, version 2: Isoform design handoff 2026-10-28-1215.
+   Ported from the working prototype (docs/handoff-2026-10-28/setup-2.0/),
+   which wins on every size, color and timing. Everything is scoped under
+   .sv2, the 600 x 560 setup window. Only transform and opacity animate
+   (plus the title's color fade), per the handoff's section 10. */
+
+@font-face {
+    font-family: "Instrument Sans";
+    font-style: normal;
+    font-weight: 500;
+    font-display: block;
+    src: url("../../../assets/fonts/InstrumentSans-Medium.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Instrument Sans";
+    font-style: normal;
+    font-weight: 600;
+    font-display: block;
+    src: url("../../../assets/fonts/InstrumentSans-SemiBold.woff2") format("woff2");
+}
+
+/* Colors are the app's tokens. Where the prototype draws a value no token
+   holds (faint, the washes), it is mixed from tokens to the same value. The
+   app icon tile, the phone's island and shadows are artwork and stay the
+   same in both themes; see docs/setup-v2-qa/README.md. */
+.sv2 {
+    --bg: var(--color-background);
+    --panel: var(--color-panel);
+    --panel-2: var(--color-panel-warm);
+    --user: var(--color-panel-user);
+    --ink: var(--color-ink);
+    --muted: var(--color-muted);
+    --subtle: var(--color-subtle);
+    --faint: color-mix(in srgb, var(--color-faint), var(--color-border-strong));
+    --accent: var(--color-accent);
+    --brand: var(--color-solid);
+    --solid: var(--color-solid);
+    --solid-fg: var(--color-solid-fg);
+    --copper: var(--color-warning);
+    --copper-bg: color-mix(in srgb, var(--color-warning) 10%, transparent);
+    --ok: var(--color-success);
+    --ok-bg: var(--color-success-bg);
+    --border: var(--color-border);
+    --focus: var(--color-border-focus);
+    --acc-bg: var(--color-accent-light);
+    --acc-bg2: color-mix(in srgb, var(--color-solid) 22%, transparent);
+    --you: var(--color-ink);
+    --you-edge: var(--color-panel);
+    --tile-top: white;
+    --tile-bottom: color-mix(in srgb, white 94%, navy);
+    --tile-mark: var(--color-solid);
+    --pop-shadow: 0 1px 2px color-mix(in srgb, black 6%, transparent),
+        0 18px 50px color-mix(in srgb, black 16%, transparent);
+    --display: "Instrument Sans", -apple-system, BlinkMacSystemFont,
+        "Helvetica Neue", Arial, sans-serif;
+    --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+    --spring: cubic-bezier(0.2, 1.25, 0.4, 1);
+    --rise: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.45 var(--ui);
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+}
+:root[data-theme="onedark"] .sv2 {
+    --faint: color-mix(in srgb, var(--color-faint) 40%, var(--color-border));
+    --copper-bg: color-mix(in srgb, var(--color-warning) 14%, transparent);
+    --ok-bg: color-mix(in srgb, var(--color-success) 14%, transparent);
+    --acc-bg: color-mix(in srgb, var(--color-solid) 12%, transparent);
+    --acc-bg2: color-mix(in srgb, var(--color-solid) 26%, transparent);
+    --you-edge: var(--color-solid-fg);
+    --pop-shadow: 0 1px 2px color-mix(in srgb, black 40%, transparent),
+        0 18px 50px color-mix(in srgb, black 55%, transparent);
+    color-scheme: dark;
+}
+.sv2 *,
+.sv2 *::before,
+.sv2 *::after {
+    box-sizing: border-box;
+}
+.sv2 [hidden] {
+    display: none !important;
+}
+.sv2 button {
+    font: inherit;
+    color: inherit;
+}
+.sv2 :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.sv2 .drag {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 30px;
+    --wails-draggable: drag;
+}
+
+/* the window: content scales with the native fade at the finish */
+.sv2 .win {
+    position: absolute;
+    inset: 0;
+    transform-origin: 50% 50%;
+    transition:
+        opacity 0.28s,
+        transform 0.28s;
+}
+.sv2 .win.closing {
+    opacity: 0;
+    transform: scale(0.96);
+}
+.sv2 .win.reopen {
+    animation: sv2-reopen 0.8s ease-in-out;
+}
+@keyframes sv2-reopen {
+    0% { opacity: 1; transform: none; }
+    35% { opacity: 0; transform: scale(0.97); }
+    60% { opacity: 0; transform: scale(0.97); }
+    100% { opacity: 1; transform: none; }
+}
+.sv2 .prog {
+    position: absolute;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 5px;
+}
+.sv2 .prog i {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--faint);
+    transition: background 0.3s;
+}
+.sv2 .prog i.was { background: var(--subtle); }
+.sv2 .prog i.on { background: var(--ink); }
+.sv2 .back {
+    position: absolute;
+    left: 20px;
+    top: 40px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--muted);
+    z-index: 3;
+}
+.sv2 .back svg { width: 14px; height: 14px; }
+
+/* "On this computer" (v2.1.0 §1): the pill, level with the traffic lights, and
+   the popover under it. */
+.sv2 .local {
+    position: absolute;
+    right: 14px;
+    top: 9px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 9px 0 7px;
+    border-radius: 11px;
+    border: 0;
+    background: var(--acc-bg);
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 5;
+}
+.sv2 .local svg { width: 11px; height: 11px; }
+.sv2 .localpop {
+    position: absolute;
+    right: 14px;
+    top: 38px;
+    width: 300px;
+    z-index: 6;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--pop-shadow);
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--muted);
+    animation: sv2-fin 0.2s both;
+}
+.sv2.still .localpop { animation: none; }
+.sv2 .localpop b { display: block; color: var(--ink); font-size: 12.5px; margin-bottom: 6px; }
+.sv2 .localpop ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.sv2 .localpop li span { color: var(--ink); font-weight: 600; }
+
+/* scenes */
+.sv2 .scene {
+    position: absolute;
+    inset: 58px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 40px 26px;
+    outline: none;
+}
+.sv2 .t {
+    margin: 0;
+    font: 600 24px/1.2 var(--display);
+    letter-spacing: -0.012em;
+    text-align: center;
+    text-wrap: balance;
+    max-width: 470px;
+    color: var(--ink);
+}
+.sv2 .s {
+    margin: 9px 0 0;
+    color: var(--muted);
+    font-size: 13.5px;
+    line-height: 1.45;
+    text-align: center;
+    max-width: 370px;
+    text-wrap: pretty;
+}
+.sv2 .ill {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    display: grid;
+    place-items: center;
+    min-height: 0;
+}
+.sv2 .act {
+    width: 320px;
+    display: grid;
+    /* The column stays 320 px: a line that may not wrap (Sees' done line)
+       runs past it, centered, instead of widening the button. */
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    justify-items: center;
+}
+.sv2 .btn {
+    width: 100%;
+    height: 38px;
+    border-radius: 10px;
+    border: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition:
+        background 0.25s,
+        color 0.25s,
+        transform 0.12s;
+}
+.sv2 .btn.primary { background: var(--solid); color: var(--solid-fg); }
+.sv2 .btn.quiet {
+    background: transparent;
+    color: var(--muted);
+    height: 30px;
+    font-weight: 500;
+}
+.sv2 .btn.on { background: var(--ok-bg); color: var(--ok); }
+.sv2 .btn:active:not(:disabled) { transform: scale(0.97); }
+.sv2 .btn svg { width: 15px; height: 15px; }
+.sv2 .btn:disabled { opacity: 0.4; cursor: default; }
+.sv2 .fine {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--subtle);
+    text-align: center;
+    line-height: 1.4;
+}
+.sv2 .fine.error { color: var(--copper); }
+/* One line under the assistant cards. A second line makes the screen 17 px taller
+   than the window, and the illustration moves up until the "On this computer" zone chip
+   touches the subtitle (a 440 px box in the 320 px column: 60 px out on each side). */
+.sv2 .fine.wide { width: 440px; margin-inline: -60px; }
+.sv2 .link {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: inherit;
+    font-weight: 500;
+}
+.sv2 .scene.enter .t { animation: sv2-tin 0.6s var(--rise) both; }
+.sv2 .scene.enter .s { animation: sv2-fin 0.55s 0.1s var(--rise) both; }
+.sv2 .scene.enter .act { animation: sv2-fin 0.45s 0.2s var(--rise) both; }
+.sv2 .scene.fade { animation: sv2-cross 0.2s ease both; }
+@keyframes sv2-tin {
+    from { opacity: 0; color: var(--faint); transform: translateY(8px); }
+    to { opacity: 1; color: var(--ink); transform: none; }
+}
+@keyframes sv2-fin {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes sv2-cross {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.sv2 .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 9px;
+    border-radius: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    font-size: 11.5px;
+    white-space: nowrap;
+    color: var(--ink);
+}
+.sv2 .chip svg { width: 13px; height: 13px; color: var(--muted); }
+@keyframes sv2-ring {
+    from { opacity: 0.9; transform: scale(0.7); }
+    to { opacity: 0; transform: scale(1.5); }
+}
+
+/* 1 · the day strip */
+.sv2 .day { position: relative; width: 360px; height: 140px; transform: scale(1.15); }
+.sv2 .dchip {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    height: 32px;
+    padding: 0 11px;
+    gap: 7px;
+    font-size: 12.5px;
+    box-shadow: 0 1px 2px color-mix(in srgb, black 6%, transparent);
+    opacity: 0;
+    transform: translateY(6px);
+    transition:
+        opacity 0.28s,
+        transform 0.28s;
+}
+.sv2 .dchip.show { opacity: 1; transform: none; }
+.sv2 .st {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    margin-left: 4px;
+}
+.sv2 .st::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.sv2 .st.ready { color: var(--accent); }
+.sv2 .st.need { color: var(--copper); }
+.sv2 .lane {
+    position: absolute;
+    left: 0;
+    top: 62px;
+    width: 360px;
+    height: 28px;
+    border-radius: 9px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    overflow: visible;
+}
+.sv2 .past {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 360px;
+    border-radius: 8px;
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+    background: linear-gradient(90deg, transparent, var(--acc-bg2));
+}
+.sv2 .blk {
+    position: absolute;
+    top: 6px;
+    height: 14px;
+    border-radius: 4px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+}
+.sv2 .mkr {
+    position: absolute;
+    top: 50%;
+    width: 11px;
+    height: 11px;
+    margin: -5.5px 0 0 -5.5px;
+    border-radius: 50%;
+    border: 2px solid var(--brand);
+    background: var(--panel);
+    transition:
+        background 0.2s,
+        opacity 0.4s;
+}
+.sv2 .mkr.need { border-color: var(--copper); }
+.sv2 .mkr.hit { background: var(--brand); }
+.sv2 .mkr.need.hit { background: var(--copper); }
+.sv2 .mkr.hit::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--brand);
+    opacity: 0;
+    animation: sv2-ring 0.9s ease-out 1;
+}
+.sv2 .mkr.need.hit::after { border-color: var(--copper); }
+.sv2 .mkr.fade { opacity: 0; }
+.sv2 .now {
+    position: absolute;
+    left: 0;
+    top: 52px;
+    width: 2px;
+    height: 48px;
+    margin-left: -1px;
+    background: var(--brand);
+    border-radius: 1px;
+}
+.sv2 .now::before {
+    content: "";
+    position: absolute;
+    left: -3px;
+    top: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--brand);
+}
+.sv2 .hours {
+    position: absolute;
+    left: 0;
+    top: 100px;
+    width: 360px;
+    height: 16px;
+    font-size: 11px;
+    color: var(--subtle);
+    font-variant-numeric: tabular-nums;
+}
+.sv2 .hours span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.sv2 .hours span:first-child { transform: none; }
+.sv2 .hours span:last-child { transform: translateX(-100%); }
+.sv2 .tele-row {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--subtle);
+    height: 16px;
+}
+.sv2 .act.tele-open .tele-row { display: flex; }
+.sv2 .act.tele-open .tele { display: none; }
+.sv2 .sw {
+    position: relative;
+    width: 28px;
+    height: 16px;
+    border-radius: 8px;
+    background: var(--faint);
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.sv2 .sw::after {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 2px color-mix(in srgb, black 25%, transparent);
+    transition: transform 0.2s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+.sv2 .sw[aria-checked="true"] { background: var(--solid); }
+.sv2 .sw[aria-checked="true"]::after { transform: translateX(12px); }
+
+/* 2 · your AI */
+.sv2 .ai { position: relative; width: 360px; height: 262px; }
+.sv2 .isorow { position: absolute; left: 161px; top: 1px; }
+/* The boundary (v2.1.0 §3): the noticed item and the result stay inside;
+   only the text item crosses down to the assistant. */
+.sv2 .maczone {
+    position: absolute;
+    left: 0;
+    top: -10px;
+    width: 360px;
+    height: 58px;
+    border-radius: 14px;
+    border: 1.5px dashed var(--acc-bg2);
+    background: color-mix(in srgb, var(--acc-bg) 45%, transparent);
+}
+.sv2 .maczone .zl {
+    position: absolute;
+    left: 12px;
+    top: -8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+    background: var(--bg);
+    color: var(--accent);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 14px;
+}
+.sv2 .maczone .zl svg { width: 10px; height: 10px; }
+.sv2 .itile {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(var(--tile-top), var(--tile-bottom));
+    border: 1px solid color-mix(in srgb, black 8%, transparent);
+    display: grid;
+    place-items: center;
+    color: var(--tile-mark);
+    box-shadow: 0 2px 8px color-mix(in srgb, black 8%, transparent);
+}
+.sv2 .itile svg { width: 21px; height: 21px; }
+.sv2 .itile.saw { animation: sv2-saw 0.5s ease-out; }
+@keyframes sv2-saw {
+    40% { transform: scale(1.1); }
+}
+.sv2 .wire {
+    position: absolute;
+    left: 179px;
+    top: 42px;
+    width: 2px;
+    height: 21px;
+    background: repeating-linear-gradient(var(--faint) 0 3px, transparent 3px 6px);
+}
+.sv2 .slot {
+    position: absolute;
+    left: 16px;
+    top: 64px;
+    width: 328px;
+    height: 56px;
+    border-radius: 12px;
+    border: 1.5px dashed var(--faint);
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 5px;
+    transition:
+        border-color 0.2s,
+        background-color 0.2s;
+}
+.sv2 .slot.bk { top: 134px; left: 40px; width: 280px; height: 52px; }
+.sv2 .slot .sl {
+    position: absolute;
+    left: 12px;
+    top: -8px;
+    padding: 0 6px;
+    background: var(--bg);
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--subtle);
+    line-height: 14px;
+}
+.sv2 .slot .hint {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    color: var(--subtle);
+    transition: color 0.2s;
+}
+.sv2 .slot.filled { border-style: solid; border-color: var(--border); }
+.sv2 .slot.filled .hint { display: none; }
+.sv2 .slot.first.filled { border-color: var(--acc-bg2); background: var(--acc-bg); }
+.sv2 .slot.first.filled .sl { color: var(--accent); }
+.sv2 .slot[data-over] { border-style: solid; border-color: var(--brand); background: var(--acc-bg); }
+.sv2 .slot[data-waiting] { border-color: var(--copper); }
+.sv2 .slot[data-waiting] .hint { color: var(--copper); }
+.sv2 .tray { position: absolute; left: 16px; top: 202px; width: 328px; transition: opacity 0.3s; }
+.sv2 .tray.gone { opacity: 0; pointer-events: none; }
+.sv2 .tl2 { font-size: 10.5px; font-weight: 600; color: var(--subtle); margin: 0 0 6px 2px; }
+.sv2 .trow { display: flex; gap: 8px; min-height: 44px; }
+.sv2 .ainote {
+    position: absolute;
+    left: 16px;
+    top: 206px;
+    width: 328px;
+    margin: 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.sv2 .ainote.show { opacity: 1; }
+.sv2 .ainote.error { color: var(--copper); }
+.sv2 .as {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 10px;
+    border-radius: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 2px color-mix(in srgb, black 5%, transparent);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    color: var(--ink);
+    text-align: left;
+}
+.sv2 .trow .as { padding: 0 8px; gap: 7px; }
+.sv2 .as[data-dragging] { cursor: grabbing; box-shadow: 0 12px 28px color-mix(in srgb, black 22%, transparent); z-index: 8; }
+.sv2 .as.off { cursor: default; box-shadow: none; }
+.sv2 .as.off .aic,
+.sv2 .as.off b { opacity: 0.55; }
+.sv2 .as.off small { color: var(--subtle); }
+.sv2 .as.off small.wait { opacity: 1; color: var(--copper); }
+.sv2 .aic {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    flex: none;
+}
+.sv2 .aic svg { width: 16px; height: 16px; }
+.sv2 .as b { display: block; font-size: 12.5px; font-weight: 600; line-height: 1.25; white-space: nowrap; }
+.sv2 .as small { display: block; font-size: 10.5px; color: var(--subtle); line-height: 1.3; white-space: nowrap; }
+.sv2 .as .think { display: none; margin-left: auto; gap: 3px; }
+.sv2 .as[data-thinking] .think { display: flex; }
+.sv2 .think i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--brand);
+    animation: sv2-dot 1s ease-in-out infinite;
+}
+.sv2 .think i:nth-child(2) { animation-delay: 0.15s; }
+.sv2 .think i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes sv2-dot {
+    0%, 100% { opacity: 0.3; transform: none; }
+    50% { opacity: 1; transform: translateY(-2px); }
+}
+.sv2 .as .lim {
+    display: none;
+    margin-left: auto;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--copper);
+    white-space: nowrap;
+}
+.sv2 .as[data-limit] .lim { display: block; }
+.sv2 .as[data-limit] .think { display: none; }
+.sv2 .tok {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 9;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    height: 24px;
+    font-size: 11px;
+    transition:
+        opacity 0.25s,
+        border-color 0.25s,
+        color 0.25s;
+}
+.sv2 .tok .st { font-size: 10.5px; margin-left: 2px; }
+.sv2 .tok .st::before { width: 5px; height: 5px; }
+.sv2 .tok.wait { border-color: var(--copper); color: var(--copper); }
+.sv2 .tok.wait svg { color: var(--copper); }
+.sv2 .cact {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--accent);
+    cursor: pointer;
+}
+.sv2 .as .bar {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 5px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--panel-2);
+    overflow: hidden;
+    display: none;
+}
+.sv2 .as .bar i {
+    position: absolute;
+    inset: 0;
+    background: var(--brand);
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+}
+.sv2 .as.installing .bar { display: block; }
+.sv2 .as.installing .bar i { animation: sv2-install 2.2s linear forwards; }
+@keyframes sv2-install {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(0.92); }
+}
+
+/* 3 · sees your work */
+.sv2 .see { position: relative; width: 360px; height: 248px; }
+.sv2 .mini {
+    position: absolute;
+    left: 10px;
+    top: 0;
+    width: 340px;
+    height: 128px;
+    border-radius: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(6px);
+    transition:
+        opacity 0.35s,
+        transform 0.35s;
+}
+.sv2 .mini.in { opacity: 1; transform: none; }
+.sv2 .mbar {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 8px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+}
+.sv2 .mbar > i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.sv2 .tabs { display: flex; gap: 4px; margin-left: 8px; }
+.sv2 .tab {
+    position: relative;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    color: var(--muted);
+    border: 1px solid transparent;
+}
+.sv2 .tab.on { background: var(--panel); border-color: var(--border); color: var(--ink); }
+.sv2 .mbody { display: grid; grid-template-columns: 1fr 122px; gap: 12px; padding: 9px 12px; }
+.sv2 .doc b { display: block; font-size: 11px; font-weight: 600; margin-bottom: 8px; }
+.sv2 .ln { display: block; height: 6px; border-radius: 3px; background: var(--panel-2); margin-bottom: 6px; }
+.sv2 .msgx { font-size: 10px; line-height: 1.35; background: var(--panel-2); border-radius: 8px; padding: 5px 7px; }
+.sv2 .pw {
+    position: relative;
+    margin-top: 7px;
+    font-size: 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 7px;
+    color: var(--muted);
+}
+/* The blur is on chip-sized pieces only (a tab and a field), per §10. */
+.sv2 .skip .c { transition: filter 0.35s, opacity 0.35s; }
+.sv2 .skip .lbl {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.35s;
+}
+.sv2 .skip .lbl svg { width: 10px; height: 10px; }
+.sv2 .skip.hid .c { filter: blur(3px); opacity: 0.4; }
+.sv2 .skip.hid .lbl { opacity: 1; }
+.sv2 .scan {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 30px;
+    margin-top: -15px;
+    background: linear-gradient(transparent, var(--acc-bg2) 48%, var(--brand) 50%, var(--acc-bg2) 52%, transparent);
+    opacity: 0.85;
+    pointer-events: none;
+    visibility: hidden;
+    will-change: transform;
+}
+.sv2 .scan.on { visibility: visible; }
+.sv2 .vault {
+    position: absolute;
+    left: 10px;
+    top: 138px;
+    width: 340px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow: visible;
+}
+.sv2 .vb {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    padding: 0 9px;
+    border-radius: 8px;
+    background: var(--acc-bg);
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.sv2 .vb svg { width: 12px; height: 12px; }
+.sv2 .note {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.96);
+    transition:
+        opacity 0.35s,
+        transform 0.45s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+.sv2 .note.show { opacity: 1; transform: none; }
+.sv2 .perm {
+    position: absolute;
+    left: 10px;
+    top: 176px;
+    width: 340px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.sv2 .pr {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    height: 30px;
+    padding: 0 9px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    font-size: 11.5px;
+    transition: border-color 0.3s;
+}
+.sv2 .pr > svg { width: 14px; height: 14px; color: var(--muted); }
+.sv2 .pr .sv {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10.5px;
+    color: var(--subtle);
+    font-weight: 600;
+}
+.sv2 .pr .sv svg { width: 11px; height: 11px; display: none; }
+.sv2 .pr.on { border-color: var(--ok-bg); }
+.sv2 .pr.on .sv { color: var(--ok); }
+.sv2 .pr.on .sv svg { display: block; }
+.sv2 .pr .cact { font-size: 10.5px; }
+.sv2 .doneline {
+    font-size: 12px;
+    color: var(--ok);
+    font-weight: 600;
+    height: 16px;
+    /* v2.1.0's longer line wraps into Continue in the prototype; one line
+       instead, running a little past the rows (docs/setup-v2-qa/README.md). */
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.sv2 .doneline.show { opacity: 1; }
+.sv2 .doneline.error { color: var(--copper); }
+
+/* 4 · runs on this computer: the local models (v2.2.0 §2). The bars move with
+   real progress, by transform only; under Reduce Motion they show their
+   value without moving. */
+.sv2 .mods { width: 440px; display: grid; gap: 6px; }
+.sv2 .mr {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--panel);
+    position: relative;
+    overflow: hidden;
+    transition: opacity 0.25s;
+}
+.sv2 .mr span { display: block; font-size: 11px; color: var(--muted); line-height: 1.3; }
+.sv2 .mr .mi {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--acc-bg);
+    color: var(--accent);
+    display: grid;
+    place-items: center;
+}
+.sv2 .mr .mi svg { width: 15px; height: 15px; }
+.sv2 .mr b { display: block; font-size: 12.5px; line-height: 1.3; font-weight: 600; color: var(--ink); }
+.sv2 .mr em { display: block; font-style: normal; font-size: 10.5px; line-height: 1.3; color: var(--subtle); }
+.sv2 .mr em.lic { color: var(--copper); }
+.sv2 .mr em.need .link { font-size: inherit; }
+.sv2 .mr .pct {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    min-width: 30px;
+    text-align: right;
+}
+.sv2 .mr .bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: var(--brand);
+    transform-origin: left;
+    transform: scaleX(0);
+    opacity: 0;
+    transition:
+        opacity 0.2s,
+        transform 0.5s linear;
+}
+.sv2 .mr.dl .bar { opacity: 1; }
+.sv2 .mr.off { opacity: 0.55; }
+.sv2 .mr.off .bar { opacity: 0; }
+.sv2 .mods.still .bar { transition: none; }
+.sv2 .tg {
+    display: block;
+    width: 34px;
+    height: 20px;
+    border-radius: 10px;
+    border: 0;
+    background: var(--faint);
+    position: relative;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s;
+}
+.sv2 .tg::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 1px 2px color-mix(in srgb, black 20%, transparent);
+    transition: transform 0.2s;
+}
+.sv2 .tg[aria-checked="true"] { background: var(--ok); }
+.sv2 .tg[aria-checked="true"]::after { transform: translateX(14px); }
+.sv2 .tg:disabled { cursor: default; }
+.sv2 .mr.fixed .al { font-size: 10.5px; font-weight: 600; color: var(--subtle); }
+.sv2 .tot { font-size: 12px; color: var(--muted); min-height: 16px; text-align: center; line-height: 1.35; }
+.sv2 .tot.ok { color: var(--ok); font-weight: 600; }
+.sv2 .tot.error { color: var(--copper); }
+@media (prefers-reduced-motion: reduce) {
+    .sv2 .mr .bar { transition: none; }
+}
+
+/* 5 · you press Send */
+.sv2 .send { position: relative; width: 360px; height: 250px; }
+.sv2 .ubub {
+    position: absolute;
+    right: 0;
+    top: 0;
+    background: var(--user);
+    border-radius: 14px 14px 4px 14px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+    opacity: 0;
+    transform: translateX(10px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+.sv2 .mail {
+    position: absolute;
+    left: 0;
+    top: 40px;
+    width: 360px;
+    height: 146px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+.sv2 .mrow { display: flex; gap: 8px; font-size: 11.5px; padding: 6px 12px; border-bottom: 1px solid var(--border); }
+.sv2 .mrow span { width: 50px; color: var(--subtle); }
+.sv2 .mtext { padding: 8px 12px; font-size: 12px; line-height: 1.45; white-space: pre-wrap; min-height: 60px; }
+.sv2 .caret {
+    display: inline-block;
+    width: 1.5px;
+    height: 13px;
+    background: var(--brand);
+    vertical-align: -2px;
+    margin-left: 1px;
+    animation: sv2-blink 0.9s steps(1) infinite;
+}
+@keyframes sv2-blink {
+    50% { opacity: 0; }
+}
+.sv2 .sendb {
+    position: absolute;
+    right: 10px;
+    bottom: 9px;
+    height: 26px;
+    padding: 0 14px;
+    border-radius: 7px;
+    border: 0;
+    background: var(--solid);
+    color: var(--solid-fg);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.25s, color 0.25s, transform 0.12s;
+}
+.sv2 .sendb svg { width: 12px; height: 12px; }
+.sv2 .sendb.ready::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    border: 2px solid var(--brand);
+    pointer-events: none;
+    animation: sv2-sring 1.3s ease-out infinite;
+}
+@keyframes sv2-sring {
+    from { opacity: 0.7; transform: scale(1); }
+    to { opacity: 0; transform: scale(1.22, 1.6); }
+}
+.sv2 .sendb.press { transform: scale(0.94); }
+.sv2 .sendb.sent { background: var(--ok-bg); color: var(--ok); animation: none; }
+.sv2 .ibub {
+    position: absolute;
+    left: 0;
+    top: 198px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--acc-bg);
+    border-radius: 14px 14px 14px 4px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+.sv2 .ibub svg { width: 13px; height: 13px; color: var(--brand); }
+.sv2 .show-x { opacity: 1 !important; transform: none !important; }
+.sv2 .cur {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 4;
+}
+.sv2 .cur svg { width: 16px; height: 20px; display: block; }
+.sv2 .cur.iso { color: var(--brand); }
+.sv2 .cur.iso svg path { stroke: var(--panel); }
+.sv2 .cur.you { color: var(--you); }
+.sv2 .cur.you svg path { stroke: var(--you-edge); }
+.sv2 .cur.coach { z-index: 12; }
+.sv2 .cur .cl {
+    position: absolute;
+    left: 13px;
+    top: 16px;
+    background: var(--solid);
+    color: var(--solid-fg);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+.sv2 .send.fadeall > * { opacity: 0 !important; transition: opacity 0.35s; }
+
+/* 6 · reaches you */
+.sv2 .reach { position: relative; width: 360px; height: 250px; }
+.sv2 .phone {
+    position: absolute;
+    left: 6px;
+    top: 0;
+    width: 170px;
+    height: 250px;
+    border-radius: 30px 30px 0 0;
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    background: linear-gradient(var(--panel-2), var(--bg));
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.35s, transform 0.35s;
+}
+.sv2 .phone.in { opacity: 1; transform: none; }
+.sv2 .island { position: absolute; left: 60px; top: 10px; width: 50px; height: 14px; border-radius: 7px; background: black; }
+.sv2 .ptime {
+    position: absolute;
+    top: 34px;
+    width: 100%;
+    text-align: center;
+    font: 600 34px/1 var(--display);
+    color: var(--ink);
+    letter-spacing: -0.01em;
+}
+.sv2 .pdate { position: absolute; top: 72px; width: 100%; text-align: center; font-size: 10.5px; color: var(--muted); }
+.sv2 .pn {
+    position: absolute;
+    left: 8px;
+    width: 154px;
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 8px 9px;
+    box-shadow: 0 4px 14px color-mix(in srgb, black 10%, transparent);
+    opacity: 0;
+    transform: translateY(-14px) scale(0.98);
+    transition: opacity 0.35s, transform 0.45s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+.sv2 .pn.show { opacity: 1; transform: none; }
+.sv2 .pnh { display: flex; align-items: center; gap: 5px; font-size: 10px; margin-bottom: 3px; }
+.sv2 .pnh b { font-weight: 600; }
+.sv2 .pnh span:last-child { margin-left: auto; color: var(--subtle); }
+.sv2 .pn p { margin: 0; font-size: 10.5px; line-height: 1.35; }
+.sv2 .aicon {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    background: linear-gradient(var(--tile-top), var(--tile-bottom));
+    border: 1px solid color-mix(in srgb, black 10%, transparent);
+    display: grid;
+    place-items: center;
+    color: var(--tile-mark);
+    flex: none;
+}
+.sv2 .aicon svg { width: 10px; height: 10px; }
+.sv2 .getapp {
+    position: absolute;
+    left: 196px;
+    top: 8px;
+    width: 164px;
+    display: grid;
+    gap: 7px;
+    justify-items: start;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.35s 0.15s, transform 0.35s 0.15s;
+}
+.sv2 .getapp.in { opacity: 1; transform: none; }
+.sv2 .qrbox {
+    padding: 6px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    line-height: 0;
+}
+.sv2 .qrbox svg { width: 96px; height: 96px; display: block; }
+.sv2 .qrbox .qr-empty { width: 96px; height: 96px; display: block; }
+.sv2 .getapp b { font-size: 12.5px; font-weight: 600; }
+.sv2 .getapp p { margin: 0; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+.sv2 .glink { font-size: 11.5px; color: var(--ink); display: flex; gap: 8px; align-items: baseline; }
+.sv2 .paired { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--ok); }
+.sv2 .paired svg { width: 14px; height: 14px; }
+.sv2 .getapp p.error { color: var(--copper); }
+.sv2 .sealed { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--accent); }
+.sv2 .sealed svg { width: 11px; height: 11px; }
+/* A phone asking to pair, approved in place (PROTOCOL.md §3.4). */
+.sv2 .pairact { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
+.sv2 .pairact .btn { width: auto; height: 30px; padding: 0 14px; font-size: 12.5px; border-radius: 8px; }
+
+/* finish */
+.sv2 .done { position: absolute; inset: 0; display: grid; place-items: center; z-index: 4; }
+.sv2 .atile {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: 17px;
+    background: linear-gradient(var(--tile-top), var(--tile-bottom));
+    border: 1px solid color-mix(in srgb, black 8%, transparent);
+    display: grid;
+    place-items: center;
+    color: var(--tile-mark);
+    box-shadow: 0 8px 24px color-mix(in srgb, black 14%, transparent);
+}
+.sv2 .atile > svg { width: 40px; height: 40px; }
+.sv2 .atile.pop { animation: sv2-pop 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+.sv2 .atile.gone { visibility: hidden; }
+@keyframes sv2-pop {
+    from { transform: scale(0.55); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+.sv2 .badge {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--ok);
+    color: var(--color-solid-fg);
+    border: 2px solid var(--bg);
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    transform: scale(0.4);
+    transition: opacity 0.2s, transform 0.35s var(--spring);
+}
+.sv2 .badge.show { opacity: 1; transform: none; }
+.sv2 .badge svg { width: 14px; height: 14px; }
+.sv2 .burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.sv2 .burst i {
+    position: absolute;
+    left: -1px;
+    top: -5px;
+    width: 2.5px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--brand);
+    opacity: 0;
+}
+.sv2 .burst.go i { animation: sv2-burst 0.55s ease-out both; }
+@keyframes sv2-burst {
+    from { opacity: 1; transform: rotate(var(--a)) translateY(-46px); }
+    to { opacity: 0; transform: rotate(var(--a)) translateY(-66px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sv2 .scene.enter .t,
+    .sv2 .scene.enter .s,
+    .sv2 .scene.enter .act { animation: none; }
+    .sv2 .caret,
+    .sv2 .sendb.ready::after,
+    .sv2 .mkr.hit::after,
+    .sv2 .think i { animation: none; }
+}
+/* The gallery freezes every state: no transitions, no loops. */
+.sv2.still *,
+.sv2.still *::before,
+.sv2.still *::after {
+    transition: none !important;
+    animation: none !important;
+}

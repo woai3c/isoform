@@ -1,0 +1,166 @@
+package main
+
+import (
+	"context"
+	"log"
+	"strings"
+	"time"
+
+	"wails-gui/internal/engagement"
+	"wails-gui/internal/handoff"
+)
+
+// Phase 1 moment producers. Each producer turns one app event into an
+// engagement.Moment. Producers pass titles, counts and ids only. When the
+// Engagement service is not running a producer does nothing. When Submit fails
+// the producer logs and reports nothing submitted, so the caller keeps its old
+// behavior.
+
+const (
+	engagementWorkFinishedStakes = 0.6
+	engagementWorkBlockedStakes  = 0.7
+	engagementBriefStakes        = 0.4
+	engagementBriefMissedStakes  = 0.5
+	engagementBriefExpiry        = 12 * time.Hour
+	engagementTitleMax           = 160
+)
+
+func (a *App) engagementActive() bool {
+	return a != nil && a.engagement != nil
+}
+
+// submitEngagementMoment hands one moment to the Engagement service. It reports
+// whether the service accepted it. A repeat of an open moment counts as accepted.
+func (a *App) submitEngagementMoment(what string, m engagement.Moment) bool {
+	if !a.engagementActive() {
+		return false
+	}
+	if _, err := a.engagement.Submit(context.Background(), m); err != nil {
+		log.Printf("[engagement] %s moment not submitted: %v", what, err)
+		return false
+	}
+	return true
+}
+
+// produceWorkFinished submits work_finished for a Handoff whose run ended without
+// error, whether its evidence verified (completed) or needs review. The copy
+// says the result is ready to review, so both outcomes read the same.
+func (a *App) produceWorkFinished(entry handoff.Entry) {
+	a.submitEngagementMoment("work finished", engagement.Moment{
+		ID:        mainChatEngagementMomentID(mainChatHandoffMomentID(entry)),
+		Kind:      engagement.KindWorkFinished,
+		SubjectID: entry.ID,
+		DedupeKey: engagement.DedupeKey(engagement.KindWorkFinished, entry.ID),
+		Stakes:    engagementWorkFinishedStakes,
+		Params:    map[string]string{"title": engagementTitle(entry.Title)},
+	})
+}
+
+// produceWorkBlocked submits work_blocked for a Handoff that became blocked. The
+// dedupe key includes the reason, so each reason is one moment.
+func (a *App) produceWorkBlocked(entry handoff.Entry) {
+	a.submitEngagementMoment("work blocked", engagement.Moment{
+		ID:        mainChatEngagementMomentID(mainChatHandoffMomentID(entry)),
+		Kind:      engagement.KindWorkBlocked,
+		SubjectID: entry.ID,
+		DedupeKey: engagement.DedupeKey(engagement.KindWorkBlocked, entry.ID, engagement.HashPart(entry.BlockedReason)),
+		Stakes:    engagementWorkBlockedStakes,
+		Params: map[string]string{
+			"title":    engagementTitle(entry.Title),
+			"question": engagementBlockedQuestion(entry.BlockedReason),
+		},
+	})
+}
+
+// engagementBlockedQuestion turns a blocked reason code into the phrase the
+// sealed notice reads after the title.
+func engagementBlockedQuestion(reason string) string {
+	switch reason {
+	case handoff.BlockedInterrupted:
+		return "to be picked up again."
+	case handoff.BlockedTimeout:
+		return "a check-in to keep going."
+	default:
+		return "your attention."
+	}
+}
+
+// produceBriefReady submits brief_ready for a brief that would have pushed. It
+// returns the notify flag the brief publish should use. The flag is false once
+// the moment carries the push, so the phone is not pushed twice.
+func (a *App) produceBriefReady(brief MobileBriefV1, notify bool) bool {
+	if a != nil && a.engagement != nil {
+		a.refreshYourWeekWorkDays(context.Background(), a.engagement.now())
+	}
+	if brief.NarrativeStatus == "quiet" {
+		return false
+	}
+	if a.produceFirstWeekBrief(brief) || a.produceYourWeekReady(brief) {
+		return false
+	}
+	if !notify || brief.BriefID == "" || !a.engagementActive() {
+		return notify
+	}
+	now := a.engagement.now()
+	if !a.submitEngagementMoment("brief ready", engagement.Moment{
+		Kind:      engagement.KindBriefReady,
+		SubjectID: brief.BriefID,
+		DedupeKey: engagement.DedupeKey(engagement.KindBriefReady, brief.BriefID),
+		Stakes:    engagementBriefStakes,
+		ExpiresAt: now.Add(engagementBriefExpiry),
+		Params:    map[string]string{"slot": mobileBriefDisplaySlot(brief, defaultMobileBriefSettings())},
+	}) {
+		return notify
+	}
+	return false
+}
+
+// produceBriefMissed submits brief_missed for a scheduled slot that did not
+// produce a brief. The key names the slot, so each slot is said at most once.
+// It reports whether the moment was accepted.
+// details may carry the run's "reason" and its due "time".
+func (a *App) produceBriefMissed(briefID, slot string, details ...map[string]string) bool {
+	if !a.engagementActive() || strings.TrimSpace(briefID) == "" {
+		return false
+	}
+	now := a.engagement.now()
+	return a.submitEngagementMoment("brief missed", engagement.Moment{
+		Kind:      engagement.KindBriefMissed,
+		SubjectID: briefID,
+		DedupeKey: engagement.DedupeKey(engagement.KindBriefMissed, briefID),
+		Stakes:    engagementBriefMissedStakes,
+		ExpiresAt: now.Add(engagementBriefExpiry),
+		Params:    briefMissedParams(slot, details...),
+	})
+}
+
+func briefMissedParams(slot string, details ...map[string]string) map[string]string {
+	params := map[string]string{"slot": engagementBriefSlot(slot)}
+	for _, detail := range details {
+		for _, key := range []string{"reason", "time"} {
+			if value := strings.TrimSpace(detail[key]); value != "" {
+				params[key] = value
+			}
+		}
+	}
+	return params
+}
+
+// engagementBriefSlot names the brief slot the sealed notice reads.
+func engagementBriefSlot(slot string) string {
+	switch slot {
+	case mobileBriefSlotMorning, mobileBriefSlotEvening:
+		return slot
+	default:
+		return "on-request"
+	}
+}
+
+// engagementTitle trims a title to one line of bounded length for the phone.
+func engagementTitle(title string) string {
+	title = strings.Join(strings.Fields(title), " ")
+	if runes := []rune(title); len(runes) > engagementTitleMax {
+		return strings.TrimSpace(string(runes[:engagementTitleMax])) + "..."
+	}
+	return title
+}

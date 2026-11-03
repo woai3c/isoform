@@ -1,0 +1,270 @@
+{
+  "name": "account-boundaries",
+  "version": "1.1.0",
+  "samples": [
+    {
+      "id": "boundary-negative-0",
+      "text": "the contract lapsed out",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "boundary-negative-1",
+      "text": "the contract passed out",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "boundary-long-positive-2",
+      "text": "Contract: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "category": "account_number",
+          "start": 10,
+          "end": 54
+        }
+      ]
+    },
+    {
+      "id": "boundary-long-positive-3",
+      "text": "Account: 99999999999999999999999999999999999999999999",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "99999999999999999999999999999999999999999999",
+          "category": "account_number",
+          "start": 9,
+          "end": 53
+        }
+      ]
+    },
+    {
+      "id": "boundary-negative-4",
+      "text": "écontract 12345678",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "boundary-negative-5",
+      "text": "contract12345678w",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "boundary-negative-6",
+      "text": "the contract lapsed out. Nothing on tomorrow’s calendar competes with it.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "boundary-positive-0",
+      "text": "Account number: 1234567890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "1234567890",
+          "category": "account_number",
+          "start": 16,
+          "end": 26
+        }
+      ]
+    },
+    {
+      "id": "boundary-positive-1",
+      "text": "account:1234567890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "1234567890",
+          "category": "account_number",
+          "start": 8,
+          "end": 18
+        }
+      ]
+    },
+    {
+      "id": "boundary-positive-2",
+      "text": "Claim No: AB-123456",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "AB-123456",
+          "category": "account_number",
+          "start": 10,
+          "end": 19
+        }
+      ]
+    },
+    {
+      "id": "boundary-positive-3",
+      "text": "account12345678",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "12345678",
+          "category": "account_number",
+          "start": 7,
+          "end": 15
+        }
+      ]
+    },
+    {
+      "id": "boundary-positive-4",
+      "text": "acct 87654321",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "87654321",
+          "category": "account_number",
+          "start": 5,
+          "end": 13
+        }
+      ]
+    },
+    {
+      "id": "boundary-positive-5",
+      "text": "保单号12345678",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "12345678",
+          "category": "account_number",
+          "start": 9,
+          "end": 17
+        }
+      ]
+    },
+    {
+      "id": "boundary-positive-6",
+      "text": "我的保单号12345678",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "12345678",
+          "category": "account_number",
+          "start": 15,
+          "end": 23
+        }
+      ]
+    },
+    {
+      "id": "boundary-positive-7",
+      "text": "私の保険契約番号12345678",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "12345678",
+          "category": "account_number",
+          "start": 24,
+          "end": 32
+        }
+      ]
+    },
+    {
+      "id": "boundary-positive-8",
+      "text": "Account: AB/123.45",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "AB/123.45",
+          "category": "account_number",
+          "start": 9,
+          "end": 18
+        }
+      ]
+    },
+    {
+      "id": "boundary-short-group-0",
+      "text": "Account: AB 123456",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "AB 123456",
+          "category": "account_number",
+          "start": 9,
+          "end": 18
+        }
+      ]
+    },
+    {
+      "id": "boundary-short-group-1",
+      "text": "Account: A 123456",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "A 123456",
+          "category": "account_number",
+          "start": 9,
+          "end": 17
+        }
+      ]
+    },
+    {
+      "id": "boundary-short-group-2",
+      "text": "Account: 12 345678",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "12 345678",
+          "category": "account_number",
+          "start": 9,
+          "end": 18
+        }
+      ]
+    },
+    {
+      "id": "boundary-spaced-bank-code",
+      "text": "Account: GB12 BANK 123 4567",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "GB12 BANK 123 4567",
+          "category": "account_number",
+          "start": 9,
+          "end": 27
+        }
+      ]
+    },
+    {
+      "id": "round1-grouped-numeric-0",
+      "text": "Account: 1 234 567 890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "1 234 567 890",
+          "category": "account_number",
+          "start": 9,
+          "end": 22
+        }
+      ]
+    },
+    {
+      "id": "round1-grouped-numeric-1",
+      "text": "Account: 12 3456 7890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "12 3456 7890",
+          "category": "account_number",
+          "start": 9,
+          "end": 21
+        }
+      ]
+    },
+    {
+      "id": "round1-grouped-numeric-2",
+      "text": "Account: 01 23 45 67 89",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "01 23 45 67 89",
+          "category": "account_number",
+          "start": 9,
+          "end": 23
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "source_artifact": "assets/chatterbox.json",
+  "source_files_unchanged": true,
+  "conversion": "Public Module.set_dtype(mx.float16), including codec; runtime conversion only",
+  "parameter_views_bytes": {
+    "model": {
+      "mlx.core.float16": 1386464766
+    },
+    "codec": {
+      "mlx.core.float16": 247429136
+    }
+  },
+  "note": "Model and codec views may overlap; do not sum these views. Operation intermediates may still promote to F32 for numerical stability."
+}

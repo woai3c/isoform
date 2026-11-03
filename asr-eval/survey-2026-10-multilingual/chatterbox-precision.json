@@ -1,0 +1,7 @@
+{
+  "stored_tensor_bytes_by_dtype": {
+    "F32": 2710785724
+  },
+  "file": "model.safetensors",
+  "model": "chatterbox multilingual v3"
+}

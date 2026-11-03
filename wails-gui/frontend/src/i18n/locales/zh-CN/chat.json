@@ -1,0 +1,771 @@
+{
+    "todayContext": {
+        "status": "上下文：{{memories}}，{{activities}}，{{people}}",
+        "memories_one": "{{count}} 条记忆",
+        "memories_other": "{{count}} 条记忆",
+        "activities_one": "{{count}} 项活动",
+        "activities_other": "{{count}} 项活动",
+        "people_one": "{{count}} 位相关人员",
+        "people_other": "{{count}} 位相关人员",
+        "preview": "Isoform 会补充它了解的相关信息：{{memories}}，{{activities}}，{{people}}",
+        "empty": "Isoform 会补充它了解的相关信息：目前没有相关记录",
+        "loading": "Isoform 正在查看它了解的相关信息。",
+        "unavailable": "Isoform 暂时无法查看相关信息。请从 Today 再次打开这条内容。",
+        "reviewBeforeSending": "发送前请先检查"
+    },
+    "messageActions": {
+        "speak": "朗读",
+        "stop": "停止"
+    },
+    "ttsDownload": {
+        "chinese": "中文语音",
+        "english": "英文语音",
+        "downloading": "正在下载{{language}}模型… {{percent}}%",
+        "starting": "正在开始下载本地模型…",
+        "progressDetail": "已下载 {{downloaded}}，共 {{total}} · {{speed}}/秒",
+        "preparing": "{{language}}模型已下载，正在加载…",
+        "ready": "{{language}}已就绪",
+        "failed": "语音模型下载失败",
+        "retry": "请检查网络，然后再次点击朗读重试。"
+    },
+    "welcome": {
+        "heading": "在想什么？",
+        "subheading": "随便说说，剩下的交给 Isoform。"
+    },
+    "automationResultQuote": {
+        "title": "运行结果"
+    },
+    "deliverables": {
+        "title": "交付文件",
+        "open": "打开 {{name}}",
+        "openAria": "打开交付文件 {{name}}",
+        "openButton": "打开",
+        "moreActions": "{{name}} 的更多操作",
+        "fileLabel": "文件",
+        "loadingApps": "正在加载应用…",
+        "revealInFinder": "在{{fileManager}}中打开",
+        "pendingLabel": "待产出",
+        "pendingHint": "任务完成后可用",
+        "unavailableLabel": "已失效",
+        "unavailableHint": "该交付文件已不存在"
+    },
+    "errors": {
+        "quotaPeriod": {
+            "title": "{{period}}用量已达上限",
+            "body": "下一个{{periodLower}}周期开始时用量会重置。可以在「助手」页面查看每个助手还剩多少用量。"
+        },
+        "quotaGeneric": {
+            "title": "用量已达上限",
+            "body": "用量很快会重置。可以在「助手」页面查看每个助手的剩余用量和重置时间。"
+        },
+        "subscription": {
+            "title": "你的助手账户需要处理",
+            "body": "服务商因该账户的账单或访问权限问题拒绝了这次请求。请向服务商确认该账户，或在「助手」页面查看每个助手的用量。"
+        },
+        "server": {
+            "title": "服务暂时不可用",
+            "body": "AI 服务正在恢复中，请稍后再试。"
+        },
+        "network": {
+            "title": "网络连接异常",
+            "body": "无法连接到 AI 服务。请检查网络后重试。"
+        },
+        "requestTooLarge": {
+            "title": "单次请求内容过大",
+            "body": "这次任务累积的内容（通常是大截图或大文件）超过了模型单次请求的上限。试着开启新对话，或把任务拆成更小的步骤、减少截图。"
+        },
+        "unknown": {
+            "title": "出现了一些问题",
+            "body": "遇到了意外错误。请稍后再试。"
+        },
+        "period": {
+            "daily": "每日",
+            "weekly": "每周",
+            "monthly": "每月",
+            "dailyLower": "每日",
+            "weeklyLower": "每周",
+            "monthlyLower": "每月"
+        },
+        "actions": {
+            "openSettings": "打开设置",
+            "seeUsage": "查看用量",
+            "setUp": "去设置",
+            "signIn": "登录",
+            "tryAgain": "重试",
+            "details": "详情",
+            "hide": "收起"
+        },
+        "line": "{{title}}。{{body}}",
+        "cause": {
+            "noAssistantBox": "Isoform 需要一个 AI 才能回答。",
+            "noAssistantKept": "没有发送：还没有登录 AI。",
+            "signedOut": "需要重新登录 {{ai}}。",
+            "usageDaily": "{{ai}} 今天的额度用完了。",
+            "usageWeekly": "{{ai}} 本周的额度用完了。",
+            "usageMonthly": "{{ai}} 本月的额度用完了。",
+            "usageLimit": "{{ai}} 的额度用完了。",
+            "runnerUnavailable": "没能开始：你电脑上的 {{ai}} 现在用不了。",
+            "network": "连不上 {{ai}}。请检查网络。",
+            "server": "{{ai}} 现在有点问题。",
+            "assistantError": "{{ai}} 出错停止了。",
+            "assistantErrorUnknown": "你的 AI 出错停止了。",
+            "yourAI": "你的 AI",
+            "yourAICapital": "你的 AI",
+            "separator": "· "
+        },
+        "failedSend": {
+            "line": "没有发送",
+            "edit": "编辑"
+        }
+    },
+    "tools": {
+        "answerDetails": "Isoform 是如何得出这个结果的",
+        "steps_one": "{{count}} 个步骤",
+        "steps_other": "{{count}} 个步骤",
+        "workingTail": "处理中",
+        "completedTail": "已完成",
+        "preparingTitle": "准备调用",
+        "preparingFallback": "工具",
+        "running": {
+            "read": "正在读取文件",
+            "write": "正在写入文件",
+            "edit": "正在编辑文件",
+            "bash": "正在执行命令",
+            "grep": "正在搜索代码",
+            "glob": "正在匹配文件",
+            "webFetch": "正在浏览网页",
+            "webSearch": "正在搜索网络",
+            "applyPatch": "正在应用补丁",
+            "repl": "正在运行代码",
+            "agent": "正在委托给子代理",
+            "toolSearch": "正在加载工具",
+            "skill": "正在运行 Skill",
+            "todoWrite": "正在更新待办",
+            "taskCreate": "正在创建任务",
+            "taskGet": "正在读取任务",
+            "taskList": "正在列出任务",
+            "taskOutput": "正在读取任务输出",
+            "taskStop": "正在停止任务",
+            "taskUpdate": "正在更新任务",
+            "lsp": "正在查询代码索引",
+            "sleep": "等待中",
+            "askUserQuestion": "正在提出问题",
+            "notebookEdit": "正在编辑笔记本",
+            "enterPlanMode": "正在进入规划模式",
+            "exitPlanMode": "正在退出规划模式",
+            "enterWorktree": "正在进入工作树",
+            "exitWorktree": "正在退出工作树",
+            "sendMessage": "正在发送消息",
+            "brief": "正在发送简报",
+            "cronCreate": "正在安排任务",
+            "cronDelete": "正在取消计划",
+            "cronList": "正在列出计划",
+            "remoteTrigger": "正在触发远程",
+            "default": "正在使用 {{name}}",
+            "defaultNoName": "正在使用工具",
+            "mcp": "正在调用 {{name}}"
+        },
+        "done": {
+            "read": "读取了文件",
+            "write": "写入了文件",
+            "edit": "编辑了文件",
+            "bash": "执行了命令",
+            "grep": "搜索了代码",
+            "glob": "匹配了文件",
+            "webFetch": "浏览了网页",
+            "webSearch": "搜索了网络",
+            "applyPatch": "应用了补丁",
+            "repl": "运行了代码",
+            "agent": "委托给子代理完成",
+            "toolSearch": "加载了工具",
+            "skill": "运行了 Skill",
+            "todoWrite": "更新了待办",
+            "taskCreate": "创建了任务",
+            "taskGet": "读取了任务",
+            "taskList": "列出了任务",
+            "taskOutput": "读取了任务输出",
+            "taskStop": "停止了任务",
+            "taskUpdate": "更新了任务",
+            "lsp": "查询了代码索引",
+            "sleep": "等待完成",
+            "askUserQuestion": "已提出问题",
+            "notebookEdit": "编辑了笔记本",
+            "enterPlanMode": "已进入规划模式",
+            "exitPlanMode": "已退出规划模式",
+            "enterWorktree": "已进入工作树",
+            "exitWorktree": "已退出工作树",
+            "sendMessage": "已发送消息",
+            "brief": "已发送简报",
+            "cronCreate": "已安排任务",
+            "cronDelete": "已取消计划",
+            "cronList": "已列出计划",
+            "remoteTrigger": "已触发远程",
+            "default": "使用了 {{name}}",
+            "defaultNoName": "使用了工具",
+            "mcp": "调用了 {{name}}"
+        }
+    },
+    "mainChat": {
+        "channel": {
+            "mail": "邮件",
+            "slack": "Slack"
+        },
+        "engagementSlot": {
+            "morning": "早间",
+            "evening": "晚间",
+            "onRequest": "按需"
+        },
+        "report": {
+            "engagement": {
+                "commitment_slipping": {
+                    "summary": "有一项承诺需要关注。",
+                    "detail": "{{title}}将于{{due}}到期，目前还没有进展。"
+                },
+                "meeting_ended": {
+                    "summary": "会议记录已经准备好了。",
+                    "detail": "{{title}}：{{decisions}} 项决定，{{followups}} 项待跟进。"
+                },
+                "person_reappeared": {
+                    "summary": "你认识的人出现了。",
+                    "detail": "{{name}}在{{where}}中出现了。要记一笔吗？"
+                },
+                "goal_check_in": {
+                    "summary": "看看目标进展。",
+                    "detail": "你设定了“{{title}}”。进展如何？"
+                },
+                "work_finished": {
+                    "summary": "工作已完成。",
+                    "detail": "{{title}}可以查看了。没有发送任何内容。"
+                },
+                "work_blocked": {
+                    "summary": "有工作在等你。",
+                    "detail": "{{title}}需要{{question}}"
+                },
+                "brief_ready": {
+                    "summary": "你的简报已经准备好了。",
+                    "detail": "你的{{slot}}简报已经准备好了。"
+                },
+                "brief_missed": {
+                    "summary": "你的简报没有送达。",
+                    "detail": "你的{{slot}}简报在{{time}}没有运行。",
+                    "detailReason": "你的{{slot}}简报没有运行：{{reason}}。",
+                    "detailNoTime": "你的{{slot}}简报没有运行。"
+                },
+                "schedule_missed": {
+                    "summary": "有一个定时任务没有运行。",
+                    "detail": "“{{title}}”连续两次没有运行。在“任务”中打开它查看原因。"
+                },
+                "suggestion": {
+                    "summary": "Isoform 有一个建议。",
+                    "detail": "你做了 {{count}} 次“{{title}}”。要让 Isoform 接手吗？"
+                },
+                "topic_finds": {
+                    "summary": "你关注的话题有新内容。",
+                    "detail": "{{topic}}有新内容：{{title}}"
+                },
+                "learned_to_confirm": {
+                    "summary": "Isoform 学到了一些东西。",
+                    "detail": "{{statement}}要保留吗？"
+                },
+                "capture_paused": {
+                    "summary": "Isoform 暂停观察了一会儿。",
+                    "detail": "{{what}}已经关闭了{{duration}}。要重新打开吗？"
+                },
+                "meeting_prep": {
+                    "summary": "有一个会议即将开始。",
+                    "detail": "{{title}}将在 {{minutes}} 分钟后开始（{{place}} {{people}}）。"
+                },
+                "calendar_conflict": {
+                    "summary": "日历上有需要留意的安排。",
+                    "detail": "{{summary}}"
+                },
+                "meeting_followup": {
+                    "summary": "会议给你留下了待跟进事项。",
+                    "detail": "{{title}}：{{followups}} 项需要你跟进，{{decisions}} 项决定。"
+                },
+                "waiting_on_reply": {
+                    "summary": "有人在等你回复。"
+                },
+                "playbook_suggested": {
+                    "summary": "Isoform 可以替你接手一项日常事务。",
+                    "detail": "你几乎每天 {{time}} 左右打开 {{site}}。要让 Isoform 替你查看，并把数字发给你吗？"
+                },
+                "playbook_result": {
+                    "summary": "一个操作手册运行完了。",
+                    "detail": "{{title}}：{{result}}"
+                },
+                "reminder": {
+                    "summary": "来自 Isoform 的提醒。",
+                    "detail": "提醒：{{title}}"
+                }
+            },
+            "handoff": {
+                "completed": "“{{title}}”已完成，可以查看结果。",
+                "needs_review": "“{{title}}”需要审阅。成功标准或证据尚未确认。",
+                "aborted": "“{{title}}”在完成前停止了。",
+                "blocked": "“{{title}}”被卡住了，需要你处理。",
+                "active": "“{{title}}”等待开始。",
+                "in_progress": "Isoform 正在处理“{{title}}”。",
+                "stale": "“{{title}}”在开始前已过期。"
+            },
+            "schedule": {
+                "ok": "“{{title}}”已运行并产出了结果。",
+                "error": "“{{title}}”最近一次运行失败了。",
+                "created": "已将“{{title}}”添加到你的日程。",
+                "changed": "已更改“{{title}}”的运行时间。",
+                "changedWhen": "“{{title}}”已改为{{when}}。",
+                "paused": "已暂停“{{title}}”。",
+                "resumed": "已恢复“{{title}}”。",
+                "started": "已立即运行“{{title}}”。",
+                "removed": "已移除定时任务“{{title}}”。",
+                "changedOnce": "“{{title}}”现在将在{{when}}运行一次。"
+            },
+            "meeting": {
+                "ready": "你的 {{title}} 会议笔记已准备好。"
+            },
+            "side_chat": {
+                "brought_back": "已从分支对话“{{title}}”带回。"
+            },
+            "message_send": {
+                "sent": "已通过{{channel}}发送，{{time}}"
+            }
+        },
+        "action": {
+            "review": "查看",
+            "open": "打开",
+            "needsYou": "需要你"
+        },
+        "origin": {
+            "title": "从聊天分支",
+            "openMain": "打开聊天"
+        },
+        "fallback": {
+            "handoff": "未命名工作",
+            "schedule": "一个定时任务",
+            "meeting": "会议",
+            "sideChat": "分支对话"
+        },
+        "item": {
+            "brief": "早晚简报",
+            "briefMorning": "早间简报",
+            "briefEvening": "晚间简报",
+            "news": "每日新闻"
+        },
+        "confirm": {
+            "question": "要移除定时任务“{{title}}”吗？它的运行记录也会一并删除。",
+            "remove": "移除",
+            "keep": "保留",
+            "removed": "已移除定时任务“{{title}}”。",
+            "kept": "已保留定时任务“{{title}}”。",
+            "expired": "移除“{{title}}”的请求已过期。如需移除，请重新提出。",
+            "gone": "“{{title}}”已经被移除了。",
+            "failed": "操作没有成功。请重试，或在“任务”中移除。"
+        },
+        "texted": {
+            "label": "来自短信",
+            "labelAt": "来自短信，{{time}}",
+            "use": "作为我的消息",
+            "note": "这条短信从你的号码发给 Isoform。任何人都可以伪装成你的号码发短信，因此在你把它作为自己的消息发送之前，Isoform 不会据此行动。"
+        },
+        "card": {
+            "button": {
+                "openPrep": "打开会前准备",
+                "openInCalendar": "在日历中打开",
+                "showBoth": "查看两个日程",
+                "takeMeThere": "带我过去",
+                "showThread": "查看这条工作主线",
+                "openInActivity": "在活动中打开",
+                "review": "查看",
+                "notNow": "暂不",
+                "openFile": "打开{{file}}",
+                "answer": "回答",
+                "stop": "停止",
+                "findTime": "找个时间",
+                "holdIt": "留出来",
+                "showName": "查看{{name}}",
+                "showWhatsNew": "查看新内容",
+                "doIt": "就做这个",
+                "play": "播放",
+                "readIt": "展开全文",
+                "readWeek": "阅读你的一周",
+                "makeItNow": "现在生成",
+                "runItNow": "现在运行",
+                "showWhy": "查看原因",
+                "resume": "恢复",
+                "done": "完成",
+                "allow": "允许",
+                "keepBoth": "两个都保留",
+                "show": "查看",
+                "right": "对",
+                "thatsMe": "是我",
+                "notQuite": "不太对"
+            }
+        },
+        "relativeDay": {
+            "today": "今天",
+            "tomorrow": "明天",
+            "yesterday": "昨天",
+            "wasDue": "{{day}}到期"
+        },
+        "observationPause": {
+            "paused": "观察已从 {{time}} 暂停。",
+            "resumed": "已于 {{time}} 恢复观察。",
+            "pausedFromTo": "观察于 {{start}} 至 {{end}} 暂停。",
+            "pausedAt": "观察于 {{time}} 暂停。",
+            "captureFromTo": "采集于 {{start}} 至 {{end}} 暂停。",
+            "capturePausedAt": "采集于 {{time}} 暂停。",
+            "captureNotice": "采集曾暂停。",
+            "captureResumed": "采集已于 {{time}} 恢复。",
+            "resume": "恢复",
+            "failed": "无法恢复观察，请重试。"
+        },
+        "proactive": {
+            "revalidating": "正在更新这条内容…",
+            "findTimeChecking": "正在查日历…",
+            "findTimeFailed": "没能查到你的日历，请稍后重试。",
+            "findTimeNoneChecked": "在这段时间内，你的{{calendars}}日历上没有找到空闲时段。",
+            "findTimeNoneCheckedGeneric": "在这段时间内，这台电脑上的日历没有找到空闲时段。",
+            "findTimeNextWeek": "下周你{{times}}有空。",
+            "findTimeNextWeekNone": "下周没有一小时以上的空闲时间。",
+            "findTimeNone": "接下来的几个工作日没有找到空闲时间。",
+            "findTimeRange": "{{start}}到{{end}}",
+            "findTimeAnswer": "你{{times}}有空。",
+            "findTimeChecked": "从你的{{calendars}}日历看，你{{times}}有空。",
+            "findTimeCheckedGeneric": "从这台电脑上的日历看，你{{times}}有空。",
+            "findTimeBrowserOnly": "你的{{calendars}}日历只在浏览器里，请在那里确认一下。",
+            "copyDraft": "复制草稿",
+            "sendTo": "发送给{{recipient}} · {{channel}}",
+            "draftSentHeld": "已发给 {{name}} ·",
+            "draftSent": "已发给 {{name}}",
+            "draftSentAt": "已发给 {{name}} · {{time}}",
+            "undoSend": "撤销",
+            "draftRefused": "没有发送。",
+            "draftUnknown": "没能确认是否已发送。请先看看邮件的“已发送”。",
+            "editDraft": "编辑",
+            "editLabel": "你的回复",
+            "editCancel": "取消",
+            "draftCopied": "草稿已复制。",
+            "draftTo": "收件人",
+            "draftSubject": "主题",
+            "communication": {
+                "written": "按你写给{{name}}的方式撰写：{{details}}。",
+                "details": "{{language}}，{{sentences}}，{{greeting}}",
+                "sentences_one": "{{count}} 句话",
+                "sentences_other": "{{count}} 句话",
+                "greeting": "有问候语",
+                "noGreeting": "无问候语",
+                "languages": {
+                    "chinese": "中文",
+                    "english": "英文"
+                },
+                "change": "更改"
+            },
+            "done": "已完成。",
+            "requestDetails": "请求详情",
+            "permissionTool": "工具：{{tool}}",
+            "permissionAnswered": "已答复。",
+            "permissionExpired": "此请求已失效。",
+            "failed": "操作未成功，请重试。",
+            "openFailed": "无法打开，请重试。",
+            "workDetails": "工作结果",
+            "correction": {
+                "label": "你希望 Isoform 改为理解什么？",
+                "placeholder": "写下正确的理解",
+                "save": "保存纠正",
+                "cancel": "取消"
+            },
+            "eventDetails": "日程详情",
+            "closePanel": "关闭详情",
+            "openInUpcoming": "在“任务”中打开",
+            "returnToPlace": "返回{{app}}",
+            "showThread": "显示对话线程",
+            "eventWhen": "{{start}} 至 {{end}}",
+            "privateEvent": "私人日程",
+            "moreActions": "更多操作",
+            "results": {
+                "suggestion_add_to_upcoming": "已设为定时任务，可在“任务”中找到。",
+                "suggestion_do_once": "已添加为一次性任务。",
+                "suggestion_not_now": "暂不",
+                "learned_to_confirm_keep": "已保留。",
+                "learned_to_confirm_correct": "已保存纠正。",
+                "reminder_done": "已标记完成。",
+                "reminder_not_now": "暂不",
+                "capture_paused_resume_capture": "已恢复采集。",
+                "schedule_missed_run_now": "已开始运行日程。",
+                "brief_missed_make_it_now": "已请求简报。"
+            },
+            "sourceFrom": "来自{{source}}",
+            "sourceAt": "来自{{source}} · {{time}}",
+            "leftOffIn": "停在{{app}} · {{when}}",
+            "meetingStarted": "{{time}}的{{title}}",
+            "source": {
+                "mail": "邮件",
+                "calendar": "日历",
+                "commitment": "你的承诺",
+                "observing": "观察",
+                "brief": "你的简报",
+                "tasks": "任务",
+                "slack": "Slack",
+                "suggestion": "你的工作习惯",
+                "topic": "你的主题",
+                "playbook": "操作手册",
+                "person": "你认识的人"
+            },
+            "workStopped": "已停止。",
+            "workUpdated": "已更新。",
+            "muteKind": "不再接收此类消息",
+            "notForMe": "不适合我",
+            "held": {
+                "started": "已开始",
+                "notNow": "暂不",
+                "muted": "已不再接收这类消息",
+                "scheduled": "已添加到定时任务",
+                "undo": "撤销",
+                "edit": "编辑"
+            },
+            "calendarFailed": "没能打开日历。重试",
+            "howYouDoThings": "你做事的方式"
+        },
+        "status": {
+            "summary_one": "{{count}} 条后台更新",
+            "summary_other": "{{count}} 条后台更新"
+        },
+        "view": {
+            "title": "聊天",
+            "filterLabel": "显示",
+            "everything": "全部",
+            "hideUpdates": "隐藏更新",
+            "showUpdates": "显示更新",
+            "hiddenWhileFiltered": "筛选时不显示更新",
+            "hideFailed": "没能保存，请再试一次。",
+            "summaryTitle": "今天聊天里有",
+            "summarySeparator": " · ",
+            "summaryConversations_one": "{{count}} 段与你的聊天",
+            "summaryConversations_other": "{{count}} 段与你的聊天",
+            "summaryFinished_one": "{{count}} 项已完成",
+            "summaryFinished_other": "{{count}} 项已完成",
+            "summaryRoutine_one": "{{count}} 条例行更新，已折叠",
+            "summaryRoutine_other": "{{count}} 条例行更新，已折叠",
+            "summaryFailed": "没能统计今天聊天里的内容。",
+            "retry": "重试",
+            "showEverything": "显示全部",
+            "today": "今天",
+            "yesterday": "昨天",
+            "foldSummary_one": "Isoform 的 {{count}} 条更新",
+            "foldSummary_other": "Isoform 的 {{count}} 条更新",
+            "foldNote": "例行更新会折叠在这里。可以在「设置 › 通知」中静音某一类，或让它在「今天」页显示为一行提示。",
+            "isoform": "Isoform",
+            "briefLoadFailed": "没能加载这份简报。",
+            "topicTags": "主题",
+            "chipsLabel": "准备好的请求",
+            "notePrepared": "已为你准备好。按发送之前不会发出任何内容。",
+            "notePreparedAnswer": "已根据上面的回答准备好。按发送之前不会发出任何内容。",
+            "detachTopic": "从输入框移除「{{name}}」",
+            "topicChecking": "正在核实此主题...",
+            "topicBusy": "Isoform 还在聊天里回答。可以先停止，或等它答完再发送关于这个主题的内容。",
+            "scope": "选择聊天范围",
+            "wholeChat": "整个聊天",
+            "more": "更多",
+            "itemPanel": "条目"
+        },
+        "openAnswers": {
+            "aroundResult": "有结果我告诉你，大约{{time}}。",
+            "aroundStatus": "我大约{{time}}再查一次。",
+            "reply": "还没有。{{who}} 回复后我告诉你。",
+            "settled": "有定论再告诉你。",
+            "brief": "我会放进明天的简报。",
+            "sawIt": "你在{{time}}已经看到了。",
+            "gaveUpWithWho": "{{who}} 一周都没回复，我先不查了。",
+            "gaveUp": "我先不查了。",
+            "change": "修改",
+            "noNeed": "不用了",
+            "aroundChoice": "大约{{time}}",
+            "settledChoice": "有定论再告诉我",
+            "briefChoice": "放进明天的简报",
+            "ask": "有结果时要我告诉你吗？",
+            "letMeKnow": "告诉我",
+            "askSend": "有结果时告诉我。",
+            "error": "无法更新，请重试。",
+            "youAsked": "你问过 · {{time}}",
+            "fromSource": "来自{{source}} · {{time}}",
+            "notForMe": "不适合我",
+            "learnedTopic": "好的，{{topic}}这类问题我以后不再回头告诉你了。",
+            "learned": "好的，这类问题我以后不再回头告诉你了。",
+            "undo": "撤销"
+        },
+        "answered": "你的回答：{{answer}}",
+        "change": "更改",
+        "taskClosed": "那个窗口已经关了，这是对话记录。",
+        "replyDraft": {
+            "label": "草稿",
+            "send": "发送",
+            "edit": "编辑",
+            "close": "关闭"
+        }
+    },
+    "setup": {
+        "kicker": "设置中",
+        "progress": "第 {{done}} 步，共 {{total}} 步",
+        "grant": "开启{{name}}",
+        "notNow": "暂不",
+        "requesting": "等待 macOS",
+        "openSettings": "打开系统设置",
+        "waitingSettings": "请在系统设置中开启{{name}}，然后回到这里。我会自动发现。",
+        "name": {
+            "title": "我该怎么称呼你？",
+            "body": "和你说话时我会这样称呼你。之后随时可以在左下角你的名字处修改。",
+            "placeholder": "你的名字",
+            "save": "保存",
+            "saveError": "称呼没有保存，请再试一次。",
+            "alreadyStored": "我这边已经记的是 {{name}}。要用哪个？",
+            "useTyped": "叫我 {{name}}",
+            "keepStored": "保留 {{name}}"
+        },
+        "assistant": {
+            "title": "选一个我用来思考的助手",
+            "body": "我会用你已有的 AI（比如 Claude 或 Codex）来阅读、写作和规划。没有助手时，我能观察和记住，但没法回答你。",
+            "openSettings": "在设置中选择",
+            "waiting": "等你的助手准备好，我会在这里接上。"
+        },
+        "permissions": {
+            "screen_recording": {
+                "title": "让我看到你的屏幕",
+                "body": "这样我能跟上你眼前的工作，从你停下的地方接着来。"
+            },
+            "accessibility": {
+                "title": "让我知道你在用哪个应用",
+                "body": "这样我知道你正在哪个窗口里工作，也能替你在应用之间点选操作。"
+            },
+            "microphone": {
+                "title": "让我听到你的会议",
+                "body": "这样我能在通话中记笔记，也能在你对我说话时听见。"
+            },
+            "system_audio": {
+                "title": "让我听到通话的另一方",
+                "body": "开启「自动记录会议」后，会议笔记会包含所有人说的话，而不只是你的。"
+            },
+            "calendars": {
+                "title": "让我看到你的日历",
+                "body": "这样我能在会前帮你准备，并围绕你的日程安排事情。"
+            },
+            "notifications": {
+                "title": "让我能提醒你",
+                "body": "这样工作完成或在等你时，我能告诉你。"
+            },
+            "contacts": {
+                "title": "让我认识你身边的人",
+                "body": "这样我能给会议和消息里出现的人对上名字。"
+            }
+        },
+        "names": {
+            "screen_recording": "屏幕录制",
+            "accessibility": "辅助功能",
+            "microphone": "麦克风",
+            "system_audio": "系统音频录制",
+            "calendars": "日历",
+            "notifications": "通知",
+            "contacts": "通讯录"
+        },
+        "record": {
+            "granted": "{{name}} 已开启",
+            "notNow": "{{name}}：暂不",
+            "assistantReady": "助手已就绪",
+            "assistantNotNow": "助手：暂不",
+            "done": "设置完成",
+            "name": "我会称呼你为 {{name}}",
+            "nameNotNow": "称呼：暂不"
+        },
+        "tryAgain": "再试一次"
+    },
+    "permissionQuestion": {
+        "planRejected": "已拒绝计划。",
+        "answered": "已答复：{{answer}}",
+        "title": "助手提问",
+        "other": "其他",
+        "skip": "暂不",
+        "placeholder": "输入你的回答...",
+        "send": "发送回答"
+    },
+    "sendFailure": "发送状态未确认。",
+    "quickChat": {
+        "brand": "Isoform",
+        "title": "快捷聊天",
+        "openInApp": "在 Isoform 中打开",
+        "placeholder": "给 Isoform 发消息",
+        "followupPlaceholder": "补充或确认…",
+        "detected": "已检测到 {{app}}",
+        "voiceInput": "语音输入",
+        "send": "发送",
+        "stopRecording": "点击停止录音",
+        "runTool": "运行 {{tool}}？",
+        "permissionRequested": "助手正在请求权限。",
+        "build": "构建",
+        "resultReceived": "已收到结果。",
+        "compactionFailed": "上下文压缩失败",
+        "compactionFailedDetail": "上下文压缩失败：{{error}}",
+        "compacting": "正在压缩上下文…",
+        "compacted": "上下文已压缩。",
+        "connectionLost": "连接已断开。",
+        "historyUnavailable": "无法载入回复历史。",
+        "streamError": "消息流出错",
+        "tool": "工具"
+    },
+    "stream": {
+        "openProject": "打开一个项目即可开始。",
+        "newMessages": "新消息",
+        "newReplies_one": "{{count}} 条新回复",
+        "newReplies_other": "{{count}} 条新回复",
+        "newRepliesShort": "{{count}}",
+        "jumpToNewest": "跳转到最新回复"
+    },
+    "firstRead": {
+        "label": "目前我看到的",
+        "yes": "这就是我",
+        "no": "不太对",
+        "confirmed": "你说这就是你",
+        "undo": "撤销",
+        "portrait": "“关于你”里的画像会从这里开始。",
+        "off": "哪里不对？",
+        "send": "发送",
+        "failed": "无法更新这份初步了解，请重试。",
+        "helps": "我会怎么帮你",
+        "upNext": "接下来",
+        "offerOne": "一件我可以替你做的事",
+        "offers": "{{count}} 件我可以替你做的事",
+        "offerDetail": "在“任务 › 接下来”里，每件都写着我看到了什么。你说“就做这个”之前，什么都不会开始。",
+        "see": "去看看"
+    },
+    "projectThread": {
+        "folder": "文件夹 {{path}}",
+        "changedFiles": "已更改的文件",
+        "moreFiles": "还有 {{count}} 个",
+        "steps": "步骤",
+        "command": {
+            "running": "正在运行 · {{command}} · {{elapsed}}",
+            "finished": "已完成 · {{command}}",
+            "stopped": "已停止 · {{command}}",
+            "failed": "以 {{code}} 退出 · {{command}}",
+            "unreadable": "没能读取这个线程正在运行的步骤。"
+        }
+    },
+    "failure": {
+        "loadChat": "你的聊天没有加载出来。",
+        "loadTopic": "这个话题没有加载出来。",
+        "loadSpotlight": "这个聊天没有加载出来。",
+        "streamStopped": "回答中断了。",
+        "save": "没有保存成功。",
+        "answer": "你的回答没有送达。",
+        "still": "还是没成功。",
+        "start": "没能开始。",
+        "finder": "没能在访达中显示 {{file}}。",
+        "openFile": "没能打开 {{file}}。",
+        "openIt": "没能打开它。",
+        "done": "没能把它加入“已完成”。",
+        "brief": "没能播放你的简报。",
+        "calendar": "没能打开日历。",
+        "systemSettings": "没能打开系统设置。",
+        "systemSettingsPath": "系统设置 › 隐私与安全性 › {{name}}",
+        "check": "没能核对。",
+        "confirmSent": "没能确认已发送"
+    }
+}

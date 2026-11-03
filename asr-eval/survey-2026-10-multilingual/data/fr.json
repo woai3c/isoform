@@ -1,0 +1,813 @@
+{
+  "dataset": "google/fleurs",
+  "revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+  "config": "fr_fr",
+  "split": "test",
+  "selection": "First 100 utterances in published test.tsv order; duplicate prompts retained",
+  "licence": "CC-BY-4.0",
+  "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/fr_fr",
+  "samples": [
+    {
+      "order": 0,
+      "id": "1829-7105431834829365765.wav",
+      "audio_path": "7105431834829365765.wav",
+      "reference": "les voyageurs à destination de pays où les taxes sont élevées peuvent parfois faire des économies considérables en particulier sur des produits comme les boissons alcoolisées ou le tabac",
+      "duration_s": 9.42,
+      "sha256": "17bc41e922df1f1e48c3466bfcab01af6ad31ba3963ad10757c2e95d165f4824"
+    },
+    {
+      "order": 1,
+      "id": "1829-8412394508646602569.wav",
+      "audio_path": "8412394508646602569.wav",
+      "reference": "les voyageurs à destination de pays où les taxes sont élevées peuvent parfois faire des économies considérables en particulier sur des produits comme les boissons alcoolisées ou le tabac",
+      "duration_s": 13.44,
+      "sha256": "715a6ece79257ada66440ce27357f0606ba862c8bdb6b5924b1c1165f621a1fb"
+    },
+    {
+      "order": 2,
+      "id": "1829-15519386366944716971.wav",
+      "audio_path": "15519386366944716971.wav",
+      "reference": "les voyageurs à destination de pays où les taxes sont élevées peuvent parfois faire des économies considérables en particulier sur des produits comme les boissons alcoolisées ou le tabac",
+      "duration_s": 9.48,
+      "sha256": "3663eb51c45ba4325c6bbeadfd88dfa1900ffa92a2b37704aabab969ae74a379"
+    },
+    {
+      "order": 3,
+      "id": "1679-17999210160761730950.wav",
+      "audio_path": "17999210160761730950.wav",
+      "reference": "le groupe aerosmith a annulé les derniers concerts de sa tournée",
+      "duration_s": 6.0,
+      "sha256": "28227a42434d80357aed2b0993bf543de60d43fd58cf476f791577cdd1c89a53"
+    },
+    {
+      "order": 4,
+      "id": "1679-14682302550249108464.wav",
+      "audio_path": "14682302550249108464.wav",
+      "reference": "le groupe aerosmith a annulé les derniers concerts de sa tournée",
+      "duration_s": 4.44,
+      "sha256": "ee778c1d7811174ac1e970a40dd5eccd844770255af4f2dafd42fb6c4da8153e"
+    },
+    {
+      "order": 5,
+      "id": "1707-17467158799788389101.wav",
+      "audio_path": "17467158799788389101.wav",
+      "reference": "il s'agit de l'un des parcs d'attraction les plus connus en afrique du sud et considéré comme le fleuron des parcs nationaux sud-africains sanparks",
+      "duration_s": 8.22,
+      "sha256": "2f5c7fdfb1e7f3e569158c8aaa533d4fc24240c1e9285afcc2b8200ee1aade3d"
+    },
+    {
+      "order": 6,
+      "id": "1707-3661632639400662062.wav",
+      "audio_path": "3661632639400662062.wav",
+      "reference": "il s'agit de l'un des parcs d'attraction les plus connus en afrique du sud et considéré comme le fleuron des parcs nationaux sud-africains sanparks",
+      "duration_s": 7.08,
+      "sha256": "6c4dc284e17bd518bb7b6c02fb15a3fcdc0f143c9e4af69c4bb52c7bd34988c9"
+    },
+    {
+      "order": 7,
+      "id": "1707-9118106854415790987.wav",
+      "audio_path": "9118106854415790987.wav",
+      "reference": "il s'agit de l'un des parcs d'attraction les plus connus en afrique du sud et considéré comme le fleuron des parcs nationaux sud-africains sanparks",
+      "duration_s": 7.5,
+      "sha256": "6ecf08b38beb386531a20bd7f4807b1ef0d92192c5cc0984b495cb024801baa1"
+    },
+    {
+      "order": 8,
+      "id": "1763-8969527857548188961.wav",
+      "audio_path": "8969527857548188961.wav",
+      "reference": "tout comme la lune exerce une traction sur la terre provoquant des marées la voie lactée exerce une force sur la galaxie du sagittaire",
+      "duration_s": 7.02,
+      "sha256": "f0d9f7e2e6ebd945861bcf3cb7456e580ef68acdb53abc756e918b3d219f7ede"
+    },
+    {
+      "order": 9,
+      "id": "1844-7989253100718399733.wav",
+      "audio_path": "7989253100718399733.wav",
+      "reference": "la surface de la lune est constituée de pierres et de poussière sa couche extérieure est appelée la croûte",
+      "duration_s": 7.56,
+      "sha256": "5bec3f4c74d6f81b16ade153a0e6f6996a36789e18072086c51dfbc67217770a"
+    },
+    {
+      "order": 10,
+      "id": "1844-12907873963009218833.wav",
+      "audio_path": "12907873963009218833.wav",
+      "reference": "la surface de la lune est constituée de pierres et de poussière sa couche extérieure est appelée la croûte",
+      "duration_s": 5.94,
+      "sha256": "6262fd82aac0831943bcf37dd9571fcf614475776a891a837b22ab50049b5dab"
+    },
+    {
+      "order": 11,
+      "id": "1844-7073693305905105658.wav",
+      "audio_path": "7073693305905105658.wav",
+      "reference": "la surface de la lune est constituée de pierres et de poussière sa couche extérieure est appelée la croûte",
+      "duration_s": 5.7,
+      "sha256": "07d1bb3781fd9fcdd23f7c3a4f19533b86e1b6148796709ec826a92eda3c274d"
+    },
+    {
+      "order": 12,
+      "id": "1842-3186650348647403380.wav",
+      "audio_path": "3186650348647403380.wav",
+      "reference": "étant donné que les plumes de dinosaure n'ont pas une tige entièrement développée que l'on appelle rachis mais montrent cependant d'autres caractéristiques propres aux plumes barbes et barbules les chercheurs en ont déduit que le rachis était probablement un développement évolutif ultérieur à ces autres caractéristiques",
+      "duration_s": 18.78,
+      "sha256": "57d4067281ca1c9b2c9aee58694a96a631c947aa01718568c8009ddeec6d5e2d"
+    },
+    {
+      "order": 13,
+      "id": "1842-4339248674352394665.wav",
+      "audio_path": "4339248674352394665.wav",
+      "reference": "étant donné que les plumes de dinosaure n'ont pas une tige entièrement développée que l'on appelle rachis mais montrent cependant d'autres caractéristiques propres aux plumes barbes et barbules les chercheurs en ont déduit que le rachis était probablement un développement évolutif ultérieur à ces autres caractéristiques",
+      "duration_s": 21.36,
+      "sha256": "65dc041fa3100bf545ecb7ff1c408fc9d834616f909a70469b25eb54c832a93e"
+    },
+    {
+      "order": 14,
+      "id": "1866-118005971910520590.wav",
+      "audio_path": "118005971910520590.wav",
+      "reference": "premièrement la plupart des cavaliers portent des bottes d'équitation avec un talon et une semelle lisse et assez étroite",
+      "duration_s": 10.86,
+      "sha256": "4a054a7058d6b74464378a0e6bdcf089aaa89f3f6c5e4e137052fbe7f6deb50c"
+    },
+    {
+      "order": 15,
+      "id": "1925-12217957387078475556.wav",
+      "audio_path": "12217957387078475556.wav",
+      "reference": "le travail effectué était principalement théorique mais le programme a été écrit pour simuler les observations faites de la galaxie du sagittaire",
+      "duration_s": 8.88,
+      "sha256": "a1ba34fe1a23b016d5a145f7117706a9d77f5e689cc89a6c1a8a0a7f9659c47f"
+    },
+    {
+      "order": 16,
+      "id": "1925-14854767305593977510.wav",
+      "audio_path": "14854767305593977510.wav",
+      "reference": "le travail effectué était principalement théorique mais le programme a été écrit pour simuler les observations faites de la galaxie du sagittaire",
+      "duration_s": 8.52,
+      "sha256": "5654b3ad8655da43c8affea7039ffffd0e372a39723bd630b59ad486ecb2ab11"
+    },
+    {
+      "order": 17,
+      "id": "1975-14361567643536061453.wav",
+      "audio_path": "14361567643536061453.wav",
+      "reference": "le vatican compte environ 800 habitants c'est le plus petit pays indépendant au monde et le moins peuplé",
+      "duration_s": 9.36,
+      "sha256": "451daa7dceabe8e6b4922df7cedae47d57280f05e01a4f9c2a8308ff2cff0d38"
+    },
+    {
+      "order": 18,
+      "id": "1797-15942080413960253441.wav",
+      "audio_path": "15942080413960253441.wav",
+      "reference": "tout le monde fait partie de la société et utilise les systèmes de transport quasiment tout le monde se plaint des systèmes de transport",
+      "duration_s": 8.46,
+      "sha256": "2708e2d63da3a2c723fb3243778aad5846f176aecba232efe2da269b77c37752"
+    },
+    {
+      "order": 19,
+      "id": "1797-3598665689422649485.wav",
+      "audio_path": "3598665689422649485.wav",
+      "reference": "tout le monde fait partie de la société et utilise les systèmes de transport quasiment tout le monde se plaint des systèmes de transport",
+      "duration_s": 5.52,
+      "sha256": "65214005136a058866f630a61af677e7ba3d56fcd8f3d186041ec9b848018745"
+    },
+    {
+      "order": 20,
+      "id": "1775-9747669897173511466.wav",
+      "audio_path": "9747669897173511466.wav",
+      "reference": "l'usage de l'enregistrement vidéo a mené à de grandes découvertes dans l'interprétation des micro-expressions c'est-à-dire des expressions faciales durant quelques millisecondes",
+      "duration_s": 7.5,
+      "sha256": "3cf1e1116a8d186b077815ab644ae81829dbf6e0ce25e551ae18a5827511f128"
+    },
+    {
+      "order": 21,
+      "id": "1775-171450178198153804.wav",
+      "audio_path": "171450178198153804.wav",
+      "reference": "l'usage de l'enregistrement vidéo a mené à de grandes découvertes dans l'interprétation des micro-expressions c'est-à-dire des expressions faciales durant quelques millisecondes",
+      "duration_s": 12.96,
+      "sha256": "8db406bc8653fbea7100754f54cb32a9be277f673d8a66cb8b5f00baecd49790"
+    },
+    {
+      "order": 22,
+      "id": "1985-17508721816441963353.wav",
+      "audio_path": "17508721816441963353.wav",
+      "reference": "cela ressemble au ski de randonnée de type alpin ainsi qu'à l'alpinisme sans toutefois incorporer en général ces activités qui se pratiquent sur des terrains accidentés et qui exigent l'utilisation de skis et de bottes beaucoup plus rigides",
+      "duration_s": 14.04,
+      "sha256": "85846cba147223518870b40af042e4f37d42949181be5ba6cfb001c0d9ede24a"
+    },
+    {
+      "order": 23,
+      "id": "1985-856406402163437028.wav",
+      "audio_path": "856406402163437028.wav",
+      "reference": "cela ressemble au ski de randonnée de type alpin ainsi qu'à l'alpinisme sans toutefois incorporer en général ces activités qui se pratiquent sur des terrains accidentés et qui exigent l'utilisation de skis et de bottes beaucoup plus rigides",
+      "duration_s": 13.68,
+      "sha256": "3d9533f2f7a644e3bb23391a844e54d393a8f16961ea6d179d95813204783f75"
+    },
+    {
+      "order": 24,
+      "id": "1896-2470164086297473470.wav",
+      "audio_path": "2470164086297473470.wav",
+      "reference": "usa gymnastics et l'usoc ont le même objectif rendre la gymnastique ainsi que d'autres sports aussi sûrs que possible pour que les athlètes puissent poursuivre leurs rêves dans un environnement sûr positif et responsabilisant",
+      "duration_s": 14.46,
+      "sha256": "2d0a82bf51d224faee60cbbe193f532802e79ce011c586c3337a103de009265d"
+    },
+    {
+      "order": 25,
+      "id": "1983-7555885479938165020.wav",
+      "audio_path": "7555885479938165020.wav",
+      "reference": "le terme « civilisation » est dérivé du mot latin « civilis » qui signifie civil et qui est apparenté aux mots latins « civis » qui signifie citoyen et « civitas » qui veut dire grande ville ou ville-état et qui indique aussi, en quelque sorte, la taille de la société à laquelle il se rapporte",
+      "duration_s": 20.52,
+      "sha256": "d388b7e0ea15316765d228be78558c4eaaea561de54be3170f77bc7b93a498c8"
+    },
+    {
+      "order": 26,
+      "id": "1983-4679551722475820359.wav",
+      "audio_path": "4679551722475820359.wav",
+      "reference": "le terme « civilisation » est dérivé du mot latin « civilis » qui signifie civil et qui est apparenté aux mots latins « civis » qui signifie citoyen et « civitas » qui veut dire grande ville ou ville-état et qui indique aussi, en quelque sorte, la taille de la société à laquelle il se rapporte",
+      "duration_s": 18.18,
+      "sha256": "adf9aeae60a8c5cb3c03b83a961db7d0a549dde489b4a0be04398509800c7f5b"
+    },
+    {
+      "order": 27,
+      "id": "1983-8475041387621209979.wav",
+      "audio_path": "8475041387621209979.wav",
+      "reference": "le terme « civilisation » est dérivé du mot latin « civilis » qui signifie civil et qui est apparenté aux mots latins « civis » qui signifie citoyen et « civitas » qui veut dire grande ville ou ville-état et qui indique aussi, en quelque sorte, la taille de la société à laquelle il se rapporte",
+      "duration_s": 19.56,
+      "sha256": "2842d3931c211c88780047b22e1361c495d83bebffe1b719e02b511831a64f3e"
+    },
+    {
+      "order": 28,
+      "id": "1662-9182067139125495353.wav",
+      "audio_path": "9182067139125495353.wav",
+      "reference": "les alliages sont essentiellement un mélange de deux métaux ou plus n'oubliez pas que le tableau périodique comporte de nombreux éléments",
+      "duration_s": 6.42,
+      "sha256": "41e0500bfa8ad904f71da4219a6dfa5b4665f19263ee326c47cea117e6facbcc"
+    },
+    {
+      "order": 29,
+      "id": "1662-17087096902724341712.wav",
+      "audio_path": "17087096902724341712.wav",
+      "reference": "les alliages sont essentiellement un mélange de deux métaux ou plus n'oubliez pas que le tableau périodique comporte de nombreux éléments",
+      "duration_s": 7.14,
+      "sha256": "03bc9b85b07a473871c1c78cd37cd8f67eb6487fc3a0788a865c25ca11c229eb"
+    },
+    {
+      "order": 30,
+      "id": "1798-3683527580499257367.wav",
+      "audio_path": "3683527580499257367.wav",
+      "reference": "initialement l'émission était uniquement diffusée sur le vénérable site de radio internet toginet radio un site consacré à la radio parlée",
+      "duration_s": 8.46,
+      "sha256": "698797d930d29dc64e1e76c139266be031191868eeb537324571705f1f8f4b36"
+    },
+    {
+      "order": 31,
+      "id": "1798-17318908648586294767.wav",
+      "audio_path": "17318908648586294767.wav",
+      "reference": "initialement l'émission était uniquement diffusée sur le vénérable site de radio internet toginet radio un site consacré à la radio parlée",
+      "duration_s": 8.1,
+      "sha256": "e4dbb83b43c9abcf84999aaaba40ffc37fa066d8a044a4af35353f5f1d91daf1"
+    },
+    {
+      "order": 32,
+      "id": "1798-9946857661334947968.wav",
+      "audio_path": "9946857661334947968.wav",
+      "reference": "initialement l'émission était uniquement diffusée sur le vénérable site de radio internet toginet radio un site consacré à la radio parlée",
+      "duration_s": 8.82,
+      "sha256": "3d61e574884e6a4ced6ffb75b5e951db23c44afea21540c33fc0a2123a68da0b"
+    },
+    {
+      "order": 33,
+      "id": "1715-5184613783463364583.wav",
+      "audio_path": "5184613783463364583.wav",
+      "reference": "les annonces régulières dans le métro ne sont faites qu'en catalan mais les perturbations imprévues sont annoncées par un système automatisé dans de nombreuses langues dont l'espagnol l'anglais le français l'arabe et le japonais",
+      "duration_s": 15.18,
+      "sha256": "019a6cc20ecdb6fc299ba9e56d81e53cac9d03dec672fd22111b5e4eb2cd39b9"
+    },
+    {
+      "order": 34,
+      "id": "1744-15679345674072383870.wav",
+      "audio_path": "15679345674072383870.wav",
+      "reference": "en ce qui concerne les inversions magnétiques plus le nombre de rossby est petit moins l’étoile est active ",
+      "duration_s": 6.96,
+      "sha256": "7a36638b652023c01539dce38e0737551351d7f70ea5245035ab4e55027ccbc5"
+    },
+    {
+      "order": 35,
+      "id": "1744-2582399872168648378.wav",
+      "audio_path": "2582399872168648378.wav",
+      "reference": "en ce qui concerne les inversions magnétiques plus le nombre de rossby est petit moins l’étoile est active ",
+      "duration_s": 8.46,
+      "sha256": "d958687578ffd5e672d8fa5b45062c491cff829d82684a6238ab62a9125a79a1"
+    },
+    {
+      "order": 36,
+      "id": "1839-7250834376430784014.wav",
+      "audio_path": "7250834376430784014.wav",
+      "reference": "pensez à l'itinéraire de ski comme à un itinéraire de randonnée similaire",
+      "duration_s": 3.54,
+      "sha256": "614546fc35b7a3c4d90c874cb10355d1a7dd24354b1d7aafc746ed1d6c2cce08"
+    },
+    {
+      "order": 37,
+      "id": "1839-594122609229313318.wav",
+      "audio_path": "594122609229313318.wav",
+      "reference": "pensez à l'itinéraire de ski comme à un itinéraire de randonnée similaire",
+      "duration_s": 4.98,
+      "sha256": "178167549206982a50ec78fb7b6f0d1f86317308be9763f4fd05076fe5d792a0"
+    },
+    {
+      "order": 38,
+      "id": "1947-2757290274126351777.wav",
+      "audio_path": "2757290274126351777.wav",
+      "reference": "avant l'arrivée des troupes haïti n'avait pas rencontré de problèmes liés à la maladie depuis les années 1800",
+      "duration_s": 6.0,
+      "sha256": "0c4f09cb26cc494395f0e3f196b80ee320b23226169041b052918c8837e656ec"
+    },
+    {
+      "order": 39,
+      "id": "1722-17384584725417924254.wav",
+      "audio_path": "17384584725417924254.wav",
+      "reference": "cuomo 53 ans a commencé son mandat de gouverneur au début de cette année et a signé le mois dernier un projet de loi légalisant le mariage entre personnes du même sexe",
+      "duration_s": 10.44,
+      "sha256": "ca72d16cbcf3116a8e42b7bfdb6f33152b879b26126245b20561e52eece2ccbf"
+    },
+    {
+      "order": 40,
+      "id": "1722-13821129731043667824.wav",
+      "audio_path": "13821129731043667824.wav",
+      "reference": "cuomo 53 ans a commencé son mandat de gouverneur au début de cette année et a signé le mois dernier un projet de loi légalisant le mariage entre personnes du même sexe",
+      "duration_s": 15.12,
+      "sha256": "5564a1cb76560bc1cfeb9266a4cfcb7d0f47761c28d3bbbee1576f490345e993"
+    },
+    {
+      "order": 41,
+      "id": "1722-17815512019716102082.wav",
+      "audio_path": "17815512019716102082.wav",
+      "reference": "cuomo 53 ans a commencé son mandat de gouverneur au début de cette année et a signé le mois dernier un projet de loi légalisant le mariage entre personnes du même sexe",
+      "duration_s": 9.9,
+      "sha256": "d501de0b8e8bf01715fca8dbd193da8e5f59acb5abee6e6b394e46b3f49a373e"
+    },
+    {
+      "order": 42,
+      "id": "1777-5472816019113202964.wav",
+      "audio_path": "5472816019113202964.wav",
+      "reference": "ottawa est la charmante capitale bilingue du canada et dispose d'un grand nombre de galeries d'art et de musées qui mettent en valeur le passé et le présent du canada",
+      "duration_s": 8.4,
+      "sha256": "b1d32b3f28b8ce5f9c891e409eca867ffa8122d75d417ba550d0f6ada7fefdaf"
+    },
+    {
+      "order": 43,
+      "id": "1777-5423487351382449679.wav",
+      "audio_path": "5423487351382449679.wav",
+      "reference": "ottawa est la charmante capitale bilingue du canada et dispose d'un grand nombre de galeries d'art et de musées qui mettent en valeur le passé et le présent du canada",
+      "duration_s": 12.48,
+      "sha256": "524e465ecad240f99f2efcbb186957f60a9e964f625ec420d1bd4515965c0b69"
+    },
+    {
+      "order": 44,
+      "id": "1878-14133596223444314003.wav",
+      "audio_path": "14133596223444314003.wav",
+      "reference": "l'autorité centrale de l'église était à rome depuis plus de 1000 ans et cette concentration de pouvoir et d'argent a conduit beaucoup de gens à se demander si cette doctrine était respectée",
+      "duration_s": 9.9,
+      "sha256": "33f4fe681990c8fd69c69e972f4ece9164a71c2e118bd2437c348a1f8bd5a334"
+    },
+    {
+      "order": 45,
+      "id": "1878-7625516577244837392.wav",
+      "audio_path": "7625516577244837392.wav",
+      "reference": "l'autorité centrale de l'église était à rome depuis plus de 1000 ans et cette concentration de pouvoir et d'argent a conduit beaucoup de gens à se demander si cette doctrine était respectée",
+      "duration_s": 11.58,
+      "sha256": "d23bc4e7bcb1821ba4b29af9f3f49b1b2e0ee68606c63628b893efb6d8480cd3"
+    },
+    {
+      "order": 46,
+      "id": "1732-9188184299031901646.wav",
+      "audio_path": "9188184299031901646.wav",
+      "reference": "ces événements ont eu lieu dans la période généralement considérée comme le haut moyen âge – période de l'histoire en europe courant du xie au xiiie siècle 1000-1300",
+      "duration_s": 15.96,
+      "sha256": "df406fd0b1d1ec3fdd91cceefedd25cd47de60bd5013a439a24b484dc87e0a0d"
+    },
+    {
+      "order": 47,
+      "id": "2008-3172268488349984843.wav",
+      "audio_path": "3172268488349984843.wav",
+      "reference": "parmi les autres sujets à l'ordre du jour à bali figurent la sauvegarde des dernières forêts du monde et le partage des technologies pour aider les pays en développement à poursuivre leur croissance de manière moins polluante",
+      "duration_s": 10.98,
+      "sha256": "4dcc7d2ad955e84d1c1bb872c537282c19271d399818367a8feb335207798f76"
+    },
+    {
+      "order": 48,
+      "id": "2008-14348895125714870649.wav",
+      "audio_path": "14348895125714870649.wav",
+      "reference": "parmi les autres sujets à l'ordre du jour à bali figurent la sauvegarde des dernières forêts du monde et le partage des technologies pour aider les pays en développement à poursuivre leur croissance de manière moins polluante",
+      "duration_s": 17.76,
+      "sha256": "c3d0937235166d426e6fd5ef4e3db1c36672acf6387494275ff935c9269b7688"
+    },
+    {
+      "order": 49,
+      "id": "2004-10166091086920486572.wav",
+      "audio_path": "10166091086920486572.wav",
+      "reference": "le même mois un autre avion de ligne a fait une sortie de piste à mashhad et a heurté un mur tuant ainsi dix-sept personnes",
+      "duration_s": 8.34,
+      "sha256": "c55390804a7afcfa0820386ef0ee1b2d6ca69e986184bf372f6c8fe8f989f317"
+    },
+    {
+      "order": 50,
+      "id": "2004-16651556590221169367.wav",
+      "audio_path": "16651556590221169367.wav",
+      "reference": "le même mois un autre avion de ligne a fait une sortie de piste à mashhad et a heurté un mur tuant ainsi dix-sept personnes",
+      "duration_s": 8.34,
+      "sha256": "2189002c4dd27897a85b805c27ff2d7e63a4a96c4efaabc9f40e5556b6c72aab"
+    },
+    {
+      "order": 51,
+      "id": "1741-15551477711118835465.wav",
+      "audio_path": "15551477711118835465.wav",
+      "reference": "de grandes zones plus au nord sont assez peu peuplées et certaines sont presque inhabitées à l'état sauvage",
+      "duration_s": 3.96,
+      "sha256": "5555a9f168794b12fe97b7442befc9a8f91cc8b1696798ed01a4c338222832c6"
+    },
+    {
+      "order": 52,
+      "id": "1741-13361643016326652917.wav",
+      "audio_path": "13361643016326652917.wav",
+      "reference": "de grandes zones plus au nord sont assez peu peuplées et certaines sont presque inhabitées à l'état sauvage",
+      "duration_s": 9.48,
+      "sha256": "b478bbec108d012c5af7178981523ff44f9db98b71b3c8de9090f9520f037791"
+    },
+    {
+      "order": 53,
+      "id": "1741-13180411801339872252.wav",
+      "audio_path": "13180411801339872252.wav",
+      "reference": "de grandes zones plus au nord sont assez peu peuplées et certaines sont presque inhabitées à l'état sauvage",
+      "duration_s": 4.32,
+      "sha256": "604f3f82d41fff2670f993f0581e56dd5fd67b339e6d1b4374dd7ee662c95604"
+    },
+    {
+      "order": 54,
+      "id": "1991-9505876077131055924.wav",
+      "audio_path": "9505876077131055924.wav",
+      "reference": "pendant cette période de l'histoire européenne l'église catholique qui était devenue riche et puissante a été remise en question",
+      "duration_s": 11.7,
+      "sha256": "a0aebcc2f2b32c02f107809106e3a5eec9061d256df260e7b7ac981ebed1c883"
+    },
+    {
+      "order": 55,
+      "id": "1991-9164383319826642394.wav",
+      "audio_path": "9164383319826642394.wav",
+      "reference": "pendant cette période de l'histoire européenne l'église catholique qui était devenue riche et puissante a été remise en question",
+      "duration_s": 9.84,
+      "sha256": "62d777f55f4c4bc10602238ef680dac4a993288f776f40bd5efd163ccd63be3b"
+    },
+    {
+      "order": 56,
+      "id": "1991-18362336016314903734.wav",
+      "audio_path": "18362336016314903734.wav",
+      "reference": "pendant cette période de l'histoire européenne l'église catholique qui était devenue riche et puissante a été remise en question",
+      "duration_s": 6.96,
+      "sha256": "092b2ad6a323ab56786dc0d6f595f1e791894e6e52f1a6a31fefa7aa847f5750"
+    },
+    {
+      "order": 57,
+      "id": "1675-11743576916303436440.wav",
+      "audio_path": "11743576916303436440.wav",
+      "reference": "tous les noms suivis du mot sie qui signifie vous commencent toujours par une majuscule même au milieu d'une phrase",
+      "duration_s": 7.32,
+      "sha256": "7e11fbfa06d5d0f868e24e09d26985b1bf65317e4e842e66c6316b5245802906"
+    },
+    {
+      "order": 58,
+      "id": "1675-2412329915761515247.wav",
+      "audio_path": "2412329915761515247.wav",
+      "reference": "tous les noms suivis du mot sie qui signifie vous commencent toujours par une majuscule même au milieu d'une phrase",
+      "duration_s": 9.72,
+      "sha256": "8d9d4cdb7431962a8a867562ac8e08844b64902eb353593ac3a20c0abe7c253c"
+    },
+    {
+      "order": 59,
+      "id": "1723-15438563918461129359.wav",
+      "audio_path": "15438563918461129359.wav",
+      "reference": "le port a été le site d'une impasse navale tristement célèbre en 1889 lorsque sept navires d'allemagne des états-unis et de grande-bretagne ont refusé de quitter le port",
+      "duration_s": 10.74,
+      "sha256": "747cc8ef3e9c1aeab6cbf779ed1139066ed2033e1f1a4f659da902f3ac3076e1"
+    },
+    {
+      "order": 60,
+      "id": "1884-18138136126505624776.wav",
+      "audio_path": "18138136126505624776.wav",
+      "reference": "on prétend notamment que l'on peut détecter si une personne ment en interprétant correctement des micro-expressions",
+      "duration_s": 6.18,
+      "sha256": "7d655d6a2da9d2027ffb42b67b79e1179ec6a9028cc7c2102710a58013a64e11"
+    },
+    {
+      "order": 61,
+      "id": "1884-16546766059263978787.wav",
+      "audio_path": "16546766059263978787.wav",
+      "reference": "on prétend notamment que l'on peut détecter si une personne ment en interprétant correctement des micro-expressions",
+      "duration_s": 6.6,
+      "sha256": "9e63f92d416962794251cb92259f1e76bb2ad431d4ca952c0035c8899e9d7617"
+    },
+    {
+      "order": 62,
+      "id": "1792-14576741258913308247.wav",
+      "audio_path": "14576741258913308247.wav",
+      "reference": "c'est ce qu'on appelle le ph d'un produit chimique vous pouvez fabriquer un indicateur en utilisant du jus de chou rouge",
+      "duration_s": 9.24,
+      "sha256": "b8657e0014c929b18ad53aa7e50702c54b4dfbef1ceb2b0a3a0db2ba54e2456e"
+    },
+    {
+      "order": 63,
+      "id": "1660-4115181558875922783.wav",
+      "audio_path": "4115181558875922783.wav",
+      "reference": "le romantisme présentait un important élément de déterminisme culturel tiré d'écrivains tels que goethe fichte et schlegel",
+      "duration_s": 7.86,
+      "sha256": "85949be25b35c487a5873919f1ec60b2364e019406a5684b2f34031971aa67f5"
+    },
+    {
+      "order": 64,
+      "id": "1660-9287631375827907640.wav",
+      "audio_path": "9287631375827907640.wav",
+      "reference": "le romantisme présentait un important élément de déterminisme culturel tiré d'écrivains tels que goethe fichte et schlegel",
+      "duration_s": 9.24,
+      "sha256": "bc529ef55d8030f6821e3b597424ef4e5c9b5d4d6833145ceeb957ec81a44d62"
+    },
+    {
+      "order": 65,
+      "id": "1660-925292890493340703.wav",
+      "audio_path": "925292890493340703.wav",
+      "reference": "le romantisme présentait un important élément de déterminisme culturel tiré d'écrivains tels que goethe fichte et schlegel",
+      "duration_s": 7.38,
+      "sha256": "e5151011891a90713f9d1e4efa7261e5ee2930f184fb290224002888c00f8116"
+    },
+    {
+      "order": 66,
+      "id": "1745-9072438163452641933.wav",
+      "audio_path": "9072438163452641933.wav",
+      "reference": "les plantes revêtent leur plus belle apparence lorsqu'elles se trouvent dans un environnement naturel alors résistez à la tentation d'en retirer ne serait-ce qu'« une seule »",
+      "duration_s": 8.58,
+      "sha256": "31db336965b2f7f86787c587155d527d26cac6faca740ef82a37e6a50fee8394"
+    },
+    {
+      "order": 67,
+      "id": "1745-1415793636576862491.wav",
+      "audio_path": "1415793636576862491.wav",
+      "reference": "les plantes revêtent leur plus belle apparence lorsqu'elles se trouvent dans un environnement naturel alors résistez à la tentation d'en retirer ne serait-ce qu'« une seule »",
+      "duration_s": 11.04,
+      "sha256": "9ff4ae39a35284000687394dba679cd3599dc410071e74f489c65f6238ca5505"
+    },
+    {
+      "order": 68,
+      "id": "1745-10926529561499706520.wav",
+      "audio_path": "10926529561499706520.wav",
+      "reference": "les plantes revêtent leur plus belle apparence lorsqu'elles se trouvent dans un environnement naturel alors résistez à la tentation d'en retirer ne serait-ce qu'« une seule »",
+      "duration_s": 12.24,
+      "sha256": "3b0babd01415efce2d573b95c8ae53a68cc97d7871b37d448392f4c7e6f61333"
+    },
+    {
+      "order": 69,
+      "id": "1766-796744033896621691.wav",
+      "audio_path": "796744033896621691.wav",
+      "reference": "certains atomes ont un noyau instable de sorte qu'ils ont tendance à se briser avec peu ou pas de pression",
+      "duration_s": 8.64,
+      "sha256": "8ffd60d11a17e27d67cecce3f18022d376a363e857e3b6fbe3c24c8b5325fa89"
+    },
+    {
+      "order": 70,
+      "id": "1766-18355882188885139353.wav",
+      "audio_path": "18355882188885139353.wav",
+      "reference": "certains atomes ont un noyau instable de sorte qu'ils ont tendance à se briser avec peu ou pas de pression",
+      "duration_s": 9.36,
+      "sha256": "656ad7469aeed65427d9704c1934050d9456df5c06727b69d86ae69b0044ac26"
+    },
+    {
+      "order": 71,
+      "id": "1769-8536437430059950196.wav",
+      "audio_path": "8536437430059950196.wav",
+      "reference": "construite par les égyptiens au cours du troisième millénaire avant j-c la grande pyramide est l'une des nombreuses structures géantes érigées en l'honneur des pharaons décédés",
+      "duration_s": 9.6,
+      "sha256": "38cbc3232f0e33725f857f622aece9c3de5375b71966e31f79f417c821b33321"
+    },
+    {
+      "order": 72,
+      "id": "1769-2437565489439428342.wav",
+      "audio_path": "2437565489439428342.wav",
+      "reference": "construite par les égyptiens au cours du troisième millénaire avant j-c la grande pyramide est l'une des nombreuses structures géantes érigées en l'honneur des pharaons décédés",
+      "duration_s": 8.1,
+      "sha256": "53fb58a719f48fbb7ea90893fbe851b359a5b699cdd97034bf15bf2daf38d73e"
+    },
+    {
+      "order": 73,
+      "id": "1838-16963324442618633742.wav",
+      "audio_path": "16963324442618633742.wav",
+      "reference": "la grande pyramide de gizeh est la seule des sept merveilles qui existe encore aujourd'hui",
+      "duration_s": 9.72,
+      "sha256": "6660a663d0f0e20f96874d0cbab7b5adbee427590092d91b1b8f6ba3c0f629b3"
+    },
+    {
+      "order": 74,
+      "id": "1838-11644651343215870474.wav",
+      "audio_path": "11644651343215870474.wav",
+      "reference": "la grande pyramide de gizeh est la seule des sept merveilles qui existe encore aujourd'hui",
+      "duration_s": 5.88,
+      "sha256": "fcf753c16bbd79fc948522bf19f588a122ca727d8a7590a8b7cc95e8c8327f1b"
+    },
+    {
+      "order": 75,
+      "id": "1969-476956455356127952.wav",
+      "audio_path": "476956455356127952.wav",
+      "reference": "il indique que l'endroit le plus efficace pour le sujet principal se trouve à l'intersection des lignes divisant l'image en tiers verticalement et horizontalement voir exemple",
+      "duration_s": 9.6,
+      "sha256": "4b4caf80a6e6b8e3c340bdfbf61800feaebe22f71110c27a1ec95adfc6bcd494"
+    },
+    {
+      "order": 76,
+      "id": "1969-12785245718131734148.wav",
+      "audio_path": "12785245718131734148.wav",
+      "reference": "il indique que l'endroit le plus efficace pour le sujet principal se trouve à l'intersection des lignes divisant l'image en tiers verticalement et horizontalement voir exemple",
+      "duration_s": 9.54,
+      "sha256": "e7be904e115a6139afc4772e591bf9c1420aa042152525d1db854bacf2bfb319"
+    },
+    {
+      "order": 77,
+      "id": "1969-8337835540520041534.wav",
+      "audio_path": "8337835540520041534.wav",
+      "reference": "il indique que l'endroit le plus efficace pour le sujet principal se trouve à l'intersection des lignes divisant l'image en tiers verticalement et horizontalement voir exemple",
+      "duration_s": 12.78,
+      "sha256": "f84cf1c8caa5e7c8d675678ef73ceff36964810e18538066db0b1c9a83cf7ec0"
+    },
+    {
+      "order": 78,
+      "id": "1876-8781467055035677912.wav",
+      "audio_path": "8781467055035677912.wav",
+      "reference": "le bureau de gestion des urgences des îles mariannes du nord a déclaré qu'aucun dégât n'avait été signalé dans ce pays",
+      "duration_s": 7.2,
+      "sha256": "7cd909025d001f89863f2e9b9d94474700a4ea1c0f8977d75874bd98b9ad1cf3"
+    },
+    {
+      "order": 79,
+      "id": "1876-1200691263101632363.wav",
+      "audio_path": "1200691263101632363.wav",
+      "reference": "le bureau de gestion des urgences des îles mariannes du nord a déclaré qu'aucun dégât n'avait été signalé dans ce pays",
+      "duration_s": 7.2,
+      "sha256": "2e14e43947d9cdc2b4c4ce4d3264a8a8cdaa621a0cbed36aca0c694a0e90f2fa"
+    },
+    {
+      "order": 80,
+      "id": "1928-10946670521716589729.wav",
+      "audio_path": "10946670521716589729.wav",
+      "reference": "en 1976 trente pour cent du machu picchu avait été restauré et cette restauration se poursuit jusqu'à aujourd'hui",
+      "duration_s": 8.16,
+      "sha256": "7b78a22b33f1c7a11c38d0da7a87ba9982d6f822ede90de2bd3442cd243b179c"
+    },
+    {
+      "order": 81,
+      "id": "1928-14104511820947854373.wav",
+      "audio_path": "14104511820947854373.wav",
+      "reference": "en 1976 trente pour cent du machu picchu avait été restauré et cette restauration se poursuit jusqu'à aujourd'hui",
+      "duration_s": 7.38,
+      "sha256": "a361c89de49941d90ce781e4571e225d01b7c7fd71d441464450d5f58a9f8742"
+    },
+    {
+      "order": 82,
+      "id": "1928-12134016059159477965.wav",
+      "audio_path": "12134016059159477965.wav",
+      "reference": "en 1976 trente pour cent du machu picchu avait été restauré et cette restauration se poursuit jusqu'à aujourd'hui",
+      "duration_s": 8.58,
+      "sha256": "a158ae5a613d7aa75d1d1e3a30165d9933830e8e009d697f3c76cc9b653b9c57"
+    },
+    {
+      "order": 83,
+      "id": "1795-8784349706551339646.wav",
+      "audio_path": "8784349706551339646.wav",
+      "reference": "depuis 1988 les urnes doivent être transparentes afin que les électeurs et les observateurs puissent constater qu'aucune enveloppe n'est présente au début du vote et qu'aucune enveloppe n'est ajoutée sauf celles des électeurs dûment comptés et autorisés",
+      "duration_s": 14.22,
+      "sha256": "ffe43dfd94edbe12f001d4367e4db4c822ddd38bf6052db050fd9147c1bf29e7"
+    },
+    {
+      "order": 84,
+      "id": "1923-679574719011499345.wav",
+      "audio_path": "679574719011499345.wav",
+      "reference": "cette stratégie s'est avérée efficace coupant les approvisionnements militaires et civils vitaux bien que ce blocus ait violé le droit international généralement accepté et codifié par plusieurs accords internationaux des deux derniers siècles",
+      "duration_s": 13.08,
+      "sha256": "4ed7710bb33aeee4e2996626ce50b0e18539268e37a161fcddaf12df1b0253c7"
+    },
+    {
+      "order": 85,
+      "id": "1717-15966981972274576354.wav",
+      "audio_path": "15966981972274576354.wav",
+      "reference": "en raison de la topologie sous-marine le flux de retour est concentré sur quelques sections plus profondes et un courant rapide vers les eaux profondes peut s'y former",
+      "duration_s": 11.4,
+      "sha256": "c2f8c722a86367056781abdfc6dfad083c1daee5f586de03138e9774a7fcfeb9"
+    },
+    {
+      "order": 86,
+      "id": "1717-7160098958583618965.wav",
+      "audio_path": "7160098958583618965.wav",
+      "reference": "en raison de la topologie sous-marine le flux de retour est concentré sur quelques sections plus profondes et un courant rapide vers les eaux profondes peut s'y former",
+      "duration_s": 9.18,
+      "sha256": "f6881d75566edaa01dae13f73093ba23cda63ba1edb564034877135b37bc0bd7"
+    },
+    {
+      "order": 87,
+      "id": "1717-13292226229846030035.wav",
+      "audio_path": "13292226229846030035.wav",
+      "reference": "en raison de la topologie sous-marine le flux de retour est concentré sur quelques sections plus profondes et un courant rapide vers les eaux profondes peut s'y former",
+      "duration_s": 8.82,
+      "sha256": "c1121a5c2b1ae033019d66b8de6d40de14c17a6b0fad955b6f6da1f6441ee958"
+    },
+    {
+      "order": 88,
+      "id": "1911-12170410141556380483.wav",
+      "audio_path": "12170410141556380483.wav",
+      "reference": "de même en ayant un visa schengen vous n'avez pas besoin de demander séparément un visa pour chacun des pays membres de l'espace ce qui permet d'économiser du temps de l'argent et des formalités administratives",
+      "duration_s": 10.14,
+      "sha256": "3882a79e8c0f80117e92686cf1d7cdc48ed786b7e55ec1e2af82600b95773fd0"
+    },
+    {
+      "order": 89,
+      "id": "1911-14079270901153124231.wav",
+      "audio_path": "14079270901153124231.wav",
+      "reference": "de même en ayant un visa schengen vous n'avez pas besoin de demander séparément un visa pour chacun des pays membres de l'espace ce qui permet d'économiser du temps de l'argent et des formalités administratives",
+      "duration_s": 11.76,
+      "sha256": "72bdaaaca8fa446f95ddcf14c5f521308679d6e5459ba1b976afc42e89f5aeb3"
+    },
+    {
+      "order": 90,
+      "id": "1911-4287078376450508512.wav",
+      "audio_path": "4287078376450508512.wav",
+      "reference": "de même en ayant un visa schengen vous n'avez pas besoin de demander séparément un visa pour chacun des pays membres de l'espace ce qui permet d'économiser du temps de l'argent et des formalités administratives",
+      "duration_s": 10.08,
+      "sha256": "13ffcabcef96972af00b1df68ca01596820a0b82f473695ac767c36e2e67fb81"
+    },
+    {
+      "order": 91,
+      "id": "1665-16264538655325299705.wav",
+      "audio_path": "16264538655325299705.wav",
+      "reference": "d'après la fuite le document portera sur le différend à la frontière que la palestine revendique sur la base des frontières existantes avant la guerre du moyen-orient de 1967",
+      "duration_s": 16.38,
+      "sha256": "33e705756596bcbd37ced1a829b497a104ec85661814914d6b6ea9e23070c118"
+    },
+    {
+      "order": 92,
+      "id": "1786-17916850742686748759.wav",
+      "audio_path": "17916850742686748759.wav",
+      "reference": "la composition de ces cristaux correspond à ce qui est trouvé dans l’urine des animaux domestiques affectés lorsqu’on compare par spectroscopie infrarouge irtf",
+      "duration_s": 9.18,
+      "sha256": "e07704defee894e4d7d9dbda0e6631a5d3fddfbb3bcc08c47ea02420589559b5"
+    },
+    {
+      "order": 93,
+      "id": "1689-6532225463918874493.wav",
+      "audio_path": "6532225463918874493.wav",
+      "reference": "l'europe est un continent relativement petit mais comportant de nombreux pays indépendants dans des circonstances classiques voyager à travers plusieurs pays implique donc de devoir procéder à plusieurs demandes de visa et de subir plusieurs vérifications de passeport",
+      "duration_s": 14.52,
+      "sha256": "1deb319df1b0a028701ebc2ccac38f5890680d558357330efa34369ed9a62705"
+    },
+    {
+      "order": 94,
+      "id": "1689-13733687226163008324.wav",
+      "audio_path": "13733687226163008324.wav",
+      "reference": "l'europe est un continent relativement petit mais comportant de nombreux pays indépendants dans des circonstances classiques voyager à travers plusieurs pays implique donc de devoir procéder à plusieurs demandes de visa et de subir plusieurs vérifications de passeport",
+      "duration_s": 15.36,
+      "sha256": "594221f8e9e3f8d8d8fefd26d0a8add048a8b27bfcee73f847946a0e2a92c4f6"
+    },
+    {
+      "order": 95,
+      "id": "1689-390032609814762317.wav",
+      "audio_path": "390032609814762317.wav",
+      "reference": "l'europe est un continent relativement petit mais comportant de nombreux pays indépendants dans des circonstances classiques voyager à travers plusieurs pays implique donc de devoir procéder à plusieurs demandes de visa et de subir plusieurs vérifications de passeport",
+      "duration_s": 11.22,
+      "sha256": "2887223e7670ad4a2fbc85102e07f1f14cc6fcf8946baa085809f208d70b6f4e"
+    },
+    {
+      "order": 96,
+      "id": "1963-3401760301064688692.wav",
+      "audio_path": "3401760301064688692.wav",
+      "reference": "en repassant les vêtements humides on peut les faire sécher plus facilement de nombreux hôtels disposent d'un fer et d'une planche à repasser qui peuvent être prêtés même s'il n'y en a pas dans les chambres",
+      "duration_s": 13.62,
+      "sha256": "3464724ace70faac2f9ee517cc9f1ff392556aa53d4f8ffc56d3a5de3d8f3ca1"
+    },
+    {
+      "order": 97,
+      "id": "1709-15988319403992284100.wav",
+      "audio_path": "15988319403992284100.wav",
+      "reference": "le rapport est très critique envers presque tous les aspects de la politique actuelle du gouvernement à l'égard de l'irak et plaide vivement pour un changement de direction immédiat",
+      "duration_s": 9.36,
+      "sha256": "9f232e9bbe68291cdc2c8b3a14f8f767c699084d6fd58052f46332493d92d229"
+    },
+    {
+      "order": 98,
+      "id": "1709-5551307706852429820.wav",
+      "audio_path": "5551307706852429820.wav",
+      "reference": "le rapport est très critique envers presque tous les aspects de la politique actuelle du gouvernement à l'égard de l'irak et plaide vivement pour un changement de direction immédiat",
+      "duration_s": 10.8,
+      "sha256": "e40940ca340946140b528a951f0fcaec6d242c24fa8fc636f0244b604237777d"
+    },
+    {
+      "order": 99,
+      "id": "1957-6777638221047973574.wav",
+      "audio_path": "6777638221047973574.wav",
+      "reference": "il a qualifié les rumeurs de « bavardages et de bêtises politiques »",
+      "duration_s": 6.42,
+      "sha256": "5d5345237eec67172332cd85778f3b74b132ecc76d958680030ffb1eaa4e28cb"
+    }
+  ],
+  "reference_parsing": "Literal tab separation, csv.QUOTE_NONE; seven fields required. Do not parse embedded quote characters as CSV field delimiters.",
+  "source_tsv_sha256": "5d06d338b242e00786fcf12c4c92008b9f399d5a5c872c91dca90572e7869c0d"
+}

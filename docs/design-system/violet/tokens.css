@@ -1,0 +1,569 @@
+/* Isoform tokens, brand violet. Same names as ds/yansu and ds/patina; replaces Patina.
+   Themes keep their ids: paper is light (the default), onedark is dark.
+   Meaning: violet = Isoform acts or speaks; copper = waiting on you; ink = you; red = failure; green = success.
+   Grounds are cool neutral gray, never cream or paper. No texture. */
+/* Yansu — generated from tokens.json */
+:root, [data-theme="paper"] {
+  --color-background: #f6f6f9; /* Window/page ground — the lightest step of the warm-paper ladder (graphite in dark). Body text is `color-ink` on it. */
+  --color-background-accent: #f1f1f6; /* A half-step below `color-background`; settings and secondary page grounds. */
+  --color-panel: #ffffff; /* Raised surface: cards, dialogs, menus, popovers, inputs. The most-used surface after the page ground. */
+  --color-panel-warm: #f0f1f6; /* Warmer recessed panel for grouped content, status rows and nested sections. */
+  --color-panel-code: #e9eaf1; /* Inline code and diff surfaces inside light chrome. */
+  --color-panel-result: #ffffff; /* Tool-result blocks in the chat stream. */
+  --color-panel-user: #ebecf2; /* The user's own message bubble in the chat stream. */
+  --color-ink: #16161d; /* Primary text and icons on every surface. Neutral gray-12 in paper, warm cream in onedark. */
+  --color-muted: #5d5f6e; /* Secondary text: descriptions, metadata, placeholders, menu labels. 4.5:1+ on `color-background` and `color-panel` in both themes. */
+  --color-accent: #4f5ed8; /* Brand highlight — labels, emphasis, secondary actions. A deep warm gray, not a hue; also the selected day in Calendar. */
+  --color-accent-light: rgba(89, 104, 223, 0.1); /* 10% tint of `color-accent` for soft highlighted fills. Defined; no direct use found. */
+  --color-accent-2: #4f5ed8; /* Primary action accent — links, focus rings (at 40%), checked Checkbox. Same warm ink as `color-accent`. */
+  --color-accent-2-light: rgba(89, 104, 223, 0.1); /* 10% tint of `color-accent-2`; selected plan cards in subscription settings. */
+  --color-border: #e2e3ec; /* Default 1px hairline for cards, inputs, dividers and Dialog/Card edges. */
+  --color-border-light: #ececf2; /* Lightest hairline. Defined; no direct use found. */
+  --color-border-strong: #d4d6e2; /* Menus, Select content, Popover and Checkbox edges; hover border on outline buttons. */
+  --color-border-focus: #9ea7f0; /* Focus border on inputs, textareas and the composer — a deeper gray shift, no accent halo. Under 3:1 on `color-panel` by design (understated focus language). */
+  --color-selection-bg: #d5d9fa; /* Text-selection wash (soft sky); applied via ::selection. */
+  --color-selection-code-fg: #16161d; /* Selected-text color inside code blocks so dark code text stays legible on the wash. In onedark the code keeps its own color (`color-code-fg`). */
+  --color-app-sage-bg: #eef1ea; /* App-tint chip fill (sage) for per-app badges; pair with `color-app-sage-text`. */
+  --color-app-sage-border: #d8ded0; /* App-tint chip border (sage). */
+  --color-app-sage-text: #6c7a5c; /* App-tint chip text (sage) on `color-app-sage-bg`. Just under 4.5:1 in paper (3.7–4.4:1): chip labels only. */
+  --color-app-teal-bg: #ebf1f0; /* App-tint chip fill (teal) for per-app badges; pair with `color-app-teal-text`. */
+  --color-app-teal-border: #d1ddda; /* App-tint chip border (teal). */
+  --color-app-teal-text: #5f7974; /* App-tint chip text (teal) on `color-app-teal-bg`. Just under 4.5:1 in paper (3.7–4.4:1): chip labels only. */
+  --color-app-amber-bg: #f3eee5; /* App-tint chip fill (amber) for per-app badges; pair with `color-app-amber-text`. */
+  --color-app-amber-border: #e0d6c5; /* App-tint chip border (amber). */
+  --color-app-amber-text: #867259; /* App-tint chip text (amber) on `color-app-amber-bg`. Just under 4.5:1 in paper (3.7–4.4:1): chip labels only. */
+  --color-app-rose-bg: #f3ebea; /* App-tint chip fill (rose) for per-app badges; pair with `color-app-rose-text`. */
+  --color-app-rose-border: #e2d1cf; /* App-tint chip border (rose). */
+  --color-app-rose-text: #85686a; /* App-tint chip text (rose) on `color-app-rose-bg`. Just under 4.5:1 in paper (3.7–4.4:1): chip labels only. */
+  --color-app-indigo-bg: #edf0f5; /* App-tint chip fill (indigo) for per-app badges; pair with `color-app-indigo-text`. */
+  --color-app-indigo-border: #d5dbe6; /* App-tint chip border (indigo). */
+  --color-app-indigo-text: #6d7b9a; /* App-tint chip text (indigo) on `color-app-indigo-bg`. Just under 4.5:1 in paper (3.7–4.4:1): chip labels only. */
+  --color-app-plum-bg: #f1ecf3; /* App-tint chip fill (plum) for per-app badges; pair with `color-app-plum-text`. */
+  --color-app-plum-border: #ddd2e1; /* App-tint chip border (plum). */
+  --color-app-plum-text: #796788; /* App-tint chip text (plum) on `color-app-plum-bg`. Just under 4.5:1 in paper (3.7–4.4:1): chip labels only. */
+  --color-app-stone-bg: #efedea; /* App-tint chip fill (stone) for per-app badges; pair with `color-app-stone-text`. */
+  --color-app-stone-border: #dcd6d0; /* App-tint chip border (stone). */
+  --color-app-stone-text: #786f66; /* App-tint chip text (stone) on `color-app-stone-bg`. Just under 4.5:1 in paper (3.7–4.4:1): chip labels only. */
+  --color-error: #a12538; /* Error text and destructive actions (destructive Button, menu items). */
+  --color-error-bg: rgba(161, 37, 56, 0.12); /* Fill behind error banners and destructive menu hover. */
+  --color-error-border: rgba(161, 37, 56, 0.22); /* Border of error banners and status chips. */
+  --color-error-strong: rgba(161, 37, 56, 0.6); /* Emphasised error stroke (60%). Used in subscription settings. */
+  --color-success: #2a7a44; /* Success text and icons. */
+  --color-success-bg: rgba(42, 122, 68, 0.12); /* Fill behind success chips. `color-success` on it is 4.35:1 in paper (passes for 19px bold+ or icons only). */
+  --color-success-border: rgba(42, 122, 68, 0.22); /* Border of success chips. */
+  --color-warning: #9b4f1d; /* Warning text and icons. */
+  --color-warning-bg: rgba(155, 79, 29, 0.12); /* Fill behind warning chips. */
+  --color-warning-border: rgba(155, 79, 29, 0.22); /* Border of warning chips. */
+  --color-info: #4f5ed8; /* Informational text and icons (teal). */
+  --color-info-bg: rgba(89, 104, 223, 0.12); /* Fill behind info chips and continuation dialogs. */
+  --color-info-border: rgba(89, 104, 223, 0.22); /* Border of info chips. */
+  --color-code-bg: #15151c; /* Code-block ground (dark in both themes). */
+  --color-code-fg: #e3e4ee; /* Code-block text on `color-code-bg`. */
+  --color-seaweed: #52b78c; /* Green accent for redaction/privacy animations. */
+  --color-seaweed-deep: #41a37a; /* Deeper step of the seaweed privacy animation palette. */
+  --color-seaweed-light: #7fcca8; /* Light step of the seaweed palette. */
+  --color-seaweed-foam: #b8e4ce; /* Palest step of the seaweed palette. */
+  --color-seaweed-olive: #64c19a; /* Olive step of the seaweed palette. */
+  --color-automation: #4f5ed8; /* Automation indicator (scheduled work running). */
+  --color-automation-deep: #3c49b8; /* Deeper step of the automation indicator. */
+  --color-automation-light: #aab3f5; /* Glow step of the automation indicator. */
+  --color-extractor: #c08a2e; /* Amber marker for extractor items on the Timeline. 2.5:1 on `color-background` in paper — use as a mark, not text. */
+  --color-claude: #d97757; /* Model-attribution coral for Claude-provider marks. Defined in both themes; no direct component use found. */
+  --color-solid: #5968df; /* Primary action fill in the composer — the darkest step of the warm ladder (inverts to paper in onedark). */
+  --color-solid-fg: #ffffff; /* Text/icon on `color-solid`. */
+  --color-subtle: #6f7185; /* Tertiary text: timestamps, counts, hints. 3.6:1 on paper surfaces — keep to 12px+ secondary info or pair with `color-muted` for anything essential. */
+  --color-faint: #b4b6c4; /* Quaternary text and disabled glyphs (transcripts). Below 4.5:1 in both themes; never for content that must be read. */
+  --color-label: #6f7185; /* Small uppercase section labels. 3.6:1 on `color-panel` in paper (same value as `color-subtle`). */
+  --color-dropdown-label: #5d5f6e; /* Group labels in search/dropdown lists. */
+  --color-welcome-sub: #5d5f6e; /* Subtitle on the new-chat welcome screen. */
+  --color-heading-strong: #16161d; /* Strong headings on the welcome screen. */
+  --color-icon-subtle: #424453; /* Low-emphasis sidebar icons. */
+  --color-border-subtle: #e8e9f0; /* Sidebar and grid dividers. */
+  --color-border-divider: #e2e3ec; /* List dividers in search. */
+  --color-border-input: #e2e3ec; /* Input and settings-field borders. */
+  --color-border-emphasis: #d4d6e2; /* Emphasised grid borders (automation grid). */
+  --color-border-strong-alt: #d4d6e2; /* Memory-page strong border. */
+  --color-card-warm: #ffffff; /* Warm card fill (design-spec token). Defined; no direct use found. */
+  --color-card-cool: #ffffff; /* Cool card fill (design-spec). Defined; no direct use found. */
+  --color-card-warm-alt: #f6f6f9; /* Alt warm card fill. Defined; no direct use found. */
+  --color-card-cool-alt: #ffffff; /* Alt cool card fill. Defined; no direct use found. */
+  --color-card-placeholder: #f0f1f6; /* Composer suggestion placeholder cards. */
+  --color-card-progress: #e2e3ec; /* Progress track on Initiative and Agency cards. */
+  --color-sample-border: rgba(89, 104, 223, 0.35); /* Secondary and connect Button border (30% warm ink). */
+  --color-sample-text: #4f5ed8; /* Secondary and connect Button text. */
+  --color-button-solid: #16161d; /* Composer send button fill. */
+  --color-overlay-ink-25: rgba(0, 0, 0, 0.25); /* 25% ink scrim. Defined; no direct use found. */
+  --color-card-edge: #ffffff; /* Card edge highlight. Defined; no direct use found. */
+  --color-surface-hover: #f0f1f6; /* Hover fill for rows and list items — stays on the warm ladder, never an ink-alpha overlay. */
+  --color-surface-active: #e9eaf1; /* Pressed/highlighted fill for menu items and selected rows; Avatar fill. */
+  --color-active-row-bg: #e9eaf1; /* Selected row in lists (memory, sidebar). */
+  --color-sample-badge-bg: #f0f1f6; /* Sample badge fill. Defined; no direct use found. */
+  --color-solid-btn-bg: #5968df; /* Primary (default) Button fill — warm ink on paper, paper on graphite. */
+  --color-solid-btn-fg: #ffffff; /* Primary Button text on `color-solid-btn-bg`. */
+  --color-btn-connect-bg: #f0f1f6; /* Connect Button fill (integrations). */
+  --color-composer-bg: #ffffff; /* Chat composer surface. */
+  --color-composer-border: #d4d6e2; /* Chat composer border. */
+  --color-chip-bg: #f0f1f6; /* Composer suggestion chip fill. */
+  --color-chip-border: #d4d6e2; /* Composer suggestion chip border. */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -8px rgba(0, 0, 0, 0.16); /* Cards, Dialog, Command palette, context menu — hairline-first: a 1px contact shadow plus a tight low-diffusion drop. */
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.05); /* Barely-there contact shadow for small raised elements. */
+  --shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.04); /* Chat composer at rest; it leans on its border. */
+  --shadow-composer-focus: 0 2px 8px -2px rgba(0, 0, 0, 0.08); /* Chat composer when focused. */
+  --shadow-button: none; /* Buttons carry no shadow. */
+  --shadow-button-hover: none; /* Buttons carry no shadow on hover. */
+  --shadow-accent: none; /* No coloured/glow shadows anywhere. */
+  --shadow-solid-btn: inset 0 1px 0 0 rgba(255, 255, 255, 0.08); /* 1px inner top highlight on the primary Button (paper only; none in onedark). */
+}
+[data-theme="onedark"] {
+  --color-background: #121217;
+  --color-background-accent: #15151b;
+  --color-panel: #1a1a21;
+  --color-panel-warm: #1f1f27;
+  --color-panel-code: #0e0e13;
+  --color-panel-result: #1f1f27;
+  --color-panel-user: #26262f;
+  --color-ink: #ececf2;
+  --color-muted: #a6a8b8;
+  --color-accent: #7a8aff;
+  --color-accent-light: rgba(122, 138, 255, 0.14);
+  --color-accent-2: #7a8aff;
+  --color-accent-2-light: rgba(122, 138, 255, 0.14);
+  --color-border: #2a2b35;
+  --color-border-light: #212129;
+  --color-border-strong: #353746;
+  --color-border-focus: #4a52a0;
+  --color-selection-bg: #333a7a;
+  --color-selection-code-fg: var(--color-code-fg);
+  --color-app-sage-bg: #14201a;
+  --color-app-sage-border: #1f2f26;
+  --color-app-sage-text: #8fb89c;
+  --color-app-teal-bg: #0f1e20;
+  --color-app-teal-border: #1d2e30;
+  --color-app-teal-text: #8db0b0;
+  --color-app-amber-bg: #1f1a14;
+  --color-app-amber-border: #2f281d;
+  --color-app-amber-text: #c4a87a;
+  --color-app-rose-bg: #1f1617;
+  --color-app-rose-border: #2e2224;
+  --color-app-rose-text: #c49096;
+  --color-app-indigo-bg: #131720;
+  --color-app-indigo-border: #222838;
+  --color-app-indigo-text: #98a9d1;
+  --color-app-plum-bg: #1a151e;
+  --color-app-plum-border: #2b2432;
+  --color-app-plum-text: #ab95c1;
+  --color-app-stone-bg: #181716;
+  --color-app-stone-border: #272524;
+  --color-app-stone-text: #9d948b;
+  --color-error: #f07380;
+  --color-error-bg: rgba(240, 115, 128, 0.16);
+  --color-error-border: rgba(240, 115, 128, 0.3);
+  --color-error-strong: rgba(240, 115, 128, 0.6);
+  --color-success: #62c98d;
+  --color-success-bg: rgba(98, 201, 141, 0.16);
+  --color-success-border: rgba(98, 201, 141, 0.3);
+  --color-warning: #e8a066;
+  --color-warning-bg: rgba(232, 160, 102, 0.16);
+  --color-warning-border: rgba(232, 160, 102, 0.3);
+  --color-info: #7a8aff;
+  --color-info-bg: rgba(122, 138, 255, 0.16);
+  --color-info-border: rgba(122, 138, 255, 0.3);
+  --color-code-bg: #0e0e13;
+  --color-code-fg: #e3e4ee;
+  --color-seaweed: #52b78c;
+  --color-seaweed-deep: #41a37a;
+  --color-seaweed-light: #7fcca8;
+  --color-seaweed-foam: #b8e4ce;
+  --color-seaweed-olive: #64c19a;
+  --color-automation: #7a8aff;
+  --color-automation-deep: #5c6be6;
+  --color-automation-light: #b3bbff;
+  --color-extractor: #d9a24a;
+  --color-claude: #e08a6c;
+  --color-solid: #7a8aff;
+  --color-solid-fg: #101016;
+  --color-subtle: #868899;
+  --color-faint: #4f5162;
+  --color-label: #868899;
+  --color-dropdown-label: #a6a8b8;
+  --color-welcome-sub: #a6a8b8;
+  --color-heading-strong: #ececf2;
+  --color-icon-subtle: #babcca;
+  --color-border-subtle: #23232c;
+  --color-border-divider: #2a2b35;
+  --color-border-input: #2a2b35;
+  --color-border-emphasis: #353746;
+  --color-border-strong-alt: #353746;
+  --color-card-warm: #1a1a21;
+  --color-card-cool: #1a1a21;
+  --color-card-warm-alt: #1f1f27;
+  --color-card-cool-alt: #26262f;
+  --color-card-placeholder: #15151b;
+  --color-card-progress: #353746;
+  --color-sample-border: rgba(122, 138, 255, 0.4);
+  --color-sample-text: #7a8aff;
+  --color-button-solid: #ececf2;
+  --color-overlay-ink-25: rgba(255, 255, 255, 0.55);
+  --color-card-edge: #24242e;
+  --color-surface-hover: #1f1f27;
+  --color-surface-active: #24242e;
+  --color-active-row-bg: #24242e;
+  --color-sample-badge-bg: #1f1f27;
+  --color-solid-btn-bg: #7a8aff;
+  --color-solid-btn-fg: #101016;
+  --color-btn-connect-bg: #1f1f27;
+  --color-composer-bg: #1a1a21;
+  --color-composer-border: #353746;
+  --color-chip-bg: #1f1f27;
+  --color-chip-border: #353746;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -8px rgba(0, 0, 0, 0.7);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-composer-focus: 0 2px 8px -2px rgba(0, 0, 0, 0.6);
+  --shadow-button: none;
+  --shadow-button-hover: none;
+  --shadow-accent: none;
+  --shadow-solid-btn: none;
+}
+:root {
+  --spacing: 0.25rem; /* Tailwind base unit; every p-/m-/gap- step is a multiple. Common: 6px (1.5) menu rows, 12px (3) menu item x-padding, 24px (6) Dialog/Sheet padding, 40px (10) hero Card padding. */
+  --radius-sm: 0.25rem; /* `rounded` — Checkbox. */
+  --radius-md: 0.375rem; /* `rounded-md` — menu items, Calendar days, inner list rows. */
+  --radius-lg: 0.5rem; /* `rounded-lg` — Select trigger, Combobox content, context menu, small and icon Buttons, Sheet close. */
+  --radius-xl: 0.75rem; /* `rounded-xl` — Card, Dialog, Command palette, dropdown/Select/Popover content, Textarea. */
+  --radius-full: 9999px; /* `rounded-full` — default and large Buttons (pills), ghost Button, Switch, Avatar. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-serif: "Palatino", "Book Antiqua", "Georgia", serif;
+  --font-mono: "SF Mono", "SFMono-Regular", "Monaco", "JetBrains Mono", "Consolas", monospace;
+  --text-display: 400 28px/1.4 var(--font-sans); /* Welcome and empty-state display line. */
+  --text-heading-1: 400 22px/1.4 var(--font-sans); /* Page titles. */
+  --text-heading-2: 600 18px/1.4 var(--font-sans); /* Section and Sheet titles (Sheet uses 18px semibold). */
+  --text-heading-3: 400 16px/1.4 var(--font-sans); /* Card and group headings. */
+  --text-body: 400 14px/1.4 var(--font-sans); /* Default body copy; Button labels set it at 600 (14px semibold). */
+  --text-body-sm: 400 13px/1.4 var(--font-sans); /* Dense UI: Select, Combobox, context menus (13px). */
+  --text-caption: 400 12px/1.4 var(--font-sans); /* Metadata, Sheet descriptions, small buttons. */
+  --text-label: 500 11px/1.4 var(--font-sans); /* Uppercase group labels (Command group headings: 11px, 500, wider tracking). */
+  --text-micro: 400 10px/1.4 var(--font-sans); /* Calendar weekdays, tiny counters. */
+  --text-card-title: 600 32px/1.4 var(--font-serif); /* CardTitle only — marketing/landing hero cards, not the app UI. */
+}
+.display {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.heading-1 {
+  font-family: var(--font-sans);
+  font-size: 22px;
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.heading-2 {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.heading-3 {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.body-sm {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.caption {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.micro {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.card-title {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+@font-face {
+  font-family: "PPMori Medium Italic";
+  src: url("fonts/PPMori-MediumItalic.woff2") format("woff2");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/9cef5ae09cd750178afada774f5d1a0c") format("woff");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Regular Italic";
+  src: url("../_blob/173b598ad67576fe44533087557d4b81") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Light Italic";
+  src: url("../_blob/6a30727bcdda2f3f0b4eabbe6b866abc") format("woff2");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/54d68c92baf9ebe1bcce84094474922e") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/4823476e2649a9af079fcfa7d3ffa710") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Extra Bold Italic";
+  src: url("../_blob/11a00a8b7e554679e7250a91fc8f583a") format("woff");
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/0cbc6e488a45495bd824cdbb1960afbf") format("woff");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/3a21a38d8a6c6d5e6a28a31a354dcc93") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/bc5509004dcfc91c56cd0c236334f629") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/c2e6a5f9521578def251d0f170b6c932") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Book Italic";
+  src: url("../_blob/1bea7af4333bb7dc47ea3c338b22a4b0") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Light Italic";
+  src: url("../_blob/fe3cc9dfa502b6652ae97cb06eb3542c") format("woff");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/f32f9ee5d42c87823d90c164e275ad8c") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Extra Bold Italic";
+  src: url("../_blob/926023da16457c649768871a6bd6b3b2") format("woff2");
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Book Italic";
+  src: url("../_blob/9f937d336e86b152cb1d5d3ddc73837a") format("woff");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Semi Bold Italic";
+  src: url("../_blob/53f8cda73cf0dfa2bc3e9981cfdeb1b8") format("woff");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/ec4d260fa29b2fecfd5cb9153f000368") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Bold Italic";
+  src: url("../_blob/c1982ae0974fd74b00a09ed1f3ae3a53") format("woff");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/6f6f5232f1a79e864b2ad9b32053d701") format("woff2");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/30ea04c16f30edd6ced5ad2ac714b10c") format("woff");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Extra Light Italic";
+  src: url("../_blob/59d09eb3d542a583ff2c8a3d7a4f0a4a") format("woff2");
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Regular Italic";
+  src: url("../_blob/9e4f41ecc8aa09645d263fcf94e27c5d") format("woff");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Medium Italic";
+  src: url("../_blob/54f1b3702476f3d73576a2ac54c10aa5") format("woff");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/95e80eb6b50b44c78207f16431f9dfd8") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Extra Light Italic";
+  src: url("../_blob/04da9f22092d45852c7b8709e5015f12") format("woff");
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/745d65dacfd41364532ad39c0099db0f") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Bold Italic";
+  src: url("../_blob/51b7d74a7ab03fe2bad5a8e3a93a4106") format("woff2");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/dfd20508b29635bfc406d40533fe343a") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/bd634d5fabfae1cefdc6e35fe3740256") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori";
+  src: url("../_blob/ab22b6e798903ddf58fec369a36f205c") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "PPMori Semi Bold Italic";
+  src: url("../_blob/97d1d49b71c5b772c5f2adf2bb1ae96e") format("woff2");
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root, [data-theme="paper"] {
+  --color-copper: #b4642d;
+  --color-automation-bg: rgba(89, 104, 223, 0.12);
+  --color-automation-border: rgba(89, 104, 223, 0.22);
+}
+[data-theme="onedark"] {
+  --color-copper: #c9733a;
+  --color-automation-bg: rgba(122, 138, 255, 0.16);
+  --color-automation-border: rgba(122, 138, 255, 0.3);
+}
+
+/* Type. PP Mori is the brand face for display moments only: the Today title, the About you portrait,
+   the Activity headline and the welcome or empty-state line (.display). Everything else stays on the system font. */
+:root {
+  --font-display: "PP Mori", "PPMori", var(--font-sans);
+  --text-display: 400 30px/1.25 var(--font-display);
+  --text-portrait: 400 19px/1.65 var(--font-display);
+}
+.display { font: var(--text-display); letter-spacing: -0.01em; }
+.display b, .display strong { font-weight: 600; }
+.portrait { font: var(--text-portrait); letter-spacing: 0; }
+
+/* No texture. The grain and mottle variables stay defined as none so existing class names keep working;
+   remove Settings > Appearance > Texture. */
+:root { --texture-grain: none; --texture-mottle-hi: none; --texture-mottle-lo: none; --texture-copper-hi: none; }
+.patina-ground, .patina-verdigris { background-image: none; }

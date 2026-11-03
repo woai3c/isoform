@@ -1,0 +1,25 @@
+--- a/onnxruntime/core/providers/coreml/model/model.mm
++++ b/onnxruntime/core/providers/coreml/model/model.mm
+@@ -373,11 +373,13 @@
+ #if HAS_COREMLOPTIMIZATIONHINT
+-  MLOptimizationHints* optimizationHints = [[MLOptimizationHints alloc] init];
+-  if (coreml_options.UseStrategy("FastPrediction")) {
+-    optimizationHints.specializationStrategy = MLSpecializationStrategyFastPrediction;
+-    config.optimizationHints = optimizationHints;
+-  } else if (coreml_options.UseStrategy("Default")) {
+-    optimizationHints.specializationStrategy = MLSpecializationStrategyDefault;
+-    config.optimizationHints = optimizationHints;
+-  } else {
+-    // not set
++  if (@available(macOS 15.0, iOS 18.0, tvOS 18.0, *)) {
++    MLOptimizationHints* optimizationHints = [[MLOptimizationHints alloc] init];
++    if (coreml_options.UseStrategy("FastPrediction")) {
++      optimizationHints.specializationStrategy = MLSpecializationStrategyFastPrediction;
++      config.optimizationHints = optimizationHints;
++    } else if (coreml_options.UseStrategy("Default")) {
++      optimizationHints.specializationStrategy = MLSpecializationStrategyDefault;
++      config.optimizationHints = optimizationHints;
++    } else {
++      // not set
++    }
+   }

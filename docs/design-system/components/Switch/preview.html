@@ -1,0 +1,15 @@
+<!-- @dsCard group="Forms" height=90 subtitle="Static rendition" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Switch — preview</title></head>
+<body>
+<div class="yn-stage">
+  <label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="yn-switch" role="switch" aria-checked="true" data-state="checked" tabindex="0"><span class="yn-switch__thumb"></span></span>Independent work</label>
+  <label style="display:flex;gap:10px;align-items:center;font-size:13px"><span class="yn-switch" role="switch" aria-checked="false" data-state="unchecked" tabindex="0"><span class="yn-switch__thumb"></span></span>Background listening</label>
+  <label style="display:flex;gap:10px;align-items:center;font-size:13px;color:var(--color-muted)"><span class="yn-switch" data-state="unchecked" data-disabled><span class="yn-switch__thumb"></span></span>Disabled</label>
+</div>
+<script>
+document.querySelectorAll('[role=switch]').forEach(function(b){b.addEventListener('click',function(){var on=b.dataset.state!=='checked';b.dataset.state=on?'checked':'unchecked';b.setAttribute('aria-checked',on);});});
+</script>
+</body>
+</html>

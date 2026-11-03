@@ -1,0 +1,56 @@
+{
+    "redactions": {
+        "code": "a private code",
+        "private_detail": "a private detail",
+        "account_number": "an account number",
+        "private_email": "an email address",
+        "private_phone": "a phone number",
+        "private_address": "a private address",
+        "street_address": "a street address",
+        "private_person": "a person",
+        "private_date": "a private date",
+        "private_url": "a private link",
+        "private_link": "a private link",
+        "private_org": "an organization",
+        "credit_card": "a card number",
+        "cvv": "a security code",
+        "one_time_password": "a one-time code",
+        "password": "a password",
+        "secret": "a private credential",
+        "api_key": "an API key",
+        "government_id": "an identity number",
+        "license_plate": "a license plate",
+        "device_id": "a device identifier",
+        "session_id": "a session identifier"
+    },
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyTooltip": "Copy markdown to the clipboard",
+    "close": "Close",
+    "refresh": "Refresh",
+    "brand": {
+        "name": "Isoform",
+        "wordmark": "ISOFORM"
+    },
+    "relaunch": {
+        "title": "Reopen {{app}} to finish turning on Screen Recording",
+        "body": "macOS lets {{app}} see your screen only after it quits and opens again. Setup picks up where you left off.",
+        "action": "Quit and reopen",
+        "reopening": "Reopening…",
+        "failed": "{{app}} could not reopen itself. Quit it from the menu bar, then open it again."
+    },
+    "firstDay": {
+        "history": {
+            "claude": "Claude Code history",
+            "codex": "Codex history",
+            "both": "Claude Code and Codex history"
+        },
+        "fromHistory": "From your {{history}}",
+        "fromCalendar": "From your calendar",
+        "localLine": "Screenshots and audio never leave this computer."
+    }
+}

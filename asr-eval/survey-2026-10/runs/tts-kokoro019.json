@@ -1,0 +1,118 @@
+{
+  "status": "complete",
+  "model": "kokoro019",
+  "host": "macOS-26.2-arm64-arm-64bit",
+  "load_s": 0.9153545419976581,
+  "samples": [
+    {
+      "path": "tts-samples/kokoro019-en-0-1.wav",
+      "lang": "en",
+      "voice": "0",
+      "prompt_index": 0,
+      "reference": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work.",
+      "sample_rate": 24000,
+      "duration_s": 5.237916666666667,
+      "synthesis_s": 2.418446750001749,
+      "rtf": 0.46171921088252305,
+      "cpu_percent": 195.0,
+      "rss_mb": 782.984375,
+      "sha256": "e43e30d2ad6361ef2711312cb8209de8f24ac727021b7d0e54fe8b8fb2588dd0",
+      "size_bytes": 251464
+    },
+    {
+      "path": "tts-samples/kokoro019-en-0-2.wav",
+      "lang": "en",
+      "voice": "0",
+      "prompt_index": 1,
+      "reference": "The code review is ready. Please check the new API before merging the pull request.",
+      "sample_rate": 24000,
+      "duration_s": 4.944958333333333,
+      "synthesis_s": 2.2196759579965146,
+      "rtf": 0.44887657455755736,
+      "cpu_percent": 196.7,
+      "rss_mb": 791.40625,
+      "sha256": "d01e65296948d7fed7f2763e67a3115bd6451c7def607bfce29189fce5820a1e",
+      "size_bytes": 237402
+    },
+    {
+      "path": "tts-samples/kokoro019-en-0-3.wav",
+      "lang": "en",
+      "voice": "0",
+      "prompt_index": 2,
+      "reference": "Take a short break, then send the project update when you are ready.",
+      "sample_rate": 24000,
+      "duration_s": 3.4433333333333334,
+      "synthesis_s": 1.4049202909955056,
+      "rtf": 0.40801170116035984,
+      "cpu_percent": 197.3,
+      "rss_mb": 794.359375,
+      "sha256": "97b93b62281efc434245f4385f128064f468b142924fe0c3c4840e1dd1fe5c6f",
+      "size_bytes": 165324
+    },
+    {
+      "path": "tts-samples/kokoro019-en-1-1.wav",
+      "lang": "en",
+      "voice": "1",
+      "prompt_index": 0,
+      "reference": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work.",
+      "sample_rate": 24000,
+      "duration_s": 5.189416666666666,
+      "synthesis_s": 2.135642833003658,
+      "rtf": 0.4115381304264111,
+      "cpu_percent": 197.6,
+      "rss_mb": 794.5625,
+      "sha256": "e733da88fc464b5425f54fe15ee311d5320817fd80a207e8179bf4347d3d4194",
+      "size_bytes": 249136
+    }
+  ],
+  "briefs": [
+    {
+      "lang": "en",
+      "text": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then",
+      "word_count": 300,
+      "characters": 1684,
+      "duration_s": 93.54429166666667,
+      "synthesis_s": 74.91751199999999,
+      "rtf": 0.8008774310565003,
+      "rss_mb": 814.59375,
+      "input_chunks": [
+        "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request.",
+        " Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready.",
+        " Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning.",
+        " Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request.",
+        " Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready.",
+        " Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning.",
+        " Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request.",
+        " Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready.",
+        " Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning.",
+        " Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then"
+      ],
+      "characters_synthesized": 1684,
+      "first_chunk_s": 7.491268707992276,
+      "chunk_synthesis_s": [
+        7.491268707992276,
+        9.3798310830025,
+        6.837489291006932,
+        6.7611487499962095,
+        10.89247391698882,
+        6.79541941700154,
+        5.976300207999884,
+        8.306948958008434,
+        5.071133125005872,
+        7.405465666000964
+      ],
+      "mode": "bounded sentence groups, maximum 200 Latin or 80 Han characters; all input retained"
+    }
+  ],
+  "voices": {
+    "en": "0",
+    "zh": "0"
+  },
+  "nice": 20,
+  "num_speakers": 11,
+  "prior_run": "survey-2026-10/diagnostics/tts-kokoro019-1792784484.json",
+  "warmup_s": {
+    "en": 4.813355833000969
+  },
+  "process_peak_rss_bytes": 867401728
+}

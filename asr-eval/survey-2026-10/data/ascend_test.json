@@ -1,0 +1,217 @@
+{
+  "source": "https://huggingface.co/datasets/CAiRE/ASCEND/resolve/737e9800ae31be9932ba8464c80366559bd28424/main/test-00000-of-00001.parquet",
+  "licence": "CC-BY-SA-4.0",
+  "selection": "first N in published order",
+  "samples": [
+    {
+      "id": "0",
+      "audio_path": "0.wav",
+      "reference": "好的",
+      "duration_s": 0.64,
+      "sha256": "a72e9ab4bd76a640886c23389ac1fb54480ef05f4e09e5be06e95957956c841a"
+    },
+    {
+      "id": "1",
+      "audio_path": "1.wav",
+      "reference": "呃",
+      "duration_s": 0.781,
+      "sha256": "4f290a8fadb2ae2cd027d0578a224cf4841a6b209798cf09f0f6b4f174588d29"
+    },
+    {
+      "id": "2",
+      "audio_path": "2.wav",
+      "reference": "what's your major and your hobbies",
+      "duration_s": 2.876,
+      "sha256": "6bf1b9dc6c22c10920e94923b4052fca98e9733a3e322569ad950aba258595bd"
+    },
+    {
+      "id": "3",
+      "audio_path": "3.wav",
+      "reference": "e c e",
+      "duration_s": 0.9,
+      "sha256": "5e39c555e283bcca768ac92d45eee7fca27de7e28c8b0435bfcbd859f56da26d"
+    },
+    {
+      "id": "4",
+      "audio_path": "4.wav",
+      "reference": "呃what's the呃",
+      "duration_s": 1.36,
+      "sha256": "b1d784c7c355c79febc73733f61a9faa2564c9f07cdf12caa3dd470f381c0149"
+    },
+    {
+      "id": "5",
+      "audio_path": "5.wav",
+      "reference": "ok I see",
+      "duration_s": 0.84,
+      "sha256": "9e5bddac0788e79566e3939c578498ae44377233ae76bd151977be315a6fc78b"
+    },
+    {
+      "id": "6",
+      "audio_path": "6.wav",
+      "reference": "yeah I see",
+      "duration_s": 0.99,
+      "sha256": "3642f15ac3c205e13d584ade12c8e6791e7d3cf67bc1ed34c1c165dc712332a9"
+    },
+    {
+      "id": "7",
+      "audio_path": "7.wav",
+      "reference": "我们专业专业课程有一些是那个你们那个专业的",
+      "duration_s": 4.69,
+      "sha256": "37668a9d106e64fa66049b56a5bedd6aca081f05d8268ae43c924c9bf3383f0d"
+    },
+    {
+      "id": "8",
+      "audio_path": "8.wav",
+      "reference": "呃不是",
+      "duration_s": 0.4,
+      "sha256": "3c78a433ad971048b5c28ffb6aa0578f095465244b894f44250f9bbb8d69d036"
+    },
+    {
+      "id": "9",
+      "audio_path": "9.wav",
+      "reference": "no我专业是那个i s m information systems management",
+      "duration_s": 4.03,
+      "sha256": "7317a4752e95039e6f6c345ef5b15fdd18fc7f48353cc893e6f99218a682c9a3"
+    },
+    {
+      "id": "10",
+      "audio_path": "10.wav",
+      "reference": "no bussiness school",
+      "duration_s": 1.8,
+      "sha256": "bd78f9b8773809edfe712c0eaadc94591d6e8b8b04dcc6e51e2ed33e4f4b0a77"
+    },
+    {
+      "id": "11",
+      "audio_path": "11.wav",
+      "reference": "那呃",
+      "duration_s": 1.4,
+      "sha256": "4e93a6b6390acbad9c66a374e18f97a04519b518c17ddb7d03c21b8c27ca0e85"
+    },
+    {
+      "id": "12",
+      "audio_path": "12.wav",
+      "reference": "yeah m s c oh yeah I know [UNK] yeah",
+      "duration_s": 3.44,
+      "sha256": "506751b4670f58f84501f2f5a93692e0486f876e9c465eaf438bd8317ff640a6"
+    },
+    {
+      "id": "13",
+      "audio_path": "13.wav",
+      "reference": "full time student",
+      "duration_s": 0.99,
+      "sha256": "8bc18b1d9c6d3f88f5bb17238abfd54f96025c956f3b8e7cf2743046b2a2b58f"
+    },
+    {
+      "id": "14",
+      "audio_path": "14.wav",
+      "reference": "嗯嗯嗯",
+      "duration_s": 0.79,
+      "sha256": "1a82e3b47d1c5556db157d091edeedfefdf8d2087dd5710d2038a48f5d021b2e"
+    },
+    {
+      "id": "15",
+      "audio_path": "15.wav",
+      "reference": "so where are you come from",
+      "duration_s": 1.34,
+      "sha256": "5ad3ec6222fcfed6f9f468f62f1e3658dfc5686d4772883ce67b8b73c370a8b2"
+    },
+    {
+      "id": "16",
+      "audio_path": "16.wav",
+      "reference": "how about you",
+      "duration_s": 0.7,
+      "sha256": "c324cb1409f7ad648139464d93645613a7ca58d6b632dffdf22ef19f6e45a60d"
+    },
+    {
+      "id": "17",
+      "audio_path": "17.wav",
+      "reference": "accident",
+      "duration_s": 1.01,
+      "sha256": "9832948c2b40e6d3e26d80bc8335c88cafd02cbb2acfd63df0aac2e3a34371ae"
+    },
+    {
+      "id": "18",
+      "audio_path": "18.wav",
+      "reference": "南方人",
+      "duration_s": 0.83,
+      "sha256": "5bc487c9f66f9d7a4225d267c36b67b63f867cbecd946c3e6f68ad026b5f6bfa"
+    },
+    {
+      "id": "19",
+      "audio_path": "19.wav",
+      "reference": "南方人啊深圳",
+      "duration_s": 1.76,
+      "sha256": "56c199ddbb37e42f1d5b6a32a6fcd3044d310ca8ef9c055ba0b196cab70169a5"
+    },
+    {
+      "id": "20",
+      "audio_path": "20.wav",
+      "reference": "深圳",
+      "duration_s": 0.56,
+      "sha256": "6de51c30b8d3ce418e82274cbe39d7c5e1d7b3af25e98b841b827f713e7d35f5"
+    },
+    {
+      "id": "21",
+      "audio_path": "21.wav",
+      "reference": "不是",
+      "duration_s": 0.7,
+      "sha256": "3cf3c6ea65c2b901a339fdf78ef8d90df549dcf1670a6512458bfb6c9f7334b2"
+    },
+    {
+      "id": "22",
+      "audio_path": "22.wav",
+      "reference": "嗯哼因为感觉香港好多深圳人",
+      "duration_s": 3.08,
+      "sha256": "4a4f4db1d36f7766dee1d911fb5ad85cf9a4289fefce3cbae5561c411750d6ca"
+    },
+    {
+      "id": "23",
+      "audio_path": "23.wav",
+      "reference": "不是我也是南方人",
+      "duration_s": 1.58,
+      "sha256": "5218b1613b9aa1194562483b9209cf7341f86f9c7f3c89b39ff9fa5c9fab8dc2"
+    },
+    {
+      "id": "24",
+      "audio_path": "24.wav",
+      "reference": "不是",
+      "duration_s": 0.68,
+      "sha256": "f92cef57391e420595ca076d66917297d7ded523731ff27da454d0c663aa9040"
+    },
+    {
+      "id": "25",
+      "audio_path": "25.wav",
+      "reference": "really uh close to Guangzhou Guangdong province",
+      "duration_s": 3.64,
+      "sha256": "41d10bb301b6063105fa87c798d9afdf4dc4bc7b3ff5a1e8375c95c430b24fc1"
+    },
+    {
+      "id": "26",
+      "audio_path": "26.wav",
+      "reference": "不是",
+      "duration_s": 0.52,
+      "sha256": "49655a3e541249bed85641c4e4ee6f73cf4a3428201fa57afceeb37909225331"
+    },
+    {
+      "id": "27",
+      "audio_path": "27.wav",
+      "reference": "可是",
+      "duration_s": 0.76,
+      "sha256": "b7308b9ca71417c3fad7d3f0cfd7d5bd3d23a5b8575b48d8bd053f194f30916c"
+    },
+    {
+      "id": "28",
+      "audio_path": "28.wav",
+      "reference": "ok福建",
+      "duration_s": 1.02,
+      "sha256": "f790b945050ccc625702f214dc7182c0c0e781a6fd5a82c7d1863c4683414842"
+    },
+    {
+      "id": "29",
+      "audio_path": "29.wav",
+      "reference": "yeah",
+      "duration_s": 0.28,
+      "sha256": "270281fa186f90e1fb0adf6136ee0ae639bcf047dcaf2a6c6de74c4b1b5cce72"
+    }
+  ]
+}

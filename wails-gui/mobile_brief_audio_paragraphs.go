@@ -1,0 +1,169 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"encoding/binary"
+	"errors"
+	"strings"
+)
+
+// Paragraph timings (PROTOCOL.md section 8.1): the voice reads each spoken
+// paragraph on its own, the readings are joined with a short pause, and the
+// start of each one is recorded against the written paragraph it reads, so a
+// phone can follow along and play from any paragraph.
+
+// mobileBriefParagraphGapSeconds is the pause between two spoken paragraphs.
+const mobileBriefParagraphGapSeconds = 0.45
+
+var errMobileBriefWAVFormat = errors.New("the readings do not share one WAV format")
+
+// synthesizeMobileBriefParagraphs reads the spoken text paragraph by paragraph
+// and returns one WAV with each paragraph's start in seconds. A single
+// paragraph, or any failure, reads the text whole and returns no starts.
+func synthesizeMobileBriefParagraphs(ctx context.Context, speaker mobileBriefSpeaker, lang, text string) ([]byte, []float64, error) {
+	segments := mobileBriefSpokenSegments(text)
+	if len(segments) > 1 {
+		parts := make([][]byte, 0, len(segments))
+		for _, segment := range segments {
+			wav, err := speaker.synthesize(ctx, lang, segment)
+			if err != nil || len(wav) == 0 {
+				parts = nil
+				break
+			}
+			parts = append(parts, wav)
+		}
+		if parts != nil {
+			if joined, starts, err := joinMobileBriefWAV(parts, mobileBriefParagraphGapSeconds); err == nil {
+				return joined, starts, nil
+			}
+		}
+		if ctx.Err() != nil {
+			return nil, nil, ctx.Err()
+		}
+	}
+	wav, err := speaker.synthesize(ctx, lang, text)
+	return wav, nil, err
+}
+
+// mobileBriefSpokenSegments splits the spoken text into the paragraphs the
+// voice reads.
+func mobileBriefSpokenSegments(text string) []string {
+	var out []string
+	for _, segment := range strings.Split(text, "\n\n") {
+		if segment = strings.TrimSpace(segment); segment != "" {
+			out = append(out, segment)
+		}
+	}
+	return out
+}
+
+type mobileBriefWAVFormat struct {
+	channels, bits uint16
+	rate           uint32
+}
+
+func mobileBriefWAVHeader(wav []byte) (mobileBriefWAVFormat, []byte, error) {
+	if len(wav) < 44 || string(wav[:4]) != "RIFF" || string(wav[8:12]) != "WAVE" || string(wav[36:40]) != "data" {
+		return mobileBriefWAVFormat{}, nil, errMobileBriefWAVFormat
+	}
+	format := mobileBriefWAVFormat{
+		channels: binary.LittleEndian.Uint16(wav[22:24]),
+		rate:     binary.LittleEndian.Uint32(wav[24:28]),
+		bits:     binary.LittleEndian.Uint16(wav[34:36]),
+	}
+	if format.channels == 0 || format.rate == 0 || format.bits == 0 || format.bits%8 != 0 {
+		return mobileBriefWAVFormat{}, nil, errMobileBriefWAVFormat
+	}
+	dataLen := int(binary.LittleEndian.Uint32(wav[40:44]))
+	if dataLen > len(wav)-44 {
+		dataLen = len(wav) - 44
+	}
+	return format, wav[44 : 44+dataLen], nil
+}
+
+// joinMobileBriefWAV joins 16-bit PCM WAVs of one format with silence between
+// them, returning where each one starts.
+func joinMobileBriefWAV(parts [][]byte, gapSeconds float64) ([]byte, []float64, error) {
+	var format mobileBriefWAVFormat
+	var body bytes.Buffer
+	starts := make([]float64, 0, len(parts))
+	for i, part := range parts {
+		current, samples, err := mobileBriefWAVHeader(part)
+		if err != nil {
+			return nil, nil, err
+		}
+		if i == 0 {
+			format = current
+		} else if current != format {
+			return nil, nil, errMobileBriefWAVFormat
+		}
+		frame := int(format.channels) * int(format.bits) / 8
+		bytesPerSecond := float64(int(format.rate) * frame)
+		if i > 0 {
+			gap := int(gapSeconds*float64(format.rate)) * frame
+			body.Write(make([]byte, gap))
+		}
+		starts = append(starts, float64(body.Len())/bytesPerSecond)
+		body.Write(samples[:len(samples)/frame*frame])
+	}
+	var out bytes.Buffer
+	out.Grow(44 + body.Len())
+	out.WriteString("RIFF")
+	_ = binary.Write(&out, binary.LittleEndian, uint32(36+body.Len()))
+	out.WriteString("WAVEfmt ")
+	_ = binary.Write(&out, binary.LittleEndian, uint32(16))
+	_ = binary.Write(&out, binary.LittleEndian, uint16(1))
+	_ = binary.Write(&out, binary.LittleEndian, format.channels)
+	_ = binary.Write(&out, binary.LittleEndian, format.rate)
+	_ = binary.Write(&out, binary.LittleEndian, format.rate*uint32(format.channels)*uint32(format.bits/8))
+	_ = binary.Write(&out, binary.LittleEndian, format.channels*format.bits/8)
+	_ = binary.Write(&out, binary.LittleEndian, format.bits)
+	out.WriteString("data")
+	_ = binary.Write(&out, binary.LittleEndian, uint32(body.Len()))
+	out.Write(body.Bytes())
+	return out.Bytes(), starts, nil
+}
+
+// mobileBriefParagraphStarts pairs the spoken segments with the written
+// paragraphs they read, in order. A segment that reads no written paragraph
+// (the template, a closing line) has no start; when no segment matches, the
+// recording does not follow the written paragraphs and there are none.
+func mobileBriefParagraphStarts(brief MobileBriefV1, lang string, segments []string, starts []float64) []MobileBriefAudioParagraph {
+	if len(segments) != len(starts) || len(segments) == 0 {
+		return nil
+	}
+	type written struct {
+		source string
+		index  int
+		spoken string
+	}
+	speak := func(paragraph MobileBriefPara) string {
+		fitted := normalizeBriefText(strings.TrimSpace(paragraph.Text), lang, mobileBriefTextReference(brief), false)
+		return strings.TrimSpace(speechDisplayText(mobileBriefParagraphSpeech(brief, MobileBriefPara{Text: fitted, Refs: paragraph.Refs}, lang), lang))
+	}
+	var candidates []written
+	for i, paragraph := range brief.Narrative {
+		if !mobileBriefIsOpenAnswerParagraph(brief, paragraph) {
+			candidates = append(candidates, written{mobileBriefAudioSourceNarrative, i, speak(paragraph)})
+		}
+	}
+	for i, paragraph := range brief.WeeklyRecap {
+		candidates = append(candidates, written{mobileBriefAudioSourceWeekly, i, speak(paragraph)})
+	}
+	var out []MobileBriefAudioParagraph
+	cursor := 0
+	for k, segment := range segments {
+		for j := cursor; j < len(candidates); j++ {
+			spoken := candidates[j].spoken
+			// Highlights may lose trailing lines to the time budget, so a
+			// reading may be the start of its paragraph.
+			if spoken != "" && (spoken == segment || strings.HasPrefix(spoken, segment+"\n")) {
+				out = append(out, MobileBriefAudioParagraph{Source: candidates[j].source, Index: candidates[j].index, StartSeconds: starts[k]})
+				cursor = j + 1
+				break
+			}
+		}
+	}
+	return out
+}

@@ -1,0 +1,19 @@
+{
+    "$schema": "https://wails.io/schemas/config.v2.json",
+    "name": "quick-chat-spotlight",
+    "outputfilename": "quick-chat-spotlight",
+    "frontend:install": "pnpm install",
+    "frontend:build": "pnpm run build",
+    "frontend:dev:watcher": "pnpm run dev",
+    "frontend:dev:serverUrl": "auto",
+    "frontend:dir": "frontend",
+    "go:build": "go build",
+    "reloaddirs": ".",
+    "debounceMS": 200,
+    "author": {
+        "name": "Yansu"
+    },
+    "info": {
+        "productVersion": "0.1.0"
+    }
+}

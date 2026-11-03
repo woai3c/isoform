@@ -1,0 +1,56 @@
+{
+    "redactions": {
+        "code": "一个私密代码",
+        "private_detail": "一项隐私信息",
+        "account_number": "一个账号",
+        "private_email": "一个邮箱地址",
+        "private_phone": "一个电话号码",
+        "private_address": "一个私人地址",
+        "street_address": "一个街道地址",
+        "private_person": "某个人",
+        "private_date": "一个私人日期",
+        "private_url": "一个私人链接",
+        "private_link": "一个私人链接",
+        "private_org": "某个机构",
+        "credit_card": "一个银行卡号",
+        "cvv": "一个安全码",
+        "one_time_password": "一个一次性验证码",
+        "password": "一个密码",
+        "secret": "一项私密凭据",
+        "api_key": "一个 API 密钥",
+        "government_id": "一个证件号码",
+        "license_plate": "一个车牌号",
+        "device_id": "一个设备标识",
+        "session_id": "一个会话标识"
+    },
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "copy": "复制",
+    "copied": "已复制",
+    "copyTooltip": "把 markdown 复制到剪贴板",
+    "close": "关闭",
+    "refresh": "刷新",
+    "brand": {
+        "name": "Isoform",
+        "wordmark": "ISOFORM"
+    },
+    "relaunch": {
+        "title": "重新打开 {{app}}，完成屏幕录制的开启",
+        "body": "macOS 要等 {{app}} 退出并重新打开后，才会让它看到你的屏幕。设置会从你停下的地方继续。",
+        "action": "退出并重新打开",
+        "reopening": "正在重新打开…",
+        "failed": "{{app}} 无法自行重新打开。请从菜单栏退出，然后再打开它。"
+    },
+    "firstDay": {
+        "history": {
+            "claude": "Claude Code 记录",
+            "codex": "Codex 记录",
+            "both": "Claude Code 和 Codex 记录"
+        },
+        "fromHistory": "来自你的 {{history}}",
+        "fromCalendar": "来自你的日历",
+        "localLine": "截图和音频不会离开这台电脑。"
+    }
+}

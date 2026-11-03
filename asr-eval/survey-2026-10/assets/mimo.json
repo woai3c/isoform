@@ -1,0 +1,85 @@
+{
+  "id": "mimo",
+  "repo": "mlx-community/MiMo-V2.5-ASR-MLX-4bit",
+  "revision": "284d42f8d404cc97b625edf9c9c7ed898c05b101",
+  "files": [
+    {
+      "path": "LICENSE",
+      "size_bytes": 11348,
+      "sha256": "539327f43d0a84438f006fadf77a651daa9ca29429286a46e69cb6b2594d8a4c",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/LICENSE"
+    },
+    {
+      "path": "added_tokens.json",
+      "size_bytes": 788,
+      "sha256": "45a03de178f22795c611428bf0798d9acaa9792bb8484870b7e8dab8ad34e0c3",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/added_tokens.json"
+    },
+    {
+      "path": "chat_template.jinja",
+      "size_bytes": 8467,
+      "sha256": "e63cd39d862e28059a94632cba03160eeb15c771bf7e0abd76f29db4eaa0b793",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/chat_template.jinja"
+    },
+    {
+      "path": "config.json",
+      "size_bytes": 2961,
+      "sha256": "d904100a6db45550764e3c39a3951a683760bf0da592a64501aa28b635309403",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/config.json"
+    },
+    {
+      "path": "generation_config.json",
+      "size_bytes": 77,
+      "sha256": "575fff5a84761eea35265538cff4609365ca06355b064a44f16d7ab457ef73da",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/generation_config.json"
+    },
+    {
+      "path": "merges.txt",
+      "size_bytes": 1671853,
+      "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/merges.txt"
+    },
+    {
+      "path": "mlx_manifest.json",
+      "size_bytes": 392,
+      "sha256": "fa9f56d74be990ea53d88c7b06e917b4e716976ff592981baabe0ec6d8e6cc8d",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/mlx_manifest.json"
+    },
+    {
+      "path": "model.safetensors",
+      "size_bytes": 4511552749,
+      "sha256": "b96730328d6af2a412cf49e181734bb9f1060c7e64d76884723734a5d25bb01c",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/model.safetensors"
+    },
+    {
+      "path": "model.safetensors.index.json",
+      "size_bytes": 117882,
+      "sha256": "c5d081e177cb5eb3b75f7fc31a2bcd112d6bdcc5a56fca9326e88d959a8b8e6e",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/model.safetensors.index.json"
+    },
+    {
+      "path": "special_tokens_map.json",
+      "size_bytes": 616,
+      "sha256": "6676f091c8bc4d1b50146427cfde92073402866b87b6e39223227931b70083e9",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/special_tokens_map.json"
+    },
+    {
+      "path": "tokenizer.json",
+      "size_bytes": 11423383,
+      "sha256": "d91a78cce6441fd6855038f6764fc5f811ae949d9b89f43ac326cddfe91c66db",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/tokenizer.json"
+    },
+    {
+      "path": "tokenizer_config.json",
+      "size_bytes": 6092,
+      "sha256": "fcd8ec17c91cd380f6c2e78bc409463949a546db1fd4182ee50856895f20115d",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/tokenizer_config.json"
+    },
+    {
+      "path": "vocab.json",
+      "size_bytes": 2776833,
+      "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+      "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/vocab.json"
+    }
+  ]
+}

@@ -1,0 +1,349 @@
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Bell, Check, ListPlus, MessageSquare, PencilLine } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+    AddActivityFollowUp,
+    CancelActivityReminder,
+    CorrectActivity,
+    GetActivityReminderChoices,
+    SetActivityReminder,
+    UndoActivityFollowUp,
+    type ActivityFollowUp,
+    type ActivityReminderChoice,
+    type ActivityView,
+} from '@/lib/wails-shim-app';
+import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+// The actions in an opened "What you worked on" row (backlog item 62, step 3):
+// Add follow-up, Remind me and Not right. Go prepares the follow-up line and
+// the quick reminder times and keeps every rule; this only shows them.
+
+const actionClass =
+    'inline-flex items-center gap-1 text-[11px] text-muted hover:text-ink transition-colors disabled:pointer-events-none';
+const inputClass =
+    'w-full px-3 py-1.5 text-xs rounded-md border border-border bg-panel text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent';
+
+type Editor = 'none' | 'followUp' | 'pickTime' | 'correct';
+
+function newKey(): string {
+    return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** "9:00 AM" today, "tomorrow at 9:00 AM", or "Oct 23 at 9:00 AM". */
+export function useReminderWhen() {
+    const { t, i18n } = useTranslation('activity');
+    return (atMs: number) => {
+        const at = new Date(atMs);
+        const time = at.toLocaleTimeString(i18n.language, { hour: 'numeric', minute: '2-digit' });
+        const today = new Date();
+        const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+        if (at.toDateString() === today.toDateString()) return t('rowActions.whenToday', { time });
+        if (at.toDateString() === tomorrow.toDateString()) return t('rowActions.whenTomorrow', { time });
+        const date = at.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' });
+        return t('rowActions.whenOther', { date, time });
+    };
+}
+
+/** A datetime-local value for a time, in local time. */
+function toLocalInputValue(ms: number): string {
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function ActivityRowActions({
+    activity,
+    onChanged,
+    onChatAbout,
+    deleteControl,
+    threadControl,
+}: {
+    activity: ActivityView;
+    /** Reloads the day's activities after a change Go made. */
+    onChanged: () => void;
+    /** Chat about this: opens the main chat with the moment's words in the
+     *  box, unsent. Absent where the page has no main chat to open. */
+    onChatAbout?: () => void;
+    /** The existing Delete from history control, kept as it was. */
+    deleteControl: ReactNode;
+    /** Not right also moves the moment to another thread or into its own. */
+    threadControl?: ReactNode;
+}) {
+    const { t } = useTranslation('activity');
+    const reminderWhen = useReminderWhen();
+    const [editor, setEditor] = useState<Editor>('none');
+    const [busy, setBusy] = useState(false);
+    const [followUp, setFollowUp] = useState<ActivityFollowUp | undefined>(activity.followUp);
+    const [reminderAt, setReminderAt] = useState<number | undefined>(activity.reminderAt || undefined);
+    useEffect(() => setFollowUp(activity.followUp), [activity.followUp?.openLoopId, activity.followUp?.eventId]);
+    useEffect(() => setReminderAt(activity.reminderAt || undefined), [activity.reminderAt]);
+
+    // Follow-up editor: one line, prefilled with Go's text, editable.
+    const [followUpDraft, setFollowUpDraft] = useState('');
+    const followUpKey = useRef('');
+    const openFollowUp = () => {
+        setFollowUpDraft(activity.followUpText ?? '');
+        followUpKey.current = newKey();
+        setEditor('followUp');
+    };
+    const addFollowUp = async () => {
+        const text = followUpDraft.trim();
+        if (!text || busy) return;
+        setBusy(true);
+        try {
+            const added = await AddActivityFollowUp(activity.id, text, followUpKey.current);
+            setFollowUp(added);
+            setEditor('none');
+            onChanged();
+            toast.success(t('rowActions.followUpAddedToast'), {
+                action: {
+                    label: t('rowActions.undo'),
+                    onClick: () => {
+                        UndoActivityFollowUp(added.openLoopId, added.eventId)
+                            .then(() => {
+                                setFollowUp(undefined);
+                                onChanged();
+                                toast(t('rowActions.followUpRemovedToast'));
+                            })
+                            .catch(() => toast.error(t('rowActions.undoFailed')));
+                    },
+                },
+            });
+        } catch {
+            toast.error(t('rowActions.followUpFailed'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    // Remind me: Go's quick times when the menu opens, or any picked time.
+    const [choices, setChoices] = useState<ActivityReminderChoice[]>([]);
+    const [pickedTime, setPickedTime] = useState('');
+    const loadChoices = (open: boolean) => {
+        if (!open) return;
+        GetActivityReminderChoices()
+            .then((rows) => setChoices(rows ?? []))
+            .catch(() => setChoices([]));
+    };
+    const setReminder = async (atMs: number) => {
+        if (busy) return;
+        setBusy(true);
+        try {
+            const at = await SetActivityReminder(activity.id, atMs);
+            setReminderAt(at);
+            setEditor('none');
+            onChanged();
+            toast.success(t('rowActions.reminderSetToast', { when: reminderWhen(at) }));
+        } catch {
+            toast.error(t('rowActions.reminderFailed'));
+        } finally {
+            setBusy(false);
+        }
+    };
+    const openPickTime = () => {
+        const tomorrow = choices.find((c) => c.id === 'tomorrow_morning');
+        setPickedTime(toLocalInputValue(tomorrow?.atMs ?? Date.now() + 3_600_000));
+        setEditor('pickTime');
+    };
+    const pickedMs = pickedTime ? new Date(pickedTime).getTime() : NaN;
+    const pickedValid = Number.isFinite(pickedMs) && pickedMs > Date.now() + 60_000;
+    const cancelReminder = async () => {
+        if (busy) return;
+        setBusy(true);
+        try {
+            await CancelActivityReminder(activity.id);
+            setReminderAt(undefined);
+            onChanged();
+            toast(t('rowActions.reminderCancelledToast'));
+        } catch {
+            toast.error(t('rowActions.cancelReminderFailed'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    // Not right: the title and summary, edited in place.
+    const [titleDraft, setTitleDraft] = useState('');
+    const [summaryDraft, setSummaryDraft] = useState('');
+    const openCorrect = () => {
+        setTitleDraft(activity.title);
+        setSummaryDraft(activity.description);
+        setEditor('correct');
+    };
+    const saveCorrection = async () => {
+        if (!titleDraft.trim() || busy) return;
+        setBusy(true);
+        try {
+            await CorrectActivity(activity.id, titleDraft, summaryDraft);
+            setEditor('none');
+            onChanged();
+            toast.success(t('rowActions.correctionSavedToast'));
+        } catch {
+            toast.error(t('rowActions.correctionFailed'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const keys = (onEnter: () => void) => (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            onEnter();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setEditor('none');
+        }
+    };
+
+    const withheld = activity.actionsWithheld;
+    return (
+        <div className="pt-1 space-y-2">
+            {withheld && (
+                <p className="text-[12px] text-muted">
+                    {withheld === 'private' ? t('rowActions.withheldPrivate') : t('rowActions.withheldPaused')}
+                </p>
+            )}
+            {reminderAt && !withheld && (
+                <p className="flex items-center gap-2 text-[12px] text-muted">
+                    <Bell className="h-3 w-3 shrink-0" />
+                    <span>{t('rowActions.reminderSetFor', { when: reminderWhen(reminderAt) })}</span>
+                    <button type="button" onClick={cancelReminder} disabled={busy} className={actionClass}>
+                        {t('rowActions.cancelReminder')}
+                    </button>
+                </p>
+            )}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                {!withheld &&
+                    (followUp ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted" title={followUp.text}>
+                            <Check className="h-3 w-3" />
+                            {t('rowActions.followUpAdded')}
+                        </span>
+                    ) : (
+                        <button type="button" onClick={openFollowUp} disabled={busy} className={actionClass}>
+                            <ListPlus className="h-3 w-3" />
+                            {t('rowActions.addFollowUp')}
+                        </button>
+                    ))}
+                {!withheld && (
+                    <DropdownMenu onOpenChange={loadChoices}>
+                        <DropdownMenuTrigger asChild>
+                            <button type="button" disabled={busy} className={actionClass}>
+                                <Bell className="h-3 w-3" />
+                                {t('rowActions.remindMe')}
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                            {choices.map((choice) => (
+                                <DropdownMenuItem key={choice.id} onSelect={() => void setReminder(choice.atMs)}>
+                                    {choice.id === 'later_today'
+                                        ? t('rowActions.laterToday', { when: reminderWhen(choice.atMs) })
+                                        : t('rowActions.tomorrowMorning', { when: reminderWhen(choice.atMs) })}
+                                </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuItem onSelect={openPickTime}>{t('rowActions.pickTime')}</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
+                {!withheld && onChatAbout && (
+                    <button type="button" onClick={onChatAbout} className={actionClass}>
+                        <MessageSquare className="h-3 w-3" />
+                        {t('rowActions.chatAboutThis')}
+                    </button>
+                )}
+                <button type="button" onClick={openCorrect} disabled={busy} className={actionClass}>
+                    <PencilLine className="h-3 w-3" />
+                    {t('rowActions.notRight')}
+                </button>
+                <span className="ml-auto">{deleteControl}</span>
+            </div>
+
+            {editor === 'followUp' && (
+                <div className="flex items-center gap-2">
+                    <input
+                        type="text"
+                        autoFocus
+                        aria-label={t('rowActions.followUpLabel')}
+                        className={inputClass}
+                        value={followUpDraft}
+                        placeholder={t('rowActions.followUpPlaceholder')}
+                        onChange={(e) => setFollowUpDraft(e.target.value)}
+                        onKeyDown={keys(() => void addFollowUp())}
+                    />
+                    <Button size="sm" onClick={() => void addFollowUp()} disabled={busy || !followUpDraft.trim()}>
+                        {t('rowActions.add')}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditor('none')}>
+                        {t('activityCard.cancel')}
+                    </Button>
+                </div>
+            )}
+
+            {editor === 'pickTime' && (
+                <div className="flex items-center gap-2">
+                    <input
+                        type="datetime-local"
+                        autoFocus
+                        aria-label={t('rowActions.pickTime')}
+                        className={inputClass}
+                        value={pickedTime}
+                        min={toLocalInputValue(Date.now())}
+                        onChange={(e) => setPickedTime(e.target.value)}
+                        onKeyDown={keys(() => pickedValid && void setReminder(pickedMs))}
+                    />
+                    <Button size="sm" onClick={() => void setReminder(pickedMs)} disabled={busy || !pickedValid}>
+                        {t('rowActions.setReminder')}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditor('none')}>
+                        {t('activityCard.cancel')}
+                    </Button>
+                </div>
+            )}
+
+            {editor === 'correct' && (
+                <div className="space-y-2">
+                    {threadControl && <div>{threadControl}</div>}
+                    <label className="block space-y-1">
+                        <span className="text-[11px] text-muted">{t('rowActions.titleLabel')}</span>
+                        <input
+                            type="text"
+                            autoFocus
+                            className={inputClass}
+                            value={titleDraft}
+                            onChange={(e) => setTitleDraft(e.target.value)}
+                            onKeyDown={keys(() => void saveCorrection())}
+                        />
+                    </label>
+                    <label className="block space-y-1">
+                        <span className="text-[11px] text-muted">{t('rowActions.summaryLabel')}</span>
+                        <input
+                            type="text"
+                            className={inputClass}
+                            value={summaryDraft}
+                            onChange={(e) => setSummaryDraft(e.target.value)}
+                            onKeyDown={keys(() => void saveCorrection())}
+                        />
+                    </label>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" onClick={() => void saveCorrection()} disabled={busy || !titleDraft.trim()}>
+                            {t('rowActions.save')}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditor('none')}>
+                            {t('activityCard.cancel')}
+                        </Button>
+                        <span className="text-[11px] text-muted">{t('rowActions.correctionHint')}</span>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

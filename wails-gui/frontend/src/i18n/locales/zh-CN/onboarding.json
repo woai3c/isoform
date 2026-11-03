@@ -1,0 +1,785 @@
+{
+    "screen": {
+        "progressLabel": "设置进度",
+        "stepWelcome": "欢迎",
+        "stepAgent": "助手",
+        "stepDependencies": "工具",
+        "stepFirstTask": "第一个任务",
+        "stepPermissions": "权限",
+        "stepMemoryImport": "关于你",
+        "stepCount": "第 {{current}} 步，共 {{total}} 步",
+        "goToStep": "前往「{{label}}」",
+        "skipSetup": "跳过设置",
+        "skipSetupHint": "现在就打开 Isoform。剩下的事它会在对话里一次问一件，你也可以在「设置 > 关于」中重新进行初始设置。",
+        "stepNotifications": "通知",
+        "stepModels": "在这台电脑上"
+    },
+    "actions": {
+        "back": "返回",
+        "continue": "继续",
+        "getStarted": "开始使用",
+        "skipThisStep": "跳过此步骤"
+    },
+    "agent": {
+        "heading": "选择由谁来思考",
+        "subheading": "Isoform 会使用这台电脑上已登录的助手。选一个优先回答的；它的用量达到上限时，另一个会接替。",
+        "names": {
+            "claude": "Claude Code",
+            "codex": "Codex"
+        },
+        "plan": "{{plan}} 套餐",
+        "primary": "优先回答",
+        "backup": "备用",
+        "useAsBackup": "将 {{name}} 作为备用",
+        "consent": "这些是你自己的订阅，只在这台电脑上使用。各服务商的条款仍然适用，macOS 可能会询问一次，是否允许从钥匙串读取 Claude Code 的登录信息。",
+        "apply": "使用 {{name}}",
+        "applyGeneric": "使用这个助手",
+        "applying": "正在设置……",
+        "ready": "就绪：{{primary}} 优先回答",
+        "readyWithBackup": "就绪：{{primary}} 优先回答，{{backup}} 作为备用",
+        "change": "更改",
+        "loading": "正在查找已登录的助手……",
+        "starting": "正在启动助手连接……",
+        "loadFailed": "无法读取已登录的助手。",
+        "applyFailed": "无法应用该选择：{{error}}",
+        "noneHeading": "还没有已登录的助手",
+        "noneBody": "在终端里登录 Claude Code 或 Codex，然后重新检查。Isoform 会自动识别它们。",
+        "noneHintClaude": "claude  — 登录 Claude Code",
+        "noneHintCodex": "codex  — 登录 Codex",
+        "ownKey": "你也可以稍后在「设置 > 助手 > 高级」中添加自己的密钥。",
+        "checkAgain": "重新检查",
+        "setUpLater": "稍后设置",
+        "laterHint": "在选择助手之前，Isoform 无法思考。你随时可以在「设置 > 助手」中选择。",
+        "userMagpieHeading": "Isoform 在你的 magpie 里有自己的分组",
+        "userMagpieBody": "Isoform 找到了你自己的 magpie，并在里面添加了自己的分组。你的其他分组和助手设置保持不变；随时可以在 magpie 里修改 Isoform 的分组。",
+        "userMagpieGroup": "分组：{{group}}",
+        "groupNames": {
+            "chat": "Isoform 对话",
+            "background": "Isoform 后台",
+            "light": "Isoform 轻量任务"
+        },
+        "userMagpieMembers": "{{members}}",
+        "userMagpieNoGroup": "Isoform 暂时无法创建自己的分组，因此使用 Claude Code 设定的分组或该助手的模型。magpie 登录后请再检查一次。"
+    },
+    "dependencies": {
+        "heading": "这台电脑上的工具",
+        "subheading": "Isoform 使用这台电脑上的 Claude Code 或 Codex 来思考。请至少安装并登录其中一个，缺少的可以直接在这里安装。",
+        "checking": "正在检查这台电脑……",
+        "checkAgain": "重新检查",
+        "install": "安装",
+        "installing": "正在安装……",
+        "notInstalled": "未安装",
+        "signedIn": "已登录",
+        "notSignedIn": "已安装，未登录",
+        "signInHint": "在终端里运行 {{command}} 登录，然后重新检查。",
+        "npmMissing": "安装需要 npm（Node.js）。请先安装 Node.js 再重新检查，或自行运行 {{command}}。",
+        "installFailed": "无法安装 {{name}}：{{error}}",
+        "magpieTitle": "助手连接",
+        "magpieUser": "直接使用你自己的 magpie {{version}}",
+        "magpieUserGroup": "Isoform 通过你 magpie 里自己的分组「{{group}}」来思考。",
+        "magpieUserNoGroup": "Isoform 的分组尚未创建；它使用 Claude Code 当前的模型。",
+        "magpieBundled": "Isoform 内置",
+        "magpieBundledDetail": "无需安装。它会自动启动，把 Isoform 与 Claude Code 和 Codex 连接起来。",
+        "magpieStarting": "正在启动助手连接……",
+        "ollamaTitle": "Ollama",
+        "ollamaFound": "本地 Ollama 可用；它的第一个模型会作为后备加入。",
+        "ollamaMissing": "可选。这台电脑上未找到。",
+        "noneNeededHint": "Isoform 至少需要一个已登录的助手才能思考。",
+        "gitTitle": "Git",
+        "gitRecover": "安装 Git for Windows"
+    },
+    "firstTask": {
+        "heading": "你的第一个任务",
+        "subheading": "交给它一件真实的事。你选择的助手会在新的对话里开始处理，你可以随时查看进展、调整方向。",
+        "inputLabel": "想让 Isoform 先做什么？",
+        "placeholder": "例如：总结我这周在各个项目里改了什么",
+        "enterHint": "按 Enter 开始，Shift+Enter 换行",
+        "suggestionsLabel": "或者从这些开始",
+        "suggestions": {
+            "projectChanges": {
+                "label": "总结项目的近期改动",
+                "prompt": "找出这台电脑上我最近改动过的项目文件夹，逐个总结过去一周的变化：主要改了什么、哪些还没做完、接下来该先做什么。"
+            },
+            "draftReply": {
+                "label": "起草一条回复",
+                "prompt": "帮我起草一条回复。我会把收到的消息粘贴在下面；回复要简短、友好、清楚。\n\n"
+            },
+            "planWeek": {
+                "label": "规划我的一周",
+                "prompt": "帮我规划这一周。先问我最重要的三件事和已经定好的会议，然后排出一个现实可行的每日计划，并留出专注时间。"
+            },
+            "tidyDownloads": {
+                "label": "整理下载文件夹",
+                "prompt": "看看我的下载文件夹，给出整理建议：按类型和项目分组，指出重复的文件和可能不再需要的大文件。在我确认之前，不要移动或删除任何文件。"
+            },
+            "hearBrief": {
+                "label": "听我的简报",
+                "prompt": "给我今天的早间简报：昨天以来有什么进展、今天有什么需要我处理、以及我的会议。"
+            }
+        },
+        "noAssistant": "Isoform 还没有可用的助手，暂时没法开始。先选一个助手，或者先跳过，之后在「设置 > 助手」中设置。",
+        "chooseAssistant": "选择助手",
+        "start": "开始",
+        "skip": "跳过，直接打开 Isoform"
+    },
+    "welcome": {
+        "heading": "欢迎使用 Isoform",
+        "subheading": "Isoform 能看到、听到你在这台电脑上的工作，了解你的工作方式，并通过你已经在用的助手帮你做事。设置只需几分钟。",
+        "tagline": "始终安静。只属于你。随时可关。",
+        "bullets": {
+            "learns": "在这台电脑上从你的工作中学习",
+            "assistants": "沿用你已经在用的 AI"
+        }
+    },
+    "telemetry": {
+        "title": "帮助改进 Isoform",
+        "description": "分享匿名的功能使用次数和主动使用 Isoform 的时长。绝不包含你的内容、姓名、邮箱或设备身份信息。这些统计通过随机生成的安装 ID 关联。",
+        "choiceHint": "默认开启。你可以在这里关闭，也可以随时在「设置 > 隐私」中关闭。",
+        "detailsLink": "阅读完整说明",
+        "saveFailed": "未能保存你的选择，请重试。"
+    },
+    "permissions": {
+        "heading": "权限",
+        "intro": "Isoform 需要少量权限来跟上你的工作。可选的权限可以稍后再开启。",
+        "localProcessing": "屏幕和音频录制由这台电脑上的<h>本地模型</h>读取，并留在本机。只有 Isoform 帮你做事所需的内容，才会发送给你选择的 AI。",
+        "webCalendarsNote": "如果你在浏览器中使用 Google 日历或 Outlook，Isoform 也可以在电脑空闲时读取它们。你随时可以在「设置 > 观察」中关闭。",
+        "checking": "正在检查 Isoform 在这台电脑上需要的权限……",
+        "couldNotDetermine": "Isoform 暂时无法检查权限。你可以先继续，之后在「设置 > 隐私」中开启。",
+        "noneRequired": "在 {{platform}} 上无需额外权限，一切就绪。",
+        "allGranted": "Isoform 需要的权限都已开启，可选的可以以后再说。",
+        "coreGrantedToast": {
+            "title": "屏幕录制和辅助功能已开启",
+            "description": "Isoform 现在可以跟上你的工作，并在你需要时代你操作应用。"
+        },
+        "grant": "开启",
+        "pending": "尚未开启",
+        "granted": "已开启",
+        "items": {
+            "screen_recording": {
+                "label": "屏幕录制",
+                "description": "让 Isoform 看到你屏幕上的工作，了解你的工作方式。"
+            },
+            "screen_capture": {
+                "label": "屏幕捕获",
+                "description": "让 Isoform 看到你屏幕上的工作。之后可以关闭以节省资源。"
+            },
+            "accessibility": {
+                "label": "辅助功能",
+                "description": "让 Isoform 识别你正在使用的应用和窗口，并在你需要时代你操作应用。"
+            },
+            "input_automation": {
+                "label": "键盘与鼠标自动化",
+                "description": "让 Isoform 在你需要时代你操作应用。之后可以关闭。"
+            },
+            "microphone": {
+                "label": "麦克风",
+                "description": "可选。用于语音输入和后台聆听。"
+            },
+            "system_audio": {
+                "label": "系统音频录制",
+                "description": "可选。让 Isoform 听到电脑播放的声音，例如通话中对方的声音。"
+            },
+            "notifications": {
+                "label": "通知",
+                "description": "可选。后台任务完成时提醒你。"
+            },
+            "calendars": {
+                "label": "日历",
+                "description": "可选。让 Isoform 看到你接下来的安排，帮你准备会议。日程保存在这台电脑上；只有任务需要的内容会发送给你选择的 AI 和已配对的手机。"
+            },
+            "contacts": {
+                "label": "通讯录",
+                "description": "可选。让 Isoform 认识与你共事的人。通讯录只保存在这台电脑上。"
+            },
+            "reminders": {
+                "label": "提醒事项",
+                "description": "可选。让 Isoform 把未完成的提醒事项算作你的承诺，并在快要逾期时提醒你。提醒事项保存在这台电脑上；未完成的提醒事项可能出现在已配对手机上的简报中。"
+            },
+            "clipboard": {
+                "label": "剪贴板",
+                "description": "默认开启，无需授权。Isoform 会记录你复制的内容类型和所在位置；在 macOS 允许读取时，还会保留一段去除了个人信息、验证码和密码的简短预览。来自密码管理器或被标记为密码的内容不会被记录。你可以在 设置 > 观察 中关闭。"
+            },
+            "files": {
+                "label": "最近文件",
+                "description": "目前默认关闭，无需授权。Isoform 可以通过聚焦搜索记录你在“文稿”“桌面”“下载”和 iCloud 云盘中打开和编辑的文稿名称，从不读取文件内容。你可以在 设置 > 观察 中开启，并将文件夹设为私密。"
+            },
+            "automation_mail": {
+                "label": "邮件",
+                "description": "可选。当“邮件”打开时，Isoform 会读取最近一周邮件的发件人、主题和日期，从不读取正文，用来提醒你谁在等你回复。Isoform 从不自行打开“邮件”。"
+            }
+        }
+    },
+    "memoryImport": {
+        "heading": "关于你",
+        "subheading": "从其他 AI 工具导入上下文，让 Isoform 一开始就了解你。",
+        "nameLabel": "Isoform 该怎么称呼你？",
+        "namePlaceholder": "比如：张三",
+        "nameHint": "帮助 Isoform 为你定制任务，并区分你和他人的消息。",
+        "nameSaveError": "无法保存你的名字：{{error}}",
+        "scanning": "正在这台电脑上查找 AI 记忆文件……",
+        "scanErrorHeading": "Isoform 无法扫描记忆文件",
+        "tryAgain": "重试",
+        "noFilesHeading": "未找到记忆文件",
+        "noFilesBody": "完全没关系。你仍可以在下方从 ChatGPT 或 Claude 导入记忆，或直接跳过此步骤。Isoform 会在你使用过程中逐步了解你的偏好。",
+        "foundOnMachine": "在本机上找到",
+        "fileCount_one": "{{count}} 个文件",
+        "fileCount_other": "{{count}} 个文件",
+        "importAll": "全部导入",
+        "importing": "正在导入……",
+        "importedFiles_one": "已导入 {{count}} 个文件。",
+        "importedFiles_other": "已导入 {{count}} 个文件。",
+        "noFilesImported": "没有导入任何文件。",
+        "fromConversations": "从会话导入",
+        "providerTabsLabel": "AI 提供方",
+        "step1": "把这段提示词复制到 {{provider}} 的对话中",
+        "step2": "把 {{provider}} 的回复粘贴到下方，加入 Isoform 的记忆",
+        "pastePlaceholder": "把来自 {{provider}} 的记忆内容粘贴到这里……",
+        "showMore": "展开",
+        "showLess": "收起",
+        "copy": "复制",
+        "copied": "已复制",
+        "addToMemory": "加入记忆",
+        "copyClipboardError": "无法复制到剪贴板，请手动复制提示词。",
+        "importedMemories_one": "已导入 {{count}} 条记忆{{suffix}}。",
+        "importedMemories_other": "已导入 {{count}} 条记忆{{suffix}}。",
+        "skippedSuffix": "（跳过 {{count}} 条）",
+        "noMemoriesImported": "未导入任何记忆{{errorSuffix}}",
+        "errorSuffix": " —— {{error}}",
+        "extractionPrompt": "导出你存储的关于我的全部记忆，以及从过去对话中了解的背景信息。尽可能逐字保留我的原话，尤其是指示和偏好。\n\n## 分类（按以下顺序）：\n\n1. **指示**：我明确要求你今后遵守的规则，包括语气、格式、风格、「始终做什么」「不要做什么」，以及对你行为的纠正。仅包含已保存的记忆，不要从对话中提取。\n\n2. **身份**：姓名、年龄、所在地、教育、家庭、关系、语言和兴趣。\n\n3. **职业**：当前和过去的职位、公司，以及主要技能领域。\n\n4. **项目**：我实际参与构建或持续投入的项目。每个项目尽量只列一条，包括用途、现状和关键决定。每条以项目名称或简短描述开头。\n\n5. **偏好**：广泛适用的观点、品味和工作方式偏好。\n\n## 格式：\n\n为每个分类使用标题。每个分类中每行列一条，按日期从早到晚排序，格式为：\n\n[YYYY-MM-DD] - 条目内容。\n\n如果日期不详，使用 [unknown]。\n\n## 输出：\n- 将完整导出内容放在一个代码块中，方便复制。\n- 在代码块之后说明这是否是全部记忆，或是否还有更多。"
+    },
+    "notifications": {
+        "heading": "希望 Isoform 多主动提醒你？",
+        "subheading": "当有事需要你、工作完成或简报送达时，Isoform 会通过这台电脑、已配对的手机或短信联系你。选择你想听到的频率，之后可以随时在「设置 > 通知」中更改。",
+        "options": {
+            "off": {
+                "label": "关闭",
+                "description": "Isoform 不会主动提醒它注意到的事。你自己安排的事的结果和「今天」页面仍会显示。"
+            },
+            "fewer": {
+                "label": "更少",
+                "description": "只提醒需要你处理的事、已完成的工作和你的简报。每天最多打扰 3 次。"
+            },
+            "normal": {
+                "label": "正常",
+                "description": "常规组合，包含每周一个建议。每天最多打扰 6 次。"
+            },
+            "more": {
+                "label": "更多",
+                "description": "全部提醒，包括再次出现的人、目标回顾和 Isoform 学到的事。每天最多 10 次。"
+            }
+        },
+        "quietHint": "每个档位都有安静时段，夜间不打扰。需要你处理且有截止时间的事，在该类提醒开启时仍会送达。",
+        "saveFailed": "暂时无法保存。你可以稍后在「设置 > 通知」中设置。"
+    },
+    "setupWelcome": {
+        "description": "Isoform 在这台电脑上了解你的工作，学习你的工作方式，并每天早晨为你简报。它通过这里已登录的助手思考，使用你自己的订阅。",
+        "ready": "准备就绪",
+        "noSignin": "还没有已登录的助手",
+        "readyBackup": "{{primary}} 优先回答；{{primary}} 达到用量上限时，{{backup}} 接手。两者都在这台电脑上使用你自己的账号运行，Isoform 不额外收费。",
+        "readySingle": "{{primary}} 优先回答，在这台电脑上使用你自己的账号运行。Isoform 不额外收费。",
+        "magpieReady": "Isoform 通过你的 magpie 中的 {{group}} 分组思考，使用你自己的账号。",
+        "noSigninDescription": "Isoform 通过 Claude Code 或 Codex 思考。在终端登录其中一个，它就会自动显示在这里。你也可以继续，稍后在「设置 › 助手」中选择。",
+        "useAssistant": "使用 {{name}}",
+        "notFoundYet": "暂未找到",
+        "installed": "已安装 · {{version}}",
+        "signInTerminal": "已安装，尚未登录 · 在终端运行 {{command}}",
+        "installCommand": "未安装 · 运行 {{command}}，或点击安装",
+        "answerFirst": "优先回答",
+        "available": "可用",
+        "signInNeeded": "需要登录",
+        "ollamaFound": "可选：本地模型作为最后的备用。",
+        "ollamaMissing": "未找到。可选：本地模型作为最后的备用。",
+        "gitFound": "Git 可用于克隆和管理项目。",
+        "gitMissing": "未找到 Git。Isoform 需要它来克隆和管理项目。",
+        "checked": "Isoform 启动时已检查。各提供商的条款适用；macOS 可能会询问一次，是否允许从钥匙串读取 Claude Code 的登录信息。",
+        "applyFailed": "无法保存助手选择。你可以稍后在「设置 › 助手」中选择。",
+        "installFailed": "无法安装助手。请重试或在终端中安装。",
+        "telemetryOn": "已开启匿名使用统计。",
+        "telemetryOff": "已关闭匿名使用统计。",
+        "telemetryDescription": "通过随机安装 ID 记录功能使用和活跃时间。绝不收集内容、姓名或邮箱。可在「设置 › 隐私」中关闭。",
+        "installedPlan": "已安装 · {{version}} · {{plan}}"
+    },
+    "setupPermissions": {
+        "description": "macOS 会逐项询问。Isoform 在这台电脑上读取所见所闻；只有任务需要的内容才会发送给你的助手。",
+        "groups": {
+            "needed": {
+                "title": "必需",
+                "description": "缺少这些权限，Isoform 无法跟进你的工作。"
+            },
+            "hear": {
+                "title": "聆听和联系你",
+                "description": "推荐。"
+            },
+            "brief": {
+                "title": "用于简报",
+                "description": "可选。仅保留在这台电脑上。"
+            }
+        },
+        "items": {
+            "screen_recording": {
+                "name": "屏幕录制",
+                "description": "查看屏幕。macOS 需要 Isoform 重新打开一次；设置将在此继续。"
+            },
+            "accessibility": {
+                "name": "辅助功能",
+                "description": "了解你正在使用的应用，并在你要求时为你操作应用。"
+            },
+            "microphone": {
+                "name": "麦克风",
+                "description": "会议和语音笔记中你的声音。"
+            },
+            "system_audio": {
+                "name": "系统音频",
+                "description": "通话中对方的声音。"
+            },
+            "notifications": {
+                "name": "通知",
+                "description": "有事情需要你时联系你。"
+            },
+            "calendars": {
+                "name": "日历",
+                "description": "为简报了解你接下来的日程。"
+            },
+            "reminders": {
+                "name": "提醒事项",
+                "description": "了解待办事项，在简报中提醒遗漏。"
+            }
+        },
+        "afterReopen": "重新打开后开启",
+        "on": "已开启",
+        "turnOn": "开启",
+        "turnOnNamed": "开启{{name}}",
+        "count": "已开启 {{count}} 项，共 {{total}} 项。",
+        "sequence": "七项 macOS 提示将逐一出现。屏幕录制最后开启，随后重新打开。",
+        "checking": "正在检查权限…",
+        "sequenceCount": "{{count}} 项权限提示将逐一出现。",
+        "continueWithout": "暂不开启，继续",
+        "turnOnAll": "开启全部 {{count}} 项",
+        "note": "这些权限都可以在「设置 › 隐私」中管理。邮件、信息和通讯录会在首次需要时询问。剪贴板和最近文件不属于权限。",
+        "failed": "无法完成权限请求。请尝试逐项点击开启。",
+        "appName": "Isoform",
+        "countAfterReopen": "重新打开后开启 {{count}} 项，共 {{total}} 项",
+        "countReminders": "已开启 {{count}} 项，共 {{total}} 项。提醒事项可以稍后开启。",
+        "notAllowed": "未允许",
+        "openSettings": "打开设置",
+        "openSettingsNamed": "打开{{name}}的设置"
+    },
+    "models": {
+        "heading": "在这台电脑上运行什么",
+        "settingsTitle": "模型",
+        "description": "这些模型在本机读取屏幕和音频；只有任务需要的内容才会离开这台电脑。Isoform 已为每项工作选好模型。可以更改，也可以直接继续。",
+        "jobs": {
+            "live": "说话时实时转写",
+            "after-call": "通话后",
+            "voice": "语音",
+            "always": "始终开启"
+        },
+        "alwaysName": "隐私过滤和记忆搜索",
+        "alwaysDescription": "从离开这台电脑的内容中移除姓名、号码和密码；查找 Isoform 的记忆。",
+        "none": "无",
+        "noneDescription": "保留实时转写原文。",
+        "recommended": "推荐",
+        "selected": "已选择",
+        "downloaded": "已下载",
+        "change": "更改",
+        "changeJob": "更改{{taskLabel}}",
+        "chosen": "已选择",
+        "remove": "移除",
+        "note": "所有实时模型都附带说话人模型，让转写标明谁说了什么。下载前会显示大小、来源和许可；稍后可以在「设置 › 存储 › 模型」中更改。",
+        "legacy": "此版本使用当前模型设置。请继续，稍后在设置中管理。",
+        "loadFailed": "无法读取或更新模型，请重试。",
+        "retry": "重试",
+        "folder": "模型文件夹",
+        "sources": "下载来源",
+        "evaluation": "查看完整评估表",
+        "reviewDownloads": "查看下载清单",
+        "alreadyHere": "这台电脑上已有 {{size}}。",
+        "skip": "暂不",
+        "downloadContinue": "在后台下载 {{size}} 并继续",
+        "sheetTitle": "下载 {{count}} 个模型",
+        "diskSummary": "{{size}} · 此磁盘剩余 {{free}}",
+        "saveTo": "保存到",
+        "saveFolder": "保存",
+        "changeFolder": "更改…",
+        "itemSize": "{{size}} · {{count}} 个文件",
+        "source": "来源",
+        "sourceFor": "{{name}} 的来源",
+        "sourceNote": "所选来源仅适用于本次下载。「设置 › 存储」保存默认来源和你的镜像。非商业许可会在确认前以铜色显示。",
+        "nonCommercial": "{{name}} 使用 {{licence}}，仅限非商业用途。请仅在使用方式符合此限制时确认。",
+        "shortfall": "空间不足。下载前还需释放 {{size}}。",
+        "startFailed": "无法开始下载，请重试。",
+        "cancel": "取消",
+        "download": "下载 {{size}}",
+        "understandDownload": "我已了解，下载 {{size}}",
+        "progress": "正在下载 {{name}} {{percent}}%",
+        "background": "正在后台下载 {{count}} 项",
+        "downloadFailed": "{{name}} 下载失败。",
+        "retryFailed": "无法重试 {{name}}，请再试一次。",
+        "copy": {
+            "sensevoice": {
+                "description": "最快。支持中英等多种语言，并区分说话人。"
+            },
+            "parakeet": {
+                "description": "仅英语，错误最少。"
+            },
+            "whisper": {
+                "description": "支持 99 种语言。"
+            },
+            "qwen3": {
+                "description": "更准确；重新读取每段录音并替换实时转写。"
+            },
+            "mimo": {
+                "description": "最准确，也最慢。"
+            },
+            "kokoro": {
+                "description": "用英语朗读简报，有多种声音。"
+            },
+            "melotts": {
+                "description": "支持中文和英语，各一种声音。"
+            },
+            "privacy": {
+                "description": "从离开这台电脑的内容中移除姓名、号码和密码。",
+                "name": "隐私过滤"
+            },
+            "memory": {
+                "description": "查找 Isoform 的记忆。",
+                "name": "记忆搜索"
+            },
+            "speaker": {
+                "description": "Silero VAD、pyannote 分段和 CAM++ 标明谁说了什么。",
+                "name": "说话人模型"
+            },
+            "none": {
+                "description": "保留实时转写原文。"
+            }
+        },
+        "modelName": "{{name}}",
+        "evidenceEnglish": "测试：英语错误率 {{english}}% · 实时速度的 {{speed}} 倍",
+        "evidenceBilingual": "测试：英语错误率 {{english}}%，中文 {{chinese}}% · 实时速度的 {{speed}} 倍",
+        "sourceMirror": "Isoform 镜像",
+        "sourceHuggingFace": "Hugging Face",
+        "sourceGitHub": "GitHub",
+        "evaluationTitle": "模型评估",
+        "evaluationClose": "关闭",
+        "spaceForExtraction": "没有足够的空间下载和解压。请先释放更多磁盘空间。",
+        "folderUnavailable": "此版本暂不支持更改模型文件夹。请保留当前文件夹以继续。",
+        "unknownSize": "大小尚未核实",
+        "defaultSourceFor": "{{name}} 的默认来源",
+        "customMirror": "你的镜像",
+        "customMirrorPlaceholder": "https://your-mirror.example/models",
+        "sourceSaveFailed": "无法保存下载来源，请重试。",
+        "itemSize_one": "{{size}} · {{count}} 个文件",
+        "itemSize_other": "{{size}} · {{count}} 个文件",
+        "manifestDescription": "{{description}}",
+        "evidenceEnglishRange": "测试：英语错误率 {{english}}% · 实时速度的 {{speedLow}} 至 {{speed}} 倍",
+        "notDownloaded": "未下载",
+        "downloadAsset": "下载",
+        "removeTitle": "移除{{name}}？",
+        "removeDescription": "从这台电脑移除{{name}}（{{size}}）。使用它的功能将暂时不可用，直到重新下载。",
+        "evaluationCopy": {
+            "updated": "最后更新：{{date}}",
+            "method": "在 Apple Silicon 电脑 上评测，每个模型在每个数据集上使用 {{samples}} 个样本。",
+            "headings": {
+                "models": "模型",
+                "datasets": "数据集",
+                "wer": "词错误率（越低越好）",
+                "cer": "字错误率（越低越好）",
+                "rtf": "实时因子（越低越快）",
+                "resources": "延迟与资源",
+                "tiers": "模型对比",
+                "recommendation": "建议"
+            },
+            "columns": {
+                "model": "模型",
+                "framework": "框架",
+                "size": "模型大小",
+                "languages": "语言",
+                "dataset": "数据集",
+                "language": "语言",
+                "samples": "样本数",
+                "hours": "时长",
+                "source": "来源",
+                "fleurs": "FLEURS 中文",
+                "ascend": "ASCEND 中英混合",
+                "clean": "LibriSpeech 清晰语音",
+                "other": "LibriSpeech 其他语音",
+                "latency": "平均延迟",
+                "memory": "峰值内存",
+                "load": "模型加载",
+                "tier": "等级",
+                "bestFor": "适用场景"
+            },
+            "notAvailable": "无数据",
+            "current": "{{name}}（当前）",
+            "englishOnly": "仅英语",
+            "chinese": "中文",
+            "english": "英语",
+            "mixed": "中英混合",
+            "languageCount": "{{count}} 种语言",
+            "dialects": "中文、英语及方言",
+            "rtfNote": "实时因子低于 {{threshold}} 表示快于实时。因子为 {{factor}} 表示速度是实时的 {{speed}} 倍。",
+            "whisperNote": "Whisper 在 ASCEND 上的词错误率超过 {{percent}}%，原因是中英混合内容的文本归一化方式不一致。",
+            "tierNotes": {
+                "mimo": "中英文词错误率最低，但不适合实时输入。",
+                "qwen3": "综合准确率和中英混合表现出色，可接近实时运行。",
+                "sensevoice": "双语实时语音输入的当前选择，兼顾速度和准确率。",
+                "parakeet": "英语准确率出色（词错误率 {{english}}%），不支持中文。",
+                "whisper": "支持语言广泛，但速度较慢，中英混合表现较差。",
+                "paraformer": "速度最快（实时因子 {{rtf}}），英语表现较弱。"
+            },
+            "recommendation": "实时语音输入继续使用 SenseVoice。按键说话和后台聆听都需要快速响应。",
+            "speedNote": "测得的实时因子：SenseVoice {{sensevoice}}、MiMo {{mimo}}、Qwen3 {{qwen3}}。数值越低，速度越快。",
+            "runtimeNote": "SenseVoice 通过 sherpa-onnx 的 Go 绑定在进程内运行。评测的 MLX 模型需要 Python 子进程。",
+            "accuracyNote": "SenseVoice 的中文词错误率为 {{chinese}}%，可满足语音输入需求；转写的准确率要求有所不同。",
+            "future": "后续可考虑：ONNX/sherpa-onnx 对 Qwen3-ASR 的支持、使用 MiMo 进行录音转写，以及在主要使用中文时选择 Paraformer。"
+        },
+        "sourcePlanFailed": "无法更新下载来源。已恢复显示之前的来源，请重试后再下载。",
+        "removePrivacyDescription": "从这台电脑移除{{name}}（{{size}}）。移除在发送截图前识别人名及其他个人信息的模型。重新下载之前，Isoform 仅使用基于规则的脱敏，能识别的人名更少。",
+        "removeMemoryDescription": "从这台电脑移除{{name}}（{{size}}）。移除用于按含义搜索记忆的模型。关键词搜索仍可正常使用。",
+        "networkWaiting": "正在等待网络状态。已确认的下载会等待连接就绪。",
+        "networkOffline": "当前处于离线状态。已确认的下载会等待，并在恢复非按流量计费的网络连接后自动继续。",
+        "networkMetered": "当前连接按流量计费。已确认的下载会等待，并在连接到非按流量计费的网络后自动继续。",
+        "networkLowData": "低数据模式已开启。已确认的下载会等待，并在关闭低数据模式且网络不按流量计费后自动继续。",
+        "pausedOffline": "{{name}} 已因离线暂停。",
+        "pausedWaiting": "{{name}} 已暂停，正在等待网络状态。",
+        "pausedMetered": "{{name}} 已因按流量计费的网络暂停。",
+        "pausedLowData": "{{name}} 已因低数据模式暂停。",
+        "pausedSpace": "{{name}} 已暂停。请释放磁盘空间后继续。",
+        "paused": "{{name}} 已暂停。继续时会重新检查网络和磁盘空间。",
+        "resume": "继续下载",
+        "resumeFailed": "无法继续下载 {{name}}。请重试。",
+        "queued": "{{name}} 已排队等待后台下载。",
+        "waitingPowerIdle": "等待接上电源并空闲"
+    },
+    "tools": {
+        "sheetTitle": "安装 {{name}}",
+        "gitName": "Git for Windows",
+        "sheetDescription": "Isoform 需要 Git 来克隆和管理项目。在你确认之前不会下载任何内容。",
+        "planning": "正在准备下载…",
+        "planFailed": "无法为 {{name}} 准备下载。请重试。",
+        "startFailed": "无法安装 {{name}}。请重试。",
+        "itemSize": "{{size}} 下载",
+        "version": "版本 {{version}}",
+        "source": "来源",
+        "licence": "许可证",
+        "saveTo": "保存到",
+        "cancel": "取消",
+        "retry": "重试",
+        "confirm": "下载",
+        "pending": "正在安装…"
+    },
+    "v2": {
+        "progress": "设置进度",
+        "local": {
+            "pill": "在这台电脑上",
+            "title": "哪些留在这台电脑上",
+            "lines": {
+                "recordings": "<b>截图、音频和录音</b>由这台电脑上的模型读取，从不离开这台电脑。",
+                "ai": "<b>你的 AI</b> 只拿到任务需要的文字，用的是你自己的套餐。",
+                "phone": "<b>你的 iPhone</b> 只拿到它要显示的内容，在你的设备之间加密传送。",
+                "usage": "<b>使用统计</b>是匿名的，从不包含你的内容。"
+            }
+        },
+        "stepCount": "第 {{current}} 步，共 {{total}} 步",
+        "back": "返回",
+        "continue": "继续",
+        "notices": {
+            "title": "留意要做的事，提前准备好。",
+            "line": "Isoform 跟着你在这台电脑上的工作，把下一步准备好。截图和音频都留在这里。",
+            "hours": {
+                "h7": "上午 7 点",
+                "h10": "10",
+                "h13": "下午 1 点",
+                "h16": "4",
+                "h19": "晚上 7 点"
+            },
+            "cards": {
+                "brief": "早间简报",
+                "priya": "已起草给 Priya 的回复",
+                "lena": "已为 2:00 和 Lena 的会做好准备",
+                "invoice": "注意到周五到期的发票"
+            },
+            "ready": "已就绪",
+            "needsYou": "需要你",
+            "usage": "Isoform 会分享匿名的使用次数，绝不包含你的内容。",
+            "change": "更改",
+            "usageSwitch": "分享匿名使用次数",
+            "usageSaveFailed": "没能保存，请再试一次。"
+        },
+        "ai": {
+            "title": "用你已有的 AI",
+            "line": "Isoform 在这台电脑上读取屏幕，只把需要的文字交给你的助手。",
+            "zone": "在这台电脑上：截图和音频留在这里",
+            "isoform": "Isoform",
+            "answersFirst": "优先回答",
+            "backup": "备用",
+            "dragHere": "把助手拖到这里",
+            "otherStepsIn": "另一个会在额度用完时接手",
+            "noBackup": "还没有备用",
+            "found": "在这台电脑上找到",
+            "addBackup": "添加备用",
+            "planSignedIn": "{{plan}} 套餐 · 已登录",
+            "signedIn": "已登录",
+            "notSignedIn": "未登录",
+            "signIn": "登录",
+            "notInstalled": "未安装",
+            "install": "安装",
+            "installing": "正在安装",
+            "finishInTerminal": "请在终端中完成",
+            "atLimit": "额度已用完",
+            "note": "{{first}} 额度用完时，{{backup}} 会接手。",
+            "fineDrag": "把一个拖到最上面，或者点一下。",
+            "finePlans": "Isoform 用的是你自己的套餐，额度限制照常适用。",
+            "fineSignIn": "登录 Claude Code 或 Codex，Isoform 会自动识别。",
+            "errorSetUp": "没能设置好，请再试一次。",
+            "checking": "正在检查",
+            "testing": "正在确认能用",
+            "working": "已登录 · 可以使用",
+            "planWorking": "{{plan}} 套餐 · 可以使用",
+            "needsNode": "需要 Node.js",
+            "getNode": "获取 Node.js",
+            "notInstalledYet": "没有装好",
+            "installInTerminal": "在终端中安装",
+            "notFound": "已安装，但没找到",
+            "signInFailed": "登录没有生效",
+            "noAnswer": "没有回应",
+            "testAgain": "再检查一次",
+            "openAgain": "重新打开",
+            "fineNeedsNode": "{{name}} 需要 Node.js 才能安装。从 nodejs.org 下载安装后回到这里，Isoform 会接着安装 {{name}}。",
+            "fineInstallDenied": "这台电脑没有允许安装。请在终端中安装，Isoform 会自动识别。",
+            "fineInstallTimeout": "安装太久没有完成。请在终端中安装，Isoform 会自动识别。",
+            "fineInstallFailed": "没能在这里安装 {{name}}。请在终端中安装，Isoform 会自动识别。",
+            "fineNotFound": "{{name}} 已安装，但 Isoform 找不到它。请在终端中安装，Isoform 会自动识别。",
+            "fineWaitInstall": "终端正在运行 {{command}}，Isoform 会自动再检查。",
+            "fineWaitSignIn": "请在终端中登录 {{name}}，Isoform 会自动再检查。",
+            "fineNoTerminal": "没能打开终端。请打开终端并运行 {{command}}。",
+            "fineTestSignedOut": "{{name}} 显示还没有登录。请在终端中重新登录。",
+            "fineTestFailed": "{{name}} 已登录，但没有回应。请检查网络后再检查一次。",
+            "fineGatewayDown": "Isoform 在这台电脑上连不上 {{name}}。请稍后再检查一次。",
+            "fineLimit": "{{name}} 目前额度已用完。它已经设置好，额度恢复后会继续回答。",
+            "setUpLater": "稍后设置",
+            "flow": {
+                "lenaSeen": "Lena 的邮件",
+                "lenaMade": "2:00 会议准备",
+                "deckSeen": "Halcyon deck v3",
+                "deckMade": "评审要点",
+                "priyaSeen": "Priya 的消息",
+                "priyaMade": "回复 Priya",
+                "ready": "已就绪"
+            },
+            "cardLabel": "{{name}}，{{state}}",
+            "fineHistory": "Isoform 会读取这台电脑上你最近 30 天的 {{assistants}} 记录，从一开始就了解你的项目。可在“设置 › 隐私”中更改。",
+            "assistantsBoth": "Claude Code 和 Codex"
+        },
+        "sees": {
+            "title": "看见你的工作，留在这台电脑上。",
+            "line": "这台电脑上的模型读取你的屏幕和通话。截图和音频从不离开这台电脑。",
+            "deckTab": "Halcyon deck",
+            "bankTab": "银行 · 账户",
+            "deckTitle": "Halcyon deck · v3",
+            "priyaMessage": "Priya：周四 2 点还可以吗？",
+            "password": "密码 ••••••••",
+            "skipped": "已跳过",
+            "thisMac": "在这台电脑上",
+            "noteHalcyon": "在做 Halcyon",
+            "notePriya": "Priya 在等你",
+            "rows": {
+                "screen": "你的屏幕",
+                "calls": "你的通话",
+                "day": "你的日程",
+                "apps": "你的应用"
+            },
+            "off": "关",
+            "on": "开",
+            "openSettings": "打开设置",
+            "openSettingsNamed": "为{{name}}打开设置",
+            "turnOn": "开启",
+            "done": "全部开启。截图和音频留在这台电脑上。",
+            "failed": "没能发起请求，请再试一次。",
+            "reopenFailed": "Isoform 没能自动重新打开，请退出后再打开。"
+        },
+        "runs": {
+            "title": "在这台电脑上运行",
+            "line": "它们在本机读取你的屏幕和通话。截图和音频从不离开这台电脑。",
+            "rows": {
+                "calls": {
+                    "name": "听你的通话",
+                    "line": "能分辨说话人的语音识别",
+                    "model": "{{name}} 和说话人模型 · {{size}}"
+                },
+                "afterCall": {
+                    "name": "通话后整理",
+                    "line": "重新听一遍录音，转写更准确",
+                    "model": "{{name}} · {{size}}"
+                },
+                "voice": {
+                    "name": "朗读你的简报",
+                    "line": "在这台电脑上运行的语音",
+                    "model": "{{name}} · {{size}}",
+                    "modelBilingual": "{{name}} · {{size}}（中文和英文）"
+                },
+                "always": {
+                    "name": "隐私过滤和记忆搜索",
+                    "line": "在内容离开之前隐去姓名和密码",
+                    "model": "{{size}}"
+                }
+            },
+            "alwaysOn": "始终开启",
+            "total": "共 {{total}} · 磁盘剩余 {{free}}",
+            "download": "下载 {{total}}",
+            "fine": "选“<later>稍后</later>”会等到电脑接上电源且空闲时再下载。可在“设置 › 模型”中更改。",
+            "downloading": "正在后台下载，你可以继续。",
+            "needsCalls": "需要先开启“你的通话” ·",
+            "turnOn": "开启",
+            "percent": "{{percent}}%"
+        },
+        "send": {
+            "title": "它把事情准备好，你来按发送。",
+            "line": "Isoform 起草、填写、准备，没有你的同意，什么都不会发出去。",
+            "ask": "回复 Priya 周四的事",
+            "to": "收件人",
+            "toName": "Priya Shah",
+            "subject": "主题",
+            "subjectLine": "回复：周四",
+            "draft": "Priya 你好，周四 2:00 可以。我会带上 Halcyon 的数据。\n\nBo",
+            "ready": "准备好了。看一下，再按发送。",
+            "sendButton": "发送",
+            "sent": "已发送",
+            "cursor": "Isoform"
+        },
+        "reaches": {
+            "notificationDenied": "通知已关闭。请在系统设置中打开。",
+            "notificationFailed": "无法检查或打开通知。请重试。",
+            "title": "随时都能找到你",
+            "line": "有事准备好或需要你时，Isoform 会在这里或你的 iPhone 上告诉你。",
+            "time": "9:41",
+            "date": "10月28日 星期三",
+            "appName": "Isoform",
+            "now": "现在",
+            "notice1": "简报已就绪，有 2 件事需要你。",
+            "notice2": "给 Priya 的回复已可发送。",
+            "getIt": "在手机上获取 Isoform",
+            "scan": "下载 Isoform，然后在应用中扫描此二维码，与这台电脑配对。",
+            "link": "打开 App Store",
+            "copy": "复制",
+            "copied": "已复制",
+            "codeLabel": "手机配对二维码",
+            "sealed": "只在你的设备之间加密传送",
+            "paired": "已与 {{phone}} 配对",
+            "pairedLine": "你的简报和需要你的事也会在那里显示。",
+            "turnOn": "开启通知",
+            "on": "通知已开启",
+            "notNow": "暂不",
+            "pending": "与 {{phone}} 配对？",
+            "pendingCode": "你的手机上显示 {{code}}。",
+            "approve": "配对",
+            "decline": "不是这台",
+            "pairFailed": "没能配对，请再扫一次。"
+        },
+        "finish": {
+            "callout": "Isoform 在这里，随时可以暂停。",
+            "calloutHidden": "Isoform 在菜单栏里，随时可以暂停。",
+            "done": "设置完成"
+        }
+    }
+}

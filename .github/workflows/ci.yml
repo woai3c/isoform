@@ -1,0 +1,332 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, feat/iphone-companion]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      desktop: ${{ steps.filter.outputs.desktop }}
+      agent: ${{ steps.filter.outputs.agent }}
+      relay: ${{ steps.filter.outputs.relay }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      ios: ${{ steps.filter.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            desktop:
+              - 'wails-gui/**'
+              - 'yansu-agent/**'
+              - 'relay/**'
+              - '.github/**'
+              - 'scripts/**'
+              - 'go.work*'
+            agent:
+              - 'yansu-agent/**'
+              - '.github/**'
+              - 'scripts/**'
+            relay:
+              - 'relay/**'
+              - '.github/**'
+              - 'scripts/**'
+            frontend:
+              - 'wails-gui/**'
+              - '.github/**'
+              - 'scripts/**'
+              - '.github/**'
+            ios:
+              - 'ios/**'
+              - 'scripts/build-ios.sh'
+              - 'scripts/test-ios-compatibility.sh'
+              - '.github/**'
+  bindings:
+    needs: changes
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.desktop == 'true' || needs.changes.outputs.frontend == 'true' }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wails-gui/go.mod
+          cache-dependency-path: |
+            wails-gui/go.sum
+            yansu-agent/go.sum
+      - name: Generate Wails bindings without launching the app
+        working-directory: wails-gui
+        run: |
+          mkdir -p frontend/dist quick-chat-spotlight/frontend/dist
+          printf '<!doctype html>\n' > frontend/dist/index.html
+          printf '<!doctype html>\n' > quick-chat-spotlight/frontend/dist/index.html
+          go run github.com/wailsapp/wails/v2/cmd/wails@v2.12.0 generate module -nocolour
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wails-bindings
+          path: wails-gui/frontend/wailsjs
+          if-no-files-found: error
+  lint-work:
+    needs: changes
+    if: ${{ true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wails-gui/go.mod
+          cache-dependency-path: |
+            wails-gui/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check Go formatting
+        run: |
+          unformatted=$(git ls-files '*.go' | xargs gofmt -l)
+          if [ -n "$unformatted" ]; then printf '%s\n' "$unformatted"; exit 1; fi
+      - name: Validate workflows and release helpers
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          actionlint .github/workflows/ci.yml .github/workflows/release.yml
+          python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+      - uses: pre-commit/action@v3.0.1
+
+  lint:
+    needs: [changes, lint-work]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require work or deliberate path skip
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          WORK_RESULT: ${{ needs.lint-work.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          FILTER: ${{ 'true' }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$WORK_RESULT" = success ]; then exit 0; fi
+          if [ "$EVENT_NAME" = pull_request ] && [ "$FILTER" = false ] && [ "$WORK_RESULT" = skipped ]; then exit 0; fi
+          echo "Required work result: $WORK_RESULT" >&2
+          exit 1
+
+  go-desktop-work:
+    needs: [changes, bindings]
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.desktop == 'true' }}
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      GIT_AUTHOR_NAME: CI
+      GIT_AUTHOR_EMAIL: ci@users.noreply.github.com
+      GIT_COMMITTER_NAME: CI
+      GIT_COMMITTER_EMAIL: ci@users.noreply.github.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: wails-bindings
+          path: wails-gui/frontend/wailsjs
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wails-gui/go.mod
+          cache-dependency-path: |
+            wails-gui/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: wails-gui/frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: |
+            wails-gui/frontend/pnpm-lock.yaml
+            wails-gui/quick-chat-spotlight/frontend/pnpm-lock.yaml
+      - name: Build embedded frontends
+        run: |
+          pnpm --dir wails-gui/frontend install --frozen-lockfile
+          pnpm --dir wails-gui/quick-chat-spotlight/frontend install --frozen-lockfile
+          pnpm --dir wails-gui/frontend build
+          pnpm --dir wails-gui/quick-chat-spotlight/frontend build
+      - name: Vet and test desktop
+        working-directory: wails-gui
+        run: |
+          go vet ./...
+          go test ./...
+
+  go-desktop:
+    needs: [changes, go-desktop-work]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require work or deliberate path skip
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          WORK_RESULT: ${{ needs.go-desktop-work.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          FILTER: ${{ needs.changes.outputs.desktop }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$WORK_RESULT" = success ]; then exit 0; fi
+          if [ "$EVENT_NAME" = pull_request ] && [ "$FILTER" = false ] && [ "$WORK_RESULT" = skipped ]; then exit 0; fi
+          echo "Required work result: $WORK_RESULT" >&2
+          exit 1
+
+  go-agent-work:
+    needs: changes
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.agent == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: yansu-agent/go.mod
+          cache-dependency-path: |
+            yansu-agent/go.sum
+      - run: go test ./...
+        working-directory: yansu-agent
+
+  go-agent:
+    needs: [changes, go-agent-work]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require work or deliberate path skip
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          WORK_RESULT: ${{ needs.go-agent-work.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          FILTER: ${{ needs.changes.outputs.agent }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$WORK_RESULT" = success ]; then exit 0; fi
+          if [ "$EVENT_NAME" = pull_request ] && [ "$FILTER" = false ] && [ "$WORK_RESULT" = skipped ]; then exit 0; fi
+          echo "Required work result: $WORK_RESULT" >&2
+          exit 1
+
+  go-relay-work:
+    needs: changes
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.relay == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: relay/go.mod
+          cache-dependency-path: |
+            relay/go.sum
+      - run: go test ./...
+        working-directory: relay
+
+  go-relay:
+    needs: [changes, go-relay-work]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require work or deliberate path skip
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          WORK_RESULT: ${{ needs.go-relay-work.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          FILTER: ${{ needs.changes.outputs.relay }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$WORK_RESULT" = success ]; then exit 0; fi
+          if [ "$EVENT_NAME" = pull_request ] && [ "$FILTER" = false ] && [ "$WORK_RESULT" = skipped ]; then exit 0; fi
+          echo "Required work result: $WORK_RESULT" >&2
+          exit 1
+
+  frontend-work:
+    needs: [changes, bindings]
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: wails-bindings
+          path: wails-gui/frontend/wailsjs
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: wails-gui/frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: |
+            wails-gui/frontend/pnpm-lock.yaml
+            wails-gui/quick-chat-spotlight/frontend/pnpm-lock.yaml
+      - run: |
+          pnpm --dir wails-gui/frontend install --frozen-lockfile
+          pnpm --dir wails-gui/quick-chat-spotlight/frontend install --frozen-lockfile
+          pnpm --dir wails-gui/frontend test
+          pnpm --dir wails-gui/frontend build
+          pnpm --dir wails-gui/quick-chat-spotlight/frontend test
+          pnpm --dir wails-gui/quick-chat-spotlight/frontend build
+
+  frontend:
+    needs: [changes, frontend-work]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require work or deliberate path skip
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          WORK_RESULT: ${{ needs.frontend-work.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          FILTER: ${{ needs.changes.outputs.frontend }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$WORK_RESULT" = success ]; then exit 0; fi
+          if [ "$EVENT_NAME" = pull_request ] && [ "$FILTER" = false ] && [ "$WORK_RESULT" = skipped ]; then exit 0; fi
+          echo "Required work result: $WORK_RESULT" >&2
+          exit 1
+
+  ios-work:
+    needs: changes
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.ios == 'true' }}
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build iOS Simulator app
+        run: ./scripts/build-ios.sh
+      - name: Select one available iPhone simulator and test
+        run: |
+          id=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for group in d["devices"].values() for x in group if x["isAvailable"] and x["name"].startswith("iPhone")))')
+          YANSU_IOS_IPHONE_15_ID="$id" ./scripts/test-ios-compatibility.sh --iphone-15
+
+  ios:
+    needs: [changes, ios-work]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require work or deliberate path skip
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          WORK_RESULT: ${{ needs.ios-work.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          FILTER: ${{ needs.changes.outputs.ios }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$WORK_RESULT" = success ]; then exit 0; fi
+          if [ "$EVENT_NAME" = pull_request ] && [ "$FILTER" = false ] && [ "$WORK_RESULT" = skipped ]; then exit 0; fi
+          echo "Required work result: $WORK_RESULT" >&2
+          exit 1

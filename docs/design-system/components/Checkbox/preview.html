@@ -1,0 +1,15 @@
+<!-- @dsCard group="Forms" height=90 subtitle="Static rendition" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Checkbox — preview</title></head>
+<body>
+<div class="yn-stage">
+  <label style="display:flex;gap:8px;align-items:center;font-size:13px"><span class="yn-checkbox" role="checkbox" aria-checked="true" data-state="checked" tabindex="0"><svg class="yn-ico" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>Include calendar events</label>
+  <label style="display:flex;gap:8px;align-items:center;font-size:13px"><span class="yn-checkbox" role="checkbox" aria-checked="false" data-state="unchecked" tabindex="0"><svg class="yn-ico" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>Include Slack threads</label>
+  <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--color-muted)"><span class="yn-checkbox" data-state="unchecked" data-disabled><svg class="yn-ico" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>Unavailable</label>
+</div>
+<script>
+document.querySelectorAll('[role=checkbox]').forEach(function(b){b.addEventListener('click',function(){var on=b.dataset.state!=='checked';b.dataset.state=on?'checked':'unchecked';b.setAttribute('aria-checked',on);});});
+</script>
+</body>
+</html>

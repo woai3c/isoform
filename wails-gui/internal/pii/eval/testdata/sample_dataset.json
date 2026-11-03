@@ -1,0 +1,1346 @@
+{
+  "name": "yansu-pii-eval-v1",
+  "description": "Evaluation dataset for Yansu PII detection. Covers 16 entity categories across EN/ZH/JA/KO with positive, negative, multi-entity, desktop-app, and private-link samples.",
+  "version": "1.1.0",
+  "samples": [
+    {
+      "id": "email-01",
+      "text": "Please contact john.doe@example.com for more info",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "john.doe@example.com",
+          "category": "private_email",
+          "start": 15,
+          "end": 35
+        }
+      ]
+    },
+    {
+      "id": "email-02",
+      "text": "Send invoices to billing+dept@example.com asap",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "billing+dept@example.com",
+          "category": "private_email",
+          "start": 17,
+          "end": 41
+        }
+      ]
+    },
+    {
+      "id": "email-03",
+      "text": "CC: admin@example.com, ops@example.net",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "admin@example.com",
+          "category": "private_email",
+          "start": 4,
+          "end": 21
+        },
+        {
+          "text": "ops@example.net",
+          "category": "private_email",
+          "start": 23,
+          "end": 38
+        }
+      ]
+    },
+    {
+      "id": "email-04",
+      "text": "user_name.tag+filter@subdomain.example.org",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "user_name.tag+filter@subdomain.example.org",
+          "category": "private_email",
+          "start": 0,
+          "end": 42
+        }
+      ]
+    },
+    {
+      "id": "email-05",
+      "text": "Reply to: zhang.wei@example.com",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "zhang.wei@example.com",
+          "category": "private_email",
+          "start": 10,
+          "end": 31
+        }
+      ]
+    },
+    {
+      "id": "phone-01",
+      "text": "Phone: +1 (555) 123-4567",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "+1 (555) 123-4567",
+          "category": "private_phone",
+          "start": 7,
+          "end": 24
+        }
+      ]
+    },
+    {
+      "id": "phone-02",
+      "text": "联系电话：13812345678",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "13812345678",
+          "category": "private_phone",
+          "start": 15,
+          "end": 26
+        }
+      ]
+    },
+    {
+      "id": "phone-03",
+      "text": "電話番号: 090-1234-5678",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "090-1234-5678",
+          "category": "private_phone",
+          "start": 14,
+          "end": 27
+        }
+      ]
+    },
+    {
+      "id": "phone-04",
+      "text": "Mobile: +44 7700 900100",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "+44 7700 900100",
+          "category": "private_phone",
+          "start": 8,
+          "end": 23
+        }
+      ]
+    },
+    {
+      "id": "phone-05",
+      "text": "Tel：03-1234-5678",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "03-1234-5678",
+          "category": "private_phone",
+          "start": 6,
+          "end": 18
+        }
+      ]
+    },
+    {
+      "id": "phone-06",
+      "text": "手机号: 18600001234",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "18600001234",
+          "category": "private_phone",
+          "start": 11,
+          "end": 22
+        }
+      ]
+    },
+    {
+      "id": "phone-07",
+      "text": "call 1-800-555-0199 for details",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "1-800-555-0199",
+          "category": "private_phone",
+          "start": 5,
+          "end": 19
+        }
+      ]
+    },
+    {
+      "id": "cc-01",
+      "text": "4532 0123 4567 8901",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "4532 0123 4567 8901",
+          "category": "credit_card",
+          "start": 0,
+          "end": 19
+        }
+      ]
+    },
+    {
+      "id": "cc-02",
+      "text": "5425-2334-3010-9903",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "5425-2334-3010-9903",
+          "category": "credit_card",
+          "start": 0,
+          "end": 19
+        }
+      ]
+    },
+    {
+      "id": "cc-03",
+      "text": "Card ending in 4532 0123 4567",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "4532 0123 4567",
+          "category": "credit_card",
+          "start": 15,
+          "end": 29
+        }
+      ]
+    },
+    {
+      "id": "cc-04",
+      "text": "Payment: 3782 822463 10005",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "3782 822463 10005",
+          "category": "credit_card",
+          "start": 9,
+          "end": 26
+        }
+      ]
+    },
+    {
+      "id": "cc-05",
+      "text": "4111111111111111",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "4111111111111111",
+          "category": "credit_card",
+          "start": 0,
+          "end": 16
+        }
+      ]
+    },
+    {
+      "id": "cvv-01",
+      "text": "CVV: 847",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "847",
+          "category": "cvv",
+          "start": 5,
+          "end": 8
+        }
+      ]
+    },
+    {
+      "id": "cvv-02",
+      "text": "Security code: 1234",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "1234",
+          "category": "cvv",
+          "start": 15,
+          "end": 19
+        }
+      ]
+    },
+    {
+      "id": "cvv-03",
+      "text": "CVC2 391",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "391",
+          "category": "cvv",
+          "start": 5,
+          "end": 8
+        }
+      ]
+    },
+    {
+      "id": "otp-01",
+      "text": "OTP: 384 291",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "384 291",
+          "category": "one_time_password",
+          "start": 5,
+          "end": 12
+        }
+      ]
+    },
+    {
+      "id": "otp-02",
+      "text": "MFA 847293",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "847293",
+          "category": "one_time_password",
+          "start": 4,
+          "end": 10
+        }
+      ]
+    },
+    {
+      "id": "otp-03",
+      "text": "TOTP: 192.384",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "192.384",
+          "category": "one_time_password",
+          "start": 6,
+          "end": 13
+        }
+      ]
+    },
+    {
+      "id": "otp-04",
+      "text": "一次性密码: 583 021",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "583 021",
+          "category": "one_time_password",
+          "start": 17,
+          "end": 24
+        }
+      ]
+    },
+    {
+      "id": "password-01",
+      "text": "password: S3cr3t!Pass#2024",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "S3cr3t!Pass#2024",
+          "category": "password",
+          "start": 10,
+          "end": 26
+        }
+      ]
+    },
+    {
+      "id": "password-02",
+      "text": "密码=MyW3irdP@ss",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "MyW3irdP@ss",
+          "category": "password",
+          "start": 7,
+          "end": 18
+        }
+      ]
+    },
+    {
+      "id": "password-03",
+      "text": "passwd: hunter2!complex",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "hunter2!complex",
+          "category": "password",
+          "start": 8,
+          "end": 23
+        }
+      ]
+    },
+    {
+      "id": "password-04",
+      "text": "口令=xK9#mP2$vL5",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "xK9#mP2$vL5",
+          "category": "password",
+          "start": 7,
+          "end": 18
+        }
+      ]
+    },
+    {
+      "id": "address-01",
+      "text": "1234 Oak Ave, Springfield, IL 62704",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "1234 Oak Ave, Springfield, IL 62704",
+          "category": "street_address",
+          "start": 0,
+          "end": 35
+        }
+      ]
+    },
+    {
+      "id": "address-02",
+      "text": "Ship to 5678 Maple Blvd, Portland, OR 97201",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "5678 Maple Blvd, Portland, OR 97201",
+          "category": "street_address",
+          "start": 8,
+          "end": 43
+        }
+      ]
+    },
+    {
+      "id": "address-03",
+      "text": "9012 Pine Dr, Austin, TX 78701",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "9012 Pine Dr, Austin, TX 78701",
+          "category": "street_address",
+          "start": 0,
+          "end": 30
+        }
+      ]
+    },
+    {
+      "id": "address-jp-01",
+      "text": "〒100-0001 東京都千代田区千代田1-1",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "100-0001",
+          "category": "private_address",
+          "start": 3,
+          "end": 11
+        }
+      ]
+    },
+    {
+      "id": "address-jp-02",
+      "text": "郵便番号: 150-0002",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "150-0002",
+          "category": "private_address",
+          "start": 14,
+          "end": 22
+        }
+      ]
+    },
+    {
+      "id": "address-jp-03",
+      "text": "郵便番号：530-0001",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "530-0001",
+          "category": "private_address",
+          "start": 15,
+          "end": 23
+        }
+      ]
+    },
+    {
+      "id": "govid-01",
+      "text": "SSN: 123-45-6789",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "123-45-6789",
+          "category": "government_id",
+          "start": 5,
+          "end": 16
+        }
+      ]
+    },
+    {
+      "id": "govid-02",
+      "text": "身份证号: 110101199003071234",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "110101199003071234",
+          "category": "government_id",
+          "start": 14,
+          "end": 32
+        }
+      ]
+    },
+    {
+      "id": "govid-03",
+      "text": "マイナンバー: 123456789012",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "123456789012",
+          "category": "government_id",
+          "start": 20,
+          "end": 32
+        }
+      ]
+    },
+    {
+      "id": "govid-04",
+      "text": "Passport number: AB1234567",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "AB1234567",
+          "category": "government_id",
+          "start": 17,
+          "end": 26
+        }
+      ]
+    },
+    {
+      "id": "govid-05",
+      "text": "Driver's license number: D12345678",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "D12345678",
+          "category": "government_id",
+          "start": 25,
+          "end": 34
+        }
+      ]
+    },
+    {
+      "id": "govid-06",
+      "text": "National ID: 98765432X",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "98765432X",
+          "category": "government_id",
+          "start": 13,
+          "end": 22
+        }
+      ]
+    },
+    {
+      "id": "govid-07",
+      "text": "주민등록번호: 900101-1234567",
+      "language": "ko",
+      "annotations": [
+        {
+          "text": "900101-1234567",
+          "category": "government_id",
+          "start": 20,
+          "end": 34
+        }
+      ]
+    },
+    {
+      "id": "govid-08",
+      "text": "Tax ID: 12-3456789",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "12-3456789",
+          "category": "government_id",
+          "start": 8,
+          "end": 18
+        }
+      ]
+    },
+    {
+      "id": "apikey-01",
+      "text": "sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234",
+          "category": "api_key",
+          "start": 0,
+          "end": 56
+        }
+      ]
+    },
+    {
+      "id": "apikey-02",
+      "text": "ghp_1234567890abcdefghijklmnopqrstuvwx",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "ghp_1234567890abcdefghijklmnopqrstuvwx",
+          "category": "api_key",
+          "start": 0,
+          "end": 38
+        }
+      ]
+    },
+    {
+      "id": "apikey-03",
+      "text": "AKIAIOSFODNN7EXAMPLE",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "AKIAIOSFODNN7EXAMPLE",
+          "category": "api_key",
+          "start": 0,
+          "end": 20
+        }
+      ]
+    },
+    {
+      "id": "apikey-04",
+      "text": "api_key=sk-test-example-api-key",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "sk-test-example-api-key",
+          "category": "api_key",
+          "start": 8,
+          "end": 31
+        }
+      ]
+    },
+    {
+      "id": "apikey-05",
+      "text": "glpat-xxxxxxxxxxxx-yyyyyyyyzzzz",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "glpat-xxxxxxxxxxxx-yyyyyyyyzzzz",
+          "category": "api_key",
+          "start": 0,
+          "end": 31
+        }
+      ]
+    },
+    {
+      "id": "apikey-07",
+      "text": "secret_key: example-secret-key-value",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "example-secret-key-value",
+          "category": "api_key",
+          "start": 12,
+          "end": 36
+        }
+      ]
+    },
+    {
+      "id": "apikey-08",
+      "text": "access_token=eyJhbGciOiJIUzI1NiJ9.e30.example",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "eyJhbGciOiJIUzI1NiJ9.e30.example",
+          "category": "api_key",
+          "start": 13,
+          "end": 45
+        }
+      ]
+    },
+    {
+      "id": "session-01",
+      "text": "session_id=abc123def456ghi789jkl012",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "abc123def456ghi789jkl012",
+          "category": "session_id",
+          "start": 11,
+          "end": 35
+        }
+      ]
+    },
+    {
+      "id": "session-02",
+      "text": "refresh_token=rt_aBcDeFgHiJkLmNoPqRsT",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "rt_aBcDeFgHiJkLmNoPqRsT",
+          "category": "session_id",
+          "start": 14,
+          "end": 37
+        }
+      ]
+    },
+    {
+      "id": "session-03",
+      "text": "cookie_id: sess_x7y8z9a0b1c2d3e4f5g6",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "sess_x7y8z9a0b1c2d3e4f5g6",
+          "category": "session_id",
+          "start": 11,
+          "end": 36
+        }
+      ]
+    },
+    {
+      "id": "device-01",
+      "text": "IMEI: 353456789012345",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "353456789012345",
+          "category": "device_id",
+          "start": 6,
+          "end": 21
+        }
+      ]
+    },
+    {
+      "id": "device-02",
+      "text": "device_id=A1B2C3D4-E5F6-7890-ABCD",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "A1B2C3D4-E5F6-7890-ABCD",
+          "category": "device_id",
+          "start": 10,
+          "end": 33
+        }
+      ]
+    },
+    {
+      "id": "device-03",
+      "text": "IDFA: 6D92078A-8246-4BA4-AE5B-76104861E7DC",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "6D92078A-8246-4BA4-AE5B-76104861E7DC",
+          "category": "device_id",
+          "start": 6,
+          "end": 42
+        }
+      ]
+    },
+    {
+      "id": "plate-zh-01",
+      "text": "京A12345",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "京A12345",
+          "category": "license_plate",
+          "start": 0,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "plate-zh-02",
+      "text": "粤B88888",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "粤B88888",
+          "category": "license_plate",
+          "start": 0,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "plate-zh-03",
+      "text": "沪C12D34",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "沪C12D34",
+          "category": "license_plate",
+          "start": 0,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "plate-ja-01",
+      "text": "品川 300 あ 12-34",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "品川 300 あ 12-34",
+          "category": "license_plate",
+          "start": 0,
+          "end": 20
+        }
+      ]
+    },
+    {
+      "id": "plate-ja-02",
+      "text": "横浜530さ5678",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "横浜530さ5678",
+          "category": "license_plate",
+          "start": 0,
+          "end": 16
+        }
+      ]
+    },
+    {
+      "id": "plate-ko-01",
+      "text": "12가 3456",
+      "language": "ko",
+      "annotations": [
+        {
+          "text": "12가 3456",
+          "category": "license_plate",
+          "start": 0,
+          "end": 10
+        }
+      ]
+    },
+    {
+      "id": "plate-ko-02",
+      "text": "123나4567",
+      "language": "ko",
+      "annotations": [
+        {
+          "text": "123나4567",
+          "category": "license_plate",
+          "start": 0,
+          "end": 10
+        }
+      ]
+    },
+    {
+      "id": "account-01",
+      "text": "Policy number: POL-2024-78901",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "POL-2024-78901",
+          "category": "account_number",
+          "start": 15,
+          "end": 29
+        }
+      ]
+    },
+    {
+      "id": "account-02",
+      "text": "Account number: AC-9876543",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "AC-9876543",
+          "category": "account_number",
+          "start": 16,
+          "end": 26
+        }
+      ]
+    },
+    {
+      "id": "account-03",
+      "text": "保险证券番号: INS-2024-001234",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "INS-2024-001234",
+          "category": "account_number",
+          "start": 20,
+          "end": 35
+        }
+      ]
+    },
+    {
+      "id": "account-04",
+      "text": "Claim number: CLM-00567890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "CLM-00567890",
+          "category": "account_number",
+          "start": 14,
+          "end": 26
+        }
+      ]
+    },
+    {
+      "id": "org-01",
+      "text": "Insurance company: Pacific Life Holdings LLC",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "Pacific Life Holdings LLC",
+          "category": "private_org",
+          "start": 19,
+          "end": 44
+        }
+      ]
+    },
+    {
+      "id": "org-02",
+      "text": "保険会社名: 東京海上日動火災保険",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "東京海上日動火災保険",
+          "category": "private_org",
+          "start": 17,
+          "end": 47
+        }
+      ]
+    },
+    {
+      "id": "org-03",
+      "text": "Insurer: Allianz Global Insurance AG",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "Allianz Global Insurance AG",
+          "category": "private_org",
+          "start": 9,
+          "end": 36
+        }
+      ]
+    },
+    {
+      "id": "neg-01",
+      "text": "The meeting is scheduled for 3:00 PM tomorrow in room 204.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-02",
+      "text": "Revenue grew 15% year-over-year to $2.3 billion in Q4 2024.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-03",
+      "text": "Please review PR #1234 and merge if tests pass.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-04",
+      "text": "The build took 123 seconds to complete on CI runner 456.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-05",
+      "text": "Version 2.3.14 was released on 2024-03-15.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-06",
+      "text": "Total cost: $1,234.56 for 789 units.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-07",
+      "text": "The function returned error code 0x8007000E.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-08",
+      "text": "See https://docs.example.com/api/v2/users for documentation.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-09",
+      "text": "Latency p99 is 234ms, throughput 5600 req/s.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-10",
+      "text": "Deployed commit abc1234 to production cluster us-east-1.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-11",
+      "text": "今天下午3点开会，在302会议室。",
+      "language": "zh",
+      "annotations": []
+    },
+    {
+      "id": "neg-12",
+      "text": "明日の会議は14時からです。資料を確認してください。",
+      "language": "ja",
+      "annotations": []
+    },
+    {
+      "id": "neg-13",
+      "text": "File path: /usr/local/bin/process-data.sh",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-14",
+      "text": "Container ID: sha256:a1b2c3d4e5f6 running on port 8080.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-15",
+      "text": "The ISBN is 978-3-16-148410-0 for this book.",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "multi-01",
+      "text": "Name: John Smith\nEmail: john.smith@example.com\nPhone: +44 7700 900100\nSSN: 078-05-1120",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "john.smith@example.com",
+          "category": "private_email",
+          "start": 24,
+          "end": 46
+        },
+        {
+          "text": "+44 7700 900100",
+          "category": "private_phone",
+          "start": 54,
+          "end": 69
+        },
+        {
+          "text": "078-05-1120",
+          "category": "government_id",
+          "start": 75,
+          "end": 86
+        }
+      ]
+    },
+    {
+      "id": "multi-02",
+      "text": "api_key=sk-test-example-api-key\nsession_id=sess-fixture-example\ndevice_id=A1B2C3D4-E5F6-7890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "sk-test-example-api-key",
+          "category": "api_key",
+          "start": 8,
+          "end": 31
+        },
+        {
+          "text": "sess-fixture-example",
+          "category": "session_id",
+          "start": 43,
+          "end": 63
+        },
+        {
+          "text": "A1B2C3D4-E5F6-7890",
+          "category": "device_id",
+          "start": 74,
+          "end": 92
+        }
+      ]
+    },
+    {
+      "id": "multi-03",
+      "text": "Customer: alice@example.com\nCard: 4532 0123 4567 8901\nCVV: 321\nPassword: Tr0ub4dor&3!x",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "alice@example.com",
+          "category": "private_email",
+          "start": 10,
+          "end": 27
+        },
+        {
+          "text": "4532 0123 4567 8901",
+          "category": "credit_card",
+          "start": 34,
+          "end": 53
+        },
+        {
+          "text": "321",
+          "category": "cvv",
+          "start": 59,
+          "end": 62
+        },
+        {
+          "text": "Tr0ub4dor&3!x",
+          "category": "password",
+          "start": 73,
+          "end": 86
+        }
+      ]
+    },
+    {
+      "id": "multi-04",
+      "text": "保険会社: 日本生命保険\n証券番号: POL-JP-2024-0042\n電話: 03-0000-0123",
+      "language": "ja",
+      "annotations": [
+        {
+          "text": "日本生命保険",
+          "category": "private_org",
+          "start": 14,
+          "end": 32
+        },
+        {
+          "text": "POL-JP-2024-0042",
+          "category": "account_number",
+          "start": 47,
+          "end": 63
+        },
+        {
+          "text": "03-0000-0123",
+          "category": "private_phone",
+          "start": 72,
+          "end": 84
+        }
+      ]
+    },
+    {
+      "id": "multi-05",
+      "text": "身份证号: 440301199001011234\n手机: 13900001111\n密码=Qwerty@2024!",
+      "language": "zh",
+      "annotations": [
+        {
+          "text": "440301199001011234",
+          "category": "government_id",
+          "start": 14,
+          "end": 32
+        },
+        {
+          "text": "13900001111",
+          "category": "private_phone",
+          "start": 41,
+          "end": 52
+        },
+        {
+          "text": "Qwerty@2024!",
+          "category": "password",
+          "start": 60,
+          "end": 72
+        }
+      ]
+    },
+    {
+      "id": "private-link-01",
+      "text": "Download the signed report: https://s3.amazonaws.com/acme/reports/q2.csv?X-Amz-Signature=abcdef1234567890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "https://s3.amazonaws.com/acme/reports/q2.csv?X-Amz-Signature=abcdef1234567890",
+          "category": "private_link",
+          "start": 28,
+          "end": 105
+        }
+      ]
+    },
+    {
+      "id": "private-link-02",
+      "text": "Temporary file share https://files.example.com/export.zip?signature=1f2e3d4c5b6a7980 expires tonight",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "https://files.example.com/export.zip?signature=1f2e3d4c5b6a7980",
+          "category": "private_link",
+          "start": 21,
+          "end": 84
+        }
+      ]
+    },
+    {
+      "id": "private-link-03",
+      "text": "Google Drive draft: https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz123456/view",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz123456",
+          "category": "private_link",
+          "start": 20,
+          "end": 85
+        }
+      ]
+    },
+    {
+      "id": "private-link-04",
+      "text": "Azure SAS URL: https://storage.example.blob.core.windows.net/audit/log.txt?sv=2024-11-04&sig=abcdef1234567890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "https://storage.example.blob.core.windows.net/audit/log.txt?sv=2024-11-04&sig=abcdef1234567890",
+          "category": "private_link",
+          "start": 15,
+          "end": 109
+        }
+      ]
+    },
+    {
+      "id": "developer-log-01",
+      "text": "CI log: AWS_ACCESS_KEY_ID=AKIAZZZZZZZZZZZZZZZZ and SESSION_ID=prod_sess_9f8e7d6c5b4a3210",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "AKIAZZZZZZZZZZZZZZZZ",
+          "category": "api_key",
+          "start": 26,
+          "end": 46
+        },
+        {
+          "text": "prod_sess_9f8e7d6c5b4a3210",
+          "category": "session_id",
+          "start": 62,
+          "end": 88
+        }
+      ]
+    },
+    {
+      "id": "developer-log-02",
+      "text": "Deploy output: DATABASE_PASSWORD=ProdDb!2026#ChangeMe and reset_token=rt-fixture-example",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "ProdDb!2026#ChangeMe",
+          "category": "password",
+          "start": 33,
+          "end": 53
+        },
+        {
+          "text": "rt-fixture-example",
+          "category": "session_id",
+          "start": 70,
+          "end": 88
+        }
+      ]
+    },
+    {
+      "id": "browser-form-01",
+      "text": "Checkout form: email maya.chen@customer.example, Phone: +1 (212) 555-0184, Card Number: 4242 4242 4242 4242, CVV: 737",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "maya.chen@customer.example",
+          "category": "private_email",
+          "start": 21,
+          "end": 47
+        },
+        {
+          "text": "+1 (212) 555-0184",
+          "category": "private_phone",
+          "start": 56,
+          "end": 73
+        },
+        {
+          "text": "4242 4242 4242 4242",
+          "category": "credit_card",
+          "start": 88,
+          "end": 107
+        },
+        {
+          "text": "737",
+          "category": "cvv",
+          "start": 114,
+          "end": 117
+        }
+      ]
+    },
+    {
+      "id": "crm-record-01",
+      "text": "CRM note: Account number: ACCT-2026-88421, Primary email: priya.rao@example.com, Phone: +44 20 7946 0100",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "ACCT-2026-88421",
+          "category": "account_number",
+          "start": 26,
+          "end": 41
+        },
+        {
+          "text": "priya.rao@example.com",
+          "category": "private_email",
+          "start": 58,
+          "end": 79
+        },
+        {
+          "text": "+44 20 7946 0100",
+          "category": "private_phone",
+          "start": 88,
+          "end": 104
+        }
+      ]
+    },
+    {
+      "id": "neg-16-public-url",
+      "text": "Public docs: https://docs.example.com/guides/authentication and GET /v1/projects/{project_id}",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-17-uuid-and-version",
+      "text": "Example UUID 550e8400-e29b-41d4-a716-446655440000 ships in version v2.4.18",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-18-git-and-k8s",
+      "text": "Pods api-7f96c5d8f9-ptm4x and commit 8f14e45fceea167a5a36dedd4bea2543 are healthy",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-19-money-and-date",
+      "text": "Invoice template example shows $249.99 due on 2026-06-01 with issue PROJ-1842",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "neg-20-public-healthcheck",
+      "text": "curl https://status.example.com/public/health returned {\"status\":\"ok\",\"latency_ms\":42}",
+      "language": "en",
+      "annotations": []
+    },
+    {
+      "id": "round1-grouped-numeric-0",
+      "text": "Account: 1 234 567 890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "1 234 567 890",
+          "category": "account_number",
+          "start": 9,
+          "end": 22
+        }
+      ]
+    },
+    {
+      "id": "round1-grouped-numeric-1",
+      "text": "Account: 12 3456 7890",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "12 3456 7890",
+          "category": "account_number",
+          "start": 9,
+          "end": 21
+        }
+      ]
+    },
+    {
+      "id": "round1-grouped-numeric-2",
+      "text": "Account: 01 23 45 67 89",
+      "language": "en",
+      "annotations": [
+        {
+          "text": "01 23 45 67 89",
+          "category": "account_number",
+          "start": 9,
+          "end": 23
+        }
+      ]
+    }
+  ]
+}

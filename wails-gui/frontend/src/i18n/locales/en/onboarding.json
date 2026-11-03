@@ -1,0 +1,785 @@
+{
+    "screen": {
+        "progressLabel": "Setup progress",
+        "stepWelcome": "Welcome",
+        "stepAgent": "Assistant",
+        "stepDependencies": "Tools",
+        "stepFirstTask": "First task",
+        "stepPermissions": "Permissions",
+        "stepMemoryImport": "About you",
+        "stepCount": "Step {{current}} of {{total}}",
+        "goToStep": "Go to {{label}}",
+        "skipSetup": "Skip setup",
+        "skipSetupHint": "Open Isoform now. It asks for the rest in the chat, one thing at a time, and you can run setup again from Settings > About.",
+        "stepNotifications": "Notifications",
+        "stepModels": "On this computer"
+    },
+    "actions": {
+        "back": "Back",
+        "continue": "Continue",
+        "getStarted": "Get started",
+        "skipThisStep": "Skip this step"
+    },
+    "agent": {
+        "heading": "Choose who does the thinking",
+        "subheading": "Isoform uses the assistants already signed in on this computer. Pick the one that answers first; the other steps in when it reaches its usage limit.",
+        "names": {
+            "claude": "Claude Code",
+            "codex": "Codex"
+        },
+        "plan": "{{plan}} plan",
+        "primary": "Answers first",
+        "backup": "Backup",
+        "useAsBackup": "Use {{name}} as backup",
+        "consent": "These are your own subscriptions, used only on this computer. Each provider's terms apply, and macOS may ask once to read the Claude Code sign-in from the Keychain.",
+        "apply": "Use {{name}}",
+        "applyGeneric": "Use this assistant",
+        "applying": "Setting up…",
+        "ready": "Ready: {{primary}} answers first",
+        "readyWithBackup": "Ready: {{primary}} answers first, {{backup}} as backup",
+        "change": "Change",
+        "loading": "Looking for signed-in assistants…",
+        "starting": "Starting the assistant connection…",
+        "loadFailed": "Could not read the signed-in assistants.",
+        "applyFailed": "Could not apply the choice: {{error}}",
+        "noneHeading": "No signed-in assistant yet",
+        "noneBody": "Sign in to Claude Code or Codex in a terminal, then check again. Isoform picks them up by itself.",
+        "noneHintClaude": "claude  — sign in to Claude Code",
+        "noneHintCodex": "codex  — sign in to Codex",
+        "ownKey": "You can also add your own key later under Settings > Assistant > Advanced.",
+        "checkAgain": "Check again",
+        "setUpLater": "Set up later",
+        "laterHint": "Isoform cannot think until an assistant is chosen. You can choose one any time in Settings > Assistant.",
+        "userMagpieHeading": "Isoform has its own group in your magpie",
+        "userMagpieBody": "Isoform found your own magpie and added its own group there. Your other groups and assistant settings stay as they are; you can edit Isoform's group in magpie any time.",
+        "userMagpieGroup": "Group: {{group}}",
+        "groupNames": {
+            "chat": "Isoform chat",
+            "background": "Isoform background",
+            "light": "Isoform light"
+        },
+        "userMagpieMembers": "{{members}}",
+        "userMagpieNoGroup": "Isoform could not make its group yet, so it uses the group Claude Code is set to, or that assistant's model. Check again once magpie is signed in."
+    },
+    "dependencies": {
+        "heading": "Tools on this computer",
+        "subheading": "Isoform thinks with Claude Code or Codex on this computer. Install and sign in to at least one; anything missing can be installed from here.",
+        "checking": "Checking this computer…",
+        "checkAgain": "Check again",
+        "install": "Install",
+        "installing": "Installing…",
+        "notInstalled": "Not installed",
+        "signedIn": "Signed in",
+        "notSignedIn": "Installed, not signed in",
+        "signInHint": "Run {{command}} in a terminal to sign in, then check again.",
+        "npmMissing": "Installing needs npm (Node.js). Install Node.js, then check again, or run {{command}} yourself.",
+        "installFailed": "Could not install {{name}}: {{error}}",
+        "magpieTitle": "Assistant connection",
+        "magpieUser": "Your magpie {{version}} is used as it is",
+        "magpieUserGroup": "Isoform thinks through its own group \"{{group}}\" in your magpie.",
+        "magpieUserNoGroup": "Isoform's group is not made yet; it uses Claude Code's current model.",
+        "magpieBundled": "Built into Isoform",
+        "magpieBundledDetail": "Nothing to install. It starts by itself and links Isoform to Claude Code and Codex.",
+        "magpieStarting": "Starting the assistant connection…",
+        "ollamaTitle": "Ollama",
+        "ollamaFound": "A local Ollama answers; its first model joins as a fallback.",
+        "ollamaMissing": "Optional. Not found on this computer.",
+        "noneNeededHint": "At least one signed-in assistant is needed for Isoform to think.",
+        "gitTitle": "Git",
+        "gitRecover": "Install Git for Windows"
+    },
+    "firstTask": {
+        "heading": "Your first task",
+        "subheading": "Ask for one real thing. The assistant you chose starts on it in a new chat, where you can follow along and steer.",
+        "inputLabel": "What should Isoform start on?",
+        "placeholder": "For example: summarize what I changed in my projects this week",
+        "enterHint": "Enter to start, Shift+Enter for a new line",
+        "suggestionsLabel": "Or start from one of these",
+        "suggestions": {
+            "projectChanges": {
+                "label": "Summarize recent project changes",
+                "prompt": "Find the project folders on this computer I changed most recently and summarize what changed in each over the last week: the main changes, anything left half-done, and what to pick up next."
+            },
+            "draftReply": {
+                "label": "Draft a reply",
+                "prompt": "Help me draft a reply. I'll paste the message I received below; keep my answer short, friendly and clear.\n\n"
+            },
+            "planWeek": {
+                "label": "Plan my week",
+                "prompt": "Help me plan this week. Ask me for my three most important things and any fixed meetings, then lay out a realistic day-by-day plan with time to focus."
+            },
+            "tidyDownloads": {
+                "label": "Tidy my Downloads folder",
+                "prompt": "Look through my Downloads folder and suggest how to tidy it: group files by type and project, and point out duplicates and large files I probably no longer need. Don't move or delete anything until I say so."
+            },
+            "hearBrief": {
+                "label": "Hear my brief",
+                "prompt": "Give me my morning brief: what moved since yesterday, what needs me today, and my meetings."
+            }
+        },
+        "noAssistant": "Isoform has no assistant yet, so it cannot start on this. Choose one first, or skip for now and set one up later in Settings > Assistant.",
+        "chooseAssistant": "Choose an assistant",
+        "start": "Start",
+        "skip": "Skip and open Isoform"
+    },
+    "welcome": {
+        "heading": "Welcome to Isoform",
+        "subheading": "Isoform sees and hears your work on this computer, learns how you work, and helps through the assistants you already use. Setup takes a few minutes.",
+        "tagline": "Always quiet. Yours. Off anytime.",
+        "bullets": {
+            "learns": "Learns from your work on this computer",
+            "assistants": "Works with the AI you already use"
+        }
+    },
+    "telemetry": {
+        "title": "Help improve Isoform",
+        "description": "Share anonymous counts of feature use and time spent actively using Isoform. Never your content, name, email or device identity. A random install ID links these counts.",
+        "choiceHint": "On by default. You can turn this off here or any time in Settings > Privacy.",
+        "detailsLink": "Read the full description",
+        "saveFailed": "Could not save your choice. Please try again."
+    },
+    "permissions": {
+        "heading": "Permissions",
+        "intro": "Isoform needs a few permissions to follow your work. You can turn on the optional ones any time later.",
+        "localProcessing": "Screen and audio recordings are read by <h>local models</h> on this computer and stay here. Only what Isoform needs to help you is sent to the AI you chose.",
+        "webCalendarsNote": "If you use Google Calendar or Outlook in your browser, Isoform can also read them while your computer is idle. You can turn that off any time in Settings > Observation.",
+        "checking": "Checking what Isoform needs on this computer…",
+        "couldNotDetermine": "Isoform could not check its permissions right now. You can continue and turn them on later in Settings > Privacy.",
+        "noneRequired": "No additional permissions required on {{platform}}. You're all set.",
+        "allGranted": "Everything Isoform needs is on. The optional ones can wait.",
+        "coreGrantedToast": {
+            "title": "Screen Recording and Accessibility are on",
+            "description": "Isoform can now follow your work and use apps for you when you ask."
+        },
+        "grant": "Turn on",
+        "pending": "Not on yet",
+        "granted": "On",
+        "items": {
+            "screen_recording": {
+                "label": "Screen Recording",
+                "description": "Lets Isoform see the work on your screen and learn how you work."
+            },
+            "screen_capture": {
+                "label": "Screen Capture",
+                "description": "Lets Isoform see the work on your screen. You can turn it off later to save resources."
+            },
+            "accessibility": {
+                "label": "Accessibility",
+                "description": "Lets Isoform read which app and window you are in, and use apps for you when you ask."
+            },
+            "input_automation": {
+                "label": "Keyboard & Mouse Automation",
+                "description": "Lets Isoform use apps for you when you ask. You can turn it off later."
+            },
+            "microphone": {
+                "label": "Microphone",
+                "description": "Optional. For voice input and listening in the background."
+            },
+            "system_audio": {
+                "label": "System Audio Recording",
+                "description": "Optional. Lets Isoform hear your computer's audio output, such as the other side of a call."
+            },
+            "notifications": {
+                "label": "Notifications",
+                "description": "Optional. Tells you when background work is done."
+            },
+            "calendars": {
+                "label": "Calendars",
+                "description": "Optional. Lets Isoform see your day ahead to prepare you for meetings. Events are kept on this computer; what a task needs is sent to the AI you chose and to your paired phone."
+            },
+            "contacts": {
+                "label": "Contacts",
+                "description": "Optional. Lets Isoform recognize the people you work with. Contacts stay on this computer."
+            },
+            "reminders": {
+                "label": "Reminders",
+                "description": "Optional. Lets Isoform count your open reminders as commitments and tell you when one is slipping. Reminders are kept on this computer; open ones can appear in your brief on your paired phone."
+            },
+            "clipboard": {
+                "label": "Clipboard",
+                "description": "On by default and needs no permission. Isoform notes what kind of thing you copy and where and, where macOS allows it, a short preview with personal details, codes and passwords removed. Nothing is noted from password managers or copies marked as passwords. You can turn it off in Settings > Observation."
+            },
+            "files": {
+                "label": "Recent files",
+                "description": "Off for now and needs no permission. Isoform can note the names of the documents you open and edit in Documents, Desktop, Downloads and iCloud Drive, from Spotlight, never what is in them. You can turn it on and keep folders private in Settings > Observation."
+            },
+            "automation_mail": {
+                "label": "Mail",
+                "description": "Optional. While Mail is open, Isoform reads the senders, subjects and dates of the last week's mail, never the messages, to tell you who is waiting on a reply. Isoform never opens Mail."
+            }
+        }
+    },
+    "memoryImport": {
+        "heading": "About you",
+        "subheading": "Bring in context from other AI tools so Isoform already knows you.",
+        "nameLabel": "What should Isoform call you?",
+        "namePlaceholder": "e.g. Alex",
+        "nameHint": "Helps Isoform personalize tasks and tell your messages apart.",
+        "nameSaveError": "Could not save your name: {{error}}",
+        "scanning": "Looking for AI memory files on this computer…",
+        "scanErrorHeading": "Isoform could not scan for memory files",
+        "tryAgain": "Try again",
+        "noFilesHeading": "No memory files found",
+        "noFilesBody": "That is perfectly fine. You can still import memories from ChatGPT or Claude below, or skip this step entirely. Isoform will learn your preferences as you use it.",
+        "foundOnMachine": "Found on this machine",
+        "fileCount_one": "{{count}} file",
+        "fileCount_other": "{{count}} files",
+        "importAll": "Import all",
+        "importing": "Importing…",
+        "importedFiles_one": "Imported {{count}} file.",
+        "importedFiles_other": "Imported {{count}} files.",
+        "noFilesImported": "No files were imported.",
+        "fromConversations": "Import from conversations",
+        "providerTabsLabel": "AI provider",
+        "step1": "Copy this prompt into a chat with {{provider}}",
+        "step2": "Paste {{provider}}'s response below to add to Isoform's memory",
+        "pastePlaceholder": "Paste your memory details from {{provider}} here…",
+        "showMore": "Show more",
+        "showLess": "Show less",
+        "copy": "Copy",
+        "copied": "Copied",
+        "addToMemory": "Add to memory",
+        "copyClipboardError": "Could not copy to clipboard. Please copy the prompt manually.",
+        "importedMemories_one": "Imported {{count}} memory{{suffix}}.",
+        "importedMemories_other": "Imported {{count}} memories{{suffix}}.",
+        "skippedSuffix": " ({{count}} skipped)",
+        "noMemoriesImported": "No memories imported{{errorSuffix}}",
+        "errorSuffix": " — {{error}}",
+        "extractionPrompt": "Export all of my stored memories and any context you've learned about me from past conversations. Preserve my words verbatim where possible, especially for instructions and preferences.\n\n## Categories (output in this order):\n\n1. **Instructions**: Rules I've explicitly asked you to follow going forward — tone, format, style, \"always do X\", \"never do Y\", and corrections to your behavior. Only include rules from stored memories, not from conversations.\n\n2. **Identity**: Name, age, location, education, family, relationships, languages, and personal interests.\n\n3. **Career**: Current and past roles, companies, and general skill areas.\n\n4. **Projects**: Projects I meaningfully built or committed to. Ideally ONE entry per project. Include what it does, current status, and any key decisions. Use the project name or a short descriptor as the first words of the entry.\n\n5. **Preferences**: Opinions, tastes, and working-style preferences that apply broadly.\n\n## Format:\n\nUse section headers for each category. Within each category, list one entry per line, sorted by oldest date first. Format each line as:\n\n[YYYY-MM-DD] - Entry content here.\n\nIf no date is known, use [unknown] instead.\n\n## Output:\n- Wrap the entire export in a single code block for easy copying.\n- After the code block, state whether this is the complete set or if more remain."
+    },
+    "notifications": {
+        "heading": "How much should Isoform speak up?",
+        "subheading": "Isoform reaches you on this computer, on a paired phone, or by text when something needs you, finishes, or arrives. Pick how much you want to hear. You can change it any time in Settings > Notifications.",
+        "options": {
+            "off": {
+                "label": "Off",
+                "description": "Isoform never speaks up about what it notices. Results of what you scheduled and Today still show."
+            },
+            "fewer": {
+                "label": "Fewer",
+                "description": "Only things that need you, finished work and your brief. Up to 3 interruptions a day."
+            },
+            "normal": {
+                "label": "Normal",
+                "description": "The usual mix, with one suggestion a week. Up to 6 interruptions a day."
+            },
+            "more": {
+                "label": "More",
+                "description": "Everything, including people who came back, goal check-ins and what Isoform learned. Up to 10 a day."
+            }
+        },
+        "quietHint": "Quiet hours keep the night free at every level. Work that needs you and has a deadline still gets through when that kind is on.",
+        "saveFailed": "Could not save this yet. You can set it later in Settings > Notifications."
+    },
+    "setupWelcome": {
+        "description": "Isoform sees and hears your work on this computer, learns how you work, and briefs you each morning. It thinks through the assistants already signed in here, on your own subscriptions.",
+        "ready": "Ready to go",
+        "noSignin": "No signed-in assistant yet",
+        "readyBackup": "{{primary}} answers first; {{backup}} steps in when {{primary}} reaches its usage limit. Both run on this computer with your own accounts. Isoform charges nothing extra.",
+        "readySingle": "{{primary}} answers first. It runs on this computer with your own account. Isoform charges nothing extra.",
+        "magpieReady": "Isoform thinks through its group {{group}} in your magpie, using your own accounts.",
+        "noSigninDescription": "Isoform thinks through Claude Code or Codex. Sign in to one in Terminal and it is picked up here by itself. You can also continue and choose later in Settings › Assistant.",
+        "useAssistant": "Use {{name}}",
+        "notFoundYet": "Not found yet",
+        "installed": "Installed · {{version}}",
+        "signInTerminal": "Installed, not signed in · run {{command}} in Terminal",
+        "installCommand": "Not installed · {{command}}, or Install",
+        "answerFirst": "Answer first",
+        "available": "Available",
+        "signInNeeded": "Sign in needed",
+        "ollamaFound": "Optional: a local model as the last resort.",
+        "ollamaMissing": "Not found. Optional: a local model as the last resort.",
+        "gitFound": "Git is available for cloning and managing projects.",
+        "gitMissing": "Git was not found. Isoform needs it to clone and manage projects.",
+        "checked": "Checked while Isoform opened. Each provider’s terms apply; macOS may ask once to read the Claude Code sign-in from the Keychain.",
+        "applyFailed": "Could not save the assistant choice. You can choose later in Settings › Assistant.",
+        "installFailed": "Could not install the assistant. Try again or install it in Terminal.",
+        "telemetryOn": "Anonymous usage counts are on.",
+        "telemetryOff": "Anonymous usage counts are off.",
+        "telemetryDescription": "Feature use and active time under a random install ID. Never content, names or email. Settings › Privacy turns it off.",
+        "installedPlan": "Installed · {{version}} · {{plan}}"
+    },
+    "setupPermissions": {
+        "description": "macOS asks for each one. What Isoform sees and hears is read on this computer; only what a task needs goes to your assistant.",
+        "groups": {
+            "needed": {
+                "title": "Needed",
+                "description": "Without these Isoform cannot follow your work."
+            },
+            "hear": {
+                "title": "To hear and reach you",
+                "description": "Recommended."
+            },
+            "brief": {
+                "title": "For your brief",
+                "description": "Optional. Stays on this computer."
+            }
+        },
+        "items": {
+            "screen_recording": {
+                "name": "Screen Recording",
+                "description": "Sees your screen. macOS needs Isoform to reopen once; setup resumes here."
+            },
+            "accessibility": {
+                "name": "Accessibility",
+                "description": "Knows which app you are in, and uses apps for you when you ask."
+            },
+            "microphone": {
+                "name": "Microphone",
+                "description": "Your voice in meetings and voice notes."
+            },
+            "system_audio": {
+                "name": "System Audio",
+                "description": "The other side of calls."
+            },
+            "notifications": {
+                "name": "Notifications",
+                "description": "Reaches you when something needs you."
+            },
+            "calendars": {
+                "name": "Calendars",
+                "description": "Your day ahead, for the brief."
+            },
+            "reminders": {
+                "name": "Reminders",
+                "description": "What you owe, so the brief can say when one slips."
+            }
+        },
+        "afterReopen": "On after reopening",
+        "on": "On",
+        "turnOn": "Turn on",
+        "turnOnNamed": "Turn on {{name}}",
+        "count": "{{count}} of {{total}} on.",
+        "sequence": "Seven macOS prompts, one after another. Screen Recording comes last, with the reopen.",
+        "checking": "Checking permissions…",
+        "sequenceCount": "{{count}} permission prompts, one after another.",
+        "continueWithout": "Continue without",
+        "turnOnAll": "Turn on all {{count}}",
+        "note": "All of these are in Settings › Privacy. Mail, Messages and Contacts are asked the first time they are needed. Clipboard and Recent files are not permissions.",
+        "failed": "Could not finish the permission requests. Try the individual Turn on buttons.",
+        "appName": "Isoform",
+        "countAfterReopen": "{{count}} of {{total}} on after reopening",
+        "countReminders": "{{count}} of {{total}} on. Reminders can wait.",
+        "notAllowed": "Not allowed",
+        "openSettings": "Open Settings",
+        "openSettingsNamed": "Open Settings for {{name}}"
+    },
+    "models": {
+        "heading": "What runs on this computer",
+        "settingsTitle": "Models",
+        "description": "These models read your screen and audio here; only what a task needs leaves this computer. Isoform picked one of each. Change any, or just continue.",
+        "jobs": {
+            "live": "Live, while you talk",
+            "after-call": "After a call",
+            "voice": "Voice",
+            "always": "Always on"
+        },
+        "alwaysName": "Privacy filter and memory search",
+        "alwaysDescription": "Removes names, numbers and passwords from anything that leaves this computer; finds what Isoform remembers.",
+        "none": "None",
+        "noneDescription": "Keep the live transcript as it is.",
+        "recommended": "Recommended",
+        "selected": "Selected",
+        "downloaded": "Downloaded",
+        "change": "Change",
+        "changeJob": "Change {{taskLabel}}",
+        "chosen": "Chosen",
+        "remove": "Remove",
+        "note": "The speaker models come with any live choice, so transcripts say who said what. Sizes, sources and licences show before anything downloads; Settings › Storage › Models changes all of this later.",
+        "legacy": "This version uses the current model settings. Continue and manage them in Settings.",
+        "loadFailed": "Could not read or update the models. Try again.",
+        "retry": "Retry",
+        "folder": "Models folder",
+        "sources": "Download sources",
+        "evaluation": "View the full evaluation table",
+        "reviewDownloads": "Review downloads",
+        "alreadyHere": "{{size}} on this computer already.",
+        "skip": "Not now",
+        "downloadContinue": "Download {{size}} in the background and continue",
+        "sheetTitle": "Download {{count}} models",
+        "diskSummary": "{{size}} · {{free}} free on this disk",
+        "saveTo": "Save to",
+        "saveFolder": "Save",
+        "changeFolder": "Change…",
+        "itemSize": "{{size}} · {{count}} files",
+        "source": "Source",
+        "sourceFor": "Source for {{name}}",
+        "sourceNote": "Sources apply to this download only. Settings › Storage keeps the defaults and your own mirrors. A non-commercial licence shows here in copper before you confirm.",
+        "nonCommercial": "{{name}} uses {{licence}}. Non-commercial use only. Confirm only if your use meets this restriction.",
+        "shortfall": "Not enough space. Free {{size}} more before downloading.",
+        "startFailed": "Could not start the downloads. Try again.",
+        "cancel": "Cancel",
+        "download": "Download {{size}}",
+        "understandDownload": "I understand, download {{size}}",
+        "progress": "Downloading {{name}} {{percent}}%",
+        "background": "Downloading {{count}} in the background",
+        "downloadFailed": "{{name}} download failed.",
+        "retryFailed": "Could not retry {{name}}. Try again.",
+        "copy": {
+            "sensevoice": {
+                "description": "Fastest. Chinese and English, four more languages, and who said what."
+            },
+            "parakeet": {
+                "description": "English only, the fewest errors."
+            },
+            "whisper": {
+                "description": "99 languages."
+            },
+            "qwen3": {
+                "description": "More accurate; re-reads each recording and replaces the live transcript."
+            },
+            "mimo": {
+                "description": "The most accurate, and the slowest."
+            },
+            "kokoro": {
+                "description": "Reads your brief in English, several voices."
+            },
+            "melotts": {
+                "description": "Chinese and English, one voice each."
+            },
+            "privacy": {
+                "description": "Removes names, numbers and passwords from anything that leaves this computer.",
+                "name": "Privacy filter"
+            },
+            "memory": {
+                "description": "Finds what Isoform remembers.",
+                "name": "Memory search"
+            },
+            "speaker": {
+                "description": "Silero VAD, pyannote segmentation and CAM++ identify who said what.",
+                "name": "Speaker models"
+            },
+            "none": {
+                "description": "Keep the live transcript as it is."
+            }
+        },
+        "modelName": "{{name}}",
+        "evidenceEnglish": "Tests: {{english}}% errors in English · {{speed}}× real time",
+        "evidenceBilingual": "Tests: {{english}}% errors in English, {{chinese}}% in Chinese · {{speed}}× real time",
+        "sourceMirror": "Isoform mirror",
+        "sourceHuggingFace": "Hugging Face",
+        "sourceGitHub": "GitHub",
+        "evaluationTitle": "Model evaluation",
+        "evaluationClose": "Close",
+        "spaceForExtraction": "Not enough space for the download and extraction. Free more disk space before downloading.",
+        "folderUnavailable": "This version cannot change the models folder yet. Keep the current folder to continue.",
+        "unknownSize": "Size not verified",
+        "defaultSourceFor": "Default source for {{name}}",
+        "customMirror": "Your own mirror",
+        "customMirrorPlaceholder": "https://your-mirror.example/models",
+        "sourceSaveFailed": "Could not save the download sources. Try again.",
+        "itemSize_one": "{{size}} · {{count}} file",
+        "itemSize_other": "{{size}} · {{count}} files",
+        "manifestDescription": "{{description}}",
+        "evidenceEnglishRange": "Tests: {{english}}% errors in English · {{speedLow}} to {{speed}}× real time",
+        "notDownloaded": "Not downloaded",
+        "downloadAsset": "Download",
+        "removeTitle": "Remove {{name}}?",
+        "removeDescription": "Remove {{name}} ({{size}}) from this computer. Features using it will be unavailable until you download it again.",
+        "evaluationCopy": {
+            "updated": "Last updated: {{date}}",
+            "method": "Evaluated on an Apple Silicon computer, with {{samples}} samples per dataset per model.",
+            "headings": {
+                "models": "Models",
+                "datasets": "Datasets",
+                "wer": "Word error rate (lower is better)",
+                "cer": "Character error rate (lower is better)",
+                "rtf": "Real-time factor (lower is faster)",
+                "resources": "Latency and resources",
+                "tiers": "Model comparison",
+                "recommendation": "Recommendation"
+            },
+            "columns": {
+                "model": "Model",
+                "framework": "Framework",
+                "size": "Model size",
+                "languages": "Languages",
+                "dataset": "Dataset",
+                "language": "Language",
+                "samples": "Samples",
+                "hours": "Hours",
+                "source": "Source",
+                "fleurs": "FLEURS Chinese",
+                "ascend": "ASCEND Chinese–English",
+                "clean": "LibriSpeech clean",
+                "other": "LibriSpeech other",
+                "latency": "Average latency",
+                "memory": "Peak memory",
+                "load": "Model load",
+                "tier": "Tier",
+                "bestFor": "Best for"
+            },
+            "notAvailable": "Not available",
+            "current": "{{name}} (current)",
+            "englishOnly": "English only",
+            "chinese": "Chinese",
+            "english": "English",
+            "mixed": "Chinese–English mixed",
+            "languageCount": "{{count}} languages",
+            "dialects": "Chinese, English and dialects",
+            "rtfNote": "A real-time factor below {{threshold}} means faster than real time. A factor of {{factor}} means {{speed}} times real time.",
+            "whisperNote": "Whisper’s ASCEND word error rate exceeds {{percent}}% because text normalization differs for mixed-language content.",
+            "tierNotes": {
+                "mimo": "Best Chinese and English word error rates; too slow for live input.",
+                "qwen3": "Strong overall accuracy and mixed-language results; near-real-time capable.",
+                "sensevoice": "Production choice for bilingual live input, balancing speed and accuracy.",
+                "parakeet": "Strong English accuracy ({{english}}% word error rate); no Chinese support.",
+                "whisper": "Broad language support; slow, with poor mixed-language results.",
+                "paraformer": "Fastest model (real-time factor {{rtf}}); weak English results."
+            },
+            "recommendation": "Keep SenseVoice as the production model for live voice input. Speed matters for push-to-talk and background listening.",
+            "speedNote": "Measured real-time factors: SenseVoice {{sensevoice}}, MiMo {{mimo}}, Qwen3 {{qwen3}}. Lower is faster.",
+            "runtimeNote": "SenseVoice runs in-process through sherpa-onnx Go bindings. The evaluated MLX models need a Python subprocess.",
+            "accuracyNote": "SenseVoice’s {{chinese}}% Chinese word error rate is acceptable for voice input, with different accuracy needs from transcription.",
+            "future": "Future options: Qwen3-ASR support in ONNX/sherpa-onnx, MiMo for recorded transcription, and Paraformer for primarily Chinese input."
+        },
+        "sourcePlanFailed": "Could not update the download sources. Your previous sources are shown. Retry before downloading.",
+        "removePrivacyDescription": "Remove {{name}} ({{size}}) from this computer. Removes the model that finds names and other personal details in screenshots before anything is sent. Until you download it again, Isoform falls back to pattern-based redaction only, which catches fewer names.",
+        "removeMemoryDescription": "Remove {{name}} ({{size}}) from this computer. Removes the model behind meaning-based memory search. Keyword search keeps working.",
+        "networkWaiting": "Waiting for network status. Confirmed downloads will wait until the connection is ready.",
+        "networkOffline": "You are offline. Confirmed downloads will wait and resume automatically when you are online on an unmetered connection.",
+        "networkMetered": "This connection is metered. Confirmed downloads will wait and resume automatically on an unmetered connection.",
+        "networkLowData": "Low Data Mode is on. Confirmed downloads will wait and resume automatically when Low Data Mode is off and the connection is unmetered.",
+        "pausedOffline": "{{name}} paused while offline.",
+        "pausedWaiting": "{{name}} paused while waiting for network status.",
+        "pausedMetered": "{{name}} paused on a metered connection.",
+        "pausedLowData": "{{name}} paused in Low Data Mode.",
+        "pausedSpace": "{{name}} paused. Free disk space, then resume.",
+        "paused": "{{name}} paused. Resume to check the connection and disk space again.",
+        "resume": "Resume",
+        "resumeFailed": "Could not resume {{name}}. Try again.",
+        "queued": "{{name}} queued for background download.",
+        "waitingPowerIdle": "Waiting for power and idle"
+    },
+    "tools": {
+        "sheetTitle": "Install {{name}}",
+        "gitName": "Git for Windows",
+        "sheetDescription": "Isoform needs Git to clone and manage projects. Nothing is downloaded until you confirm.",
+        "planning": "Preparing the download…",
+        "planFailed": "Could not prepare the download for {{name}}. Try again.",
+        "startFailed": "Could not install {{name}}. Try again.",
+        "itemSize": "{{size}} download",
+        "version": "Version {{version}}",
+        "source": "Source",
+        "licence": "Licence",
+        "saveTo": "Save to",
+        "cancel": "Cancel",
+        "retry": "Retry",
+        "confirm": "Download",
+        "pending": "Installing…"
+    },
+    "v2": {
+        "progress": "Setup progress",
+        "local": {
+            "pill": "On this computer",
+            "title": "What stays on this computer",
+            "lines": {
+                "recordings": "<b>Screenshots, audio and recordings</b> are read by models on this computer. They never leave it.",
+                "ai": "<b>Your AI</b> gets only the text a task needs, on your own plan.",
+                "phone": "<b>Your iPhone</b> gets only what it shows, sealed between your devices.",
+                "usage": "<b>Usage counts</b> are anonymous and never include your content."
+            }
+        },
+        "stepCount": "Step {{current}} of {{total}}",
+        "back": "Back",
+        "continue": "Continue",
+        "notices": {
+            "title": "Notices what needs doing. Gets it ready.",
+            "line": "Isoform follows your work on this computer and gets the next step ready. Screenshots and audio stay here.",
+            "hours": {
+                "h7": "7 AM",
+                "h10": "10",
+                "h13": "1 PM",
+                "h16": "4",
+                "h19": "7 PM"
+            },
+            "cards": {
+                "brief": "Your morning brief",
+                "priya": "Drafted a reply to Priya",
+                "lena": "Prepped your 2:00 with Lena",
+                "invoice": "Noticed the invoice due Friday"
+            },
+            "ready": "Ready",
+            "needsYou": "Needs you",
+            "usage": "Isoform shares anonymous counts of how it's used, never your content.",
+            "change": "Change",
+            "usageSwitch": "Share anonymous usage counts",
+            "usageSaveFailed": "Couldn't save that. Try again."
+        },
+        "ai": {
+            "title": "Works with the AI you already use",
+            "line": "Isoform reads your screen on this computer, then hands your assistant only the text it needs.",
+            "zone": "On this computer: screenshots and audio stay here",
+            "isoform": "Isoform",
+            "answersFirst": "Answers first",
+            "backup": "Backup",
+            "dragHere": "Drag an assistant here",
+            "otherStepsIn": "The other one steps in at its limit",
+            "noBackup": "No backup yet",
+            "found": "Found on this computer",
+            "addBackup": "Add a backup",
+            "planSignedIn": "{{plan}} plan · Signed in",
+            "signedIn": "Signed in",
+            "notSignedIn": "Not signed in",
+            "signIn": "Sign in",
+            "notInstalled": "Not installed",
+            "install": "Install",
+            "installing": "Installing",
+            "finishInTerminal": "Finish in Terminal",
+            "atLimit": "At its limit",
+            "note": "{{backup}} steps in when {{first}} reaches its limit.",
+            "fineDrag": "Drag one to the top, or tap it.",
+            "finePlans": "Isoform uses your own plans, so their usage limits apply.",
+            "fineSignIn": "Sign in to Claude Code or Codex. Isoform picks it up by itself.",
+            "errorSetUp": "Couldn't set that up. Try again.",
+            "checking": "Checking",
+            "testing": "Checking it answers",
+            "working": "Signed in · Working",
+            "planWorking": "{{plan}} plan · Working",
+            "needsNode": "Needs Node.js",
+            "getNode": "Get Node.js",
+            "notInstalledYet": "Didn't install",
+            "installInTerminal": "Install in Terminal",
+            "notFound": "Installed, not found",
+            "signInFailed": "Sign-in didn't take",
+            "noAnswer": "Didn't answer",
+            "testAgain": "Check again",
+            "openAgain": "Open again",
+            "fineNeedsNode": "{{name}} installs with Node.js. Get it from nodejs.org, then come back here and Isoform installs {{name}}.",
+            "fineInstallDenied": "This computer didn't allow the install. Install it in Terminal, and Isoform picks it up by itself.",
+            "fineInstallTimeout": "The install took too long. Install it in Terminal, and Isoform picks it up by itself.",
+            "fineInstallFailed": "Couldn't install {{name}} from here. Install it in Terminal, and Isoform picks it up by itself.",
+            "fineNotFound": "{{name}} installed, but Isoform can't find it. Install it in Terminal, and Isoform picks it up by itself.",
+            "fineWaitInstall": "Terminal runs {{command}}. Isoform checks again by itself.",
+            "fineWaitSignIn": "Sign in to {{name}} in Terminal. Isoform checks again by itself.",
+            "fineNoTerminal": "Couldn't open Terminal. Open it and run {{command}}.",
+            "fineTestSignedOut": "{{name}} says it isn't signed in. Sign in again in Terminal.",
+            "fineTestFailed": "{{name}} is signed in but didn't answer. Check your connection, then check again.",
+            "fineGatewayDown": "Isoform couldn't reach {{name}} on this computer. Check again in a moment.",
+            "fineLimit": "{{name}} is at its usage limit right now. It's set up, and answers again when the limit resets.",
+            "setUpLater": "Set up later",
+            "flow": {
+                "lenaSeen": "Lena's email",
+                "lenaMade": "Prep for 2:00",
+                "deckSeen": "Halcyon deck v3",
+                "deckMade": "Review notes",
+                "priyaSeen": "Priya's message",
+                "priyaMade": "Reply to Priya",
+                "ready": "Ready"
+            },
+            "cardLabel": "{{name}}, {{state}}",
+            "fineHistory": "Isoform reads your last 30 days in {{assistants}} on this computer, so it knows your projects from the start. Change it in Settings › Privacy.",
+            "assistantsBoth": "Claude Code and Codex"
+        },
+        "sees": {
+            "title": "Sees your work. Keeps it here.",
+            "line": "Models on this computer read your screen and calls. Screenshots and audio never leave it.",
+            "deckTab": "Halcyon deck",
+            "bankTab": "Bank · Accounts",
+            "deckTitle": "Halcyon deck · v3",
+            "priyaMessage": "Priya: Is Thursday at 2 still good?",
+            "password": "Password ••••••••",
+            "skipped": "Skipped",
+            "thisMac": "On this computer",
+            "noteHalcyon": "On Halcyon",
+            "notePriya": "Priya is waiting",
+            "rows": {
+                "screen": "Your screen",
+                "calls": "Your calls",
+                "day": "Your day",
+                "apps": "Your apps"
+            },
+            "off": "Off",
+            "on": "On",
+            "openSettings": "Open Settings",
+            "openSettingsNamed": "Open Settings for {{name}}",
+            "turnOn": "Turn on",
+            "done": "Everything is on. Screenshots and audio stay on this computer.",
+            "failed": "Couldn't ask for that. Try again.",
+            "reopenFailed": "Isoform couldn't reopen itself. Quit and open it again."
+        },
+        "runs": {
+            "title": "Runs on this computer",
+            "line": "These read your screen and calls here. Screenshots and audio never leave this computer.",
+            "rows": {
+                "calls": {
+                    "name": "Hear your calls",
+                    "line": "Speech recognition that knows who's speaking",
+                    "model": "{{name}} and speaker models · {{size}}"
+                },
+                "afterCall": {
+                    "name": "Clean up after a call",
+                    "line": "Re-reads the recording for a more accurate transcript",
+                    "model": "{{name}} · {{size}}"
+                },
+                "voice": {
+                    "name": "Read your brief aloud",
+                    "line": "A voice that runs on this computer",
+                    "model": "{{name}} · {{size}}",
+                    "modelBilingual": "{{name}} · {{size}}, Chinese and English"
+                },
+                "always": {
+                    "name": "Privacy filter and memory search",
+                    "line": "Hides names and passwords before anything leaves",
+                    "model": "{{size}}"
+                }
+            },
+            "alwaysOn": "Always on",
+            "total": "{{total}} · {{free}} free on this disk",
+            "download": "Download {{total}}",
+            "fine": "<later>Later</later> waits until your computer is plugged in and idle. Change any of this in Settings › Models.",
+            "downloading": "Downloading in the background. You can keep going.",
+            "needsCalls": "Needs Your calls ·",
+            "turnOn": "Turn on",
+            "percent": "{{percent}}%"
+        },
+        "send": {
+            "title": "It gets things ready. You press Send.",
+            "line": "Isoform drafts, fills in and prepares. Nothing goes out until you say so.",
+            "ask": "Reply to Priya about Thursday",
+            "to": "To",
+            "toName": "Priya Shah",
+            "subject": "Subject",
+            "subjectLine": "Re: Thursday",
+            "draft": "Hi Priya, Thursday at 2:00 works. I'll bring the Halcyon numbers.\n\nBo",
+            "ready": "Ready. Look it over, then Send.",
+            "sendButton": "Send",
+            "sent": "Sent",
+            "cursor": "Isoform"
+        },
+        "reaches": {
+            "notificationDenied": "Notifications are off. Turn them on in System Settings.",
+            "notificationFailed": "Could not check or turn on notifications. Try again.",
+            "title": "Reaches you anywhere",
+            "line": "When something is ready or needs you, Isoform tells you here, or on your iPhone.",
+            "time": "9:41",
+            "date": "Wednesday, October 28",
+            "appName": "Isoform",
+            "now": "now",
+            "notice1": "Your brief is ready. 2 things need you.",
+            "notice2": "Your reply to Priya is ready to send.",
+            "getIt": "Get Isoform on your phone",
+            "scan": "Download Isoform, then scan this code in the app to pair with this computer.",
+            "link": "Open App Store",
+            "copy": "Copy",
+            "copied": "Copied",
+            "codeLabel": "Phone pairing code",
+            "sealed": "Sealed between your devices",
+            "paired": "Paired with {{phone}}",
+            "pairedLine": "Your brief and anything that needs you show there too.",
+            "turnOn": "Turn on notifications",
+            "on": "Notifications on",
+            "notNow": "Not now",
+            "pending": "Pair {{phone}}?",
+            "pendingCode": "Your phone shows {{code}}.",
+            "approve": "Pair",
+            "decline": "Not this one",
+            "pairFailed": "Couldn't pair. Scan again."
+        },
+        "finish": {
+            "callout": "Isoform lives here. Pause it anytime.",
+            "calloutHidden": "Isoform lives in the menu bar. Pause it anytime.",
+            "done": "Setup is done"
+        }
+    }
+}

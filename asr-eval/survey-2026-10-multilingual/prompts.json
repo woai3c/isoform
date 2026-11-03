@@ -1,0 +1,8 @@
+{
+    "en": ["Good morning.", "Your first meeting starts at nine, and the afternoon is clear for focused work.", "The code review is ready.", "Please check the new API before merging the pull request.", "Take a short break, then send the project update when you are ready."],
+    "zh": ["早上好。", "你的第一个会议九点开始，下午可以专心工作。", "代码审查已经准备好了。", "合并之前，请检查新的接口。", "先休息一会儿，准备好以后再发送项目进展。"],
+    "ja": ["おはようございます。", "最初の会議は九時に始まり、午後は集中して仕事ができます。", "コードレビューの準備ができました。", "変更を取り込む前に、新しいインターフェースを確認してください。", "少し休憩して、準備ができたらプロジェクトの進捗を送ってください。"],
+    "es": ["Buenos días.", "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.", "La revisión del código está lista.", "Comprueba la nueva interfaz antes de incorporar los cambios.", "Tómate un breve descanso y envía la actualización del proyecto cuando estés listo."],
+    "fr": ["Bonjour.", "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.", "La revue du code est prête.", "Vérifiez la nouvelle interface avant de fusionner les modifications.", "Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt."],
+    "de": ["Guten Morgen.", "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.", "Die Überprüfung des Codes ist fertig.", "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.", "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist."]
+}

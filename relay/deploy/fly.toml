@@ -1,0 +1,67 @@
+# Fly.io configuration for the hosted relay: one always-on shared-cpu machine
+# with a persistent volume. Fly's edge terminates TLS and forwards plaintext
+# over the private network, so the relay runs in ISOFORM_RELAY_BEHIND_TLS_PROXY
+# mode and reads the client address from Fly-Client-IP.
+#
+# Deploy from the relay/ directory so the Docker build context is the relay
+# module alone (relay/deploy/README.md):
+#   cd relay && fly deploy --config deploy/fly.toml --dockerfile Dockerfile .
+#
+# Secrets (APNs, SMS, email) are never in this file: set them with
+# `fly secrets set` and they arrive as environment variables.
+
+app = "isoform-relay"
+primary_region = "sjc"
+
+# SIGTERM starts the relay's graceful shutdown: it stops accepting, ends the
+# long-polls, closes the hub sockets and waits for the janitor, within 10s.
+kill_signal = "SIGTERM"
+kill_timeout = "20s"
+
+[build]
+  dockerfile = "../Dockerfile"
+
+[env]
+  ISOFORM_RELAY_ADDR = "0.0.0.0:8080"
+  ISOFORM_RELAY_STATE_DIR = "/var/lib/isoform"
+  ISOFORM_RELAY_BEHIND_TLS_PROXY = "1"
+  # Fly's proxy reaches the machine from the 6PN (fdaa::/16) and the private
+  # IPv4 range. Nothing else can connect to the internal port.
+  ISOFORM_RELAY_TRUSTED_PROXIES = "fdaa::/16,172.16.0.0/12"
+  ISOFORM_RELAY_CLIENT_IP_HEADER = "Fly-Client-IP"
+  ISOFORM_RELAY_LOG_FORMAT = "json"
+  ISOFORM_RELAY_MAX_CONNS = "4096"
+
+# The SQLite state: credential digests, ciphertext queues, briefs and
+# attachments. Create it once with `fly volumes create relay_state`.
+[[mounts]]
+  source = "relay_state"
+  destination = "/var/lib/isoform"
+  initial_size = "3gb"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Phones must reach the relay at any time: never stop the machine.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  # One hub socket or one long-poll is one connection. Past hard_limit Fly
+  # queues new connections instead of handing them to the machine.
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 1500
+    hard_limit = 3000
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/v1/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

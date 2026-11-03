@@ -1,0 +1,813 @@
+{
+  "dataset": "google/fleurs",
+  "revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+  "config": "en_us",
+  "split": "test",
+  "selection": "First 100 utterances in published test.tsv order; duplicate prompts retained",
+  "licence": "CC-BY-4.0",
+  "source": "https://huggingface.co/datasets/google/fleurs/resolve/70bb2e84b976b7e960aa89f1c648e09c59f894dd/data/en_us",
+  "samples": [
+    {
+      "order": 0,
+      "id": "1980-12741024238657315067.wav",
+      "audio_path": "12741024238657315067.wav",
+      "reference": "unfortunately studying traffic flow is difficult because driver behavior cannot be predicted with one-hundred percent certainty",
+      "duration_s": 12.64,
+      "sha256": "20cd28ea6a2d2d1cc768d14b0732c1ca4ebf351cc3fc2e275a41b0fa78203b73"
+    },
+    {
+      "order": 1,
+      "id": "1980-9055240296608129734.wav",
+      "audio_path": "9055240296608129734.wav",
+      "reference": "unfortunately studying traffic flow is difficult because driver behavior cannot be predicted with one-hundred percent certainty",
+      "duration_s": 7.92,
+      "sha256": "0994878385cb563cc94cd7302c3adac1a5022d97284e880fa5bbd31bd0ebf747"
+    },
+    {
+      "order": 2,
+      "id": "1914-621925716775998155.wav",
+      "audio_path": "621925716775998155.wav",
+      "reference": "twentieth century research has shown that there are two pools of genetic variation hidden and expressed",
+      "duration_s": 5.88,
+      "sha256": "8d1bf6aa2ea02454b6c8ac0f6a8f264ab1dde754c8edbf0cb0441fd89def2f9c"
+    },
+    {
+      "order": 3,
+      "id": "1914-10335587906469246566.wav",
+      "audio_path": "10335587906469246566.wav",
+      "reference": "twentieth century research has shown that there are two pools of genetic variation hidden and expressed",
+      "duration_s": 6.96,
+      "sha256": "5dda0ee70df74d9d0cae4593fa62ae2fbcde1d6ab227245d8fa00d0a657f4ca1"
+    },
+    {
+      "order": 4,
+      "id": "1771-2589557553267364799.wav",
+      "audio_path": "2589557553267364799.wav",
+      "reference": "remember that even though music on the main stages may have finished there may be sections of the festival that will keep playing music until late into the night",
+      "duration_s": 8.94,
+      "sha256": "d95165b84b1d707bfa50525edbd2476fb9053bb3e71a5c7c472313f52e3bc3fd"
+    },
+    {
+      "order": 5,
+      "id": "1771-17824557748066874904.wav",
+      "audio_path": "17824557748066874904.wav",
+      "reference": "remember that even though music on the main stages may have finished there may be sections of the festival that will keep playing music until late into the night",
+      "duration_s": 11.9,
+      "sha256": "558034789b2c356d30769fd59352d19b627c8f2bddb4b3ff474b646b3551243c"
+    },
+    {
+      "order": 6,
+      "id": "1669-8173060820032255320.wav",
+      "audio_path": "8173060820032255320.wav",
+      "reference": "police superintendent chandra shekhar solanki said the accused appeared in court with covered faces",
+      "duration_s": 9.14,
+      "sha256": "509bc6279b6549a1ed01a712950f0593e43380204f77f39a4fdd11bd216c68c0"
+    },
+    {
+      "order": 7,
+      "id": "1669-15618717836108767541.wav",
+      "audio_path": "15618717836108767541.wav",
+      "reference": "police superintendent chandra shekhar solanki said the accused appeared in court with covered faces",
+      "duration_s": 7.2,
+      "sha256": "3e26e82c681eac95b810a2ca2049576f2e9daa7d55e571c47b78b52f91ec1901"
+    },
+    {
+      "order": 8,
+      "id": "1949-2652155470394119415.wav",
+      "audio_path": "2652155470394119415.wav",
+      "reference": "the term bug is used by entomologists in a formal sense for this group of insects",
+      "duration_s": 6.72,
+      "sha256": "37155a0d74ac482fdfe831e3736f28cd7c468a92b0909a95e05c0b7e357a57b6"
+    },
+    {
+      "order": 9,
+      "id": "1949-14585898865749103727.wav",
+      "audio_path": "14585898865749103727.wav",
+      "reference": "the term bug is used by entomologists in a formal sense for this group of insects",
+      "duration_s": 6.48,
+      "sha256": "0e834126f5e39cd16ff2bf065abe6aa33774ecd0a62cb681037d730d0ebb6576"
+    },
+    {
+      "order": 10,
+      "id": "1832-18066939864018796519.wav",
+      "audio_path": "18066939864018796519.wav",
+      "reference": "popular sports include football basketball volleyball water-polo fencing rugby cycling ice hockey roller hockey and f1 motor racing",
+      "duration_s": 10.38,
+      "sha256": "b538f2d118700f3a1e1b5822c235362693d10e8d99a1d31f4547d8eb773f2e26"
+    },
+    {
+      "order": 11,
+      "id": "1832-15648812079343683412.wav",
+      "audio_path": "15648812079343683412.wav",
+      "reference": "popular sports include football basketball volleyball water-polo fencing rugby cycling ice hockey roller hockey and f1 motor racing",
+      "duration_s": 9.3,
+      "sha256": "551b156cf82ea9cdecdaac4f3eab67618f360277c3a937516c1d9c4487466c5e"
+    },
+    {
+      "order": 12,
+      "id": "1915-16847628585853049714.wav",
+      "audio_path": "16847628585853049714.wav",
+      "reference": "you can use boda-boda motorcycle taxi to get around goma. the normal local price is ~500 congolese francs for the short ride",
+      "duration_s": 13.34,
+      "sha256": "5d2c2f1efbb4c7c310c059d45396a8232160f814fb554203a522b790f652feab"
+    },
+    {
+      "order": 13,
+      "id": "1915-8756381645087147947.wav",
+      "audio_path": "8756381645087147947.wav",
+      "reference": "you can use boda-boda motorcycle taxi to get around goma. the normal local price is ~500 congolese francs for the short ride",
+      "duration_s": 12.12,
+      "sha256": "ab030be9f3fc56ff888e64fac824c10cb8ae2a8ac75b27d2ce2d59b9482444ec"
+    },
+    {
+      "order": 14,
+      "id": "1699-1596269393232229615.wav",
+      "audio_path": "1596269393232229615.wav",
+      "reference": "bishkek was described as sinking into a state of anarchy by one observer as gangs of people roamed the streets and plundered stores of consumer goods",
+      "duration_s": 9.6,
+      "sha256": "a15328d7d054d0c614ba9bb91437abe54bb860a2e1b417a9021c5440aed4927c"
+    },
+    {
+      "order": 15,
+      "id": "1699-16355757648693617724.wav",
+      "audio_path": "16355757648693617724.wav",
+      "reference": "bishkek was described as sinking into a state of anarchy by one observer as gangs of people roamed the streets and plundered stores of consumer goods",
+      "duration_s": 7.92,
+      "sha256": "28dcd94d439f97f070142918276a755bed977e50347288fca4afca918b319ae9"
+    },
+    {
+      "order": 16,
+      "id": "1673-2637301866626572038.wav",
+      "audio_path": "2637301866626572038.wav",
+      "reference": "during the revolutionary war the thirteen states first formed a weak central government-with the congress being its only component-under the articles of confederation",
+      "duration_s": 10.08,
+      "sha256": "1c8fc5ed781c667fdc5e2e5508e0d50e56880c3648e67c1e9ef0610aab1b9679"
+    },
+    {
+      "order": 17,
+      "id": "1673-2939761992885557861.wav",
+      "audio_path": "2939761992885557861.wav",
+      "reference": "during the revolutionary war the thirteen states first formed a weak central government-with the congress being its only component-under the articles of confederation",
+      "duration_s": 10.68,
+      "sha256": "3b4bd79f26a52a6a1e59f767f7a03d1981b0261b538ca30aabeefac4ae1c92c9"
+    },
+    {
+      "order": 18,
+      "id": "1877-1722118868151836971.wav",
+      "audio_path": "1722118868151836971.wav",
+      "reference": "current senator and argentine first lady cristina fernandez de kirchner announced her presidential candidacy yesterday evening in la plata a city 50 kilometers 31 miles away from buenos aires",
+      "duration_s": 19.56,
+      "sha256": "06cf163b0e9b8e5801ef6b2a04507488857d837cf613a8e075111519c95beb3d"
+    },
+    {
+      "order": 19,
+      "id": "1877-18080893208509673354.wav",
+      "audio_path": "18080893208509673354.wav",
+      "reference": "current senator and argentine first lady cristina fernandez de kirchner announced her presidential candidacy yesterday evening in la plata a city 50 kilometers 31 miles away from buenos aires",
+      "duration_s": 12.12,
+      "sha256": "8cf1af4bb2c09fed4f243c6dc8a9f6b503a1ae4c882524d6c2fd9c172d62f46d"
+    },
+    {
+      "order": 20,
+      "id": "1860-13230261475791184258.wav",
+      "audio_path": "13230261475791184258.wav",
+      "reference": "the governor's office said nineteen of the injured were police officers",
+      "duration_s": 4.56,
+      "sha256": "0a91a26008a45e2230309ead49a1d84c56992e593bb9c9be91db9a490ea492ef"
+    },
+    {
+      "order": 21,
+      "id": "1860-12164368102080603077.wav",
+      "audio_path": "12164368102080603077.wav",
+      "reference": "the governor's office said nineteen of the injured were police officers",
+      "duration_s": 7.26,
+      "sha256": "42e89a5287e8572c15260553ec7c87941fd023bd995060b17503a866e34bb1a8"
+    },
+    {
+      "order": 22,
+      "id": "1935-5106380017322065030.wav",
+      "audio_path": "5106380017322065030.wav",
+      "reference": "however that is not true although there is something written on the back of the document it is not a treasure map",
+      "duration_s": 8.54,
+      "sha256": "fceea5ba0bfe19648cf9326ab134c5696ec0e15eabc92ee95785d5b1bf060765"
+    },
+    {
+      "order": 23,
+      "id": "1935-1618638950277648344.wav",
+      "audio_path": "1618638950277648344.wav",
+      "reference": "however that is not true although there is something written on the back of the document it is not a treasure map",
+      "duration_s": 10.02,
+      "sha256": "e28201cea462ef93f028d6e59f9b8af6188986246b24a309c908294cf4c20bbc"
+    },
+    {
+      "order": 24,
+      "id": "1674-10492135991603561867.wav",
+      "audio_path": "10492135991603561867.wav",
+      "reference": "in some areas boiling water for a minute is enough in others several minutes are needed",
+      "duration_s": 5.64,
+      "sha256": "4474304761819edbfa603c0660c6d4ec71d0552083f1db36578180f67d50ad91"
+    },
+    {
+      "order": 25,
+      "id": "1674-2254021119996292300.wav",
+      "audio_path": "2254021119996292300.wav",
+      "reference": "in some areas boiling water for a minute is enough in others several minutes are needed",
+      "duration_s": 6.6,
+      "sha256": "ab22ad087d937f3974e5da6a36c16b90d85dee0c3dd8b480ab59d8ccfd24c48e"
+    },
+    {
+      "order": 26,
+      "id": "1675-6817878979697223927.wav",
+      "audio_path": "6817878979697223927.wav",
+      "reference": "all nouns alongside the word sie for you always begin with a capital letter even in the middle of a sentence",
+      "duration_s": 6.6,
+      "sha256": "e0751a943103d270476f5466783e29dddab723fc4a9318109e22c7009145ec8a"
+    },
+    {
+      "order": 27,
+      "id": "1675-10052240106321793346.wav",
+      "audio_path": "10052240106321793346.wav",
+      "reference": "all nouns alongside the word sie for you always begin with a capital letter even in the middle of a sentence",
+      "duration_s": 8.76,
+      "sha256": "ffd32e9953ffb14bed7f4e3a2d037ea7ac7de1ba5ad25d4c0f678fd06b24aab0"
+    },
+    {
+      "order": 28,
+      "id": "1728-10197164397713068203.wav",
+      "audio_path": "10197164397713068203.wav",
+      "reference": "the cabbage juice changes color depending on how acidic or basic alkaline the chemical is",
+      "duration_s": 5.76,
+      "sha256": "f4e95852e336403001191b6dbfc9f00c5263cea304c10761608d6d5fce23da3f"
+    },
+    {
+      "order": 29,
+      "id": "1728-13006273800980159403.wav",
+      "audio_path": "13006273800980159403.wav",
+      "reference": "the cabbage juice changes color depending on how acidic or basic alkaline the chemical is",
+      "duration_s": 6.72,
+      "sha256": "a2c2f791776e23fdc6b780ac8435c9390fc178ddffaf183cbad4dc2d6795d98f"
+    },
+    {
+      "order": 30,
+      "id": "1798-1218355507714944126.wav",
+      "audio_path": "1218355507714944126.wav",
+      "reference": "in its early days the show was featured solely at the long-running internet radio site toginet radio a site focused on talk radio",
+      "duration_s": 13.18,
+      "sha256": "d7657513e88872af43974d599069ebe2e4f8d2f0b56ed4ed6771446b5fcd649d"
+    },
+    {
+      "order": 31,
+      "id": "1798-5606750157981126233.wav",
+      "audio_path": "5606750157981126233.wav",
+      "reference": "in its early days the show was featured solely at the long-running internet radio site toginet radio a site focused on talk radio",
+      "duration_s": 11.22,
+      "sha256": "57ba07a8a5df5ea821c718a8eaf4947be484bf54c4ccb2ada3787ef914df5a1e"
+    },
+    {
+      "order": 32,
+      "id": "1924-283614893570272908.wav",
+      "audio_path": "283614893570272908.wav",
+      "reference": "four skiers in the women's sitting group failed to finish their runs and 45 of the 117 total skiers in the giant slalom failed to rank in the race",
+      "duration_s": 7.68,
+      "sha256": "b1960baa82b0fb5d22383c6a218b99e1580f35647e879edf46dbe232bcf90c10"
+    },
+    {
+      "order": 33,
+      "id": "1924-4498797456222901763.wav",
+      "audio_path": "4498797456222901763.wav",
+      "reference": "four skiers in the women's sitting group failed to finish their runs and 45 of the 117 total skiers in the giant slalom failed to rank in the race",
+      "duration_s": 12.96,
+      "sha256": "d76fad5e6563c688c2e0da3283e93f8c17d230e489786cf5cbf6f28812639cef"
+    },
+    {
+      "order": 34,
+      "id": "1684-4496786334735634498.wav",
+      "audio_path": "4496786334735634498.wav",
+      "reference": "apia is the capital of samoa the town is on the island of upolu and has a population of just under 40,000",
+      "duration_s": 10.96,
+      "sha256": "abdfb0891c90610ba7abe7c7f1672095befe462ead46ac169303ce2786225cd7"
+    },
+    {
+      "order": 35,
+      "id": "1684-9431561488681290113.wav",
+      "audio_path": "9431561488681290113.wav",
+      "reference": "apia is the capital of samoa the town is on the island of upolu and has a population of just under 40,000",
+      "duration_s": 9.96,
+      "sha256": "9029908a9e0bf20b0203dfcf886e6828d81796279ab275ffa2db3fdca4a397a7"
+    },
+    {
+      "order": 36,
+      "id": "1936-5505398583576174352.wav",
+      "audio_path": "5505398583576174352.wav",
+      "reference": "perry stated that he would return to texas to assess the results of tonight's caucus determine whether there is a path forward for myself in this race but later said that he would remain in the race and compete in the january 21 south carolina primary",
+      "duration_s": 12.6,
+      "sha256": "c6fbbda48d9964fbaad1285ce31b1866cd5d3ff0b4f7adca14bc26ba5ee46c51"
+    },
+    {
+      "order": 37,
+      "id": "1936-2467414061703477879.wav",
+      "audio_path": "2467414061703477879.wav",
+      "reference": "perry stated that he would return to texas to assess the results of tonight's caucus determine whether there is a path forward for myself in this race but later said that he would remain in the race and compete in the january 21 south carolina primary",
+      "duration_s": 13.8,
+      "sha256": "7bc63299cb92f3960611bb747441efc39ba2ee61cf74f66ed8061fc8766242f6"
+    },
+    {
+      "order": 38,
+      "id": "1661-6917907748364342404.wav",
+      "audio_path": "6917907748364342404.wav",
+      "reference": "he did not set a figure for the cuts saying they will be made based on china's economic output",
+      "duration_s": 6.36,
+      "sha256": "aa1ad08ecf8e13dde4b9d74a8c0d2393dbc1ab4ce97e07f29ccb518f523a9a3e"
+    },
+    {
+      "order": 39,
+      "id": "1661-8546403500877190903.wav",
+      "audio_path": "8546403500877190903.wav",
+      "reference": "he did not set a figure for the cuts saying they will be made based on china's economic output",
+      "duration_s": 6.9,
+      "sha256": "7030ae950ab3ebb8e40bc392a3104304dd9d6ab3e5a2e0a9cd10fdd03c4abda5"
+    },
+    {
+      "order": 40,
+      "id": "1721-16851035292487940942.wav",
+      "audio_path": "16851035292487940942.wav",
+      "reference": "after the dam was built in 1963 the seasonal floods that would spread sediment throughout the river were halted",
+      "duration_s": 6.48,
+      "sha256": "7b605d781e6c90ec00419de94cad67b3ff3855aba8c9bb24cbe256bb9bbe9beb"
+    },
+    {
+      "order": 41,
+      "id": "1721-1633905380187706594.wav",
+      "audio_path": "1633905380187706594.wav",
+      "reference": "after the dam was built in 1963 the seasonal floods that would spread sediment throughout the river were halted",
+      "duration_s": 9.24,
+      "sha256": "2afc7599c54def5d2ddcd9ad66fbf505890f66f3f4a954f0b4d23ec7525d03a5"
+    },
+    {
+      "order": 42,
+      "id": "1869-6852813781354643345.wav",
+      "audio_path": "6852813781354643345.wav",
+      "reference": "its long jaws were studded with more than 70 razor-sharp teeth along with an extra set in the roof of its mouth meaning that there was no escape for anything that crossed its path",
+      "duration_s": 10.98,
+      "sha256": "71f20a33ff43c4919087626d3f269ceb1128e12870acaba2343ca288bc895b2d"
+    },
+    {
+      "order": 43,
+      "id": "1869-3585583328394597156.wav",
+      "audio_path": "3585583328394597156.wav",
+      "reference": "its long jaws were studded with more than 70 razor-sharp teeth along with an extra set in the roof of its mouth meaning that there was no escape for anything that crossed its path",
+      "duration_s": 16.2,
+      "sha256": "34a94f511a60d08a6432bd9570096108546f4d371a4e28ff4757c0c7154df304"
+    },
+    {
+      "order": 44,
+      "id": "1893-11536232800365538941.wav",
+      "audio_path": "11536232800365538941.wav",
+      "reference": "the sundarbans are the largest littoral mangrove belt in the world stretching 80 km 50 mi into the bangladeshi and indian hinterland from the coast",
+      "duration_s": 10.2,
+      "sha256": "2c2553dd0321fb9965b8cef6054c2e2f282305acf24acbe7e2ca220b0d6e1d69"
+    },
+    {
+      "order": 45,
+      "id": "1893-11593450817032542587.wav",
+      "audio_path": "11593450817032542587.wav",
+      "reference": "the sundarbans are the largest littoral mangrove belt in the world stretching 80 km 50 mi into the bangladeshi and indian hinterland from the coast",
+      "duration_s": 12.24,
+      "sha256": "be3a559d5ef9d52a77d07046725c3561592ba4b363e86fa7e4043cf1fe7406e8"
+    },
+    {
+      "order": 46,
+      "id": "1735-3927163358777802368.wav",
+      "audio_path": "3927163358777802368.wav",
+      "reference": "researchers from princeton university in the united states and uppsala university in sweden reported the new species evolved in just two generations though this process had been believed to take much longer due to breeding between an endemic darwin finch geospiza fortes and the immigrant cactus finch geospiza conirostris",
+      "duration_s": 20.4,
+      "sha256": "6a7c569b257d3f98fe7f2848cf8c0e7f1cfdb194f251a51f19f5107b1848deed"
+    },
+    {
+      "order": 47,
+      "id": "1996-16824485789160047135.wav",
+      "audio_path": "16824485789160047135.wav",
+      "reference": "australia's mitchell gourley finished eleventh in the men's standing super-g czech competitor oldrich jelinek finished sixteenth in the men's sitting super-g",
+      "duration_s": 13.98,
+      "sha256": "d634ea1036bf492fbe5302d774a59a95ad1a2bb485655250d995c27fb53af1ac"
+    },
+    {
+      "order": 48,
+      "id": "1996-14993919225529607964.wav",
+      "audio_path": "14993919225529607964.wav",
+      "reference": "australia's mitchell gourley finished eleventh in the men's standing super-g czech competitor oldrich jelinek finished sixteenth in the men's sitting super-g",
+      "duration_s": 15.6,
+      "sha256": "9c3e2bed21b35576417ced485cf2a39a1e0ce39682d72ccfb5b2f6da641358e4"
+    },
+    {
+      "order": 49,
+      "id": "1866-11705046490861852963.wav",
+      "audio_path": "11705046490861852963.wav",
+      "reference": "first most riders wear riding boots with a heel and a smooth quite narrow sole",
+      "duration_s": 7.86,
+      "sha256": "16e9826540fcf8bf90529cbd987ecaafaf6962d353d50703a1a551274a70dcd5"
+    },
+    {
+      "order": 50,
+      "id": "1866-559615000143317446.wav",
+      "audio_path": "559615000143317446.wav",
+      "reference": "first most riders wear riding boots with a heel and a smooth quite narrow sole",
+      "duration_s": 4.68,
+      "sha256": "a497f7a81bd8ba359ac6a3a917fe66a71f780b4032caf95ee16ae65ba8b8bfce"
+    },
+    {
+      "order": 51,
+      "id": "1742-18320871674783850842.wav",
+      "audio_path": "18320871674783850842.wav",
+      "reference": "hong kong island gives the territory of hong kong its name and is the place that many tourists regard as the main focus",
+      "duration_s": 7.02,
+      "sha256": "c6c69f5961cb64d13485d0451c29cde1f6540c4ac9835c522a4b8265a2d1a0a2"
+    },
+    {
+      "order": 52,
+      "id": "1742-5907599423488165658.wav",
+      "audio_path": "5907599423488165658.wav",
+      "reference": "hong kong island gives the territory of hong kong its name and is the place that many tourists regard as the main focus",
+      "duration_s": 9.36,
+      "sha256": "24c86f5c5c872f3dd11f12b08592972192ca547d5e0e09107ae284166d7efbea"
+    },
+    {
+      "order": 53,
+      "id": "1977-3502277023574363012.wav",
+      "audio_path": "3502277023574363012.wav",
+      "reference": "prides are made up of one to three related adult males along with as many as thirty females and cubs",
+      "duration_s": 6.6,
+      "sha256": "7cad37d9a188dddb08c2bb40c981b9b55fc4b1c43700835294af6910c29457f4"
+    },
+    {
+      "order": 54,
+      "id": "1977-15592925372393530543.wav",
+      "audio_path": "15592925372393530543.wav",
+      "reference": "prides are made up of one to three related adult males along with as many as thirty females and cubs",
+      "duration_s": 6.78,
+      "sha256": "3fdd3ca2bb0be24aa087c4958b450a2e6517d31265e3113d6389d5bef8b0de94"
+    },
+    {
+      "order": 55,
+      "id": "1967-17087438879836851456.wav",
+      "audio_path": "17087438879836851456.wav",
+      "reference": "layton had asked for changes to the conservatives' environmental bill during the meeting with the pm asking for a thorough and complete rewriting of the conservative party's environmental bill",
+      "duration_s": 9.72,
+      "sha256": "c683f10dcbdec553dfe4f57af9e5c678aca2f630f5496a080983264a9eae8774"
+    },
+    {
+      "order": 56,
+      "id": "1967-6507390080013738113.wav",
+      "audio_path": "6507390080013738113.wav",
+      "reference": "layton had asked for changes to the conservatives' environmental bill during the meeting with the pm asking for a thorough and complete rewriting of the conservative party's environmental bill",
+      "duration_s": 11.28,
+      "sha256": "b9d1035174c73df7755f4ae753c42d32d1cab7cf41193b7acd190520ea2468d8"
+    },
+    {
+      "order": 57,
+      "id": "1975-1605300975319497622.wav",
+      "audio_path": "1605300975319497622.wav",
+      "reference": "vatican city's population is around 800 it is the smallest independent country in the world and the country with the lowest population",
+      "duration_s": 9.76,
+      "sha256": "e10fecac598538fa23edda4de2a8f917468df9f87319a8a1d2a583be5807fc3b"
+    },
+    {
+      "order": 58,
+      "id": "1975-11265842188315045636.wav",
+      "audio_path": "11265842188315045636.wav",
+      "reference": "vatican city's population is around 800 it is the smallest independent country in the world and the country with the lowest population",
+      "duration_s": 10.74,
+      "sha256": "0c1a3dd4ded401853759efb2b239a5d7f354598aa129eadd6e1ba69e244e6414"
+    },
+    {
+      "order": 59,
+      "id": "1871-7587276269543309929.wav",
+      "audio_path": "7587276269543309929.wav",
+      "reference": "in the warm climate of the middle east the house was not so important",
+      "duration_s": 6.02,
+      "sha256": "ecb698c20ff4f58372793c567085157bbfea3e254d66ec3b76f829983af833fc"
+    },
+    {
+      "order": 60,
+      "id": "1871-4838660681321542582.wav",
+      "audio_path": "4838660681321542582.wav",
+      "reference": "in the warm climate of the middle east the house was not so important",
+      "duration_s": 6.72,
+      "sha256": "d963a734bbd219a06d818d3a3a7aa2f8bd7c612251bcf83b45b49f6c85817ae4"
+    },
+    {
+      "order": 61,
+      "id": "1770-8324220666349639753.wav",
+      "audio_path": "8324220666349639753.wav",
+      "reference": "this seems sensible because the earth doesn't feel as if it's moving does it",
+      "duration_s": 4.38,
+      "sha256": "a51e46802e733a4d3bc409a60c160d7b4c78a919baec7e409b5df6cc549e0b5a"
+    },
+    {
+      "order": 62,
+      "id": "1770-3529855487992513201.wav",
+      "audio_path": "3529855487992513201.wav",
+      "reference": "this seems sensible because the earth doesn't feel as if it's moving does it",
+      "duration_s": 5.64,
+      "sha256": "699f56c31a456e4859558f7fb4dbd0a73995ee3d32c50707eb88ec006df9b419"
+    },
+    {
+      "order": 63,
+      "id": "1819-5407053594615190090.wav",
+      "audio_path": "5407053594615190090.wav",
+      "reference": "ancient china had a unique way of showing different time periods each stage of china or each family that was in power was a distinctive dynasty",
+      "duration_s": 12.94,
+      "sha256": "a58ac7e7e0016ee85e1fab7f60a027c773745aca8a329f005adf34e4d87c9d37"
+    },
+    {
+      "order": 64,
+      "id": "1819-7366992441583559574.wav",
+      "audio_path": "7366992441583559574.wav",
+      "reference": "ancient china had a unique way of showing different time periods each stage of china or each family that was in power was a distinctive dynasty",
+      "duration_s": 12.24,
+      "sha256": "bf56fe3d26119bc2301b7271ac01afa879a2ad3407bc1b79141ac51c4c32af8c"
+    },
+    {
+      "order": 65,
+      "id": "1897-10861831846737909528.wav",
+      "audio_path": "10861831846737909528.wav",
+      "reference": "in the north the region is bounded by the sahel and in the south and west by the atlantic ocean",
+      "duration_s": 9.58,
+      "sha256": "44515b0d3030e3d5e563dafe91413d33fe062a32761ba45d994cffa24d5029b4"
+    },
+    {
+      "order": 66,
+      "id": "1897-6656552880161745727.wav",
+      "audio_path": "6656552880161745727.wav",
+      "reference": "in the north the region is bounded by the sahel and in the south and west by the atlantic ocean",
+      "duration_s": 7.14,
+      "sha256": "a40624b15d465ccc720cf4257b8212752837914ba7bf462a29362b68a49749ba"
+    },
+    {
+      "order": 67,
+      "id": "1816-8268356342449509719.wav",
+      "audio_path": "8268356342449509719.wav",
+      "reference": "duvall who is married with two adult children did not leave a big impression on miller to whom the story was related",
+      "duration_s": 9.24,
+      "sha256": "10d6ebc1dccbcf14ceaace052b2d88ffb03398b58947b078001947121dd983d7"
+    },
+    {
+      "order": 68,
+      "id": "1816-17737260257548671107.wav",
+      "audio_path": "17737260257548671107.wav",
+      "reference": "duvall who is married with two adult children did not leave a big impression on miller to whom the story was related",
+      "duration_s": 6.24,
+      "sha256": "41348ada0a7e2bb8d97466b734b4daca737b525c1ac0ac249ac6df33ee901e21"
+    },
+    {
+      "order": 69,
+      "id": "1901-6354316372780583820.wav",
+      "audio_path": "6354316372780583820.wav",
+      "reference": "although ai has a strong connotation of science fiction ai forms a very important branch of computer science dealing with behavior learning and intelligent adaptation in a machine",
+      "duration_s": 13.48,
+      "sha256": "08af31d26de5fd6703f440bf4dec2fd4c333e970826c7645b5d86ab182cd255a"
+    },
+    {
+      "order": 70,
+      "id": "1901-7053482366261158.wav",
+      "audio_path": "7053482366261158.wav",
+      "reference": "although ai has a strong connotation of science fiction ai forms a very important branch of computer science dealing with behavior learning and intelligent adaptation in a machine",
+      "duration_s": 16.08,
+      "sha256": "f86440c143ec9dc9a3d0350d5588d05d8f0ed13f98644996b17484bc32f8be0c"
+    },
+    {
+      "order": 71,
+      "id": "1826-5433314566767233828.wav",
+      "audio_path": "5433314566767233828.wav",
+      "reference": "after the accident occurred gibson was transported to a hospital but died shortly afterwards",
+      "duration_s": 6.24,
+      "sha256": "a2ffc8a16ad7a7be623a0e7090dca101a23d2409fdc6647a53d175dac2951434"
+    },
+    {
+      "order": 72,
+      "id": "1820-2786302614981736925.wav",
+      "audio_path": "2786302614981736925.wav",
+      "reference": "people now write messages on computer screens never having to come close to a sharpener",
+      "duration_s": 5.52,
+      "sha256": "2ed0b9f9b5218f507afd99ad45ff7df7a4c49605971c3fab3db4e7f0373221bc"
+    },
+    {
+      "order": 73,
+      "id": "1820-2381187994276969930.wav",
+      "audio_path": "2381187994276969930.wav",
+      "reference": "people now write messages on computer screens never having to come close to a sharpener",
+      "duration_s": 8.8,
+      "sha256": "87871c32b9268323df29eb55715382120800591fc1334fd48dd27aa771295629"
+    },
+    {
+      "order": 74,
+      "id": "1899-12381237049043414166.wav",
+      "audio_path": "12381237049043414166.wav",
+      "reference": "muhammad was deeply interested in matters beyond this mundane life. he used to frequent a cave that became known as  hira‘” on the mountain of  noor” light for contemplation",
+      "duration_s": 11.28,
+      "sha256": "58889959d4d54fb7d1befdf16baf362d50f31377d75b8d5937c5f252866ce208"
+    },
+    {
+      "order": 75,
+      "id": "1899-1876924768395363851.wav",
+      "audio_path": "1876924768395363851.wav",
+      "reference": "muhammad was deeply interested in matters beyond this mundane life. he used to frequent a cave that became known as  hira‘” on the mountain of  noor” light for contemplation",
+      "duration_s": 14.52,
+      "sha256": "e55db214bb30427998f9d207e1feb5f1477544c1a89cac100d13b5b2defcf01c"
+    },
+    {
+      "order": 76,
+      "id": "1874-5657427923960079748.wav",
+      "audio_path": "5657427923960079748.wav",
+      "reference": "some people thought he was right but many people believed the opposite; that the solar system moved around the earth including the sun and even the other stars",
+      "duration_s": 7.74,
+      "sha256": "bc4264ed9bcb3f4b106304da596b3429e6c4213905547e203bdab5f805b7030f"
+    },
+    {
+      "order": 77,
+      "id": "1874-837008417921522673.wav",
+      "audio_path": "837008417921522673.wav",
+      "reference": "some people thought he was right but many people believed the opposite; that the solar system moved around the earth including the sun and even the other stars",
+      "duration_s": 7.92,
+      "sha256": "2bf66d95e9d8ea18db62283f6718edbb1940520a4d68016735ebbdb1eb03a025"
+    },
+    {
+      "order": 78,
+      "id": "1664-1944915261206096046.wav",
+      "audio_path": "1944915261206096046.wav",
+      "reference": "swirl the two dry powders together and then with clean wet hands squeeze them into a ball",
+      "duration_s": 5.4,
+      "sha256": "e74bf67b76430a8bdbddf4aac5b7fb84fea7066a19673b638c77002f2357299e"
+    },
+    {
+      "order": 79,
+      "id": "1664-13031516147694203229.wav",
+      "audio_path": "13031516147694203229.wav",
+      "reference": "swirl the two dry powders together and then with clean wet hands squeeze them into a ball",
+      "duration_s": 8.36,
+      "sha256": "37200fbe31f5fcc89c4dc889bd98eb3548d4c1f8de719771cee67486cc73b38f"
+    },
+    {
+      "order": 80,
+      "id": "1903-14076834086577911298.wav",
+      "audio_path": "14076834086577911298.wav",
+      "reference": "when all available resources are effectively used across the functional departments of an organization creativity and ingenuity can transpire",
+      "duration_s": 9.18,
+      "sha256": "7b5a86902871a04e2f6e10f5941fdc6aba5c2a423937b21aeb4e9fc3bbc6a35c"
+    },
+    {
+      "order": 81,
+      "id": "1803-13130060533227294993.wav",
+      "audio_path": "13130060533227294993.wav",
+      "reference": "the moisture on your hands will react with the outer layers which will feel funny and form a sort of shell",
+      "duration_s": 8.04,
+      "sha256": "d788275c804aa702cbb11a096f91011472edeb134b0a45033a5acd0d896fae47"
+    },
+    {
+      "order": 82,
+      "id": "1803-11987168412167267165.wav",
+      "audio_path": "11987168412167267165.wav",
+      "reference": "the moisture on your hands will react with the outer layers which will feel funny and form a sort of shell",
+      "duration_s": 8.52,
+      "sha256": "0dfd53aba5bcaa70a09992b937b189f10f273d3b5f3667cb5afc1eeab2b7aa5c"
+    },
+    {
+      "order": 83,
+      "id": "1991-15667010054869079797.wav",
+      "audio_path": "15667010054869079797.wav",
+      "reference": "during this period of european history the catholic church which had become rich and powerful came under scrutiny",
+      "duration_s": 9.74,
+      "sha256": "df078d3915ef4545af977fbea3c1ebae5569f82a0f349c9e810623d074b6b343"
+    },
+    {
+      "order": 84,
+      "id": "1991-1116401173651214130.wav",
+      "audio_path": "1116401173651214130.wav",
+      "reference": "during this period of european history the catholic church which had become rich and powerful came under scrutiny",
+      "duration_s": 11.4,
+      "sha256": "b92c200c1ff1904c536306296762dcd79f07a0092a3c490f4b32365b2b0c45e9"
+    },
+    {
+      "order": 85,
+      "id": "1731-17257800930548614745.wav",
+      "audio_path": "17257800930548614745.wav",
+      "reference": "in the archipelagos and lakes you do not necessarily need a yacht",
+      "duration_s": 7.48,
+      "sha256": "98ce64f7a6ef084431f9d6ee1b0c78ef6d1e6911eda44208c786d30f4bf94b49"
+    },
+    {
+      "order": 86,
+      "id": "1731-7546471028199266685.wav",
+      "audio_path": "7546471028199266685.wav",
+      "reference": "in the archipelagos and lakes you do not necessarily need a yacht",
+      "duration_s": 7.1,
+      "sha256": "7f1795d950fc525cfb3489da5645e70756c0e762861ec3e089edd8f96287f2a1"
+    },
+    {
+      "order": 87,
+      "id": "1884-3362263413020550013.wav",
+      "audio_path": "3362263413020550013.wav",
+      "reference": "in particular it is claimed that one can detect whether a person is lying by interpreting micro-expressions correctly",
+      "duration_s": 7.68,
+      "sha256": "89ef460cebb9746f5f5d26f33dc11ea9d0e0f89497aff9bf9b879ff94cccaf8c"
+    },
+    {
+      "order": 88,
+      "id": "1884-13029464143980259888.wav",
+      "audio_path": "13029464143980259888.wav",
+      "reference": "in particular it is claimed that one can detect whether a person is lying by interpreting micro-expressions correctly",
+      "duration_s": 6.12,
+      "sha256": "27d7943e5f89bd058d360199769078b27ca094d81e5f9ec0adb124b2fef0c6a0"
+    },
+    {
+      "order": 89,
+      "id": "1872-7489324500816890474.wav",
+      "audio_path": "7489324500816890474.wav",
+      "reference": "during the struggle for independence organised by the mau movement a peaceful gathering in the town resulted in the killing of the paramount chief tupua tamasese lealofi iii",
+      "duration_s": 12.54,
+      "sha256": "3e4f47f915f73ef5eae395cbff0e4c686094241e0e6a423ed061c63d87e37e19"
+    },
+    {
+      "order": 90,
+      "id": "1872-2642023010607031328.wav",
+      "audio_path": "2642023010607031328.wav",
+      "reference": "during the struggle for independence organised by the mau movement a peaceful gathering in the town resulted in the killing of the paramount chief tupua tamasese lealofi iii",
+      "duration_s": 12.12,
+      "sha256": "dbc8619d84851a94423d5288116c66f8329b421a5c33d956d2231e22e9ff6ab2"
+    },
+    {
+      "order": 91,
+      "id": "1876-10323357556845456822.wav",
+      "audio_path": "10323357556845456822.wav",
+      "reference": "the northern marianas emergency management office said that there were no damages reported in the nation",
+      "duration_s": 10.8,
+      "sha256": "4cd81b45d5b010d69057bf7503967a9a51436441b590a9d7e6a0e130b2da72f3"
+    },
+    {
+      "order": 92,
+      "id": "1876-8491962032427728850.wav",
+      "audio_path": "8491962032427728850.wav",
+      "reference": "the northern marianas emergency management office said that there were no damages reported in the nation",
+      "duration_s": 11.1,
+      "sha256": "9792d0b5711b3f535e2963a7a1751c465827d01f83aae976eacef529e1cc501d"
+    },
+    {
+      "order": 93,
+      "id": "1687-221216034074176262.wav",
+      "audio_path": "221216034074176262.wav",
+      "reference": "segregation and recombination shuffle variation back and forth between the two pools with each generation",
+      "duration_s": 11.22,
+      "sha256": "2f426960eadfd6044525628e8942852dd82f836a09c9f78a46f3710aa1589e6b"
+    },
+    {
+      "order": 94,
+      "id": "1687-13888599635337906526.wav",
+      "audio_path": "13888599635337906526.wav",
+      "reference": "segregation and recombination shuffle variation back and forth between the two pools with each generation",
+      "duration_s": 11.52,
+      "sha256": "5d3a2345cf20303836c7e6f86b2fdc0baea20e99bc282912f5ef60d96d1c0a9e"
+    },
+    {
+      "order": 95,
+      "id": "1857-4103166808026076685.wav",
+      "audio_path": "4103166808026076685.wav",
+      "reference": "he added that they should not however be asked to take on obligations that go beyond their development stage responsibility and capabilities",
+      "duration_s": 10.26,
+      "sha256": "faffc12279788760ea795dfe2648b0e6e3ad860702867cae3f1ed342e67e1508"
+    },
+    {
+      "order": 96,
+      "id": "1857-14805661830607478688.wav",
+      "audio_path": "14805661830607478688.wav",
+      "reference": "he added that they should not however be asked to take on obligations that go beyond their development stage responsibility and capabilities",
+      "duration_s": 12.22,
+      "sha256": "46f2a5592380d34f06eb425dc00a8047ca61296df69d9097b4f2a1d26fc208c4"
+    },
+    {
+      "order": 97,
+      "id": "1783-8395660467583137383.wav",
+      "audio_path": "8395660467583137383.wav",
+      "reference": "regional and seasonal severe weather phenomena include blizzards snowstorms ice storms and dust storms",
+      "duration_s": 7.58,
+      "sha256": "3b377e98d8a42216765cd5eea5b31b37692cf7e73b17eb0e9aabc0408aacb888"
+    },
+    {
+      "order": 98,
+      "id": "1783-8582392026322819617.wav",
+      "audio_path": "8582392026322819617.wav",
+      "reference": "regional and seasonal severe weather phenomena include blizzards snowstorms ice storms and dust storms",
+      "duration_s": 7.8,
+      "sha256": "ecc37c4cb302dbafd13e2484331f03e2551b416f2e1bb36c7c9468b0e897c335"
+    },
+    {
+      "order": 99,
+      "id": "1759-8398257681626621326.wav",
+      "audio_path": "8398257681626621326.wav",
+      "reference": "dr malar balasubramanian 29 was found in blue ash ohio a suburb approximately 15 miles north of cincinnati lying on the ground beside the road in a t-shirt and underwear in an apparently heavily medicated state",
+      "duration_s": 14.28,
+      "sha256": "9dea02df5b55d510e1f6e0290808d16a589e366c607fe5fac7252f8b98926daa"
+    }
+  ],
+  "reference_parsing": "Literal tab separation, csv.QUOTE_NONE; seven fields required. Do not parse embedded quote characters as CSV field delimiters.",
+  "source_tsv_sha256": "74c046239374deeb60fa63f258f907388093a32bcaa3140965f70ef05c79f7ca"
+}

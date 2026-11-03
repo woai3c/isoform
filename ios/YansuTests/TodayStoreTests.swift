@@ -1,0 +1,457 @@
+import Foundation
+import XCTest
+@testable import Yansu
+
+final class TodayStoreTests: XCTestCase {
+    private actor UnusedHub: TodayHubAPI {
+        func today() async throws -> MobileTodaySnapshot { throw HubRequestError.noAnswer }
+        func pollTodayEvents() async throws -> [MobileTodayEvent] { throw HubRequestError.noAnswer }
+        func requestTodayBrief(key: String) async throws -> BriefRefreshResult { throw HubRequestError.noAnswer }
+    }
+
+    private actor RecordingHub: TodayHubAPI {
+        var online = false
+        var keys: [String] = []
+        let value: MobileTodaySnapshot
+        init(value: MobileTodaySnapshot) { self.value = value }
+        func setOnline() { online = true }
+        func today() async throws -> MobileTodaySnapshot {
+            guard online else { throw HubRequestError.noAnswer }
+            return value
+        }
+        func pollTodayEvents() async throws -> [MobileTodayEvent] { [] }
+        func requestTodayBrief(key: String) async throws -> BriefRefreshResult {
+            keys.append(key)
+            guard online else { throw HubRequestError.noAnswer }
+            return BriefRefreshResult(status: "queued", nextAllowedAt: nil, readyAt: "2026-10-27T13:00:00Z")
+        }
+    }
+    private func snapshot() -> MobileTodaySnapshot {
+        MobileTodaySnapshot(generatedAt: "2026-10-27T12:00:00Z", latestBrief: nil, briefs: [],
+                            needsYou: [], needsYouCount: 0,
+                            day: TodayDay(next: nil, free: [], calendarConnected: false), topics: [],
+                            briefRequest: nil, schedule: MobileBriefSchedule(morning: "07:00", evening: "18:00"))
+    }
+
+    func testReadyTimeIsHiddenOnceItPasses() throws {
+        let request = TodayBriefRequest(state: "making", readyAt: "2026-10-27T12:00:00Z")
+        let ready = try XCTUnwrap(request.readyDate)
+        XCTAssertEqual(request.futureReadyDate(at: ready.addingTimeInterval(-1)), ready)
+        XCTAssertNil(request.futureReadyDate(at: ready))
+        XCTAssertNil(request.futureReadyDate(at: ready.addingTimeInterval(1)))
+    }
+
+    @MainActor
+    func testAsOfUsesTheNewerSnapshotOrBriefTime() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let vault = PairingVault(directory: directory.appendingPathComponent("vault"), secrets: InMemorySecretStore())
+        let cache = BriefCache(directory: directory.appendingPathComponent("briefs"))
+        // The brief's text is in the library, so it is the current brief and its time counts.
+        try cache.save(MobileBriefV1(briefId: "new", asOf: "2026-10-27T13:00:00Z", narrativeStatus: "ok",
+                                     narrative: [BriefParagraph(text: "New")]))
+        let brief = BriefStore(pairing: PairingStore(vault: vault), vault: vault, cache: cache, hub: HubChannel(vault: vault))
+        let store = TodayStore(hub: UnusedHub(), cache: TodayDiskCache(fileURL: directory.appendingPathComponent("today.json")),
+                               brief: brief,
+                               identity: { TodayPairingIdentity(hubID: "mac", deviceID: "phone") })
+        var value = snapshot()
+        value.latestBrief = TodayBriefIndex(id: "new", slot: "morning", localDate: "2026-10-27", scheduledAt: nil,
+                                            madeAt: "2026-10-27T13:00:00Z", catchUp: nil, durationSeconds: nil, lead: "New")
+        value.briefs = [value.latestBrief!]
+        store.accept(value)
+        XCTAssertEqual(store.asOf, RelayTime.parse("2026-10-27T13:00:00Z"))
+        value.generatedAt = "2026-10-27T14:00:00Z"
+        store.accept(value)
+        XCTAssertEqual(store.asOf, RelayTime.parse("2026-10-27T14:00:00Z"))
+    }
+
+    func testDiskCacheRoundTripIsScopedToPairingAndCanBeCleared() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cache = TodayDiskCache(fileURL: directory.appendingPathComponent("today.json"))
+        let identity = TodayPairingIdentity(hubID: "mac-a", deviceID: "phone-a")
+        cache.save(snapshot(), for: identity)
+        // load synchronizes with the preceding asynchronous save.
+        XCTAssertEqual(cache.load(for: identity), snapshot())
+        XCTAssertNil(cache.load(for: TodayPairingIdentity(hubID: "mac-b", deviceID: "phone-a")))
+        XCTAssertTrue(cache.clear())
+        XCTAssertNil(cache.load(for: identity))
+    }
+
+    func testTasksWaitingFieldsRoundTripAndOlderCopiesDecode() throws {
+        let page = MobileTasksPage(tasks: [], counts: MobileTaskCounts(needsYou: 0, running: 0, doneThisWeek: 0))
+        let legacy = try JSONDecoder().decode(MobileTasksPage.self, from: JSONEncoder().encode(page))
+        XCTAssertNil(legacy.waitingItems)
+        XCTAssertNil(legacy.waitingCount)
+        var current = page
+        current.waitingItems = []
+        current.waitingCount = 4
+        let decoded = try JSONDecoder().decode(MobileTasksPage.self, from: JSONEncoder().encode(current))
+        XCTAssertEqual(decoded.waitingCount, 4)
+        XCTAssertEqual(decoded.waitingItems, [])
+    }
+
+    func testDraftSendIsDurableUndoableBeforeDispatchAndKeepsItsKey() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("draft-journal.json")
+        let journal = PendingWriteJournal(fileURL: url, hubID: { "computer" })
+        let saved = try await journal.reserveTodayDraft(taskID: "draft.1", revision: "revision-a", text: "My edit",
+                                                        deviceID: "phone", makeKey: { "send-key" }, createdAt: Date())
+        let reopened = PendingWriteJournal(fileURL: url, hubID: { "computer" })
+        let recovered = await reopened.entries()
+        XCTAssertEqual(recovered.first?.key, saved.key)
+        XCTAssertEqual(recovered.first?.todayDraftSend?.text, "My edit")
+        let undone = try await reopened.undoToday(key: saved.key)
+        XCTAssertTrue(undone)
+        let next = try await reopened.reserveTodayDraft(taskID: "draft.1", revision: "revision-a", text: nil,
+                                                        deviceID: "phone", makeKey: { "next-key" }, createdAt: Date())
+        _ = try await reopened.markTodayDraft(key: next.key, dispatchedAt: Date())
+        let lateUndo = try await reopened.undoToday(key: next.key)
+        XCTAssertFalse(lateUndo)
+        let retry = try await reopened.reserveTodayDraft(taskID: "draft.1", revision: "revision-a", text: nil,
+                                                         deviceID: "phone", makeKey: { "wrong-key" }, createdAt: Date())
+        XCTAssertEqual(retry.key, "next-key")
+    }
+
+    func testQueuedActionSurvivesReopenAndUndoCannotCancelADispatchedWrite() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("journal.json")
+        let journal = PendingWriteJournal(fileURL: url, hubID: { "mac" })
+        let item = try JSONDecoder().decode(ChatProactiveView.self, from: Data(#"{"momentId":"m1","kind":"reminder","state":"pending","actionIds":["done"]}"#.utf8))
+        let write = try await journal.reserveToday(chatID: "chat", item: item, actionID: "done", deviceID: "phone",
+                                                   makeKey: { "key" }, createdAt: Date())
+        let reopened = PendingWriteJournal(fileURL: url, hubID: { "mac" })
+        let restored = await reopened.entries()
+        XCTAssertEqual(restored.first?.todayReplay?.momentID, "m1")
+        XCTAssertEqual(restored.first?.key, write.key)
+        let undone = try await reopened.undoToday(key: write.key)
+        let remaining = await reopened.entries()
+        XCTAssertTrue(undone)
+        XCTAssertTrue(remaining.isEmpty)
+
+        let next = try await reopened.reserveToday(chatID: "chat", item: item, actionID: "done", deviceID: "phone",
+                                                   makeKey: { "next" }, createdAt: Date())
+        _ = try await reopened.markTodayDispatched(key: next.key, at: Date())
+        let dispatchedUndo = try await reopened.undoToday(key: next.key)
+        XCTAssertFalse(dispatchedUndo)
+        let replacement = try await reopened.reserveToday(chatID: "chat", item: item, actionID: "done", deviceID: "new-phone",
+                                                          makeKey: { "new-pairing" }, createdAt: Date())
+        let afterPairing = await reopened.entries()
+        XCTAssertEqual(afterPairing.map(\.key), [replacement.key])
+    }
+
+    @MainActor
+    func testNewestReadableBriefIsCurrentAndATextlessOneNeverIs() {
+        func brief(_ id: String, _ date: String, text: String) -> MobileBriefV1 {
+            MobileBriefV1(briefId: id, asOf: date, narrativeStatus: "ok",
+                          narrative: [BriefParagraph(text: text)])
+        }
+        func entries(_ briefs: [MobileBriefV1]) -> [CachedBrief] {
+            briefs.map { CachedBrief(brief: $0, storedAt: Date()) }
+        }
+        let old = brief("old", "2026-10-26T18:00:00Z", text: "Old")
+        let newest = brief("new", "2026-10-27T06:10:00Z", text: "New")
+        let empty = brief("empty", "2026-10-27T07:00:00Z", text: "")
+        XCTAssertEqual(BriefCache.current(in: entries([old, empty, newest]))?.brief.identifier, "new")
+        XCTAssertEqual(BriefCache.current(in: entries([old, empty]))?.brief.identifier, "old")
+        XCTAssertNil(BriefCache.current(in: entries([empty])))
+    }
+
+    @MainActor
+    func testSnapshotFetchesMissingBodiesAndKeepsTheOnesItHas() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let vault = PairingVault(directory: directory.appendingPathComponent("vault"), secrets: InMemorySecretStore())
+        let cache = BriefCache(directory: directory.appendingPathComponent("briefs"),
+                               now: { RelayTime.parse("2026-10-27T14:00:00Z")! })
+        let bodies = FakeBriefBodies(savedProbe: { _, _ in false })
+        let brief = BriefStore(pairing: PairingStore(vault: vault), vault: vault, cache: cache, hub: HubChannel(vault: vault),
+                               bodies: bodies)
+        let cached = MobileBriefV1(briefId: "cached", asOf: "2026-10-27T12:00:00Z", narrativeStatus: "ok",
+                                   narrative: [BriefParagraph(text: "Saved")])
+        try cache.save(cached)
+        let missing = MobileBriefV1(briefId: "missing", asOf: "2026-10-27T13:00:00Z", narrativeStatus: "ok",
+                                    narrative: [BriefParagraph(text: "New")])
+        await bodies.serveLegacy("missing", missing)
+        let store = TodayStore(hub: UnusedHub(), cache: TodayDiskCache(fileURL: directory.appendingPathComponent("today.json")),
+                               brief: brief, identity: { TodayPairingIdentity(hubID: "mac", deviceID: "phone") })
+        var value = snapshot()
+        value.briefs = [TodayBriefIndex(id: "cached", slot: "morning", localDate: "2026-10-27", scheduledAt: nil,
+                                        madeAt: "2026-10-27T12:00:00Z", catchUp: nil, durationSeconds: nil, lead: "Saved"),
+                        TodayBriefIndex(id: "missing", slot: "evening", localDate: "2026-10-27", scheduledAt: nil,
+                                        madeAt: "2026-10-27T13:00:00Z", catchUp: nil, durationSeconds: nil, lead: "New")]
+        store.accept(value)
+        let fetched = await awaitCondition { cache.load(identifier: "missing") != nil }
+        XCTAssertTrue(fetched)
+        let requests = await bodies.legacyRequests
+        XCTAssertEqual(requests, ["missing"], "only the brief the library lacks is fetched")
+    }
+
+    @MainActor
+    func testSnapshotPrefetchesTheCurrentBriefsAudio() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let vault = PairingVault(directory: directory.appendingPathComponent("vault"), secrets: InMemorySecretStore())
+        let keys = RelayCrypto.makeDeviceKeyPair()
+        let paired = PairedDevice(hubID: "mac", hubName: "Mac", hubPublicKey: RelayCrypto.base64URLEncode(keys.publicKey),
+                                  relayOrigin: "https://relay.example", deviceID: "phone", deviceName: "Phone",
+                                  scopes: ["brief:read"], pairedAt: Date(), counters: SequenceCounters())
+        try vault.store(paired, devicePrivateKey: RelayCrypto.base64URLEncode(keys.privateKey),
+                        bearer: RelayCrypto.base64URLEncode(RelayCrypto.randomBytes(32)))
+        let cache = BriefCache(directory: directory.appendingPathComponent("briefs"),
+                               now: { RelayTime.parse("2026-10-27T14:00:00Z")! })
+        let latest = MobileBriefV1(briefId: "new", asOf: "2026-10-27T13:00:00Z", narrativeStatus: "ok",
+                                   narrative: [BriefParagraph(text: "New")], audio: BriefAudio(mime: "audio/wav", bytes: 3))
+        try cache.save(latest)
+        let bodies = FakeBriefBodies(savedProbe: { _, _ in false })
+        let brief = BriefStore(pairing: PairingStore(vault: vault), vault: vault, cache: cache, hub: HubChannel(vault: vault),
+                               bodies: bodies)
+        brief.loadCached()
+        let prefetched = expectation(description: "current audio prefetched")
+        let store = TodayStore(hub: UnusedHub(), cache: TodayDiskCache(fileURL: directory.appendingPathComponent("today.json")),
+                               brief: brief,
+                               identity: { TodayPairingIdentity(hubID: "mac", deviceID: "phone") },
+                               prefetchAudio: { item, hub in
+            XCTAssertEqual(item, latest)
+            XCTAssertEqual(hub, "mac")
+            prefetched.fulfill()
+        })
+        var value = snapshot()
+        value.latestBrief = TodayBriefIndex(id: "new", slot: "morning", localDate: "2026-10-27", scheduledAt: nil,
+                                            madeAt: "2026-10-27T13:00:00Z", catchUp: nil, durationSeconds: nil, lead: "New")
+        value.briefs = [value.latestBrief!]
+        store.accept(value)
+        await fulfillment(of: [prefetched], timeout: 5)
+    }
+
+    @MainActor
+    func testChangedBodyRevisionIsFetchedEvenWhenTheIDIsCached() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let vault = PairingVault(directory: directory.appendingPathComponent("vault"), secrets: InMemorySecretStore())
+        let cache = BriefCache(directory: directory.appendingPathComponent("briefs"),
+                               now: { RelayTime.parse("2026-10-27T14:00:00Z")! })
+        let saved = MobileBriefV1(briefId: "brief", asOf: "2026-10-27T12:00:00Z", narrativeStatus: "ok",
+                                  narrative: [BriefParagraph(text: "Old")])
+        try cache.save(saved, version: "old")
+        let updated = MobileBriefV1(briefId: "brief", asOf: "2026-10-27T12:00:00Z", narrativeStatus: "ok",
+                                    narrative: [BriefParagraph(text: "Updated")])
+        let bodies = FakeBriefBodies(savedProbe: { _, _ in false })
+        await bodies.serveLegacy("brief", updated)
+        let brief = BriefStore(pairing: PairingStore(vault: vault), vault: vault, cache: cache, hub: HubChannel(vault: vault),
+                               bodies: bodies)
+        let store = TodayStore(hub: UnusedHub(), cache: TodayDiskCache(fileURL: directory.appendingPathComponent("today.json")),
+                               brief: brief, identity: { TodayPairingIdentity(hubID: "mac", deviceID: "phone") })
+        var value = snapshot()
+        value.briefs = [TodayBriefIndex(id: "brief", slot: "morning", localDate: "2026-10-27", scheduledAt: nil,
+                                        madeAt: "2026-10-27T12:00:00Z", catchUp: nil, durationSeconds: nil,
+                                        lead: "Updated", bodyVersion: "new")]
+        store.accept(value)
+        let fetched = await awaitCondition { cache.load(identifier: "brief")?.version == "new" }
+        XCTAssertTrue(fetched)
+        let requests = await bodies.legacyRequests
+        XCTAssertEqual(requests, ["brief"])
+    }
+
+    @MainActor
+    func testABriefWithoutItsTextIsNeverShownAndNoLeadTakesItsPlace() throws {
+        // Bo's phone, 2026-10-28: the brief arrived in full by push, the Mac then listed a newer revision of it,
+        // and Today replaced the full brief with its lead, "Good morning.". The full brief must stay on screen,
+        // and a brief whose text is not on the phone shows nothing rather than its lead.
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let vault = PairingVault(directory: directory.appendingPathComponent("vault"), secrets: InMemorySecretStore())
+        let cache = BriefCache(directory: directory.appendingPathComponent("briefs"))
+        let full = MobileBriefV1(briefId: "brief", slot: "on_request", asOf: "2026-10-28T15:41:54Z", narrativeStatus: "ok",
+                                 narrative: [BriefParagraph(text: "Good morning. The forwarded email has no reply yet."),
+                                             BriefParagraph(text: "Second paragraph.")])
+        try cache.save(full)
+        let brief = BriefStore(pairing: PairingStore(vault: vault), vault: vault, cache: cache, hub: HubChannel(vault: vault),
+                               bodies: FakeBriefBodies(savedProbe: { _, _ in false }))
+        let store = TodayStore(hub: UnusedHub(), cache: TodayDiskCache(fileURL: directory.appendingPathComponent("today.json")),
+                               brief: brief, identity: { TodayPairingIdentity(hubID: "mac", deviceID: "phone") })
+        let entry = TodayBriefIndex(id: "brief", slot: "on_request", localDate: "2026-10-28", scheduledAt: nil,
+                                    madeAt: "2026-10-28T15:41:54Z", catchUp: nil, durationSeconds: nil,
+                                    lead: "Good morning.", bodyVersion: "newer")
+        var value = snapshot()
+        value.generatedAt = "2026-10-28T16:00:00Z"
+        value.latestBrief = entry
+        value.briefs = [entry]
+        store.accept(value)
+        XCTAssertEqual(store.newestBrief()?.narrative.count, 2)
+
+        try cache.remove(identifier: "brief")
+        store.accept(value)
+        XCTAssertNil(store.newestBrief(), "the lead is not a brief: nothing shows until the text arrives")
+    }
+
+    @MainActor
+    func testOfflineFreshRequestCanBeUndoneOrSentAfterReconnect() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let vault = PairingVault(directory: directory.appendingPathComponent("vault"), secrets: InMemorySecretStore())
+        let cache = BriefCache(directory: directory.appendingPathComponent("briefs"))
+        let brief = BriefStore(pairing: PairingStore(vault: vault), vault: vault, cache: cache, hub: HubChannel(vault: vault))
+        let identity = TodayPairingIdentity(hubID: "mac", deviceID: "phone")
+        let journal = PendingWriteJournal(fileURL: directory.appendingPathComponent("journal.json"), hubID: { "mac" })
+        let hub = RecordingHub(value: snapshot())
+        // The relay reports the Mac offline, so the failed read is shown as asleep.
+        let store = TodayStore(hub: hub, cache: TodayDiskCache(fileURL: directory.appendingPathComponent("today.json")),
+                               brief: brief, journal: journal, identity: { identity },
+                               presence: { false })
+        await store.refresh()
+        XCTAssertTrue(store.hubUnreachable)
+        await store.requestFresh()
+        XCTAssertNotNil(store.pendingFresh)
+        await store.undoFresh()
+        XCTAssertNil(store.pendingFresh)
+        await store.requestFresh()
+        let key = try XCTUnwrap(store.pendingFresh?.key)
+        await hub.setOnline()
+        await store.refresh()
+        await store.retryFresh()
+        XCTAssertNil(store.pendingFresh)
+        let keys = await hub.keys
+        XCTAssertEqual(keys, [key])
+        XCTAssertEqual(store.snapshot?.briefRequest?.state, "queued")
+    }
+
+    private actor RefusingFreshHub: TodayHubAPI {
+        let value: MobileTodaySnapshot
+        init(value: MobileTodaySnapshot) { self.value = value }
+        func today() async throws -> MobileTodaySnapshot { value }
+        func pollTodayEvents() async throws -> [MobileTodayEvent] { [] }
+        func requestTodayBrief(key: String) async throws -> BriefRefreshResult {
+            throw HubRequestError.rejected(status: 400, message: "refused")
+        }
+    }
+
+    @MainActor
+    func testRefusedFreshRequestShowsAFailureThatAFreshRequestClears() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let vault = PairingVault(directory: directory.appendingPathComponent("vault"), secrets: InMemorySecretStore())
+        let cache = BriefCache(directory: directory.appendingPathComponent("briefs"))
+        let brief = BriefStore(pairing: PairingStore(vault: vault), vault: vault, cache: cache, hub: HubChannel(vault: vault))
+        let journal = PendingWriteJournal(fileURL: directory.appendingPathComponent("journal.json"), hubID: { "mac" })
+        let store = TodayStore(hub: RefusingFreshHub(value: snapshot()),
+                               cache: TodayDiskCache(fileURL: directory.appendingPathComponent("today.json")),
+                               brief: brief, journal: journal,
+                               identity: { TodayPairingIdentity(hubID: "mac", deviceID: "phone") })
+        await store.refresh()
+        XCTAssertFalse(store.freshFailed)
+        await store.requestFresh()
+        XCTAssertTrue(store.freshFailed, "the card says the brief could not be made")
+        XCTAssertNil(store.pendingFresh, "a refused request is not kept for retry")
+        XCTAssertNil(store.snapshot?.briefRequest)
+    }
+
+    private actor SlowHub: TodayHubAPI {
+        func today() async throws -> MobileTodaySnapshot { throw HubRequestError.noAnswer }
+        func pollTodayEvents() async throws -> [MobileTodayEvent] { [] }
+        func requestTodayBrief(key: String) async throws -> BriefRefreshResult { throw HubRequestError.noAnswer }
+    }
+
+    @MainActor
+    private func makeStore(directory: URL, hub: TodayHubAPI, presence: @escaping @Sendable () async throws -> Bool = { true },
+                           connectionPresence: (@Sendable () async throws -> RelayPresence)? = nil,
+                           bodies: BriefBodyAPI? = nil) -> TodayStore {
+        let vault = PairingVault(directory: directory.appendingPathComponent("vault"), secrets: InMemorySecretStore())
+        let cache = BriefCache(directory: directory.appendingPathComponent("briefs"))
+        let brief = BriefStore(pairing: PairingStore(vault: vault), vault: vault, cache: cache, hub: HubChannel(vault: vault),
+                               bodies: bodies ?? FakeBriefBodies(savedProbe: { _, _ in false }))
+        return TodayStore(hub: hub, cache: TodayDiskCache(fileURL: directory.appendingPathComponent("today.json")),
+                          brief: brief,
+                          identity: { TodayPairingIdentity(hubID: "mac", deviceID: "phone") },
+                          presence: presence, connectionPresence: connectionPresence)
+    }
+
+    @MainActor
+    func testExplicitGoodbyesNameTheCauseWithoutGuessing() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for cause in [TodayStore.ConnectionCause.sleeping, .shuttingDown, .closing] {
+            let store = makeStore(directory: directory, hub: SlowHub(), presence: { false },
+                                  connectionPresence: { RelayPresence(hubOnline: false, lastSeenAt: nil,
+                                                                      goodbyeCause: cause.rawValue) })
+            await store.refresh()
+            XCTAssertEqual(store.connectionCause, cause)
+            store.stopListening()
+        }
+        let online = makeStore(directory: directory, hub: SlowHub(), presence: { true },
+                               connectionPresence: { RelayPresence(hubOnline: true, lastSeenAt: nil,
+                                                                   goodbyeCause: "sleeping") })
+        await online.refresh()
+        XCTAssertNil(online.connectionCause)
+    }
+
+    func testPresenceDecidesWhetherASlowMacIsAsleep() async {
+        // A slow or refused read while the relay says the Mac is online is not asleep.
+        let slow = await TodayStore.macUnreachable(after: HubRequestError.noAnswer, presence: { true })
+        XCTAssertFalse(slow)
+        // The relay says the Mac is offline: asleep.
+        let asleep = await TodayStore.macUnreachable(after: HubRequestError.noAnswer, presence: { false })
+        XCTAssertTrue(asleep)
+        // The phone has no route to the relay at all: asleep.
+        let noRoute = await TodayStore.macUnreachable(after: RelayClientError.offline, presence: { throw RelayClientError.timedOut })
+        XCTAssertTrue(noRoute)
+        // A presence check that timed out says nothing about the Mac.
+        let presenceTimedOut = await TodayStore.macUnreachable(after: HubRequestError.noAnswer, presence: { throw RelayClientError.timedOut })
+        XCTAssertFalse(presenceTimedOut)
+        let presenceOffline = await TodayStore.macUnreachable(after: HubRequestError.noAnswer, presence: { throw RelayClientError.offline })
+        XCTAssertTrue(presenceOffline)
+    }
+
+    @MainActor
+    func testSlowSnapshotReadKeepsTheCopyQuietWhileTheRelaySaysOnline() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = makeStore(directory: directory, hub: SlowHub(), presence: { true })
+        await store.refresh()
+        XCTAssertFalse(store.hubUnreachable)
+    }
+
+    @MainActor
+    func testSnapshotReadIsAsleepOnlyWhenTheRelaySaysTheMacIsOffline() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = makeStore(directory: directory, hub: SlowHub(), presence: { false })
+        await store.refresh()
+        XCTAssertTrue(store.hubUnreachable)
+    }
+
+    @MainActor
+    func testLatestBriefBodyIsRetriedUntilItArrives() async throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let bodies = FakeBriefBodies(savedProbe: { _, _ in false })
+        await bodies.fail("latest", times: 1)
+        await bodies.serveLegacy("latest", MobileBriefV1(briefId: "latest", asOf: "2026-10-28T13:00:00Z",
+                                                         narrativeStatus: "ok",
+                                                         narrative: [BriefParagraph(text: "Good morning. The day is planned.")]))
+        let store = makeStore(directory: directory, hub: SlowHub(), bodies: bodies)
+        var value = snapshot()
+        value.latestBrief = TodayBriefIndex(id: "latest", slot: "morning", localDate: "2026-10-28", scheduledAt: nil,
+                                            madeAt: "2026-10-28T13:00:00Z", catchUp: nil, durationSeconds: nil,
+                                            lead: "Good morning.")
+        // The latest brief is named once, as the latest; the library's fetch retries it until it arrives.
+        value.briefs = []
+        store.accept(value)
+        let cache = BriefCache(directory: directory.appendingPathComponent("briefs"))
+        let arrived = await awaitCondition(timeout: 15) { cache.load(identifier: "latest") != nil }
+        XCTAssertTrue(arrived)
+        let requests = await bodies.legacyRequests
+        XCTAssertEqual(requests, ["latest", "latest"], "one failed attempt, then the body")
+    }
+
+    func testNeedsYouRowsAreEmptyWhenNothingIsLeftToShow() throws {
+        XCTAssertTrue(FeedView.needsYouRows([], pendingIDs: []).isEmpty)
+        let json = #"{"id":"m1","chatId":"chat","card":{"proactive":{"momentId":"m1","kind":"reminder","state":"pending","actionIds":["done"]}}}"#
+        let need = try JSONDecoder().decode(TodayNeed.self, from: Data(json.utf8))
+        // A row whose write is in flight is not shown, so the section hides with it.
+        XCTAssertTrue(FeedView.needsYouRows([need], pendingIDs: ["m1"]).isEmpty)
+        XCTAssertEqual(FeedView.needsYouRows([need], pendingIDs: []).count, 1)
+    }
+}

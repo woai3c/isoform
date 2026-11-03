@@ -1,0 +1,612 @@
+{
+  "survey_date": "2026-10-23",
+  "decision_method": {
+    "asr": "Equal-language CER(ZH/JA/KO)/WER(EN/ES/FR/DE) macro; complete100/subset, zero failures, every-language RTF budget.",
+    "voice": "Coverage and licence first, all observed primary first-sentence starts <=2s, each full briefRTF<1; rank primary five-sentence back-ASR equal-language macro; ties prefer lower mean briefRTF.",
+    "limits": "ASR limits are survey assumptions, not product SLAs. Warm sentence PCM readiness is not cold-start or device playback."
+  },
+  "rankings": {
+    "asr": {
+      "live": [
+        [
+          0.04395938850038173,
+          "qwen17"
+        ],
+        [
+          0.057813440219555645,
+          "whisper"
+        ],
+        [
+          0.08382914037413738,
+          "qwen06"
+        ]
+      ],
+      "after-call": [
+        [
+          0.04395938850038173,
+          "qwen17"
+        ],
+        [
+          0.057813440219555645,
+          "whisper"
+        ],
+        [
+          0.08382914037413738,
+          "qwen06"
+        ]
+      ]
+    },
+    "voice": [
+      [
+        0.0030303030303030303,
+        "ming_fast"
+      ]
+    ]
+  },
+  "aliases": [
+    {
+      "id": "qwen17-live",
+      "artifact_id": "qwen17",
+      "job": "live"
+    }
+  ],
+  "additional_models": [
+    {
+      "id": "granite-ctc",
+      "job": "live",
+      "display_name": "Granite Speech 5.0 TurboCTC 470M",
+      "line": "Fast multilingual CTC; does not cover Mandarin or Korean.",
+      "evidence_line": "See RESULTS-2026-10-multilingual.md for completed per-language observations and limits.",
+      "inventory": "survey-2026-10-multilingual/assets/granite_ctc.json",
+      "sources": [
+        "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/blob/1dd23f46f6d4e6eae2531982ba2e33220086dd97/README.md"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/blob/1dd23f46f6d4e6eae2531982ba2e33220086dd97/README.md",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-audio 0.6.1 / MLX Metal",
+      "gpl_components": [],
+      "requires": [
+        "speaker-pack"
+      ],
+      "verification": "downloaded SHA-256"
+    },
+    {
+      "id": "chatterbox",
+      "job": "voice",
+      "display_name": "Chatterbox multilingual v3 MLX",
+      "line": "One 23-language checkpoint with reference-voice conditioning.",
+      "evidence_line": "See RESULTS-2026-10-multilingual.md for completed per-language observations and limits.",
+      "inventory": "survey-2026-10-multilingual/assets/chatterbox.json",
+      "sources": [
+        "https://huggingface.co/ResembleAI/chatterbox"
+      ],
+      "licence": {
+        "name": "MIT weights/runtime; Apache-2.0 speech codec",
+        "url": "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/blob/03565773edd72e949572557597af8063bb49a18a/README.md"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/ResembleAI/chatterbox",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/blob/03565773edd72e949572557597af8063bb49a18a/README.md",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-audio 0.6.1 / MLX 0.32.4; public float16 parameter conversion and cached reference conditionals",
+      "gpl_components": [],
+      "requires": [
+        "s3tokenizer"
+      ],
+      "requires_reference_audio": true,
+      "reference_samples": "survey-2026-10-multilingual/voice-references.json",
+      "shipping_gap": "The evaluated synthetic reference WAVs are external listening artifacts, not a hosted preset pack. Announce and pin the selected reference pack, or explicitly use user-provided reference audio, before shipping this route.",
+      "licence_scope": "Evaluated v3 NFKD/full-case EN/ZH/JA/ES/FR/DE frontend. Optional legacy G2P packages are not part of this evaluated route.",
+      "verification": "downloaded SHA-256"
+    },
+    {
+      "id": "cosyvoice3",
+      "job": "voice",
+      "display_name": "CosyVoice 3 0.5B MLX 8-bit",
+      "line": "Nine-language synthesis with a reference voice.",
+      "evidence_line": "See RESULTS-2026-10-multilingual.md for completed per-language observations and limits.",
+      "inventory": "survey-2026-10-multilingual/assets/cosyvoice3.json",
+      "sources": [
+        "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/blob/177baf277ac75e04e810f7db7f0d9c0ce5a17854/README.md"
+      ],
+      "licence": {
+        "name": "Apache-2.0 weights; MIT MLX port",
+        "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/blob/177baf277ac75e04e810f7db7f0d9c0ce5a17854/README.md",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md",
+          "reason": "Selected licence terms."
+        },
+        {
+          "url": "https://github.com/DePasqualeOrg/mlx-audio-plus/blob/4c9ec6a8489e790b5ba8964ab1f1d63150476f9f/LICENSE",
+          "reason": "MIT licence of the pinned MLX runtime port."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md",
+          "reason": "Publisher Apache-2.0 weight declaration; the conversion card does not supply a separate licence tag."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-audio-plus 0.1.8, Git 4c9ec6a8489e790b5ba8964ab1f1d63150476f9f; MLX Metal",
+      "gpl_components": [],
+      "requires": [
+        "s3tokenizer3"
+      ],
+      "requires_reference_audio": true,
+      "requires_reference_transcript": true,
+      "reference_samples": "survey-2026-10-multilingual/voice-references.json",
+      "shipping_gap": "Ship or announce a verified synthetic reference pack separately from the model files. No unhosted reference audio is represented as an invented download URL.",
+      "evaluation_mode": "zero-shot with reference transcript, including cross-language target text",
+      "reference_transcript_scope": "Required for this tested zero-shot profile. The public reference-only cross-lingual mode omits it and was not measured.",
+      "verification": "downloaded SHA-256"
+    },
+    {
+      "id": "s3tokenizer",
+      "job": "voice",
+      "display_name": "Chatterbox S3 speech tokenizer v2",
+      "line": "Required speech codec, not a separate selectable voice.",
+      "evidence_line": "See RESULTS-2026-10-multilingual.md for completed per-language observations and limits.",
+      "inventory": "survey-2026-10-multilingual/assets/s3tokenizer.json",
+      "sources": [
+        "https://huggingface.co/mlx-community/S3TokenizerV2/blob/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/README.md"
+      ],
+      "licence": {
+        "name": "Apache-2.0 (CosyVoice2 source weights)",
+        "url": "https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/mlx-community/S3TokenizerV2/blob/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/README.md",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "MLX codec component",
+      "gpl_components": [],
+      "requires": [],
+      "kind": "support_asset",
+      "selectable": false,
+      "verification": "downloaded SHA-256"
+    },
+    {
+      "id": "s3tokenizer3",
+      "job": "voice",
+      "display_name": "CosyVoice 3 S3 speech tokenizer v3",
+      "line": "Required speech codec, not a separate selectable voice.",
+      "evidence_line": "See RESULTS-2026-10-multilingual.md for completed per-language observations and limits.",
+      "inventory": "survey-2026-10-multilingual/assets/s3tokenizer3.json",
+      "sources": [
+        "https://huggingface.co/mlx-community/S3TokenizerV3/blob/b143914b3e912278104824da706edc9c2d317c4e/README.md"
+      ],
+      "licence": {
+        "name": "Apache-2.0 (CosyVoice3 source weights)",
+        "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/mlx-community/S3TokenizerV3/blob/b143914b3e912278104824da706edc9c2d317c4e/README.md",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "MLX codec component",
+      "gpl_components": [],
+      "requires": [],
+      "kind": "support_asset",
+      "selectable": false,
+      "verification": "downloaded SHA-256"
+    },
+    {
+      "id": "kokoro-japanese-g2p",
+      "job": "voice",
+      "display_name": "Kokoro Japanese pronunciation dictionary",
+      "line": "Explicit UniDic-lite support for the Japanese frontend.",
+      "evidence_line": "See RESULTS-2026-10-multilingual.md for completed per-language observations and limits.",
+      "inventory": "survey-2026-10-multilingual/assets/kokoro-japanese-g2p.json",
+      "sources": [
+        "https://pypi.org/project/unidic-lite/1.0.8/"
+      ],
+      "licence": {
+        "name": "MIT wrapper; BSD-3-Clause dictionary option",
+        "url": "https://github.com/polm/unidic-lite/blob/master/LICENSE.unidic"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://pypi.org/project/unidic-lite/1.0.8/",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://github.com/polm/unidic-lite/blob/master/LICENSE.unidic",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "UniDic-lite 1.0.8 / Misaki Cutlet; BSD dictionary option selected",
+      "gpl_components": [],
+      "requires": [],
+      "kind": "support_asset",
+      "selectable": false,
+      "verification": "downloaded SHA-256"
+    }
+  ],
+  "entry_updates": {
+    "sensevoice": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko"
+      ],
+      "evaluation_profile": "sensevoice",
+      "evidence_line": "FLEURS 100/supported language: EN WER 9.28%; ZH CER 9.89%; JA CER 7.41%; KO CER 6.60%; max RTF 0.026. ASR-only warm throughput.",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-sensevoice.json",
+      "line": "Five declared languages; licence confirmation remains pending."
+    },
+    "sensevoice_nano": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja"
+      ],
+      "evaluation_profile": "sensevoice_nano",
+      "evidence_line": "FLEURS 100/supported language: EN WER 15.48%; ZH CER 11.33%; JA CER 11.03%; max RTF 0.034. ASR-only warm throughput.",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-sensevoice_nano.json",
+      "line": "Fast three-language CTC encoder, distinct from the full decoder."
+    },
+    "qwen06": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "qwen06",
+      "evidence_line": "FLEURS 100/supported language: EN WER 6.34%; ZH CER 8.78%; JA CER 10.25%; KO CER 6.28%; ES WER 5.91%; FR WER 11.41%; DE WER 9.70%; max RTF 0.190. ASR-only warm throughput.",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-qwen06.json",
+      "line": "Thirty-language native control; weaker accuracy in the multilingual survey."
+    },
+    "funasr_nano": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja"
+      ],
+      "evaluation_profile": "funasr_nano",
+      "evidence_line": "FLEURS 100/supported language: EN WER 6.16%; ZH CER 8.97%; JA CER 7.08%; max RTF 0.139. ASR-only warm throughput.",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-funasr_nano.json",
+      "line": "Full three-language decoder; does not cover the global seven-language job."
+    },
+    "qwen17": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "qwen17",
+      "evidence_line": "FLEURS 100/supported language: EN WER 4.04%; ZH CER 8.23%; JA CER 5.33%; KO CER 2.63%; ES WER 2.53%; FR WER 4.95%; DE WER 3.05%; max RTF 0.132. ASR-only warm throughput.",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-qwen17.json",
+      "line": "One model for 30 languages, with the strongest measured seven-language accuracy.",
+      "runtime": "mlx-qwen3-asr 0.4.4 / MLX 0.32.4, Metal GPU",
+      "integration_gap": "The production backend is native Qwen 0.6B. The measured 1.7B MLX artifact needs a runtime bridge and live pipeline validation."
+    },
+    "mimo": {
+      "tested_languages": []
+    },
+    "mimo-audio-tokenizer": {
+      "tested_languages": []
+    },
+    "kokoro019": {
+      "tested_languages": [],
+      "alternative_without_gpl": "ming_tts"
+    },
+    "melo": {
+      "tested_languages": [
+        "en",
+        "zh"
+      ],
+      "evaluation_profile": "melo",
+      "primary_voices": {
+        "en": "0",
+        "zh": "0"
+      },
+      "speed_qualified": false,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-melo.json",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 16.47% across 2 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md."
+    },
+    "kokoro11": {
+      "tested_languages": [],
+      "alternative_without_gpl": "ming_tts"
+    },
+    "kokoro_mlx": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "es",
+        "fr"
+      ],
+      "evaluation_profile": "kokoro_mlx",
+      "primary_voices": {
+        "en": "af_heart",
+        "zh": "zf_xiaobei",
+        "ja": "jf_alpha",
+        "es": "ef_dora",
+        "fr": "ff_siwis"
+      },
+      "speed_qualified": false,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-kokoro_mlx.json",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 0.18% across 5 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md.",
+      "requires": [
+        "kokoro-english-g2p",
+        "kokoro-japanese-g2p"
+      ],
+      "alternative_without_gpl": "ming_tts"
+    },
+    "ming_tts": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "ming_fast",
+      "primary_voices": {
+        "en": "UK_Charlotte",
+        "zh": "灵小柔",
+        "ja": "UK_Charlotte",
+        "es": "UK_Charlotte",
+        "fr": "US_James",
+        "de": "UK_Charlotte"
+      },
+      "speed_qualified": true,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-ming_fast.json",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 0.30% across 6 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md.",
+      "generation_config": {
+        "artifact": "ming_tts",
+        "ddpm_steps": 6,
+        "temperature": 0.7,
+        "max_tokens": 4096,
+        "seed_per_sentence": 42
+      },
+      "line": "Seven-language voice; six decoder steps enable faster sentence delivery.",
+      "runtime": "mlx-audio 0.6.1 / MLX 0.32.4; ddpm_steps=6; explicit lang_code required",
+      "runtime_components": [
+        "See survey-2026-10-multilingual/requirements-main.txt for the shared evaluation environment. Package the Ming route separately from unused GPL comparison dependencies."
+      ],
+      "latency_scope": "Resident model, complete sentence PCM before sound-device queue. Greeting first; informative sentence and playback gaps remain in the report."
+    },
+    "parakeet-v2": {
+      "tested_languages": []
+    },
+    "whisper-turbo": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "whisper",
+      "evidence_line": "FLEURS 100/supported language: EN WER 5.60%; ZH CER 9.62%; JA CER 5.76%; KO CER 3.14%; ES WER 3.18%; FR WER 6.69%; DE WER 6.47%; max RTF 0.195. ASR-only warm throughput.",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-whisper.json",
+      "line": "One hundred language tokens; the seven-language global runner-up.",
+      "runtime": "mlx-whisper 0.4.3 / MLX 0.32.4, word timestamps disabled"
+    },
+    "kokoro-english-g2p": {
+      "tested_languages": [
+        "en"
+      ]
+    },
+    "apple-vision": {
+      "tested_languages": [
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "line": "On-device multilingual screen text, with automatic language detection.",
+      "evidence_line": "30 generated screenshots: JA99.67%, KO100%, ES99.84%, FR99.84%, DE99.55% character accuracy. Warm language mean latency85.9-147.6ms. Existing Chinese-first app configuration is weak on Japanese/Korean.",
+      "recognition_configuration": {
+        "recognition_level": "accurate",
+        "automatically_detects_language": true,
+        "recognition_languages": "Query supportedRecognitionLanguages on the actual OS/request"
+      },
+      "integration_gap": "The benchmark alone changes. The app must replace its Chinese-first language configuration before claiming these multilingual results."
+    },
+    "apple-documents": {
+      "tested_languages": []
+    },
+    "ppocr6": {
+      "tested_languages": []
+    },
+    "speaker-pack": {
+      "tested_languages": []
+    },
+    "after-call-none": {
+      "tested_languages": []
+    },
+    "granite-ctc": {
+      "tested_languages": [
+        "en",
+        "ja",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "granite_ctc",
+      "evidence_line": "FLEURS 100/supported language: EN WER 4.87%; JA CER 5.88%; ES WER 4.06%; FR WER 7.81%; DE WER 5.84%; max RTF 0.007. ASR-only warm throughput.",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-granite_ctc.json"
+    },
+    "chatterbox": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "chatterbox_fp16",
+      "primary_voices": {
+        "en": "synthetic_charlotte",
+        "zh": "synthetic_charlotte",
+        "ja": "synthetic_charlotte",
+        "es": "synthetic_charlotte",
+        "fr": "synthetic_charlotte",
+        "de": "synthetic_charlotte"
+      },
+      "speed_qualified": false,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-chatterbox_fp16.json",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 6.97% across 6 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md.",
+      "generation_config": {
+        "artifact": "chatterbox",
+        "floating_parameter_dtype": "float16",
+        "conditioning_float_dtype": "float16",
+        "parameter_conversion": "Module.set_dtype",
+        "include_codec": true,
+        "source_checkpoint_precision": "float32",
+        "integer_conditioning": "unchanged token IDs and lengths",
+        "temperature": 0.8,
+        "max_new_tokens": 1000,
+        "requested_exaggeration": 0.1,
+        "exaggeration": 0.0999755859375,
+        "seed_per_sentence": 42
+      },
+      "line": "One reference voice across 23 languages.",
+      "runtime": "mlx-audio 0.6.1 / MLX 0.32.4; public float16 parameter conversion and cached reference conditionals"
+    },
+    "cosyvoice3": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "cosyvoice3",
+      "primary_voices": {
+        "en": "synthetic_charlotte",
+        "zh": "synthetic_charlotte",
+        "ja": "synthetic_charlotte",
+        "es": "synthetic_charlotte",
+        "fr": "synthetic_charlotte",
+        "de": "synthetic_charlotte"
+      },
+      "speed_qualified": false,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-cosyvoice3.json",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 16.69% across 6 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md."
+    },
+    "s3tokenizer": {
+      "tested_languages": []
+    },
+    "s3tokenizer3": {
+      "tested_languages": []
+    },
+    "kokoro-japanese-g2p": {
+      "tested_languages": [
+        "ja"
+      ]
+    },
+    "qwen17-live": {
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "qwen17",
+      "evidence_line": "FLEURS 100/supported language: EN WER 4.04%; ZH CER 8.23%; JA CER 5.33%; KO CER 2.63%; ES WER 2.53%; FR WER 4.95%; DE WER 3.05%; max RTF 0.132. ASR-only warm throughput.",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-qwen17.json",
+      "line": "Use the same verified multilingual recognizer for this job.",
+      "runtime": "mlx-qwen3-asr 0.4.4 / MLX 0.32.4, Metal GPU",
+      "integration_gap": "The production backend is native Qwen 0.6B. The measured 1.7B MLX artifact needs a runtime bridge and live pipeline validation."
+    }
+  },
+  "recommendations": {
+    "voice": "ming_tts",
+    "ocr": "apple-vision",
+    "live": "qwen17-live",
+    "after-call": "qwen17"
+  },
+  "alternatives_without_gpl": {
+    "voice": "ming_tts"
+  },
+  "shared_artifact_rule": "Deduplicate files by SHA-256/artifact_id across job rows; the live row additionally requires the speaker pack."
+}

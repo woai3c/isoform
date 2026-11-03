@@ -1,0 +1,34 @@
+{
+    "name": "quick-chat-spotlight",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "description": "Spotlight surface for Isoform Quick Chat",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "test": "pnpm --dir ../../frontend exec vitest run src/components/spotlight-language.test.tsx",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@tailwindcss/vite": "^4.1.18",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "lucide-react": "^0.563.0",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "react-markdown": "^10.1.0",
+        "react-syntax-highlighter": "^16.1.0",
+        "remark-gfm": "^4.0.1",
+        "tailwind-merge": "^3.4.0",
+        "tailwindcss": "^4.1.18"
+    },
+    "devDependencies": {
+        "@types/react": "^18.3.12",
+        "@types/react-dom": "^18.3.1",
+        "@types/react-syntax-highlighter": "^15",
+        "@vitejs/plugin-react": "^4.3.4",
+        "typescript": "^5.6.3",
+        "vite": "^6.0.3"
+    }
+}

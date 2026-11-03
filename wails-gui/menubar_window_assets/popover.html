@@ -1,0 +1,276 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'">
+<style>/*__TOKENS__*/
+/* Menu bar popover 1.0 (Isoform design, 2026-10-27):
+   docs/handoff-2026-10-26/menu-bar-popover-1.0. The window is transparent;
+   the panel draws its own border, corners and shadow, with room around it. */
+:root { --pop-shadow: 0 0 0 .5px rgba(22,22,40,.08), 0 1px 2px rgba(22,22,40,.06), 0 18px 44px -14px rgba(22,22,40,.30); --ph: var(--color-border-light); }
+:root[data-theme="onedark"] { --pop-shadow: 0 0 0 .5px rgba(0,0,0,.6), 0 18px 44px -12px rgba(0,0,0,.65); --ph: var(--color-border-subtle); }
+* { box-sizing: border-box; }
+html,body { margin:0; background:transparent; }
+body { padding:0 18px 34px; width:396px; font:13px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"PingFang SC",sans-serif; -webkit-font-smoothing:antialiased; -webkit-user-select:none; cursor:default; }
+.pop { width:360px; border-radius:12px; overflow:hidden; background:var(--color-panel); color:var(--color-ink); border:1px solid var(--color-border); box-shadow:var(--pop-shadow); }
+b { font-weight:600; }
+button { font:inherit; border:0; background:none; color:inherit; cursor:default; padding:0; text-align:left; }
+button:focus-visible { outline:2px solid var(--color-border-focus); outline-offset:-2px; }
+[hidden] { display:none !important; }
+
+.hd { height:48px; display:flex; align-items:center; gap:8px; padding:0 8px 0 14px; border-bottom:1px solid var(--color-border-light); }
+.mark { width:18px; height:18px; flex:none; background:var(--color-ink); -webkit-mask:url('/*__MARK__*/') center / contain no-repeat; }
+.paused .mark, .off .mark { opacity:.45; }
+.dot { width:7px; height:7px; border-radius:99px; background:var(--color-accent); flex:none; margin-left:2px; }
+.paused .dot, .starting .dot { background:none; box-shadow:inset 0 0 0 1.5px var(--color-faint); }
+.off .dot { background:var(--color-warning); }
+#state { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.starting #state { color:var(--color-muted); font-weight:500; }
+#hb { margin-left:auto; height:26px; padding:0 10px; border-radius:7px; font-size:12px; font-weight:500; color:var(--color-muted); white-space:nowrap; }
+#hb:hover:not(:disabled) { background:var(--color-panel-warm); color:var(--color-ink); }
+#hb.acc { color:var(--color-accent); }
+#hb:disabled { opacity:.4; }
+
+.br { display:flex; align-items:center; gap:11px; min-height:60px; padding:0 14px; border-bottom:1px solid var(--color-border-light); width:100%; }
+.br.on { min-height:72px; }
+.pl { width:30px; height:30px; border-radius:99px; flex:none; display:inline-flex; align-items:center; justify-content:center; background:var(--color-solid-btn-bg); color:var(--color-solid-btn-fg); }
+.pl.ghost { background:var(--color-panel-warm); color:var(--color-muted); box-shadow:inset 0 0 0 1px var(--color-border); }
+.pl.ghost.dim svg { opacity:.45; }
+.pl.acc { color:var(--color-accent); }
+.pl.ph { background:var(--ph); box-shadow:none; }
+.br .tx { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
+.br .tx b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.meta { font-size:12px; color:var(--color-muted); font-variant-numeric:tabular-nums; }
+.bar { height:3px; border-radius:2px; background:var(--color-border-light); margin:4px 0 2px; overflow:hidden; }
+.bar i { display:block; height:100%; width:0; background:var(--color-accent); }
+.spin { animation:sp .9s linear infinite; } @keyframes sp { to { transform:rotate(360deg); } }
+
+.sh { height:38px; display:flex; align-items:center; gap:7px; padding:6px 14px 0; }
+#count { min-width:18px; height:18px; padding:0 5px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; background:var(--color-warning-bg); color:var(--color-warning); font-variant-numeric:tabular-nums; }
+#items { display:flex; flex-direction:column; padding-top:8px; }
+.it { height:56px; display:flex; flex-direction:column; justify-content:center; gap:2px; margin:0 10px 6px; padding:0 12px; border-radius:10px; background:var(--color-panel-warm); border:1px solid transparent; width:calc(100% - 20px); }
+.it:hover, .it:focus-visible { border-color:var(--color-border-strong); outline:none; }
+.it b, .it span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.it span { font-size:12px; color:var(--color-muted); }
+.it.in { animation:slide .2s ease-out; } @keyframes slide { from { opacity:0; transform:translateY(-6px); } }
+.it.out { transition:opacity .15s; opacity:0; }
+.it.ph { gap:7px; }
+.phb { display:block; height:9px; border-radius:4px; background:var(--ph); }
+.phb.s { height:8px; }
+.fade { animation:fade .15s ease-out; } @keyframes fade { from { opacity:0; } }
+#more { display:inline-flex; align-items:center; gap:2px; height:28px; padding:0 14px 6px; font-size:12px; font-weight:500; color:var(--color-accent); }
+.note { margin:0; display:flex; align-items:center; gap:8px; min-height:34px; padding:0 14px 12px; color:var(--color-muted); }
+.note svg { flex:none; color:var(--color-faint); }
+#failed { color:var(--color-muted); font-size:12px; line-height:1.4; }
+
+.ac { border-top:1px solid var(--color-border-light); padding:6px; display:flex; flex-direction:column; }
+.ro { height:32px; display:flex; align-items:center; gap:10px; padding:0 8px; border-radius:7px; width:100%; }
+.ro:hover:not(:disabled), .ro:focus-visible { background:var(--color-panel-warm); outline:none; }
+.ro .ic { width:16px; height:16px; display:inline-flex; color:var(--color-muted); }
+.ro .k { margin-left:auto; font-size:12px; color:var(--color-subtle); letter-spacing:.04em; }
+.ro:disabled { opacity:.4; }
+.upd { height:32px; display:flex; align-items:center; gap:10px; padding:0 8px; }
+.upd button { margin-left:auto; height:24px; padding:0 10px; border-radius:99px; background:var(--color-solid-btn-bg); color:var(--color-solid-btn-fg); font-size:12px; font-weight:600; }
+.ft { height:36px; display:flex; align-items:center; justify-content:space-between; padding:0 6px; border-top:1px solid var(--color-border-light); }
+.ft button { height:26px; padding:0 8px; border-radius:6px; font-size:12px; font-weight:500; color:var(--color-muted); }
+.ft button:hover, .ft button:focus-visible { background:var(--color-panel-warm); color:var(--color-ink); }
+</style></head><body>
+<div class="pop" id="pop" role="dialog">
+<header class="hd" id="hd"><span class="mark" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span id="state"></span><button id="hb" type="button"></button></header>
+<button class="br" id="br" type="button">
+  <span class="pl" id="pl"></span>
+  <span class="tx"><b id="briefTitle"></b><span class="bar" id="bar" hidden><i id="barFill"></i></span><span class="meta" id="briefMeta"></span></span>
+</button>
+<section>
+  <div class="sh"><b id="waiting"></b><span id="count" hidden></span></div>
+  <div id="items"></div>
+  <button id="more" type="button" hidden></button>
+  <p class="note" id="empty" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span id="emptyText"></span></p>
+  <p class="note" id="failed" role="alert" hidden></p>
+</section>
+<div class="ac">
+  <button class="ro" id="make" type="button"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.9L19 9.7l-5.2 1.8L12 16.5l-1.8-5L5 9.7l5.2-1.8z"/><path d="M19 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></svg></span><span id="makeText"></span></button>
+  <button class="ro" id="open" type="button"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18"/></svg></span><span id="openText"></span><span class="k" id="shortcut"></span></button>
+  <div class="upd" id="mdl" hidden><span class="ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M6 11l6 6 6-6M5 20h14"/></svg></span><span id="mdlText"></span></div>
+  <div class="upd" id="upd" hidden><span class="ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M6 11l6 6 6-6M5 20h14"/></svg></span><span id="updText"></span><button id="restart" type="button"></button></div>
+</div>
+<footer class="ft"><button id="sees" type="button"></button><button id="settings" type="button"></button><button id="quit" type="button"></button></footer>
+</div>
+<template id="i-play"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg></template><template id="i-pause"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><rect x="6.5" y="5" width="3.6" height="14" rx="1"/><rect x="13.9" y="5" width="3.6" height="14" rx="1"/></svg></template><template id="i-page"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg></template><template id="i-spin"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" class="spin"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="2.4"/><path d="M12 4a8 8 0 0 1 8 8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></template><template id="i-more"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></template>
+<script>
+(function () {
+    const icon = name => document.getElementById('i-' + name).content.cloneNode(true);
+    const setIcon = (node, name) => node.replaceChildren(icon(name));
+    const bar = (width, small) => { const span = document.createElement('span'); span.className = small ? 'phb s' : 'phb'; span.style.width = width; return span; };
+    let model;
+    let playback = { briefId: '', state: 'idle', position: 0, duration: 0 };
+    let shownItems = null;
+    const el = id => document.getElementById(id);
+    const fill = (template, values) => String(template || '').replace(/\{(\w+)\}/g, (all, key) => key in values ? values[key] : all);
+    const clock = seconds => { const s = Math.max(0, Math.round(seconds || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+    function send(command, extra) { window.webkit.messageHandlers.menubar.postMessage(Object.assign({command}, extra || {})); }
+    function resize() { send('resize', {height: document.body.scrollHeight}); }
+
+    function renderBrief() {
+        const w = model.words, brief = model.brief || {}, row = el('br'), pl = el('pl');
+        const playing = !model.loading && brief.kind === 'ready' && playback.briefId === brief.id && (playback.state === 'playing' || playback.state === 'loading');
+        row.classList.toggle('on', playing);
+        row.disabled = !!model.loading || brief.kind === 'none' || brief.kind === 'making';
+        pl.className = 'pl';
+        el('bar').hidden = !playing;
+        if (model.loading) {
+            pl.className = 'pl ph'; pl.replaceChildren();
+            el('briefTitle').replaceChildren(bar('180px'));
+            const meta = bar('92px', true); meta.style.marginTop = '5px'; el('briefMeta').replaceChildren(meta);
+            return;
+        }
+        el('briefTitle').textContent = brief.title || '';
+        if (brief.kind === 'ready') {
+            setIcon(pl, playing && playback.state === 'playing' ? 'pause' : 'play');
+            if (playing) {
+                const length = playback.duration || brief.seconds || 0;
+                el('barFill').style.width = (length ? Math.min(100, playback.position / length * 100) : 0) + '%';
+                el('briefMeta').textContent = fill(w.playing, {elapsed: clock(playback.position), length: clock(length)});
+            } else el('briefMeta').textContent = brief.meta || '';
+        } else if (brief.kind === 'read') {
+            pl.className = 'pl ghost'; setIcon(pl, 'page'); el('briefMeta').textContent = brief.meta || '';
+        } else if (brief.kind === 'making') {
+            pl.className = 'pl ghost acc'; setIcon(pl, 'spin'); el('briefMeta').textContent = brief.meta || '';
+        } else {
+            pl.className = 'pl ghost dim'; setIcon(pl, 'play'); el('briefMeta').textContent = brief.meta || '';
+        }
+    }
+
+    function renderItems() {
+        const box = el('items');
+        if (model.loading || model.withdrawn) {
+            box.replaceChildren(...[0, 1].map(() => { const row = document.createElement('div'); row.className = 'it ph'; row.append(bar('70%'), bar('42%', true)); return row; }));
+            shownItems = null;
+            return;
+        }
+        const items = (model.items || []).slice(0, 3);
+        const ids = items.map(item => item.id);
+        const before = shownItems;
+        if (before && JSON.stringify(before) === JSON.stringify(items)) return;
+        const focused = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.id : '';
+        box.replaceChildren();
+        items.forEach(item => {
+            const button = document.createElement('button');
+            button.type = 'button'; button.className = 'it'; button.dataset.id = item.id;
+            if (before && !before.some(old => old.id === item.id)) button.classList.add('in');
+            if (!before) button.classList.add('fade');
+            const title = document.createElement('b'); title.textContent = item.title;
+            const detail = document.createElement('span'); detail.textContent = item.detail;
+            button.append(title, detail); button.title = item.title + '\n' + item.detail;
+            button.onclick = () => send('waiting:' + item.id);
+            box.append(button);
+            if (item.id === focused) button.focus();
+        });
+        shownItems = items;
+    }
+
+    window.updateMenuBar = function (next) {
+        model = next;
+        const w = model.words;
+        document.documentElement.lang = model.language;
+        document.documentElement.dataset.theme = model.theme;
+        const status = model.loading ? 'starting' : model.status;
+        el('hd').className = 'hd ' + status;
+        el('pop').setAttribute('aria-label', model.label || '');
+        el('state').textContent = model.state;
+        const hb = el('hb');
+        hb.classList.toggle('acc', status === 'paused' || status === 'off');
+        hb.textContent = status === 'paused' ? w.resume : status === 'off' ? w.turnOn : w.pause;
+        hb.dataset.command = status === 'paused' ? 'resume' : status === 'off' ? 'turnOn' : 'pause15';
+        hb.disabled = status === 'starting';
+        renderBrief();
+        el('waiting').textContent = w.waiting;
+        const pending = !!model.loading || !!model.withdrawn || !!model.waitingPending;
+        const failed = !pending && !!model.error;
+        const none = !pending && !failed && model.waiting === 0;
+        el('count').hidden = pending || failed || model.waiting === 0;
+        el('count').textContent = String(model.waiting);
+        renderItems();
+        el('items').hidden = none || failed;
+        el('more').hidden = pending || failed || model.waiting <= 3;
+        el('more').replaceChildren(document.createTextNode(fill(w.seeAll, {n: model.waiting})), icon('more'));
+        el('empty').hidden = !none;
+        el('emptyText').textContent = w.empty;
+        el('failed').hidden = !failed;
+        el('failed').textContent = failed ? w.failed : '';
+        el('makeText').textContent = w.make;
+        el('make').disabled = !!model.loading || (model.brief && model.brief.kind === 'making');
+        el('openText').textContent = w.open;
+        el('shortcut').textContent = w.openShortcut;
+        el('mdl').hidden = !model.models;
+        el('mdlText').textContent = model.models || '';
+        el('upd').hidden = !model.update;
+        el('updText').textContent = fill(w.update, {version: model.update || ''});
+        el('restart').textContent = w.restart;
+        el('sees').textContent = w.onThisMac;
+        el('settings').textContent = w.settings;
+        el('quit').textContent = w.footerQuit;
+        resize();
+    };
+    // Today's player, shared: playing here and in Today move together.
+    window.updatePlayback = function (next) {
+        playback = Object.assign({ briefId: '', state: 'idle', position: 0, duration: 0 }, next || {});
+        if (model) { renderBrief(); resize(); }
+    };
+    // A privacy or source change (a pause among them) empties what is
+    // waiting at once: its rows become placeholders until Go's next read
+    // fills them in place. The header, the brief and the actions stay.
+    window.withdrawMenuBar = function () {
+        if (!model) return;
+        window.updateMenuBar(Object.assign({}, model, {withdrawn: true, waiting: 0, items: [], error: ''}));
+    };
+
+    // Pause and Resume change the header at once; Go's read confirms it.
+    el('hb').onclick = () => {
+        const command = el('hb').dataset.command;
+        send(command);
+        if (!model || (command !== 'pause15' && command !== 'resume')) return;
+        const paused = command === 'pause15';
+        window.updateMenuBar(Object.assign({}, model, {status: paused ? 'paused' : 'observing', paused, state: paused ? model.words.paused : model.words.observing}));
+    };
+    // Play answers at once: the row shows loading, or paused when this brief
+    // is already playing. Today's player confirms it a moment later.
+    const playBrief = brief => {
+        const playingNow = playback.briefId === brief.id && (playback.state === 'playing' || playback.state === 'loading');
+        window.updatePlayback(Object.assign({}, playback, {briefId: brief.id, state: playingNow ? 'idle' : 'loading'}));
+        send('play:' + brief.id);
+        // If the player never answers, the row stops claiming loading.
+        setTimeout(() => {
+            if (playback.briefId === brief.id && playback.state === 'loading') window.updatePlayback({briefId: '', state: 'idle', position: 0, duration: 0});
+        }, 15000);
+    };
+    el('br').onclick = () => {
+        const brief = model.brief || {};
+        if (brief.kind === 'ready') playBrief(brief);
+        else if (brief.kind === 'read') send('read:' + brief.id);
+    };
+    el('more').onclick = () => send('waiting');
+    el('make').onclick = () => send('makeHere');
+    el('open').onclick = () => send('open');
+    el('restart').onclick = () => send('restart');
+    el('sees').onclick = () => send('sees');
+    el('settings').onclick = () => send('settings');
+    el('quit').onclick = () => send('quit');
+    document.addEventListener('keydown', event => {
+        const focusables = [...document.querySelectorAll('button:not([disabled]):not([hidden])')].filter(node => node.offsetParent !== null && node.id !== 'hb');
+        if (event.key === 'Escape') { event.preventDefault(); send('close'); return; }
+        if (event.metaKey && event.shiftKey && !event.ctrlKey && !event.altKey && event.key.toLowerCase() === 'i') { event.preventDefault(); send('open'); return; }
+        if (event.metaKey && !event.shiftKey && !event.ctrlKey && !event.altKey && event.key === ',') { event.preventDefault(); send('settings'); return; }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            const at = focusables.indexOf(document.activeElement);
+            const next = event.key === 'ArrowDown' ? (at + 1) % focusables.length : (at <= 0 ? focusables.length - 1 : at - 1);
+            if (focusables[next]) focusables[next].focus();
+            return;
+        }
+        if (event.key === ' ' && document.activeElement !== el('br') && model && model.brief && model.brief.kind === 'ready') {
+            event.preventDefault(); playBrief(model.brief);
+        }
+    });
+    window.updateMenuBar(/*__MODEL__*/null);
+    send('ready', {height: document.body.scrollHeight});
+})();
+</script></body></html>

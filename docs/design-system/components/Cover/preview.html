@@ -1,0 +1,53 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Yansu</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--color-background); color:var(--color-ink); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; width:960px; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; }
+  .ink { fill:var(--color-solid); }
+  .acc { fill:var(--color-accent); }
+  .tint { fill:var(--color-sample-border); }
+  .eye { fill:var(--color-seaweed); }
+  .blk { rx:var(--radius-xl); }
+  .rule { stroke:var(--color-border-strong); stroke-width:1; }
+  .rule.on-dark { stroke:var(--color-sample-border); }
+  .words { position:absolute; left:40px; bottom:36px; max-width:440px; }
+  .name { margin:0; font-size:112px; line-height:.92; font-weight:600; letter-spacing:-.03em; color:var(--color-ink); }
+  .tag { margin:12px 0 0 4px; font-size:14px; line-height:20px; color:var(--color-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      color-solid 160×248 slab bled off the top (warm ink, the primary action) · color-accent 200×200 bled off the right (the deep warm gray of emphasis) · color-sample-border 128×112 tint for relief · color-seaweed 24px disc once (privacy green, the "eye") — ≈36% of 960×288
+  arrangement one tall ink slab with satellites, bottoms on one line 40px above the edge, 16px gutters
+  pattern     hairline rules + the eye, from "Elevation is hairline-first … no glow": four 1px rules at a 48px pitch (12 × spacing) crossing the blocks, and the logo's dot as a single disc
+  scales      sides and gutters in spacing multiples (16, 48); corners radius-xl (12px); disc r = 12px
+-->
+<line class="rule" x1="0" y1="56" x2="480" y2="56"/>
+<line class="rule" x1="0" y1="104" x2="480" y2="104"/>
+<line class="rule" x1="0" y1="152" x2="480" y2="152"/>
+<line class="rule" x1="0" y1="200" x2="480" y2="200"/>
+<rect class="ink blk" x="32" y="-12" width="160" height="260" rx="12"/>
+<rect class="tint blk" x="208" y="136" width="128" height="112" rx="12"/>
+<rect class="acc blk" x="352" y="48" width="200" height="200" rx="12"/>
+<circle class="eye" cx="272" cy="104" r="12"/>
+<line class="rule on-dark" x1="32" y1="152" x2="192" y2="152"/>
+<line class="rule on-dark" x1="352" y1="104" x2="480" y2="104"/>
+</svg>
+</div>
+<div class="words">
+  <h1 class="name">Yansu</h1>
+  <p class="tag">A calm, capable coworker. Warm paper, precise ink.</p>
+</div>
+</div>
+</body>
+</html>

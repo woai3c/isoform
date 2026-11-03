@@ -1,0 +1,2412 @@
+{
+  "model": "chatterbox",
+  "samples": [
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "Good morning.",
+      "file_name": "chatterbox-en-synthetic_charlotte-0-sentence.wav",
+      "sha256": "3312acc23a3e59c6ac0398d91d87f321106b0c5f89c74acb77d74c74a00088fb",
+      "size_bytes": 71084,
+      "sample_rate": 24000,
+      "duration_s": 1.48,
+      "synthesis_s": 2.135124458000064
+    },
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "Your first meeting starts at nine, and the afternoon is clear for focused work.",
+      "file_name": "chatterbox-en-synthetic_charlotte-1-sentence.wav",
+      "sha256": "790c97ac677d0095064c84eaae7f8999956a51a478d273e18c532df3cad2bc56",
+      "size_bytes": 217004,
+      "sample_rate": 24000,
+      "duration_s": 4.52,
+      "synthesis_s": 5.4261154160049045
+    },
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "The code review is ready.",
+      "file_name": "chatterbox-en-synthetic_charlotte-2-sentence.wav",
+      "sha256": "78d82ca7a4a34729146ed1cf15c994ca19a7dd58f7cea66984ebf97aafc0896a",
+      "size_bytes": 80684,
+      "sample_rate": 24000,
+      "duration_s": 1.68,
+      "synthesis_s": 2.4887418340076692
+    },
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "Please check the new API before merging the pull request.",
+      "file_name": "chatterbox-en-synthetic_charlotte-3-sentence.wav",
+      "sha256": "70fe94e5c31e7d458b673df7fc76b174c950fe251d8c803941227a31b5cbf012",
+      "size_bytes": 163244,
+      "sample_rate": 24000,
+      "duration_s": 3.4,
+      "synthesis_s": 4.554337041990948
+    },
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "Take a short break, then send the project update when you are ready.",
+      "file_name": "chatterbox-en-synthetic_charlotte-4-sentence.wav",
+      "sha256": "3de61d3474435d5632344001d41c8ecc6ab9ce32c837eb7adf415a595bf12eb8",
+      "size_bytes": 165164,
+      "sample_rate": 24000,
+      "duration_s": 3.44,
+      "synthesis_s": 4.627208249992691
+    },
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_james",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "Good morning.",
+      "file_name": "chatterbox-en-synthetic_james-0-sentence.wav",
+      "sha256": "0de696eba4886fc4d0460c9f2a3ea0dd66050a303236a8eaa548305c8ccbc6d0",
+      "size_bytes": 43244,
+      "sample_rate": 24000,
+      "duration_s": 0.9,
+      "synthesis_s": 1.5258656660007546
+    },
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_james",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "Your first meeting starts at nine, and the afternoon is clear for focused work.",
+      "file_name": "chatterbox-en-synthetic_james-1-sentence.wav",
+      "sha256": "fd89872ae1aa143b34fb62a119948d289601513693795fdc08c6d230d48e6584",
+      "size_bytes": 204524,
+      "sample_rate": 24000,
+      "duration_s": 4.26,
+      "synthesis_s": 5.202697582994006
+    },
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_james",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "The code review is ready.",
+      "file_name": "chatterbox-en-synthetic_james-2-sentence.wav",
+      "sha256": "15f4f3fe9253391c3d0fa762adb71e5a4e0f2fda44f887c665be4610b00820c1",
+      "size_bytes": 79724,
+      "sample_rate": 24000,
+      "duration_s": 1.66,
+      "synthesis_s": 2.353980625004624
+    },
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_james",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "Please check the new API before merging the pull request.",
+      "file_name": "chatterbox-en-synthetic_james-3-sentence.wav",
+      "sha256": "2b22e1d26c07ef6a589c1385dd810837e302bf1ff41d9126083c86beb3a8291c",
+      "size_bytes": 143084,
+      "sample_rate": 24000,
+      "duration_s": 2.98,
+      "synthesis_s": 3.8938712090021
+    },
+    {
+      "model": "chatterbox",
+      "language": "en",
+      "voice": "synthetic_james",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "Take a short break, then send the project update when you are ready.",
+      "file_name": "chatterbox-en-synthetic_james-4-sentence.wav",
+      "sha256": "73b8eed652b431efde1aaa650a13597dac1c64ae8e28add6ab6134d3aee0820c",
+      "size_bytes": 145004,
+      "sample_rate": 24000,
+      "duration_s": 3.02,
+      "synthesis_s": 3.9464955830044346
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "早上好。",
+      "file_name": "chatterbox-zh-synthetic_charlotte-0-sentence.wav",
+      "sha256": "186e77514676715cf86c5f3b3444e65e863229946caad77661613c57d5086dce",
+      "size_bytes": 67244,
+      "sample_rate": 24000,
+      "duration_s": 1.4,
+      "synthesis_s": 2.2517279160092585
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "你的第一个会议九点开始，下午可以专心工作。",
+      "file_name": "chatterbox-zh-synthetic_charlotte-1-sentence.wav",
+      "sha256": "485a15491ab76d06b735b16b6fbfcab24af7fc5d7dd0e3af8ef851143fdd8bb8",
+      "size_bytes": 199724,
+      "sample_rate": 24000,
+      "duration_s": 4.16,
+      "synthesis_s": 5.30243545799749
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "代码审查已经准备好了。",
+      "file_name": "chatterbox-zh-synthetic_charlotte-2-sentence.wav",
+      "sha256": "461bffdbdfe19eb13caf911fec80145b9dbb4a2e46ae5765b973d751b980e4d4",
+      "size_bytes": 126764,
+      "sample_rate": 24000,
+      "duration_s": 2.64,
+      "synthesis_s": 3.545554500000435
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "合并之前，请检查新的接口。",
+      "file_name": "chatterbox-zh-synthetic_charlotte-3-sentence.wav",
+      "sha256": "8bc3b0d34e927d0a8647f1ab81c434218ff07fdd82cbf70163fa45620519e1cc",
+      "size_bytes": 130604,
+      "sample_rate": 24000,
+      "duration_s": 2.72,
+      "synthesis_s": 3.6416265000007115
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "先休息一会儿，准备好以后再发送项目进展。",
+      "file_name": "chatterbox-zh-synthetic_charlotte-4-sentence.wav",
+      "sha256": "2faac9d72d45c1647f92d663cccfcfad4aff8cf2fd4a9ee63c56667c312929e6",
+      "size_bytes": 184364,
+      "sample_rate": 24000,
+      "duration_s": 3.84,
+      "synthesis_s": 5.320856582999113
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_james",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "早上好。",
+      "file_name": "chatterbox-zh-synthetic_james-0-sentence.wav",
+      "sha256": "5d2a96caad2d22d15ba1c118a9b536318eedaa0c521ae677152a49b5829092e1",
+      "size_bytes": 56684,
+      "sample_rate": 24000,
+      "duration_s": 1.18,
+      "synthesis_s": 1.9003669999947306
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_james",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "你的第一个会议九点开始，下午可以专心工作。",
+      "file_name": "chatterbox-zh-synthetic_james-1-sentence.wav",
+      "sha256": "bf2ba48ac1b74851b00b2e4962970e7c494ca2a22ecfc4366a955604692f06df",
+      "size_bytes": 241004,
+      "sample_rate": 24000,
+      "duration_s": 5.02,
+      "synthesis_s": 6.495539958006702
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_james",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "代码审查已经准备好了。",
+      "file_name": "chatterbox-zh-synthetic_james-2-sentence.wav",
+      "sha256": "1a702639a6a1df51ef0c01922ec58a81cc4861ac600dfc4056f0b68e5b617ec0",
+      "size_bytes": 143084,
+      "sample_rate": 24000,
+      "duration_s": 2.98,
+      "synthesis_s": 4.060023624988389
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_james",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "合并之前，请检查新的接口。",
+      "file_name": "chatterbox-zh-synthetic_james-3-sentence.wav",
+      "sha256": "61450b141cab74d3d0f9f07af444dfc6b30a2bbea6830a0e74ad69b820e3405a",
+      "size_bytes": 150764,
+      "sample_rate": 24000,
+      "duration_s": 3.14,
+      "synthesis_s": 4.321180499988259
+    },
+    {
+      "model": "chatterbox",
+      "language": "zh",
+      "voice": "synthetic_james",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "先休息一会儿，准备好以后再发送项目进展。",
+      "file_name": "chatterbox-zh-synthetic_james-4-sentence.wav",
+      "sha256": "a3dba635dff980fe4e94f9db713ef84b9dfaebdba8d2e9f736495ed6278d8c29",
+      "size_bytes": 212204,
+      "sample_rate": 24000,
+      "duration_s": 4.42,
+      "synthesis_s": 5.90472479199525
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "おはようございます。",
+      "file_name": "chatterbox-ja-synthetic_charlotte-0-sentence.wav",
+      "sha256": "41e8074bf0db5ecaa1e806d1889dd39c7c25391a4b54b0436297e7e270d77f2b",
+      "size_bytes": 80684,
+      "sample_rate": 24000,
+      "duration_s": 1.68,
+      "synthesis_s": 2.2517676659917925
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "最初の会議は九時に始まり、午後は集中して仕事ができます。",
+      "file_name": "chatterbox-ja-synthetic_charlotte-1-sentence.wav",
+      "sha256": "e32400b017f77c58fdf0ca365c4575afa0171c8e18e9905d8e59b8fadb5e37ec",
+      "size_bytes": 155564,
+      "sample_rate": 24000,
+      "duration_s": 3.24,
+      "synthesis_s": 3.8400104160100454
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "コードレビューの準備ができました。",
+      "file_name": "chatterbox-ja-synthetic_charlotte-2-sentence.wav",
+      "sha256": "1500db7c33fc32471521451bc38f6e206b2daa550f62d619fe6e7abd792955b3",
+      "size_bytes": 140204,
+      "sample_rate": 24000,
+      "duration_s": 2.92,
+      "synthesis_s": 3.484593874993152
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "変更を取り込む前に、新しいインターフェースを確認してください。",
+      "file_name": "chatterbox-ja-synthetic_charlotte-3-sentence.wav",
+      "sha256": "bb40b5879ff8452f4588b6fc5e57954c4c470fa883907f7a197af128f58b4cad",
+      "size_bytes": 182444,
+      "sample_rate": 24000,
+      "duration_s": 3.8,
+      "synthesis_s": 4.97789270899375
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "少し休憩して、準備ができたらプロジェクトの進捗を送ってください。",
+      "file_name": "chatterbox-ja-synthetic_charlotte-4-sentence.wav",
+      "sha256": "033bf1253961ea9b9e1022e471a064c2d6246907b77366ae8377f236ddd4c98d",
+      "size_bytes": 197804,
+      "sample_rate": 24000,
+      "duration_s": 4.12,
+      "synthesis_s": 5.540232792001916
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_james",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "おはようございます。",
+      "file_name": "chatterbox-ja-synthetic_james-0-sentence.wav",
+      "sha256": "5939d7852aa99324571ae8b6befef160027191dc0c2b09dff6d18c0b9af1fe9a",
+      "size_bytes": 70124,
+      "sample_rate": 24000,
+      "duration_s": 1.46,
+      "synthesis_s": 2.172307166008977
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_james",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "最初の会議は九時に始まり、午後は集中して仕事ができます。",
+      "file_name": "chatterbox-ja-synthetic_james-1-sentence.wav",
+      "sha256": "b5d9645436c84ccb922c5f33995caca6b0cb29cb724d9c097d8d414d43b88a6d",
+      "size_bytes": 154604,
+      "sample_rate": 24000,
+      "duration_s": 3.22,
+      "synthesis_s": 4.174480708010378
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_james",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "コードレビューの準備ができました。",
+      "file_name": "chatterbox-ja-synthetic_james-2-sentence.wav",
+      "sha256": "df49515ea77b4301d96f2b6e64d1396fa974cdf44baca5735d316e1448658472",
+      "size_bytes": 100844,
+      "sample_rate": 24000,
+      "duration_s": 2.1,
+      "synthesis_s": 2.9065454579977086
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_james",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "変更を取り込む前に、新しいインターフェースを確認してください。",
+      "file_name": "chatterbox-ja-synthetic_james-3-sentence.wav",
+      "sha256": "8962a1ef1d7adc71128f65b599a753def2bfd0a24b16f556fb565c08fd80a0df",
+      "size_bytes": 194924,
+      "sample_rate": 24000,
+      "duration_s": 4.06,
+      "synthesis_s": 5.1995458339952165
+    },
+    {
+      "model": "chatterbox",
+      "language": "ja",
+      "voice": "synthetic_james",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "少し休憩して、準備ができたらプロジェクトの進捗を送ってください。",
+      "file_name": "chatterbox-ja-synthetic_james-4-sentence.wav",
+      "sha256": "160fe302a530f992223b57fb0be93738b3ac531d8a9a222da58ecb7ca0719118",
+      "size_bytes": 770924,
+      "sample_rate": 24000,
+      "duration_s": 16.06,
+      "synthesis_s": 20.847388416994363
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "Buenos días.",
+      "file_name": "chatterbox-es-synthetic_charlotte-0-sentence.wav",
+      "sha256": "15a1cc9365238165a02226d51728e1c37e8d2764fba43cc18ebc190cc6af8b87",
+      "size_bytes": 69164,
+      "sample_rate": 24000,
+      "duration_s": 1.44,
+      "synthesis_s": 2.0842651249986375
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+      "file_name": "chatterbox-es-synthetic_charlotte-1-sentence.wav",
+      "sha256": "9b5a0945776195a79a1ebbeebbea3438956d1a35a03751fb18bd8f114f517108",
+      "size_bytes": 259244,
+      "sample_rate": 24000,
+      "duration_s": 5.4,
+      "synthesis_s": 5.94361604200094
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "La revisión del código está lista.",
+      "file_name": "chatterbox-es-synthetic_charlotte-2-sentence.wav",
+      "sha256": "4c125e7beff829fc380dcfaa5bc6ebb6eb90f257201860c10277bede6ee6d58d",
+      "size_bytes": 111404,
+      "sample_rate": 24000,
+      "duration_s": 2.32,
+      "synthesis_s": 2.9511203750007553
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "Comprueba la nueva interfaz antes de incorporar los cambios.",
+      "file_name": "chatterbox-es-synthetic_charlotte-3-sentence.wav",
+      "sha256": "e07658fc1b05a888c6e2bad2c97d9727b358c31adf83e7ee10f0c888f6face9f",
+      "size_bytes": 186284,
+      "sample_rate": 24000,
+      "duration_s": 3.88,
+      "synthesis_s": 4.601188707994879
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "Tómate un breve descanso y envía la actualización del proyecto cuando estés listo.",
+      "file_name": "chatterbox-es-synthetic_charlotte-4-sentence.wav",
+      "sha256": "7aae85ab3d432d4e48dfb9f8e98b041f82a31b5c428f4eb97fea4dff85e051b7",
+      "size_bytes": 245804,
+      "sample_rate": 24000,
+      "duration_s": 5.12,
+      "synthesis_s": 6.063919416992576
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_james",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "Buenos días.",
+      "file_name": "chatterbox-es-synthetic_james-0-sentence.wav",
+      "sha256": "7b7c823356b8c2db334a01556c997c41326e7ae06c120e290af9f30f2cece765",
+      "size_bytes": 87404,
+      "sample_rate": 24000,
+      "duration_s": 1.82,
+      "synthesis_s": 2.318950542001403
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_james",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+      "file_name": "chatterbox-es-synthetic_james-1-sentence.wav",
+      "sha256": "2493d0d126af819ed211bdd55e90d2addbdfd517b5bd118b3d0e4e98119d8c68",
+      "size_bytes": 242924,
+      "sample_rate": 24000,
+      "duration_s": 5.06,
+      "synthesis_s": 5.674239707994275
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_james",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "La revisión del código está lista.",
+      "file_name": "chatterbox-es-synthetic_james-2-sentence.wav",
+      "sha256": "e273b7529942edd21e0497d9c6eee2bc2509d346266072ca53cb47b50f6a1172",
+      "size_bytes": 100844,
+      "sample_rate": 24000,
+      "duration_s": 2.1,
+      "synthesis_s": 2.635795957990922
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_james",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "Comprueba la nueva interfaz antes de incorporar los cambios.",
+      "file_name": "chatterbox-es-synthetic_james-3-sentence.wav",
+      "sha256": "9b14329eb9568791263d01e113823c4dc6070d23acf85edfe49c7d23546534a8",
+      "size_bytes": 185324,
+      "sample_rate": 24000,
+      "duration_s": 3.86,
+      "synthesis_s": 4.430648041001405
+    },
+    {
+      "model": "chatterbox",
+      "language": "es",
+      "voice": "synthetic_james",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "Tómate un breve descanso y envía la actualización del proyecto cuando estés listo.",
+      "file_name": "chatterbox-es-synthetic_james-4-sentence.wav",
+      "sha256": "53409a530ca81cb7a7fe39419ad6d9541bc4c28ab55bd28e39e08d660828bb96",
+      "size_bytes": 254444,
+      "sample_rate": 24000,
+      "duration_s": 5.3,
+      "synthesis_s": 5.9241191249893745
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "Bonjour.",
+      "file_name": "chatterbox-fr-synthetic_charlotte-0-sentence.wav",
+      "sha256": "ccd288b6004e1340ab9037bc757342b7c6fe80af40cb31db070256fddbdcc4ca",
+      "size_bytes": 53804,
+      "sample_rate": 24000,
+      "duration_s": 1.12,
+      "synthesis_s": 1.7174943329882808
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+      "file_name": "chatterbox-fr-synthetic_charlotte-1-sentence.wav",
+      "sha256": "af8ddfc06217da6f0fa89436cf3a3e45a3d86228f4687cfe719623e80e5edde3",
+      "size_bytes": 268844,
+      "sample_rate": 24000,
+      "duration_s": 5.6,
+      "synthesis_s": 6.344748250005068
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "La revue du code est prête.",
+      "file_name": "chatterbox-fr-synthetic_charlotte-2-sentence.wav",
+      "sha256": "350a1baf307d898573ab911520b3a94776a39d488a72b730570c1402be75e06c",
+      "size_bytes": 86444,
+      "sample_rate": 24000,
+      "duration_s": 1.8,
+      "synthesis_s": 2.4139889999933075
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "Vérifiez la nouvelle interface avant de fusionner les modifications.",
+      "file_name": "chatterbox-fr-synthetic_charlotte-3-sentence.wav",
+      "sha256": "933af88fb7c5e0a12f35ca36bbfb22602d15713e8345352a60179376ece0ca8c",
+      "size_bytes": 180524,
+      "sample_rate": 24000,
+      "duration_s": 3.76,
+      "synthesis_s": 4.398119375007809
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt.",
+      "file_name": "chatterbox-fr-synthetic_charlotte-4-sentence.wav",
+      "sha256": "1302fd5b7c7889c1b5c002dc787d743cbff0ae5a72df545264f7e9aed2c3c850",
+      "size_bytes": 209324,
+      "sample_rate": 24000,
+      "duration_s": 4.36,
+      "synthesis_s": 5.0480147910129745
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_james",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "Bonjour.",
+      "file_name": "chatterbox-fr-synthetic_james-0-sentence.wav",
+      "sha256": "018138c023736d07b22dde5f6b2205de5a76abeeea9c4afca303a67e04afc5a6",
+      "size_bytes": 54764,
+      "sample_rate": 24000,
+      "duration_s": 1.14,
+      "synthesis_s": 1.6509251660027076
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_james",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+      "file_name": "chatterbox-fr-synthetic_james-1-sentence.wav",
+      "sha256": "f41bfad91ea1413c52c5e113c868f92c327d9bda588a24ffd5dafafc04b7eb92",
+      "size_bytes": 277484,
+      "sample_rate": 24000,
+      "duration_s": 5.78,
+      "synthesis_s": 6.281319415997132
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_james",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "La revue du code est prête.",
+      "file_name": "chatterbox-fr-synthetic_james-2-sentence.wav",
+      "sha256": "862fdd5fa1a310af7d478500e4195a7b6e21c485f6eee3d2328e0d9792bb493f",
+      "size_bytes": 95084,
+      "sample_rate": 24000,
+      "duration_s": 1.98,
+      "synthesis_s": 2.4272835409938125
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_james",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "Vérifiez la nouvelle interface avant de fusionner les modifications.",
+      "file_name": "chatterbox-fr-synthetic_james-3-sentence.wav",
+      "sha256": "639eb23751613d25eab80a530019d4c36c8cdeb14be29d0cdd89e2761c5ee476",
+      "size_bytes": 162284,
+      "sample_rate": 24000,
+      "duration_s": 3.38,
+      "synthesis_s": 3.843609166011447
+    },
+    {
+      "model": "chatterbox",
+      "language": "fr",
+      "voice": "synthetic_james",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt.",
+      "file_name": "chatterbox-fr-synthetic_james-4-sentence.wav",
+      "sha256": "05b90c8e8ddf9dac6fc59b099df13c64574cf394a824388897a00dabc799cdb8",
+      "size_bytes": 171884,
+      "sample_rate": 24000,
+      "duration_s": 3.58,
+      "synthesis_s": 4.139556082998752
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "Guten Morgen.",
+      "file_name": "chatterbox-de-synthetic_charlotte-0-sentence.wav",
+      "sha256": "cbd96adfc090fa6df52caf273e179fb6b752e3cbfe102b21b2cfd447a0e61af4",
+      "size_bytes": 59564,
+      "sample_rate": 24000,
+      "duration_s": 1.24,
+      "synthesis_s": 1.9209047500044107
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.",
+      "file_name": "chatterbox-de-synthetic_charlotte-1-sentence.wav",
+      "sha256": "2ac85457c49d5a2bf27ce5a7b794fe2ccdd3d10a10651a0549deb39bb2787f42",
+      "size_bytes": 222764,
+      "sample_rate": 24000,
+      "duration_s": 4.64,
+      "synthesis_s": 5.7997239169926615
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "Die Überprüfung des Codes ist fertig.",
+      "file_name": "chatterbox-de-synthetic_charlotte-2-sentence.wav",
+      "sha256": "aea1e03a8934da0c5e50e5f61240cfc64700111c3d0623698e8e5d315be90c9d",
+      "size_bytes": 121004,
+      "sample_rate": 24000,
+      "duration_s": 2.52,
+      "synthesis_s": 3.492550041002687
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.",
+      "file_name": "chatterbox-de-synthetic_charlotte-3-sentence.wav",
+      "sha256": "9b0c90225bb40694a9bb0bc6eb9d179519fa3827bf37f3b4a96a628f051431c8",
+      "size_bytes": 186284,
+      "sample_rate": 24000,
+      "duration_s": 3.88,
+      "synthesis_s": 5.236981624999316
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_charlotte",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+      "file_name": "chatterbox-de-synthetic_charlotte-4-sentence.wav",
+      "sha256": "139efa8dd4a00a3239a924003b41a6009279075b5e4d7c8399ecbbe01825a0f2",
+      "size_bytes": 180524,
+      "sample_rate": 24000,
+      "duration_s": 3.76,
+      "synthesis_s": 4.833357333991444
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_james",
+      "sentence_index": 0,
+      "kind": "sentence",
+      "reference": "Guten Morgen.",
+      "file_name": "chatterbox-de-synthetic_james-0-sentence.wav",
+      "sha256": "1646627fbf148dcd232ad8ad932e887fc9bb7e51dfe79263dd58707e6fdd3b5f",
+      "size_bytes": 49004,
+      "sample_rate": 24000,
+      "duration_s": 1.02,
+      "synthesis_s": 1.6143912080005975
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_james",
+      "sentence_index": 1,
+      "kind": "sentence",
+      "reference": "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.",
+      "file_name": "chatterbox-de-synthetic_james-1-sentence.wav",
+      "sha256": "123acbff6fc155e51aa2d062672a0879375b26e55dd5860b77bc99b5fe7ae040",
+      "size_bytes": 242924,
+      "sample_rate": 24000,
+      "duration_s": 5.06,
+      "synthesis_s": 5.957826124998974
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_james",
+      "sentence_index": 2,
+      "kind": "sentence",
+      "reference": "Die Überprüfung des Codes ist fertig.",
+      "file_name": "chatterbox-de-synthetic_james-2-sentence.wav",
+      "sha256": "fc205d811fb375988ee9dff1bb16619e29a93d2eeb7ee6014e4ae1cce4b712c7",
+      "size_bytes": 102764,
+      "sample_rate": 24000,
+      "duration_s": 2.14,
+      "synthesis_s": 2.849229874991579
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_james",
+      "sentence_index": 3,
+      "kind": "sentence",
+      "reference": "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.",
+      "file_name": "chatterbox-de-synthetic_james-3-sentence.wav",
+      "sha256": "bd543c562855eba92dc3dad33e48cb551d5e070a76451e37c7df73962f953561",
+      "size_bytes": 175724,
+      "sample_rate": 24000,
+      "duration_s": 3.66,
+      "synthesis_s": 4.559113249997608
+    },
+    {
+      "model": "chatterbox",
+      "language": "de",
+      "voice": "synthetic_james",
+      "sentence_index": 4,
+      "kind": "sentence",
+      "reference": "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+      "file_name": "chatterbox-de-synthetic_james-4-sentence.wav",
+      "sha256": "febededfb87b5f5fdab6b234501f9e5dfe595b66c9e786521ca09f93b8197744",
+      "size_bytes": 189164,
+      "sample_rate": 24000,
+      "duration_s": 3.94,
+      "synthesis_s": 4.939910457993392
+    }
+  ],
+  "briefs": [
+    {
+      "language": "en",
+      "voice": "synthetic_charlotte",
+      "reference": "Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready. Good morning. Your first meeting starts at nine, and the afternoon is clear for focused work. The code review is ready. Please check the new API before merging the pull request. Take a short break, then send the project update when you are ready.",
+      "first_sentence_s": 2.2685766670037992,
+      "first_informative_sentence_ready_s": 7.985809792007785,
+      "total_s": 135.20249408295786,
+      "audio_s": 101.64000000000001,
+      "rtf": 1.3302095049484242,
+      "sentence_delivery_gap_s": 34.73391741595402,
+      "maximum_sentence_gap_s": 4.237233125003986,
+      "wall_s": 135.2027529170009,
+      "sentences": [
+        {
+          "sentence_index": 0,
+          "reference": "Good morning.",
+          "synthesis_s": 2.2685766670037992,
+          "audio_s": 1.48
+        },
+        {
+          "sentence_index": 1,
+          "reference": "Your first meeting starts at nine, and the afternoon is clear for focused work.",
+          "synthesis_s": 5.717233125003986,
+          "audio_s": 4.52
+        },
+        {
+          "sentence_index": 2,
+          "reference": "The code review is ready.",
+          "synthesis_s": 2.400674499993329,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 3,
+          "reference": "Please check the new API before merging the pull request.",
+          "synthesis_s": 4.282691791988327,
+          "audio_s": 3.4
+        },
+        {
+          "sentence_index": 4,
+          "reference": "Take a short break, then send the project update when you are ready.",
+          "synthesis_s": 4.190465791994939,
+          "audio_s": 3.44
+        },
+        {
+          "sentence_index": 5,
+          "reference": "Good morning.",
+          "synthesis_s": 2.105477749995771,
+          "audio_s": 1.48
+        },
+        {
+          "sentence_index": 6,
+          "reference": "Your first meeting starts at nine, and the afternoon is clear for focused work.",
+          "synthesis_s": 5.369557708996581,
+          "audio_s": 4.52
+        },
+        {
+          "sentence_index": 7,
+          "reference": "The code review is ready.",
+          "synthesis_s": 2.49041854099778,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 8,
+          "reference": "Please check the new API before merging the pull request.",
+          "synthesis_s": 4.361214333999669,
+          "audio_s": 3.4
+        },
+        {
+          "sentence_index": 9,
+          "reference": "Take a short break, then send the project update when you are ready.",
+          "synthesis_s": 4.395579749994795,
+          "audio_s": 3.44
+        },
+        {
+          "sentence_index": 10,
+          "reference": "Good morning.",
+          "synthesis_s": 2.2899940829956904,
+          "audio_s": 1.48
+        },
+        {
+          "sentence_index": 11,
+          "reference": "Your first meeting starts at nine, and the afternoon is clear for focused work.",
+          "synthesis_s": 5.78451979199599,
+          "audio_s": 4.52
+        },
+        {
+          "sentence_index": 12,
+          "reference": "The code review is ready.",
+          "synthesis_s": 2.4178048339963425,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 13,
+          "reference": "Please check the new API before merging the pull request.",
+          "synthesis_s": 4.402004957999452,
+          "audio_s": 3.4
+        },
+        {
+          "sentence_index": 14,
+          "reference": "Take a short break, then send the project update when you are ready.",
+          "synthesis_s": 4.4318796250008745,
+          "audio_s": 3.44
+        },
+        {
+          "sentence_index": 15,
+          "reference": "Good morning.",
+          "synthesis_s": 2.1986620829993626,
+          "audio_s": 1.48
+        },
+        {
+          "sentence_index": 16,
+          "reference": "Your first meeting starts at nine, and the afternoon is clear for focused work.",
+          "synthesis_s": 5.669867457996588,
+          "audio_s": 4.52
+        },
+        {
+          "sentence_index": 17,
+          "reference": "The code review is ready.",
+          "synthesis_s": 2.571766708002542,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 18,
+          "reference": "Please check the new API before merging the pull request.",
+          "synthesis_s": 4.36423929099692,
+          "audio_s": 3.4
+        },
+        {
+          "sentence_index": 19,
+          "reference": "Take a short break, then send the project update when you are ready.",
+          "synthesis_s": 4.492485458002193,
+          "audio_s": 3.44
+        },
+        {
+          "sentence_index": 20,
+          "reference": "Good morning.",
+          "synthesis_s": 2.294765124999685,
+          "audio_s": 1.48
+        },
+        {
+          "sentence_index": 21,
+          "reference": "Your first meeting starts at nine, and the afternoon is clear for focused work.",
+          "synthesis_s": 5.843938792007975,
+          "audio_s": 4.52
+        },
+        {
+          "sentence_index": 22,
+          "reference": "The code review is ready.",
+          "synthesis_s": 2.5770999579981435,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 23,
+          "reference": "Please check the new API before merging the pull request.",
+          "synthesis_s": 4.558209457987687,
+          "audio_s": 3.4
+        },
+        {
+          "sentence_index": 24,
+          "reference": "Take a short break, then send the project update when you are ready.",
+          "synthesis_s": 4.650111082999501,
+          "audio_s": 3.44
+        },
+        {
+          "sentence_index": 25,
+          "reference": "Good morning.",
+          "synthesis_s": 2.3296026669995626,
+          "audio_s": 1.48
+        },
+        {
+          "sentence_index": 26,
+          "reference": "Your first meeting starts at nine, and the afternoon is clear for focused work.",
+          "synthesis_s": 5.865899250013172,
+          "audio_s": 4.52
+        },
+        {
+          "sentence_index": 27,
+          "reference": "The code review is ready.",
+          "synthesis_s": 2.5446881250099977,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 28,
+          "reference": "Please check the new API before merging the pull request.",
+          "synthesis_s": 4.469602416997077,
+          "audio_s": 3.4
+        },
+        {
+          "sentence_index": 29,
+          "reference": "Take a short break, then send the project update when you are ready.",
+          "synthesis_s": 4.551866374997189,
+          "audio_s": 3.44
+        },
+        {
+          "sentence_index": 30,
+          "reference": "Good morning.",
+          "synthesis_s": 2.254629916002159,
+          "audio_s": 1.48
+        },
+        {
+          "sentence_index": 31,
+          "reference": "Your first meeting starts at nine, and the afternoon is clear for focused work.",
+          "synthesis_s": 5.6380590420012595,
+          "audio_s": 4.52
+        },
+        {
+          "sentence_index": 32,
+          "reference": "The code review is ready.",
+          "synthesis_s": 2.5040932499978226,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 33,
+          "reference": "Please check the new API before merging the pull request.",
+          "synthesis_s": 4.443150791994412,
+          "audio_s": 3.4
+        },
+        {
+          "sentence_index": 34,
+          "reference": "Take a short break, then send the project update when you are ready.",
+          "synthesis_s": 4.47166358299728,
+          "audio_s": 3.44
+        }
+      ],
+      "model": "chatterbox",
+      "sentence_index": 0,
+      "kind": "brief",
+      "file_name": "chatterbox-en-synthetic_charlotte-0-brief.wav",
+      "sha256": "be9a25d0a5a29fea2d1e22f9e7f2b8005858768400f2bfd57db6ea0406663a0f",
+      "size_bytes": 4878764,
+      "sample_rate": 24000,
+      "duration_s": 101.64,
+      "synthesis_s": 135.20249408295786
+    },
+    {
+      "language": "zh",
+      "voice": "synthetic_charlotte",
+      "reference": "早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。你的第一个会议九点开始，下午可以专心工作。代码审查已经准备好了。合并之前，请检查新的接口。先休息一会儿，准备好以后再发送项目进展。早上好。",
+      "first_sentence_s": 2.283783291990403,
+      "first_informative_sentence_ready_s": 7.968571958990651,
+      "total_s": 175.82684654105105,
+      "audio_s": 134.24000000000004,
+      "rtf": 1.3097947447932883,
+      "sentence_delivery_gap_s": 42.53723699905097,
+      "maximum_sentence_gap_s": 4.284788667000248,
+      "wall_s": 175.82711595900764,
+      "sentences": [
+        {
+          "sentence_index": 0,
+          "reference": "早上好。",
+          "synthesis_s": 2.283783291990403,
+          "audio_s": 1.4
+        },
+        {
+          "sentence_index": 1,
+          "reference": "你的第一个会议九点开始，下午可以专心工作。",
+          "synthesis_s": 5.684788667000248,
+          "audio_s": 4.16
+        },
+        {
+          "sentence_index": 2,
+          "reference": "代码审查已经准备好了。",
+          "synthesis_s": 3.8304956659994787,
+          "audio_s": 2.64
+        },
+        {
+          "sentence_index": 3,
+          "reference": "合并之前，请检查新的接口。",
+          "synthesis_s": 3.8680311659991276,
+          "audio_s": 2.72
+        },
+        {
+          "sentence_index": 4,
+          "reference": "先休息一会儿，准备好以后再发送项目进展。",
+          "synthesis_s": 5.266712459007977,
+          "audio_s": 3.84
+        },
+        {
+          "sentence_index": 5,
+          "reference": "早上好。",
+          "synthesis_s": 2.2553843329951633,
+          "audio_s": 1.4
+        },
+        {
+          "sentence_index": 6,
+          "reference": "你的第一个会议九点开始，下午可以专心工作。",
+          "synthesis_s": 5.599344957998255,
+          "audio_s": 4.16
+        },
+        {
+          "sentence_index": 7,
+          "reference": "代码审查已经准备好了。",
+          "synthesis_s": 3.7666852089896565,
+          "audio_s": 2.64
+        },
+        {
+          "sentence_index": 8,
+          "reference": "合并之前，请检查新的接口。",
+          "synthesis_s": 3.8316192090132972,
+          "audio_s": 2.72
+        },
+        {
+          "sentence_index": 9,
+          "reference": "先休息一会儿，准备好以后再发送项目进展。",
+          "synthesis_s": 5.220097707991954,
+          "audio_s": 3.84
+        },
+        {
+          "sentence_index": 10,
+          "reference": "早上好。",
+          "synthesis_s": 2.3043317499978,
+          "audio_s": 1.4
+        },
+        {
+          "sentence_index": 11,
+          "reference": "你的第一个会议九点开始，下午可以专心工作。",
+          "synthesis_s": 5.615447499993024,
+          "audio_s": 4.16
+        },
+        {
+          "sentence_index": 12,
+          "reference": "代码审查已经准备好了。",
+          "synthesis_s": 3.7660477080062265,
+          "audio_s": 2.64
+        },
+        {
+          "sentence_index": 13,
+          "reference": "合并之前，请检查新的接口。",
+          "synthesis_s": 3.8491622080036905,
+          "audio_s": 2.72
+        },
+        {
+          "sentence_index": 14,
+          "reference": "先休息一会儿，准备好以后再发送项目进展。",
+          "synthesis_s": 5.232605750003131,
+          "audio_s": 3.84
+        },
+        {
+          "sentence_index": 15,
+          "reference": "早上好。",
+          "synthesis_s": 2.2870282500080066,
+          "audio_s": 1.4
+        },
+        {
+          "sentence_index": 16,
+          "reference": "你的第一个会议九点开始，下午可以专心工作。",
+          "synthesis_s": 5.560824542000773,
+          "audio_s": 4.16
+        },
+        {
+          "sentence_index": 17,
+          "reference": "代码审查已经准备好了。",
+          "synthesis_s": 3.738725583010819,
+          "audio_s": 2.64
+        },
+        {
+          "sentence_index": 18,
+          "reference": "合并之前，请检查新的接口。",
+          "synthesis_s": 3.5704307080013677,
+          "audio_s": 2.72
+        },
+        {
+          "sentence_index": 19,
+          "reference": "先休息一会儿，准备好以后再发送项目进展。",
+          "synthesis_s": 4.755652375009959,
+          "audio_s": 3.84
+        },
+        {
+          "sentence_index": 20,
+          "reference": "早上好。",
+          "synthesis_s": 2.09850320800615,
+          "audio_s": 1.4
+        },
+        {
+          "sentence_index": 21,
+          "reference": "你的第一个会议九点开始，下午可以专心工作。",
+          "synthesis_s": 5.025750499989954,
+          "audio_s": 4.16
+        },
+        {
+          "sentence_index": 22,
+          "reference": "代码审查已经准备好了。",
+          "synthesis_s": 3.315469708002638,
+          "audio_s": 2.64
+        },
+        {
+          "sentence_index": 23,
+          "reference": "合并之前，请检查新的接口。",
+          "synthesis_s": 3.3291705419978825,
+          "audio_s": 2.72
+        },
+        {
+          "sentence_index": 24,
+          "reference": "先休息一会儿，准备好以后再发送项目进展。",
+          "synthesis_s": 4.566709833001369,
+          "audio_s": 3.84
+        },
+        {
+          "sentence_index": 25,
+          "reference": "早上好。",
+          "synthesis_s": 2.011581667000428,
+          "audio_s": 1.4
+        },
+        {
+          "sentence_index": 26,
+          "reference": "你的第一个会议九点开始，下午可以专心工作。",
+          "synthesis_s": 4.9675429170019925,
+          "audio_s": 4.16
+        },
+        {
+          "sentence_index": 27,
+          "reference": "代码审查已经准备好了。",
+          "synthesis_s": 3.2876189579983475,
+          "audio_s": 2.64
+        },
+        {
+          "sentence_index": 28,
+          "reference": "合并之前，请检查新的接口。",
+          "synthesis_s": 3.3783087500050897,
+          "audio_s": 2.72
+        },
+        {
+          "sentence_index": 29,
+          "reference": "先休息一会儿，准备好以后再发送项目进展。",
+          "synthesis_s": 4.6510825420118636,
+          "audio_s": 3.84
+        },
+        {
+          "sentence_index": 30,
+          "reference": "早上好。",
+          "synthesis_s": 2.0401904999889666,
+          "audio_s": 1.4
+        },
+        {
+          "sentence_index": 31,
+          "reference": "你的第一个会议九点开始，下午可以专心工作。",
+          "synthesis_s": 4.911796875006985,
+          "audio_s": 4.16
+        },
+        {
+          "sentence_index": 32,
+          "reference": "代码审查已经准备好了。",
+          "synthesis_s": 3.24324933400203,
+          "audio_s": 2.64
+        },
+        {
+          "sentence_index": 33,
+          "reference": "合并之前，请检查新的接口。",
+          "synthesis_s": 3.447756000008667,
+          "audio_s": 2.72
+        },
+        {
+          "sentence_index": 34,
+          "reference": "先休息一会儿，准备好以后再发送项目进展。",
+          "synthesis_s": 4.62945325000328,
+          "audio_s": 3.84
+        },
+        {
+          "sentence_index": 35,
+          "reference": "早上好。",
+          "synthesis_s": 2.0394448330043815,
+          "audio_s": 1.4
+        },
+        {
+          "sentence_index": 36,
+          "reference": "你的第一个会议九点开始，下午可以专心工作。",
+          "synthesis_s": 5.048462499995367,
+          "audio_s": 4.16
+        },
+        {
+          "sentence_index": 37,
+          "reference": "代码审查已经准备好了。",
+          "synthesis_s": 3.336589583006571,
+          "audio_s": 2.64
+        },
+        {
+          "sentence_index": 38,
+          "reference": "合并之前，请检查新的接口。",
+          "synthesis_s": 3.3720126669941237,
+          "audio_s": 2.72
+        },
+        {
+          "sentence_index": 39,
+          "reference": "先休息一会儿，准备好以后再发送项目进展。",
+          "synthesis_s": 4.575427083007526,
+          "audio_s": 3.84
+        },
+        {
+          "sentence_index": 40,
+          "reference": "早上好。",
+          "synthesis_s": 1.9726278749876656,
+          "audio_s": 1.4
+        },
+        {
+          "sentence_index": 41,
+          "reference": "你的第一个会议九点开始，下午可以专心工作。",
+          "synthesis_s": 4.948357957997359,
+          "audio_s": 4.16
+        },
+        {
+          "sentence_index": 42,
+          "reference": "代码审查已经准备好了。",
+          "synthesis_s": 3.294392916999641,
+          "audio_s": 2.64
+        },
+        {
+          "sentence_index": 43,
+          "reference": "合并之前，请检查新的接口。",
+          "synthesis_s": 3.3208782500005327,
+          "audio_s": 2.72
+        },
+        {
+          "sentence_index": 44,
+          "reference": "先休息一会儿，准备好以后再发送项目进展。",
+          "synthesis_s": 4.721443000002182,
+          "audio_s": 3.84
+        },
+        {
+          "sentence_index": 45,
+          "reference": "早上好。",
+          "synthesis_s": 2.0058262500097044,
+          "audio_s": 1.4
+        }
+      ],
+      "model": "chatterbox",
+      "sentence_index": 0,
+      "kind": "brief",
+      "file_name": "chatterbox-zh-synthetic_charlotte-0-brief.wav",
+      "sha256": "8d08d0ac96b28e3878654ab4e7e1ecbec99fb0a34a2d1422d15d85099460b6b0",
+      "size_bytes": 6443564,
+      "sample_rate": 24000,
+      "duration_s": 134.24,
+      "synthesis_s": 175.82684654105105
+    },
+    {
+      "language": "ja",
+      "voice": "synthetic_charlotte",
+      "reference": "おはようございます。最初の会議は九時に始まり、午後は集中して仕事ができます。コードレビューの準備ができました。変更を取り込む前に、新しいインターフェースを確認してください。少し休憩して、準備ができたらプロジェクトの進捗を送ってください。おはようございます。最初の会議は九時に始まり、午後は集中して仕事ができます。コードレビューの準備ができました。変更を取り込む前に、新しいインターフェースを確認してください。少し休憩して、準備ができたらプロジェクトの進捗を送ってください。おはようございます。最初の会議は九時に始まり、午後は集中して仕事ができます。コードレビューの準備ができました。変更を取り込む前に、新しいインターフェースを確認してください。少し休憩して、準備ができたらプロジェクトの進捗を送ってください。おはようございます。最初の会議は九時に始まり、午後は集中して仕事ができます。コードレビューの準備ができました。変更を取り込む前に、新しいインターフェースを確認してください。少し休憩して、準備ができたらプロジェクトの進捗を送ってください。おはようございます。最初の会議は九時に始まり、午後は集中して仕事ができます。コードレビューの準備ができました。変更を取り込む前に、新しいインターフェースを確認してください。少し休憩して、準備ができたらプロジェクトの進捗を送ってください。おはようございます。",
+      "first_sentence_s": 2.6171595839987276,
+      "first_informative_sentence_ready_s": 7.060777209000662,
+      "total_s": 105.59887529001571,
+      "audio_s": 80.48,
+      "rtf": 1.3121132615558613,
+      "sentence_delivery_gap_s": 25.901374581015542,
+      "maximum_sentence_gap_s": 2.7636176250019346,
+      "wall_s": 105.59913529199548,
+      "sentences": [
+        {
+          "sentence_index": 0,
+          "reference": "おはようございます。",
+          "synthesis_s": 2.6171595839987276,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 1,
+          "reference": "最初の会議は九時に始まり、午後は集中して仕事ができます。",
+          "synthesis_s": 4.443617625001934,
+          "audio_s": 3.24
+        },
+        {
+          "sentence_index": 2,
+          "reference": "コードレビューの準備ができました。",
+          "synthesis_s": 4.019294833007734,
+          "audio_s": 2.92
+        },
+        {
+          "sentence_index": 3,
+          "reference": "変更を取り込む前に、新しいインターフェースを確認してください。",
+          "synthesis_s": 4.994220375010627,
+          "audio_s": 3.8
+        },
+        {
+          "sentence_index": 4,
+          "reference": "少し休憩して、準備ができたらプロジェクトの進捗を送ってください。",
+          "synthesis_s": 5.437613125002827,
+          "audio_s": 4.12
+        },
+        {
+          "sentence_index": 5,
+          "reference": "おはようございます。",
+          "synthesis_s": 2.601647707997472,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 6,
+          "reference": "最初の会議は九時に始まり、午後は集中して仕事ができます。",
+          "synthesis_s": 4.403923707999638,
+          "audio_s": 3.24
+        },
+        {
+          "sentence_index": 7,
+          "reference": "コードレビューの準備ができました。",
+          "synthesis_s": 4.025838582994766,
+          "audio_s": 2.92
+        },
+        {
+          "sentence_index": 8,
+          "reference": "変更を取り込む前に、新しいインターフェースを確認してください。",
+          "synthesis_s": 5.019796207998297,
+          "audio_s": 3.8
+        },
+        {
+          "sentence_index": 9,
+          "reference": "少し休憩して、準備ができたらプロジェクトの進捗を送ってください。",
+          "synthesis_s": 5.403043875005096,
+          "audio_s": 4.12
+        },
+        {
+          "sentence_index": 10,
+          "reference": "おはようございます。",
+          "synthesis_s": 2.5758072919998085,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 11,
+          "reference": "最初の会議は九時に始まり、午後は集中して仕事ができます。",
+          "synthesis_s": 4.127342416992178,
+          "audio_s": 3.24
+        },
+        {
+          "sentence_index": 12,
+          "reference": "コードレビューの準備ができました。",
+          "synthesis_s": 3.8466174159984803,
+          "audio_s": 2.92
+        },
+        {
+          "sentence_index": 13,
+          "reference": "変更を取り込む前に、新しいインターフェースを確認してください。",
+          "synthesis_s": 4.774854667004547,
+          "audio_s": 3.8
+        },
+        {
+          "sentence_index": 14,
+          "reference": "少し休憩して、準備ができたらプロジェクトの進捗を送ってください。",
+          "synthesis_s": 4.9637897920038085,
+          "audio_s": 4.12
+        },
+        {
+          "sentence_index": 15,
+          "reference": "おはようございます。",
+          "synthesis_s": 2.518928290999611,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 16,
+          "reference": "最初の会議は九時に始まり、午後は集中して仕事ができます。",
+          "synthesis_s": 4.042404124993482,
+          "audio_s": 3.24
+        },
+        {
+          "sentence_index": 17,
+          "reference": "コードレビューの準備ができました。",
+          "synthesis_s": 3.5896287499926984,
+          "audio_s": 2.92
+        },
+        {
+          "sentence_index": 18,
+          "reference": "変更を取り込む前に、新しいインターフェースを確認してください。",
+          "synthesis_s": 4.493315707994043,
+          "audio_s": 3.8
+        },
+        {
+          "sentence_index": 19,
+          "reference": "少し休憩して、準備ができたらプロジェクトの進捗を送ってください。",
+          "synthesis_s": 5.340125625007204,
+          "audio_s": 4.12
+        },
+        {
+          "sentence_index": 20,
+          "reference": "おはようございます。",
+          "synthesis_s": 2.5602550839976175,
+          "audio_s": 1.68
+        },
+        {
+          "sentence_index": 21,
+          "reference": "最初の会議は九時に始まり、午後は集中して仕事ができます。",
+          "synthesis_s": 4.16264387499541,
+          "audio_s": 3.24
+        },
+        {
+          "sentence_index": 22,
+          "reference": "コードレビューの準備ができました。",
+          "synthesis_s": 3.650583375012502,
+          "audio_s": 2.92
+        },
+        {
+          "sentence_index": 23,
+          "reference": "変更を取り込む前に、新しいインターフェースを確認してください。",
+          "synthesis_s": 4.606923083003494,
+          "audio_s": 3.8
+        },
+        {
+          "sentence_index": 24,
+          "reference": "少し休憩して、準備ができたらプロジェクトの進捗を送ってください。",
+          "synthesis_s": 4.979159041002276,
+          "audio_s": 4.12
+        },
+        {
+          "sentence_index": 25,
+          "reference": "おはようございます。",
+          "synthesis_s": 2.4003411250014324,
+          "audio_s": 1.68
+        }
+      ],
+      "model": "chatterbox",
+      "sentence_index": 0,
+      "kind": "brief",
+      "file_name": "chatterbox-ja-synthetic_charlotte-0-brief.wav",
+      "sha256": "13d7fe5b1975bb583388fbaf817372e0e9e543a05feae76aa5153a94545d963c",
+      "size_bytes": 3863084,
+      "sample_rate": 24000,
+      "duration_s": 80.48,
+      "synthesis_s": 105.59887529001571
+    },
+    {
+      "language": "es",
+      "voice": "synthetic_charlotte",
+      "reference": "Buenos días. Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo. La revisión del código está lista. Comprueba la nueva interfaz antes de incorporar los cambios. Tómate un breve descanso y envía la actualización del proyecto cuando estés listo. Buenos días. Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo. La revisión del código está lista. Comprueba la nueva interfaz antes de incorporar los cambios. Tómate un breve descanso y envía la actualización del proyecto cuando estés listo. Buenos días. Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo. La revisión del código está lista. Comprueba la nueva interfaz antes de incorporar los cambios. Tómate un breve descanso y envía la actualización del proyecto cuando estés listo. Buenos días. Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo. La revisión del código está lista. Comprueba la nueva interfaz antes de incorporar los cambios. Tómate un breve descanso y envía la actualización del proyecto cuando estés listo. Buenos días. Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo. La revisión del código está lista. Comprueba la nueva interfaz antes de incorporar los cambios. Tómate un breve descanso y envía la actualización del proyecto cuando estés listo. Buenos días. Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo. La revisión del código está lista. Comprueba la nueva interfaz antes de incorporar los cambios. Tómate un breve descanso y envía la actualización del proyecto cuando estés listo. Buenos días. Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+      "first_sentence_s": 2.0971746670111315,
+      "first_informative_sentence_ready_s": 8.13298937502259,
+      "total_s": 137.67674433301727,
+      "audio_s": 115.8,
+      "rtf": 1.1889183448447087,
+      "sentence_delivery_gap_s": 25.179569666006145,
+      "maximum_sentence_gap_s": 4.595814708011458,
+      "wall_s": 137.6769341659965,
+      "sentences": [
+        {
+          "sentence_index": 0,
+          "reference": "Buenos días.",
+          "synthesis_s": 2.0971746670111315,
+          "audio_s": 1.44
+        },
+        {
+          "sentence_index": 1,
+          "reference": "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+          "synthesis_s": 6.035814708011458,
+          "audio_s": 5.4
+        },
+        {
+          "sentence_index": 2,
+          "reference": "La revisión del código está lista.",
+          "synthesis_s": 3.0183165830094367,
+          "audio_s": 2.32
+        },
+        {
+          "sentence_index": 3,
+          "reference": "Comprueba la nueva interfaz antes de incorporar los cambios.",
+          "synthesis_s": 4.4902748339955,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 4,
+          "reference": "Tómate un breve descanso y envía la actualización del proyecto cuando estés listo.",
+          "synthesis_s": 5.840833957990981,
+          "audio_s": 5.12
+        },
+        {
+          "sentence_index": 5,
+          "reference": "Buenos días.",
+          "synthesis_s": 2.039804832995287,
+          "audio_s": 1.44
+        },
+        {
+          "sentence_index": 6,
+          "reference": "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+          "synthesis_s": 6.0946899999980815,
+          "audio_s": 5.4
+        },
+        {
+          "sentence_index": 7,
+          "reference": "La revisión del código está lista.",
+          "synthesis_s": 2.916898958996171,
+          "audio_s": 2.32
+        },
+        {
+          "sentence_index": 8,
+          "reference": "Comprueba la nueva interfaz antes de incorporar los cambios.",
+          "synthesis_s": 4.5274080829985905,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 9,
+          "reference": "Tómate un breve descanso y envía la actualización del proyecto cuando estés listo.",
+          "synthesis_s": 5.780564458007575,
+          "audio_s": 5.12
+        },
+        {
+          "sentence_index": 10,
+          "reference": "Buenos días.",
+          "synthesis_s": 2.0208175420120824,
+          "audio_s": 1.44
+        },
+        {
+          "sentence_index": 11,
+          "reference": "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+          "synthesis_s": 6.218647457993939,
+          "audio_s": 5.4
+        },
+        {
+          "sentence_index": 12,
+          "reference": "La revisión del código está lista.",
+          "synthesis_s": 3.0006299170054263,
+          "audio_s": 2.32
+        },
+        {
+          "sentence_index": 13,
+          "reference": "Comprueba la nueva interfaz antes de incorporar los cambios.",
+          "synthesis_s": 4.586170041002333,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 14,
+          "reference": "Tómate un breve descanso y envía la actualización del proyecto cuando estés listo.",
+          "synthesis_s": 5.826999333003187,
+          "audio_s": 5.12
+        },
+        {
+          "sentence_index": 15,
+          "reference": "Buenos días.",
+          "synthesis_s": 2.0128717920015333,
+          "audio_s": 1.44
+        },
+        {
+          "sentence_index": 16,
+          "reference": "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+          "synthesis_s": 6.1018857909948565,
+          "audio_s": 5.4
+        },
+        {
+          "sentence_index": 17,
+          "reference": "La revisión del código está lista.",
+          "synthesis_s": 2.9230581669980893,
+          "audio_s": 2.32
+        },
+        {
+          "sentence_index": 18,
+          "reference": "Comprueba la nueva interfaz antes de incorporar los cambios.",
+          "synthesis_s": 4.491762249992462,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 19,
+          "reference": "Tómate un breve descanso y envía la actualización del proyecto cuando estés listo.",
+          "synthesis_s": 5.857481792001636,
+          "audio_s": 5.12
+        },
+        {
+          "sentence_index": 20,
+          "reference": "Buenos días.",
+          "synthesis_s": 2.0287791669979924,
+          "audio_s": 1.44
+        },
+        {
+          "sentence_index": 21,
+          "reference": "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+          "synthesis_s": 6.04052441699605,
+          "audio_s": 5.4
+        },
+        {
+          "sentence_index": 22,
+          "reference": "La revisión del código está lista.",
+          "synthesis_s": 2.949028957998962,
+          "audio_s": 2.32
+        },
+        {
+          "sentence_index": 23,
+          "reference": "Comprueba la nueva interfaz antes de incorporar los cambios.",
+          "synthesis_s": 4.516487792003318,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 24,
+          "reference": "Tómate un breve descanso y envía la actualización del proyecto cuando estés listo.",
+          "synthesis_s": 5.939682625001296,
+          "audio_s": 5.12
+        },
+        {
+          "sentence_index": 25,
+          "reference": "Buenos días.",
+          "synthesis_s": 2.1116759160067886,
+          "audio_s": 1.44
+        },
+        {
+          "sentence_index": 26,
+          "reference": "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+          "synthesis_s": 6.329327291998197,
+          "audio_s": 5.4
+        },
+        {
+          "sentence_index": 27,
+          "reference": "La revisión del código está lista.",
+          "synthesis_s": 3.0892289580078796,
+          "audio_s": 2.32
+        },
+        {
+          "sentence_index": 28,
+          "reference": "Comprueba la nueva interfaz antes de incorporar los cambios.",
+          "synthesis_s": 4.651021666999441,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 29,
+          "reference": "Tómate un breve descanso y envía la actualización del proyecto cuando estés listo.",
+          "synthesis_s": 5.906068791999132,
+          "audio_s": 5.12
+        },
+        {
+          "sentence_index": 30,
+          "reference": "Buenos días.",
+          "synthesis_s": 2.0632634999928996,
+          "audio_s": 1.44
+        },
+        {
+          "sentence_index": 31,
+          "reference": "Tu primera reunión empieza a las nueve y tienes la tarde libre para concentrarte en el trabajo.",
+          "synthesis_s": 6.169550082995556,
+          "audio_s": 5.4
+        }
+      ],
+      "model": "chatterbox",
+      "sentence_index": 0,
+      "kind": "brief",
+      "file_name": "chatterbox-es-synthetic_charlotte-0-brief.wav",
+      "sha256": "a8d7d5891b267e6e6bd44bd7ff25502c19f86d839fa0e9a3e99e781511a44b90",
+      "size_bytes": 5558444,
+      "sample_rate": 24000,
+      "duration_s": 115.8,
+      "synthesis_s": 137.67674433301727
+    },
+    {
+      "language": "fr",
+      "voice": "synthetic_charlotte",
+      "reference": "Bonjour. Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme. La revue du code est prête. Vérifiez la nouvelle interface avant de fusionner les modifications. Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt. Bonjour. Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme. La revue du code est prête. Vérifiez la nouvelle interface avant de fusionner les modifications. Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt. Bonjour. Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme. La revue du code est prête. Vérifiez la nouvelle interface avant de fusionner les modifications. Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt. Bonjour. Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme. La revue du code est prête. Vérifiez la nouvelle interface avant de fusionner les modifications. Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt. Bonjour. Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme. La revue du code est prête. Vérifiez la nouvelle interface avant de fusionner les modifications. Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt. Bonjour. Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme. La revue du code est prête. Vérifiez la nouvelle interface avant de fusionner les modifications. Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt. Bonjour. Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+      "first_sentence_s": 1.6594523749954533,
+      "first_informative_sentence_ready_s": 7.953654541997821,
+      "total_s": 135.65299679302552,
+      "audio_s": 106.55999999999999,
+      "rtf": 1.2730198647994138,
+      "sentence_delivery_gap_s": 33.03354441803006,
+      "maximum_sentence_gap_s": 5.174202167002368,
+      "wall_s": 135.65331487500225,
+      "sentences": [
+        {
+          "sentence_index": 0,
+          "reference": "Bonjour.",
+          "synthesis_s": 1.6594523749954533,
+          "audio_s": 1.12
+        },
+        {
+          "sentence_index": 1,
+          "reference": "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+          "synthesis_s": 6.294202167002368,
+          "audio_s": 5.6
+        },
+        {
+          "sentence_index": 2,
+          "reference": "La revue du code est prête.",
+          "synthesis_s": 2.349639209001907,
+          "audio_s": 1.8
+        },
+        {
+          "sentence_index": 3,
+          "reference": "Vérifiez la nouvelle interface avant de fusionner les modifications.",
+          "synthesis_s": 4.386259000006248,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 4,
+          "reference": "Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt.",
+          "synthesis_s": 5.03561875000014,
+          "audio_s": 4.36
+        },
+        {
+          "sentence_index": 5,
+          "reference": "Bonjour.",
+          "synthesis_s": 1.6844978330045706,
+          "audio_s": 1.12
+        },
+        {
+          "sentence_index": 6,
+          "reference": "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+          "synthesis_s": 6.348689167003613,
+          "audio_s": 5.6
+        },
+        {
+          "sentence_index": 7,
+          "reference": "La revue du code est prête.",
+          "synthesis_s": 2.411812624995946,
+          "audio_s": 1.8
+        },
+        {
+          "sentence_index": 8,
+          "reference": "Vérifiez la nouvelle interface avant de fusionner les modifications.",
+          "synthesis_s": 4.440878124994924,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 9,
+          "reference": "Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt.",
+          "synthesis_s": 5.140941000005114,
+          "audio_s": 4.36
+        },
+        {
+          "sentence_index": 10,
+          "reference": "Bonjour.",
+          "synthesis_s": 1.7117026250052731,
+          "audio_s": 1.12
+        },
+        {
+          "sentence_index": 11,
+          "reference": "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+          "synthesis_s": 6.3605638750013895,
+          "audio_s": 5.6
+        },
+        {
+          "sentence_index": 12,
+          "reference": "La revue du code est prête.",
+          "synthesis_s": 2.389496000003419,
+          "audio_s": 1.8
+        },
+        {
+          "sentence_index": 13,
+          "reference": "Vérifiez la nouvelle interface avant de fusionner les modifications.",
+          "synthesis_s": 4.467770916991867,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 14,
+          "reference": "Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt.",
+          "synthesis_s": 5.093386417007423,
+          "audio_s": 4.36
+        },
+        {
+          "sentence_index": 15,
+          "reference": "Bonjour.",
+          "synthesis_s": 1.7087921659986023,
+          "audio_s": 1.12
+        },
+        {
+          "sentence_index": 16,
+          "reference": "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+          "synthesis_s": 6.566071084002033,
+          "audio_s": 5.6
+        },
+        {
+          "sentence_index": 17,
+          "reference": "La revue du code est prête.",
+          "synthesis_s": 2.661253749989555,
+          "audio_s": 1.8
+        },
+        {
+          "sentence_index": 18,
+          "reference": "Vérifiez la nouvelle interface avant de fusionner les modifications.",
+          "synthesis_s": 5.002225167001598,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 19,
+          "reference": "Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt.",
+          "synthesis_s": 5.655465417003143,
+          "audio_s": 4.36
+        },
+        {
+          "sentence_index": 20,
+          "reference": "Bonjour.",
+          "synthesis_s": 1.917421791004017,
+          "audio_s": 1.12
+        },
+        {
+          "sentence_index": 21,
+          "reference": "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+          "synthesis_s": 7.19338837498799,
+          "audio_s": 5.6
+        },
+        {
+          "sentence_index": 22,
+          "reference": "La revue du code est prête.",
+          "synthesis_s": 2.6491252499981783,
+          "audio_s": 1.8
+        },
+        {
+          "sentence_index": 23,
+          "reference": "Vérifiez la nouvelle interface avant de fusionner les modifications.",
+          "synthesis_s": 4.8336635419982485,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 24,
+          "reference": "Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt.",
+          "synthesis_s": 5.617112040999928,
+          "audio_s": 4.36
+        },
+        {
+          "sentence_index": 25,
+          "reference": "Bonjour.",
+          "synthesis_s": 1.89403508300893,
+          "audio_s": 1.12
+        },
+        {
+          "sentence_index": 26,
+          "reference": "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+          "synthesis_s": 7.235024084002362,
+          "audio_s": 5.6
+        },
+        {
+          "sentence_index": 27,
+          "reference": "La revue du code est prête.",
+          "synthesis_s": 2.6629519580019405,
+          "audio_s": 1.8
+        },
+        {
+          "sentence_index": 28,
+          "reference": "Vérifiez la nouvelle interface avant de fusionner les modifications.",
+          "synthesis_s": 5.071805667001172,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 29,
+          "reference": "Faites une courte pause, puis envoyez les nouvelles du projet quand vous serez prêt.",
+          "synthesis_s": 5.854856707999716,
+          "audio_s": 4.36
+        },
+        {
+          "sentence_index": 30,
+          "reference": "Bonjour.",
+          "synthesis_s": 2.2341361250000773,
+          "audio_s": 1.12
+        },
+        {
+          "sentence_index": 31,
+          "reference": "Votre première réunion commence à neuf heures et votre après-midi est libre pour travailler au calme.",
+          "synthesis_s": 7.120758500008378,
+          "audio_s": 5.6
+        }
+      ],
+      "model": "chatterbox",
+      "sentence_index": 0,
+      "kind": "brief",
+      "file_name": "chatterbox-fr-synthetic_charlotte-0-brief.wav",
+      "sha256": "11244a71a13960a996d8de15f46becd6811783cd023123173d462337822901ef",
+      "size_bytes": 5114924,
+      "sample_rate": 24000,
+      "duration_s": 106.56,
+      "synthesis_s": 135.65299679302552
+    },
+    {
+      "language": "de",
+      "voice": "synthetic_charlotte",
+      "reference": "Guten Morgen. Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten. Die Überprüfung des Codes ist fertig. Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst. Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist. Guten Morgen. Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten. Die Überprüfung des Codes ist fertig. Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst. Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist. Guten Morgen. Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten. Die Überprüfung des Codes ist fertig. Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst. Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist. Guten Morgen. Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten. Die Überprüfung des Codes ist fertig. Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst. Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist. Guten Morgen. Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten. Die Überprüfung des Codes ist fertig. Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst. Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist. Guten Morgen. Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten. Die Überprüfung des Codes ist fertig. Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst. Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist. Guten Morgen. Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten. Die Überprüfung des Codes ist fertig. Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst. Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+      "first_sentence_s": 1.960439292000956,
+      "first_informative_sentence_ready_s": 7.749235041992506,
+      "total_s": 142.36670487599622,
+      "audio_s": 112.27999999999999,
+      "rtf": 1.2679613900605293,
+      "sentence_delivery_gap_s": 31.88626558399529,
+      "maximum_sentence_gap_s": 4.54879574999155,
+      "wall_s": 142.36693370799185,
+      "sentences": [
+        {
+          "sentence_index": 0,
+          "reference": "Guten Morgen.",
+          "synthesis_s": 1.960439292000956,
+          "audio_s": 1.24
+        },
+        {
+          "sentence_index": 1,
+          "reference": "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.",
+          "synthesis_s": 5.78879574999155,
+          "audio_s": 4.64
+        },
+        {
+          "sentence_index": 2,
+          "reference": "Die Überprüfung des Codes ist fertig.",
+          "synthesis_s": 3.4267858329985756,
+          "audio_s": 2.52
+        },
+        {
+          "sentence_index": 3,
+          "reference": "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.",
+          "synthesis_s": 5.047277750010835,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 4,
+          "reference": "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+          "synthesis_s": 4.904749666995485,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 5,
+          "reference": "Guten Morgen.",
+          "synthesis_s": 1.9929452090000268,
+          "audio_s": 1.24
+        },
+        {
+          "sentence_index": 6,
+          "reference": "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.",
+          "synthesis_s": 5.935710124991601,
+          "audio_s": 4.64
+        },
+        {
+          "sentence_index": 7,
+          "reference": "Die Überprüfung des Codes ist fertig.",
+          "synthesis_s": 3.43594141601352,
+          "audio_s": 2.52
+        },
+        {
+          "sentence_index": 8,
+          "reference": "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.",
+          "synthesis_s": 4.97369791699748,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 9,
+          "reference": "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+          "synthesis_s": 4.686249374994077,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 10,
+          "reference": "Guten Morgen.",
+          "synthesis_s": 1.9055572079960257,
+          "audio_s": 1.24
+        },
+        {
+          "sentence_index": 11,
+          "reference": "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.",
+          "synthesis_s": 5.594295957998838,
+          "audio_s": 4.64
+        },
+        {
+          "sentence_index": 12,
+          "reference": "Die Überprüfung des Codes ist fertig.",
+          "synthesis_s": 3.1721600000018952,
+          "audio_s": 2.52
+        },
+        {
+          "sentence_index": 13,
+          "reference": "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.",
+          "synthesis_s": 4.761865459004184,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 14,
+          "reference": "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+          "synthesis_s": 4.7718997089978075,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 15,
+          "reference": "Guten Morgen.",
+          "synthesis_s": 2.0509681249968708,
+          "audio_s": 1.24
+        },
+        {
+          "sentence_index": 16,
+          "reference": "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.",
+          "synthesis_s": 5.677135207995889,
+          "audio_s": 4.64
+        },
+        {
+          "sentence_index": 17,
+          "reference": "Die Überprüfung des Codes ist fertig.",
+          "synthesis_s": 3.1851706249872223,
+          "audio_s": 2.52
+        },
+        {
+          "sentence_index": 18,
+          "reference": "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.",
+          "synthesis_s": 4.625809458011645,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 19,
+          "reference": "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+          "synthesis_s": 4.625457166010165,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 20,
+          "reference": "Guten Morgen.",
+          "synthesis_s": 2.0199407920008525,
+          "audio_s": 1.24
+        },
+        {
+          "sentence_index": 21,
+          "reference": "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.",
+          "synthesis_s": 5.4373205000010785,
+          "audio_s": 4.64
+        },
+        {
+          "sentence_index": 22,
+          "reference": "Die Überprüfung des Codes ist fertig.",
+          "synthesis_s": 3.2185897500021383,
+          "audio_s": 2.52
+        },
+        {
+          "sentence_index": 23,
+          "reference": "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.",
+          "synthesis_s": 4.624091792007675,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 24,
+          "reference": "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+          "synthesis_s": 4.395567582992953,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 25,
+          "reference": "Guten Morgen.",
+          "synthesis_s": 1.8112407500011614,
+          "audio_s": 1.24
+        },
+        {
+          "sentence_index": 26,
+          "reference": "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.",
+          "synthesis_s": 5.476628542004619,
+          "audio_s": 4.64
+        },
+        {
+          "sentence_index": 27,
+          "reference": "Die Überprüfung des Codes ist fertig.",
+          "synthesis_s": 3.3324337089870824,
+          "audio_s": 2.52
+        },
+        {
+          "sentence_index": 28,
+          "reference": "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.",
+          "synthesis_s": 4.881201582989888,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 29,
+          "reference": "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+          "synthesis_s": 4.811920708001708,
+          "audio_s": 3.76
+        },
+        {
+          "sentence_index": 30,
+          "reference": "Guten Morgen.",
+          "synthesis_s": 1.9476824170124019,
+          "audio_s": 1.24
+        },
+        {
+          "sentence_index": 31,
+          "reference": "Deine erste Besprechung beginnt um neun und am Nachmittag kannst du konzentriert arbeiten.",
+          "synthesis_s": 5.656945499998983,
+          "audio_s": 4.64
+        },
+        {
+          "sentence_index": 32,
+          "reference": "Die Überprüfung des Codes ist fertig.",
+          "synthesis_s": 3.1538239999936195,
+          "audio_s": 2.52
+        },
+        {
+          "sentence_index": 33,
+          "reference": "Bitte prüfe die neue Schnittstelle, bevor du die Änderungen zusammenführst.",
+          "synthesis_s": 4.621432917003403,
+          "audio_s": 3.88
+        },
+        {
+          "sentence_index": 34,
+          "reference": "Mach eine kurze Pause und sende den Projektbericht, wenn du bereit bist.",
+          "synthesis_s": 4.454973083004006,
+          "audio_s": 3.76
+        }
+      ],
+      "model": "chatterbox",
+      "sentence_index": 0,
+      "kind": "brief",
+      "file_name": "chatterbox-de-synthetic_charlotte-0-brief.wav",
+      "sha256": "2048ad01a799777a8f27d03a09e525260a92f28cc35778f375b313866d471a78",
+      "size_bytes": 5389484,
+      "sample_rate": 24000,
+      "duration_s": 112.28,
+      "synthesis_s": 142.36670487599622
+    }
+  ],
+  "warmups": [
+    {
+      "language": "en",
+      "voice": "synthetic_charlotte",
+      "cold_first_sentence_s": 6.389404250003281
+    },
+    {
+      "language": "en",
+      "voice": "synthetic_james",
+      "cold_first_sentence_s": 1.634320042008767
+    },
+    {
+      "language": "zh",
+      "voice": "synthetic_charlotte",
+      "cold_first_sentence_s": 2.2448163329972886
+    },
+    {
+      "language": "zh",
+      "voice": "synthetic_james",
+      "cold_first_sentence_s": 2.011242583001149
+    },
+    {
+      "language": "ja",
+      "voice": "synthetic_charlotte",
+      "cold_first_sentence_s": 2.252797459004796
+    },
+    {
+      "language": "ja",
+      "voice": "synthetic_james",
+      "cold_first_sentence_s": 2.185763166999095
+    },
+    {
+      "language": "es",
+      "voice": "synthetic_charlotte",
+      "cold_first_sentence_s": 2.1887243329983903
+    },
+    {
+      "language": "es",
+      "voice": "synthetic_james",
+      "cold_first_sentence_s": 2.348038333992008
+    },
+    {
+      "language": "fr",
+      "voice": "synthetic_charlotte",
+      "cold_first_sentence_s": 1.7863366670062533
+    },
+    {
+      "language": "fr",
+      "voice": "synthetic_james",
+      "cold_first_sentence_s": 1.6924253750039497
+    },
+    {
+      "language": "de",
+      "voice": "synthetic_charlotte",
+      "cold_first_sentence_s": 1.9879561249981634
+    },
+    {
+      "language": "de",
+      "voice": "synthetic_james",
+      "cold_first_sentence_s": 1.5691060829994967
+    }
+  ],
+  "status": "complete",
+  "host": "macOS-26.2-arm64-arm-64bit",
+  "nice": 20,
+  "sentence_streaming": "Sequential complete-sentence PCM; model stays loaded; no device playback",
+  "started_unix": 1792791425.4299798,
+  "load_s": 3.509893624999677,
+  "voice_preparation": "Chatterbox public conds API cached per synthetic reference voice; the first excluded warmup includes preparation. Other models use the published generate path.",
+  "conditioning_prepare_s": {
+    "synthetic_charlotte": 1.1319012919993838,
+    "synthetic_james": 0.20046070899115875
+  },
+  "first_sentence_trials": [
+    {
+      "language": "en",
+      "voice": "synthetic_charlotte",
+      "seconds": [
+        2.0464952499896754,
+        2.1260862500057556,
+        2.074710708009661
+      ]
+    },
+    {
+      "language": "en",
+      "voice": "synthetic_james",
+      "seconds": [
+        1.4616567920020316,
+        1.4739756659982959,
+        1.5070981250028126
+      ]
+    },
+    {
+      "language": "zh",
+      "voice": "synthetic_charlotte",
+      "seconds": [
+        2.2346586250059772,
+        2.246402749995468,
+        2.249325791010051
+      ]
+    },
+    {
+      "language": "zh",
+      "voice": "synthetic_james",
+      "seconds": [
+        1.936777875002008,
+        1.9571093330014264,
+        1.9022209999966435
+      ]
+    },
+    {
+      "language": "ja",
+      "voice": "synthetic_charlotte",
+      "seconds": [
+        2.247852458996931,
+        2.25645733300189,
+        2.2642337500001304
+      ]
+    },
+    {
+      "language": "ja",
+      "voice": "synthetic_james",
+      "seconds": [
+        2.2065882080059964,
+        2.170177791995229,
+        2.175288250000449
+      ]
+    },
+    {
+      "language": "es",
+      "voice": "synthetic_charlotte",
+      "seconds": [
+        2.2189322499907576,
+        2.251903750002384,
+        2.2351762500038603
+      ]
+    },
+    {
+      "language": "es",
+      "voice": "synthetic_james",
+      "seconds": [
+        2.3308815420023166,
+        2.332623333000811,
+        2.331093125001644
+      ]
+    },
+    {
+      "language": "fr",
+      "voice": "synthetic_charlotte",
+      "seconds": [
+        1.743816667003557,
+        1.7256423329963582,
+        1.7645915000030072
+      ]
+    },
+    {
+      "language": "fr",
+      "voice": "synthetic_james",
+      "seconds": [
+        1.631875958002638,
+        1.6453831660037395,
+        1.6660263749945443
+      ]
+    },
+    {
+      "language": "de",
+      "voice": "synthetic_charlotte",
+      "seconds": [
+        1.9196122919966,
+        1.9156501670076977,
+        1.9228939580061706
+      ]
+    },
+    {
+      "language": "de",
+      "voice": "synthetic_james",
+      "seconds": [
+        1.5749713750119554,
+        1.5634674159955466,
+        1.5996322089922614
+      ]
+    }
+  ],
+  "process_peak_rss_bytes": 1164918784,
+  "metal_peak_bytes": 4858054116
+}

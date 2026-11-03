@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "按住说话时，Isoform 会使用麦克风。";
+"NSSpeechRecognitionUsageDescription" = "按住说话时，Isoform 会将你说的话转换成文字。";

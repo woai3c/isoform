@@ -1,0 +1,87 @@
+name: isoform-relay
+
+# The relay terminates TLS itself. A non-loopback listener must have a
+# certificate; the relay refuses plaintext on any non-loopback address. The
+# mounted certificate and key must be readable by UID 10001, and the key must
+# be owner-only (mode 0600) and kept outside the checkout.
+#
+# To terminate TLS in a separate proxy instead, keep the relay on loopback
+# (ISOFORM_RELAY_ADDR=127.0.0.1:8791 and no TLS files) and run the proxy in this
+# service's network namespace with network_mode: "service:relay", so both share
+# the loopback interface.
+#
+# APNs is optional and all-or-nothing. To enable it, add these to the env file
+# and bind the .p8 key read-only at /run/secrets/apns-key.p8 (owner UID 10001,
+# mode 0600, outside the checkout):
+#   ISOFORM_RELAY_APNS_KEY_FILE=/run/secrets/apns-key.p8
+#   ISOFORM_RELAY_APNS_KEY_ID=<10-character key id>
+#   ISOFORM_RELAY_APNS_TEAM_ID=<10-character team id>
+#   ISOFORM_RELAY_APNS_TOPIC=<bundle identifier>
+#   ISOFORM_RELAY_APNS_ENVIRONMENT=development|production
+#
+# Text messages are optional too (docs/sms-channel.md). To enable them, add:
+#   ISOFORM_RELAY_SMS_PROVIDER=twilio
+#   ISOFORM_RELAY_SMS_KEY=<openssl rand -base64 32>
+#   ISOFORM_RELAY_SMS_HASH_KEY=<the same value as the first ISOFORM_RELAY_SMS_KEY; never changed>
+#   ISOFORM_RELAY_SMS_HELP_CONTACT=<support email or URL>
+#   ISOFORM_RELAY_SMS_WEBHOOK_URL=https://<relay host>/v1/sms/inbound
+#   ISOFORM_RELAY_TWILIO_ACCOUNT_SID=<AC...>
+#   ISOFORM_RELAY_TWILIO_AUTH_TOKEN=<auth token>
+#   ISOFORM_RELAY_TWILIO_MESSAGING_SERVICE_SID=<MG...>
+
+services:
+  relay:
+    image: isoform-relay:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - path: ${ISOFORM_RELAY_ENV_FILE:?Set the absolute path to a private relay environment file outside this checkout}
+        required: true
+        format: raw
+    environment:
+      ISOFORM_RELAY_ADDR: 0.0.0.0:8791
+      ISOFORM_RELAY_STATE_DIR: /var/lib/isoform
+      ISOFORM_RELAY_TLS_CERT: /run/secrets/relay-cert.pem
+      ISOFORM_RELAY_TLS_KEY: /run/secrets/relay-key.pem
+    ports:
+      - "${ISOFORM_RELAY_PUBLISH:-127.0.0.1:8791}:8791"
+    user: "10001:10001"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    volumes:
+      - type: volume
+        source: relay-state
+        target: /var/lib/isoform
+      - type: bind
+        source: ${ISOFORM_RELAY_TLS_CERT_FILE:?Set the absolute path to the TLS certificate PEM}
+        target: /run/secrets/relay-cert.pem
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${ISOFORM_RELAY_TLS_KEY_FILE:?Set the absolute path to the TLS private key PEM}
+        target: /run/secrets/relay-key.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    restart: unless-stopped
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  # Keep the pre-rename volume name so upgrades reuse the existing relay state.
+  relay-state:
+    name: yansu-relay_relay-state

@@ -1,0 +1,51 @@
+{
+  "evaluation_date_local": "2026-10-23",
+  "timezone": "America/Los_Angeles",
+  "base_commit": "aeeb952f72ae114086fd5a7fdb8e405d5caadaa3",
+  "branch": "claude/codex-model-survey-2",
+  "tests": {
+    "command": "python -m unittest discover -s asr-eval -p 'test_*.py'",
+    "passed": 46
+  },
+  "validators": {
+    "original": "passed",
+    "multilingual_with_external_audio": "passed",
+    "explicit_gpl_acceptance_variant": "passed"
+  },
+  "counts": {
+    "asr_observations": 3600,
+    "unique_fleurs_waveforms": 700,
+    "voice_files": 393,
+    "reference_files": 2,
+    "ocr_observations": 120,
+    "unique_ocr_fixtures": 30,
+    "manifest_entries": 27
+  },
+  "disk": {
+    "preflight_checks": 183,
+    "minimum_logged_free_bytes": 19233775616,
+    "reserve_bytes": 17179869184,
+    "final_free_bytes": 52882087936,
+    "final_df": "Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on\n/dev/disk3s5   228Gi   153Gi    49Gi    76%    3.0M  516M    1%   /System/Volumes/Data\n"
+  },
+  "gplComplianceAccepted": false,
+  "audio_in_git": false,
+  "app_launched": false,
+  "private_agent_directories_read": false,
+  "cleanup": {
+    "removed": [
+      ".cache/multilingual",
+      ".venv",
+      ".venv-plus",
+      "survey-2026-10-multilingual/sources",
+      "__pycache__ directories"
+    ],
+    "raw_logs_removed": true,
+    "external_voice_samples_retained": true
+  },
+  "precommit": {
+    "command": "pre-commit run",
+    "status": "passed",
+    "scope": "all staged changes"
+  }
+}

@@ -1,0 +1,217 @@
+{
+  "source": "https://datasets-server.huggingface.co/rows?dataset=openslr/librispeech_asr&config=other&split=test&offset=0&length=30",
+  "licence": "CC-BY-4.0",
+  "selection": "first N in published order",
+  "samples": [
+    {
+      "id": "7902-96591-0000",
+      "audio_path": "7902-96591-0000.wav",
+      "reference": "I AM FROM THE CUTTER LYING OFF THE COAST",
+      "duration_s": 2.095,
+      "sha256": "9d66592b32f4b6895ea06ed7c23b973142a652b6088d822366d27668c916456e"
+    },
+    {
+      "id": "7902-96591-0001",
+      "audio_path": "7902-96591-0001.wav",
+      "reference": "DON'T CRY HE SAID I WAS OBLIGED TO COME",
+      "duration_s": 2.51,
+      "sha256": "f64490da23551f93431841b61539be926d681658a26f866bff5b1f2cffd77b1f"
+    },
+    {
+      "id": "7902-96591-0002",
+      "audio_path": "7902-96591-0002.wav",
+      "reference": "AND AND YOU HAVE NOT FOUND OUT ANYTHING CAME IN QUICK FRIGHTENED TONES",
+      "duration_s": 5.02,
+      "sha256": "9a3274d64d713c813eff79d2967052234024391cca46eb8667de350a70e56f45"
+    },
+    {
+      "id": "7902-96591-0003",
+      "audio_path": "7902-96591-0003.wav",
+      "reference": "I WISH YOU WOULD BELIEVE ME THAT I AM IN AS GREAT TROUBLE ABOUT IT AS YOU ARE",
+      "duration_s": 3.83,
+      "sha256": "e20ac66519ef005af6e049cc9009691e639b994f421f41e98b44702dc8b5cf53"
+    },
+    {
+      "id": "7902-96591-0004",
+      "audio_path": "7902-96591-0004.wav",
+      "reference": "THAT MY FATHER SIR RISDON GRAEME HAS SMUGGLED GOODS HERE",
+      "duration_s": 3.605,
+      "sha256": "ecc8cb074ebdec18eaaa71a48a6790262093ea4610ec6b023fc1fb07b7a334d6"
+    },
+    {
+      "id": "7902-96591-0005",
+      "audio_path": "7902-96591-0005.wav",
+      "reference": "HE COULD NOT HELP IT HE HATES THE SMUGGLERS YOU SHALL NOT TELL",
+      "duration_s": 3.425,
+      "sha256": "854224e6c0f84c52d1201eeba8bec5b8bd4c6245f2d137c17e3ae057c112a97e"
+    },
+    {
+      "id": "7902-96591-0006",
+      "audio_path": "7902-96591-0006.wav",
+      "reference": "PRAY PRAY SAY YOU WILL NOT ARCHY WAS SILENT",
+      "duration_s": 3.72,
+      "sha256": "d307ae496f652cfb8cff211e5b61d7a6b674575fe46911cc8173a02cec640774"
+    },
+    {
+      "id": "7902-96591-0007",
+      "audio_path": "7902-96591-0007.wav",
+      "reference": "THEN AS ARCHY STOOD IN THE DARK LITERALLY AGHAST WITH ASTONISHMENT HE HEARD THE FAINT RUSTLING ONCE MORE AND AGAIN ALL WAS SILENT",
+      "duration_s": 7.69,
+      "sha256": "c7c18bb8172d6c38c2b3a6b36b78e27916727c93b09fee81d712f37ba016078e"
+    },
+    {
+      "id": "7902-96591-0008",
+      "audio_path": "7902-96591-0008.wav",
+      "reference": "HE LAUGHED BUT IT WAS A CURIOUS KIND OF LAUGH FULL OF VEXATION INJURED AMOUR PROPRE AS THE FRENCH CALL OUR LOVE OF OUR OWN DIGNITY OF WHICH ARCHIBALD RAYSTOKE IN THE FULL FLUSH OF HIS YOUNG BELIEF IN HIS IMPORTANCE AS A BRITISH OFFICER HAD A PRETTY GOOD STOCK",
+      "duration_s": 14.73,
+      "sha256": "28f1494225db7514f4ac1fe299ef7196a6a3a31c761c05d88655e16eb437bd20"
+    },
+    {
+      "id": "7902-96591-0009",
+      "audio_path": "7902-96591-0009.wav",
+      "reference": "IT ALL COMES OF DRESSING UP IN THIS STUPID WAY LIKE A ROUGH FISHER LAD",
+      "duration_s": 3.99,
+      "sha256": "b57c44c8a01faf95c1fee97785786e38890d3d1f01635e8511fe2afc9d9c32b4"
+    },
+    {
+      "id": "7902-96591-0010",
+      "audio_path": "7902-96591-0010.wav",
+      "reference": "COLD WATER CAME ON THIS IDEA DIRECTLY AS HE RECALLED THE FACT THAT THE DARKNESS WAS INTENSE AND CELIA COULD NOT HAVE SEEN HIM",
+      "duration_s": 6.81,
+      "sha256": "0936365426761d02014dff05b841e7c568001f3cf98fbf28458616684fabd821"
+    },
+    {
+      "id": "7902-96591-0011",
+      "audio_path": "7902-96591-0011.wav",
+      "reference": "I'LL SOON SHOW THEM THAT I AM NOT GOING TO BE PLAYED WITH",
+      "duration_s": 2.93,
+      "sha256": "20678f5f42a669f2217cf0e73e730242b2472bf347ba19c9b16d58814cb0c34e"
+    },
+    {
+      "id": "7902-96591-0012",
+      "audio_path": "7902-96591-0012.wav",
+      "reference": "FOR IT SUDDENLY OCCURRED TO HIM THAT HE WAS NOT ONLY A PRISONER BUT A PRISONER IN THE POWER OF A VERY RECKLESS SET OF PEOPLE WHO WOULD STOP AT NOTHING",
+      "duration_s": 7.145,
+      "sha256": "2a329c664eeb22f16aaf85ee8872680f9da79abd1a65de949aac8af309f83c9c"
+    },
+    {
+      "id": "7902-96591-0013",
+      "audio_path": "7902-96591-0013.wav",
+      "reference": "NO HE THOUGHT TO HIMSELF I DON'T BELIEVE THEY WOULD KILL ME BUT THEY WOULD KNOCK ME ABOUT",
+      "duration_s": 5.38,
+      "sha256": "9d6877de5d62902d21ce0c6b1139508a58552c7f7a1d8f2a034c8975f66293d5"
+    },
+    {
+      "id": "7902-96591-0014",
+      "audio_path": "7902-96591-0014.wav",
+      "reference": "THE KICK HE HAD RECEIVED WAS A FORETASTE OF WHAT HE MIGHT EXPECT AND AFTER A LITTLE CONSIDERATION HE CAME TO THE CONCLUSION THAT HIS DUTY WAS TO ESCAPE AND GET BACK TO THE CUTTER AS QUICKLY AS HE COULD",
+      "duration_s": 9.71,
+      "sha256": "6d10d0582d786780a5b37a291b0b8fce5d02e899ce572ab78de30cea8e81a8ae"
+    },
+    {
+      "id": "7902-96591-0015",
+      "audio_path": "7902-96591-0015.wav",
+      "reference": "TO DO THIS HE MUST SCHEME LIE HID TILL MORNING THEN MAKE FOR THE NEAREST POINT AND SIGNAL FOR HELP UNLESS A BOAT'S CREW WERE ALREADY SEARCHING FOR HIM HOW TO ESCAPE",
+      "duration_s": 9.61,
+      "sha256": "f35e796fcec18e3abdc662d60f37809608742bccfb9fe01d420b939a2ae3525c"
+    },
+    {
+      "id": "7902-96591-0016",
+      "audio_path": "7902-96591-0016.wav",
+      "reference": "THE WINDOW WAS BARRED BUT HE WENT TO IT AND TRIED THE BARS ONE BY ONE TO FIND THEM ALL SOLIDLY FITTED INTO THE STONE SILL",
+      "duration_s": 6.045,
+      "sha256": "8d520978f719eb80571dd44a7a69aacae66a81d98e9319c80408da9b56a2fc47"
+    },
+    {
+      "id": "7902-96591-0017",
+      "audio_path": "7902-96591-0017.wav",
+      "reference": "NEXT MOMENT AS HE FELT HIS WAY ABOUT HIS HAND TOUCHED AN OLD FASHIONED MARBLE MANTELPIECE FIREPLACE CHIMNEY",
+      "duration_s": 6.675,
+      "sha256": "b255fd8e5145b2dfae804181880906191207596e9675bef040abdc70501910bd"
+    },
+    {
+      "id": "7902-96591-0018",
+      "audio_path": "7902-96591-0018.wav",
+      "reference": "YES IF OTHER WAYS FAILED HE COULD ESCAPE UP THE CHIMNEY",
+      "duration_s": 3.11,
+      "sha256": "bbfd9fe56b29410cb7116d212810b3cef05d949d1566be3df44e62189502d124"
+    },
+    {
+      "id": "7902-96591-0019",
+      "audio_path": "7902-96591-0019.wav",
+      "reference": "NO THAT WAS TOO BAD HE COULD NOT DO THAT",
+      "duration_s": 2.365,
+      "sha256": "c35839052308eccbb4c77b7b737adbf391ff9bb5c2f851b458236904b7492bd9"
+    },
+    {
+      "id": "7902-96591-0020",
+      "audio_path": "7902-96591-0020.wav",
+      "reference": "SYMPATHY AND PITY FOR THE DWELLERS IN THE HOZE WERE COMPLETELY GONE NOW AND HE SET HIS TEETH FAST AND MENTALLY CALLED HIMSELF A WEAK IDIOT FOR EVER THINKING ABOUT SUCH PEOPLE",
+      "duration_s": 8.78,
+      "sha256": "0a3e578cf08fe111f43823e918a24e31f0757aeaa88515a9b1b3c546661aa8fc"
+    },
+    {
+      "id": "7902-96591-0021",
+      "audio_path": "7902-96591-0021.wav",
+      "reference": "A NARROW TABLE AGAINST THE WALL IN TWO PLACES",
+      "duration_s": 2.96,
+      "sha256": "77256a86296d59a1ded43015ff3a4f06cee40d3fd6434d0b92d870d64132a479"
+    },
+    {
+      "id": "7902-96591-0022",
+      "audio_path": "7902-96591-0022.wav",
+      "reference": "HE WENT AND TRIED TO FORCE HIS HEAD THROUGH RECALLING AS HE DID THAT WHERE A PERSON'S HEAD WOULD GO THE REST OF THE BODY WOULD PASS",
+      "duration_s": 5.87,
+      "sha256": "5dcbd8d0971f10801ab676198331d33e9fc168550c084b012ee6c4db2af7e057"
+    },
+    {
+      "id": "7902-96591-0023",
+      "audio_path": "7902-96591-0023.wav",
+      "reference": "BUT THERE WAS NO CHANCE FOR HIS BODY THERE THE HEAD WOULD NOT GO FIRST",
+      "duration_s": 3.365,
+      "sha256": "b0fe5f5830b372632de62e17fe39a8b244d376866bef46ba42c99eb2e04df8e8"
+    },
+    {
+      "id": "7902-96591-0024",
+      "audio_path": "7902-96591-0024.wav",
+      "reference": "A FELLOW WHO WAS SHUT UP IN PRISON FOR LIFE MIGHT DO IT HE SAID BUT NOT IN A CASE LIKE THIS",
+      "duration_s": 5.145,
+      "sha256": "1072180632b74162bf6305b556fb6d0f836b1a2c725e01e8759ac81c9582bf31"
+    },
+    {
+      "id": "7902-96592-0000",
+      "audio_path": "7902-96592-0000.wav",
+      "reference": "SURE YOU'VE LOOKED ROUND EVERYWHERE BOY YES FATHER QUITE",
+      "duration_s": 4.21,
+      "sha256": "08ceca275959f7c3b271a4dfdf4196f40902b506748ec2cdf207e3586b80f19e"
+    },
+    {
+      "id": "7902-96592-0001",
+      "audio_path": "7902-96592-0001.wav",
+      "reference": "I'M GOING HOME TO BREAKFAST",
+      "duration_s": 1.83,
+      "sha256": "a0ff1b10d7016061e1a3cec1c2b1e3bfe956a09931a1be493553582ff6590303"
+    },
+    {
+      "id": "7902-96592-0002",
+      "audio_path": "7902-96592-0002.wav",
+      "reference": "SHALL I COME TOO FATHER NO",
+      "duration_s": 2.74,
+      "sha256": "7d78beb02b649b62e55fba00dbaf9c22b11ca5a572f96988f76c7e33dfcc3f77"
+    },
+    {
+      "id": "7902-96592-0003",
+      "audio_path": "7902-96592-0003.wav",
+      "reference": "STOP HERE TILL SIR RISDON COMES DOWN AND TELL HIM I'M VERY SORRY THAT WE SHOULD HAVE CLEARED OUT LAST NIGHT ONLY A BORN FOOL SAW JERRY NANDY'S LOBSTER BOAT COMING INTO THE COVE AND CAME RUNNING TO SAY IT WAS A PARTY FROM THE CUTTER YES FATHER",
+      "duration_s": 12.17,
+      "sha256": "831e03cc96ec8223927c3d04ae0ce13ddb36dc12cf5db391b5ab5e639d5bd332"
+    },
+    {
+      "id": "7902-96592-0004",
+      "audio_path": "7902-96592-0004.wav",
+      "reference": "TELL HIM NOT TO BE UNEASY TIS ALL RIGHT AND I'LL HAVE EVERYTHING CLEAR AWAY TO NIGHT",
+      "duration_s": 4.325,
+      "sha256": "5233500b32d092f59a8ba25389ff36d2f414162be8c636610c273158bde64a97"
+    }
+  ]
+}

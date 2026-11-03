@@ -1,0 +1,3321 @@
+{
+  "schema_version": 4,
+  "status": "draft; evaluation only, not an app asset catalogue",
+  "survey_date": "2026-10-23",
+  "size_semantics": "size_bytes is exact download bytes for listed files; archives differ from installed_size_bytes. Runtime packaging is not included in model download bytes.",
+  "scope": "Four surveyed jobs, existing setup alternatives and the mandatory speaker pack. Privacy/memory models belong to a separate app manifest.",
+  "recommendations": {
+    "live": "qwen17-live",
+    "after-call": "qwen17",
+    "voice": "ming_tts",
+    "ocr": "apple-vision"
+  },
+  "gplComplianceAccepted": false,
+  "alternatives_without_gpl": {
+    "voice": "ming_tts"
+  },
+  "gpl_component_scope": "Required components of each evaluated route, not a full runtime SBOM. Package cleared models separately from the survey environment's unused Kokoro/eSpeak dependencies. Acceptance permits a GPL-component option; it does not add language coverage or make it the multilingual default.",
+  "licence_status_semantics": {
+    "cleared": "Documented permitted delivery/use route, with ordinary licence/attribution conditions retained.",
+    "pending": "Unresolved permission; do not recommend or offer this download as cleared. non_commercial is null when the restriction is unknown.",
+    "restricted": "A recommendation requires its named restriction_acceptance_flag to be explicitly true. Kokoro requires gplComplianceAccepted; this is distinct from a non-commercial restriction and does not itself fulfil GPL obligations."
+  },
+  "models": [
+    {
+      "id": "sensevoice",
+      "job": "live",
+      "display_name": "SenseVoice Small int8",
+      "line": "Five declared languages; licence confirmation remains pending.",
+      "evidence_line": "FLEURS 100/supported language: EN WER 9.28%; ZH CER 9.89%; JA CER 7.41%; KO CER 6.60%; max RTF 0.026. ASR-only warm throughput.",
+      "recommended": false,
+      "size_bytes": 239549735,
+      "installed_size_bytes": 239549735,
+      "files": [
+        {
+          "path": "model.int8.onnx",
+          "size_bytes": 239233841,
+          "sha256": "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51",
+          "sources": [
+            "https://model-assets.yansu.app/sherpa/model.int8.onnx",
+            "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/2365baeacb507f821a0c8120fcee3d484dba7a07/model.int8.onnx"
+          ]
+        },
+        {
+          "path": "tokens.txt",
+          "size_bytes": 315894,
+          "sha256": "f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc",
+          "sources": [
+            "https://model-assets.yansu.app/sherpa/tokens.txt",
+            "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/2365baeacb507f821a0c8120fcee3d484dba7a07/tokens.txt"
+          ]
+        }
+      ],
+      "sources": [
+        "https://model-assets.yansu.app/sherpa/",
+        "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tree/2365baeacb507f821a0c8120fcee3d484dba7a07"
+      ],
+      "licence": {
+        "name": "FunASR Model Open Source License Agreement v1.1",
+        "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE"
+      },
+      "non_commercial": null,
+      "inventory": "survey-2026-10/assets/sensevoice.json",
+      "verification": "downloaded SHA-256",
+      "notes": "Direct files match the app's canonical SHA-256 pins. Mirror order comes from bundled_sherpa.go; mirror bytes were not fetched in this run. Preserve upstream attribution and model name.",
+      "requires": [
+        "speaker-pack"
+      ],
+      "also_serves": [
+        "after-call"
+      ],
+      "gpl_components": [],
+      "licence_status": "pending",
+      "licence_status_note": "Commercial use and redistribution of these pinned ONNX files await licence-owner confirmation; v1.1 attribution and reference/learning wording remain unresolved.",
+      "selectable": false,
+      "licence_evidence": [
+        {
+          "url": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://github.com/QwenAudio/SenseVoice/issues/334",
+          "reason": "Reopened August 29; the July reply is context, not final licence-owner/core-maintainer confirmation."
+        },
+        {
+          "url": "https://github.com/modelscope/FunASR/issues/3715",
+          "reason": "Commercial use, applicable licence version and redistribution of the pinned INT8 ONNX/tokens files remain open."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "sherpa-onnx 1.13.8, CPU 2 threads",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "yue"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/FunAudioLLM/SenseVoiceSmall"
+      ],
+      "language_note": "Licence remains pending; five languages, not six.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko"
+      ],
+      "evaluation_profile": "sensevoice",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-sensevoice.json"
+    },
+    {
+      "id": "sensevoice_nano",
+      "job": "live",
+      "display_name": "SenseVoice FunASR-Nano encoder int8",
+      "line": "Fast three-language CTC encoder, distinct from the full decoder.",
+      "evidence_line": "FLEURS 100/supported language: EN WER 15.48%; ZH CER 11.33%; JA CER 11.03%; max RTF 0.034. ASR-only warm throughput.",
+      "recommended": false,
+      "size_bytes": 187693225,
+      "installed_size_bytes": 265424253,
+      "files": [
+        {
+          "path": "sherpa-onnx-sense-voice-funasr-nano-int8-2025-12-17.tar.bz2",
+          "size_bytes": 187693225,
+          "sha256": "257936ea9a64cbe33200274e6367fc26d373ff6ca58b996b15108ffd6b9f6148",
+          "sources": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-funasr-nano-int8-2025-12-17.tar.bz2"
+          ]
+        }
+      ],
+      "sources": [
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-funasr-nano-int8-2025-12-17.tar.bz2"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/sensevoice_nano.json",
+      "verification": "downloaded SHA-256",
+      "requires": [
+        "speaker-pack"
+      ],
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512/blob/272c57b82523ada6fd87095e955f8e29100979ab/README.md",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "sherpa-onnx 1.13.8, CPU 2 threads",
+      "languages": [
+        "zh",
+        "en",
+        "ja"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512/blob/272c57b82523ada6fd87095e955f8e29100979ab/README.md"
+      ],
+      "language_note": "Original Nano checkpoint, distinct from the separate 31-language MLT checkpoint.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja"
+      ],
+      "evaluation_profile": "sensevoice_nano",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-sensevoice_nano.json"
+    },
+    {
+      "id": "qwen06",
+      "job": "live",
+      "display_name": "Qwen3-ASR 0.6B int8",
+      "line": "Thirty-language native control; weaker accuracy in the multilingual survey.",
+      "evidence_line": "FLEURS 100/supported language: EN WER 6.34%; ZH CER 8.78%; JA CER 10.25%; KO CER 6.28%; ES WER 5.91%; FR WER 11.41%; DE WER 9.70%; max RTF 0.190. ASR-only warm throughput.",
+      "recommended": false,
+      "size_bytes": 878702423,
+      "installed_size_bytes": 1000089677,
+      "files": [
+        {
+          "path": "sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2",
+          "size_bytes": 878702423,
+          "sha256": "393f8a14e2f5fb96746aaab342997a40641001fbd5bf9592a080a8329178ee96",
+          "sources": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2"
+          ]
+        }
+      ],
+      "sources": [
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/qwen06.json",
+      "verification": "downloaded SHA-256",
+      "requires": [
+        "speaker-pack"
+      ],
+      "also_serves": [
+        "after-call"
+      ],
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/Qwen/Qwen3-ASR-0.6B/blob/5eb144179a02acc5e5ba31e748d22b0cf3e303b0/README.md",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "sherpa-onnx 1.13.8, CPU 2 threads",
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "hu",
+        "mk",
+        "ro"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/Qwen/Qwen3-ASR-1.7B/blob/7278e1e70fe206f11671096ffdd38061171dd6e5/README.md"
+      ],
+      "language_note": "30 languages plus 22 Chinese dialect/accent labels; dialect labels are not counted as 22 additional languages.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "qwen06",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-qwen06.json"
+    },
+    {
+      "id": "funasr_nano",
+      "job": "after-call",
+      "display_name": "Fun-ASR-Nano int8",
+      "line": "Full three-language decoder; does not cover the global seven-language job.",
+      "evidence_line": "FLEURS 100/supported language: EN WER 6.16%; ZH CER 8.97%; JA CER 7.08%; max RTF 0.139. ASR-only warm throughput.",
+      "recommended": false,
+      "size_bytes": 1009605061,
+      "installed_size_bytes": 1009605061,
+      "files": [
+        {
+          "path": "Qwen3-0.6B/merges.txt",
+          "size_bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "sources": [
+            "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/Qwen3-0.6B/merges.txt"
+          ]
+        },
+        {
+          "path": "Qwen3-0.6B/tokenizer.json",
+          "size_bytes": 11422654,
+          "sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+          "sources": [
+            "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/Qwen3-0.6B/tokenizer.json"
+          ]
+        },
+        {
+          "path": "Qwen3-0.6B/vocab.json",
+          "size_bytes": 2776833,
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "sources": [
+            "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/Qwen3-0.6B/vocab.json"
+          ]
+        },
+        {
+          "path": "embedding.int8.onnx",
+          "size_bytes": 155584380,
+          "sha256": "95e61cd0c9c3b9543339a4cf973c95c116815e745ccc1e0285cbd81f76d18644",
+          "sources": [
+            "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/embedding.int8.onnx"
+          ]
+        },
+        {
+          "path": "encoder_adaptor.int8.onnx",
+          "size_bytes": 237792748,
+          "sha256": "f36dea2e30fbc33b5db1d7a7265cc976c5e5586c77b042d5adb1ad27c72db422",
+          "sources": [
+            "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/encoder_adaptor.int8.onnx"
+          ]
+        },
+        {
+          "path": "llm.int8.onnx",
+          "size_bytes": 600356593,
+          "sha256": "dfbf9aa3be41bccc257587f151e15c63fbe1b549f2b517f5ccd5bdce3bf4322a",
+          "sources": [
+            "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/llm.int8.onnx"
+          ]
+        }
+      ],
+      "sources": [
+        "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/Qwen3-0.6B/merges.txt",
+        "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/Qwen3-0.6B/tokenizer.json",
+        "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/Qwen3-0.6B/vocab.json",
+        "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/embedding.int8.onnx",
+        "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/encoder_adaptor.int8.onnx",
+        "https://huggingface.co/csukuangfj/sherpa-onnx-funasr-nano-int8-2025-12-30/resolve/6f16bd378457e13f36ccf3910df9017f96c346fb/llm.int8.onnx"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/funasr_nano.json",
+      "verification": "downloaded SHA-256",
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512/blob/272c57b82523ada6fd87095e955f8e29100979ab/README.md",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "sherpa-onnx 1.13.8, CPU 2 threads",
+      "languages": [
+        "zh",
+        "en",
+        "ja"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512/blob/272c57b82523ada6fd87095e955f8e29100979ab/README.md"
+      ],
+      "language_note": "Original Nano checkpoint, distinct from the separate 31-language MLT checkpoint.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja"
+      ],
+      "evaluation_profile": "funasr_nano",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-funasr_nano.json"
+    },
+    {
+      "id": "qwen17",
+      "job": "after-call",
+      "display_name": "Qwen3-ASR 1.7B MLX 8-bit",
+      "line": "One model for 30 languages, with the strongest measured seven-language accuracy.",
+      "evidence_line": "FLEURS 100/supported language: EN WER 4.04%; ZH CER 8.23%; JA CER 5.33%; KO CER 2.63%; ES WER 2.53%; FR WER 4.95%; DE WER 3.05%; max RTF 0.132. ASR-only warm throughput.",
+      "recommended": true,
+      "size_bytes": 2467856503,
+      "installed_size_bytes": 2467856503,
+      "files": [
+        {
+          "path": "chat_template.json",
+          "size_bytes": 1161,
+          "sha256": "75a8cfca24f00de72d796fbfed6858fc9614ef3dabd8696684cc3bc03a9c58ff",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/chat_template.json"
+          ]
+        },
+        {
+          "path": "config.json",
+          "size_bytes": 7188,
+          "sha256": "1b76b3b6c655fc54595da025f7a96474ad9fa86363303fbdd61a7d8483ccfaf7",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/config.json"
+          ]
+        },
+        {
+          "path": "generation_config.json",
+          "size_bytes": 142,
+          "sha256": "1da527824d81e07118facff437e03f2e24a23311e3bdeb2368973fe77e5f275c",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/generation_config.json"
+          ]
+        },
+        {
+          "path": "merges.txt",
+          "size_bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/merges.txt"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 2463307541,
+          "sha256": "bf304b009cc7eca79283056f787b44c952d24ac22cec787b39732bba3c23c13c",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors"
+          ]
+        },
+        {
+          "path": "model.safetensors.index.json",
+          "size_bytes": 78968,
+          "sha256": "0a5d0ec11188602242ff81a9969883d0fdeb98cd5d85cd1413089d897c201af5",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors.index.json"
+          ]
+        },
+        {
+          "path": "preprocessor_config.json",
+          "size_bytes": 330,
+          "sha256": "45e120a4eda2c20c5d7f2ea9354e63536bf35e27aa573fb7cdf78017b378770d",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/preprocessor_config.json"
+          ]
+        },
+        {
+          "path": "tokenizer_config.json",
+          "size_bytes": 12487,
+          "sha256": "4942d005604266809309cabc9f4e9cb89ce855d59b14681fdc0e1cc62ea26c4c",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/tokenizer_config.json"
+          ]
+        },
+        {
+          "path": "vocab.json",
+          "size_bytes": 2776833,
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/vocab.json"
+          ]
+        }
+      ],
+      "sources": [
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/chat_template.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/config.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/generation_config.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/merges.txt",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors.index.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/preprocessor_config.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/tokenizer_config.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/vocab.json"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/qwen17.json",
+      "verification": "downloaded SHA-256",
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/Qwen/Qwen3-ASR-1.7B/blob/7278e1e70fe206f11671096ffdd38061171dd6e5/README.md",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-qwen3-asr 0.4.4 / MLX 0.32.4, Metal GPU",
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "hu",
+        "mk",
+        "ro"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/Qwen/Qwen3-ASR-1.7B/blob/7278e1e70fe206f11671096ffdd38061171dd6e5/README.md"
+      ],
+      "language_note": "30 languages plus 22 Chinese dialect/accent labels; dialect labels are not counted as 22 additional languages.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "qwen17",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-qwen17.json",
+      "integration_gap": "The production backend is native Qwen 0.6B. The measured 1.7B MLX artifact needs a runtime bridge and live pipeline validation."
+    },
+    {
+      "id": "mimo",
+      "job": "after-call",
+      "display_name": "MiMo V2.5 ASR MLX 4-bit",
+      "line": "Accuracy-oriented Chinese and English alternative.",
+      "evidence_line": "October attempt: loaded in 7.55s but warmup did not finish within 600s on the shared 16GB Mac with an 8GiB MLX limit; accuracy/RTF unavailable. Requires a separate 2.58GB audio tokenizer.",
+      "recommended": false,
+      "size_bytes": 4527573441,
+      "installed_size_bytes": 4527573441,
+      "files": [
+        {
+          "path": "LICENSE",
+          "size_bytes": 11348,
+          "sha256": "539327f43d0a84438f006fadf77a651daa9ca29429286a46e69cb6b2594d8a4c",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/LICENSE"
+          ]
+        },
+        {
+          "path": "added_tokens.json",
+          "size_bytes": 788,
+          "sha256": "45a03de178f22795c611428bf0798d9acaa9792bb8484870b7e8dab8ad34e0c3",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/added_tokens.json"
+          ]
+        },
+        {
+          "path": "chat_template.jinja",
+          "size_bytes": 8467,
+          "sha256": "e63cd39d862e28059a94632cba03160eeb15c771bf7e0abd76f29db4eaa0b793",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/chat_template.jinja"
+          ]
+        },
+        {
+          "path": "config.json",
+          "size_bytes": 2961,
+          "sha256": "d904100a6db45550764e3c39a3951a683760bf0da592a64501aa28b635309403",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/config.json"
+          ]
+        },
+        {
+          "path": "generation_config.json",
+          "size_bytes": 77,
+          "sha256": "575fff5a84761eea35265538cff4609365ca06355b064a44f16d7ab457ef73da",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/generation_config.json"
+          ]
+        },
+        {
+          "path": "merges.txt",
+          "size_bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/merges.txt"
+          ]
+        },
+        {
+          "path": "mlx_manifest.json",
+          "size_bytes": 392,
+          "sha256": "fa9f56d74be990ea53d88c7b06e917b4e716976ff592981baabe0ec6d8e6cc8d",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/mlx_manifest.json"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 4511552749,
+          "sha256": "b96730328d6af2a412cf49e181734bb9f1060c7e64d76884723734a5d25bb01c",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/model.safetensors"
+          ]
+        },
+        {
+          "path": "model.safetensors.index.json",
+          "size_bytes": 117882,
+          "sha256": "c5d081e177cb5eb3b75f7fc31a2bcd112d6bdcc5a56fca9326e88d959a8b8e6e",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/model.safetensors.index.json"
+          ]
+        },
+        {
+          "path": "special_tokens_map.json",
+          "size_bytes": 616,
+          "sha256": "6676f091c8bc4d1b50146427cfde92073402866b87b6e39223227931b70083e9",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/special_tokens_map.json"
+          ]
+        },
+        {
+          "path": "tokenizer.json",
+          "size_bytes": 11423383,
+          "sha256": "d91a78cce6441fd6855038f6764fc5f811ae949d9b89f43ac326cddfe91c66db",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/tokenizer.json"
+          ]
+        },
+        {
+          "path": "tokenizer_config.json",
+          "size_bytes": 6092,
+          "sha256": "fcd8ec17c91cd380f6c2e78bc409463949a546db1fd4182ee50856895f20115d",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/tokenizer_config.json"
+          ]
+        },
+        {
+          "path": "vocab.json",
+          "size_bytes": 2776833,
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/vocab.json"
+          ]
+        }
+      ],
+      "sources": [
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/LICENSE",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/added_tokens.json",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/chat_template.jinja",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/config.json",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/generation_config.json",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/merges.txt",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/mlx_manifest.json",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/model.safetensors",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/model.safetensors.index.json",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/special_tokens_map.json",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/tokenizer.json",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/tokenizer_config.json",
+        "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/vocab.json"
+      ],
+      "licence": {
+        "name": "MIT (original weights); Apache-2.0 (MLX distribution)",
+        "url": "https://huggingface.co/XiaomiMiMo/MiMo-V2.5-ASR/blob/98641d537df521ac6df05f74090475694d9510b7/README.md"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/mimo.json",
+      "verification": "downloaded SHA-256",
+      "requires": [
+        "mimo-audio-tokenizer"
+      ],
+      "october_status": "warmup_timeout",
+      "selectable": false,
+      "notes": "Inventory retained for review; require a completed supported-runtime evaluation before offering this download.",
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/XiaomiMiMo/MiMo-V2.5-ASR/blob/98641d537df521ac6df05f74090475694d9510b7/README.md",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/mlx-community/MiMo-V2.5-ASR-MLX-4bit/resolve/284d42f8d404cc97b625edf9c9c7ed898c05b101/LICENSE",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-audio 0.6.1, Metal GPU; requires separate encoder",
+      "languages": [
+        "zh",
+        "en",
+        "yue"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/XiaomiMiMo/MiMo-V2.5-ASR/blob/98641d537df521ac6df05f74090475694d9510b7/README.md"
+      ],
+      "language_note": "Publisher lists Mandarin, English and Cantonese; conversion tag only lists zh/en. Part-1 warmup deadline is not an accuracy result.",
+      "tested_languages": []
+    },
+    {
+      "id": "mimo-audio-tokenizer",
+      "job": "after-call",
+      "display_name": "MiMo audio tokenizer",
+      "line": "Required audio encoder for MiMo V2.5 ASR.",
+      "evidence_line": "Pinned separate encoder weights; included in MiMo package totals.",
+      "recommended": false,
+      "size_bytes": 2575682783,
+      "installed_size_bytes": 2575682783,
+      "files": [
+        {
+          "path": "LICENSE",
+          "size_bytes": 1062,
+          "sha256": "427391785870db4e7f412c5cc67b2a9c0830376238a01dac7ace21ffaca99ddb",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/LICENSE"
+          ]
+        },
+        {
+          "path": "config.json",
+          "size_bytes": 1287,
+          "sha256": "22791de2210e3b704631917ac9f7fc71470ca592efbfe2795f48042364815997",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/config.json"
+          ]
+        },
+        {
+          "path": "mlx_manifest.json",
+          "size_bytes": 277,
+          "sha256": "05eab14ddf22b2a83d48a2017a4ce403c9295283de86b2867206fa5fde1e6bdd",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/mlx_manifest.json"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 2575648345,
+          "sha256": "7ce3493b01ac8b2c873256cdfe26ad049ea521b290cf65532afcfb1c9661a5c1",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/model.safetensors"
+          ]
+        },
+        {
+          "path": "model.safetensors.index.json",
+          "size_bytes": 31812,
+          "sha256": "c75fbe1843bc82711a327ca05f0b5ccf52188c5732e8aa7a42ae2568efbcd1bc",
+          "sources": [
+            "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/model.safetensors.index.json"
+          ]
+        }
+      ],
+      "sources": [
+        "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/LICENSE",
+        "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/config.json",
+        "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/mlx_manifest.json",
+        "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/model.safetensors",
+        "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/model.safetensors.index.json"
+      ],
+      "licence": {
+        "name": "MIT",
+        "url": "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/blob/main/LICENSE"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/mimo_tokenizer.json",
+      "verification": "downloaded SHA-256",
+      "kind": "support_asset",
+      "selectable": false,
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Pinned LICENSE is MIT; hub metadata says Apache-2.0. Retain the actual MIT file and conversion notices rather than treating the tag as the licence text.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/blob/main/LICENSE",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer/resolve/6d451ed9a73024b4d33b87afa69e0dfd40d8f306/LICENSE",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "see results report",
+      "languages": [],
+      "language_scope": "language-independent support",
+      "language_evidence": [
+        "https://huggingface.co/mlx-community/MiMo-Audio-Tokenizer"
+      ],
+      "language_note": "Audio codec, not an independently selectable recognizer.",
+      "tested_languages": []
+    },
+    {
+      "id": "kokoro019",
+      "job": "voice",
+      "display_name": "Kokoro English v0.19",
+      "line": "GPL component: The current English voice, several presets.",
+      "evidence_line": "October pilot, three sentences/primary voice, Qwen3-ASR 1.7B verifier: en WER 0.0%; 300-word English 74.9s.",
+      "recommended": false,
+      "size_bytes": 319625534,
+      "installed_size_bytes": 369315617,
+      "files": [
+        {
+          "path": "kokoro-en-v0_19.tar.bz2",
+          "size_bytes": 319625534,
+          "sha256": "912804855a04745fa77a30be545b3f9a5d15c4d66db00b88cbcd4921df605ac7",
+          "sources": [
+            "https://model-assets.yansu.app/sherpa/tts/kokoro-en-v0_19.tar.bz2",
+            "https://release.yansu.app/sherpa/tts/kokoro-en-v0_19.tar.bz2",
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-en-v0_19.tar.bz2"
+          ]
+        }
+      ],
+      "sources": [
+        "https://model-assets.yansu.app/sherpa/tts/kokoro-en-v0_19.tar.bz2",
+        "https://release.yansu.app/sherpa/tts/kokoro-en-v0_19.tar.bz2",
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-en-v0_19.tar.bz2"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/kokoro019.json",
+      "verification": "downloaded SHA-256",
+      "runtime_components": [
+        "See requirements-october.txt for the Python evaluation environment; app runtime packaging is separate from these model bytes."
+      ],
+      "component_licences": [
+        {
+          "component": "eSpeak-ng phonemizer and data",
+          "name": "GPL-3.0-or-later",
+          "url": "https://github.com/espeak-ng/espeak-ng/blob/master/COPYING",
+          "obligations": "GPL component: needs source offer and notices if bundled"
+        }
+      ],
+      "notes": "Existing mirror URLs copied from bundled_tts.go; mirror bytes not fetched in this survey. All sources must satisfy the same SHA-256.",
+      "gpl_components": [
+        "eSpeak-ng phonemizer and data"
+      ],
+      "licence_status": "restricted",
+      "licence_status_note": "GPL component: needs source offer and notices if bundled",
+      "restriction_acceptance_flag": "gplComplianceAccepted",
+      "licence_evidence": [
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://github.com/espeak-ng/espeak-ng/blob/master/COPYING",
+          "reason": "Phonemization includes a GPL component separately from the Apache-2.0 Kokoro weights."
+        },
+        {
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/blob/f3ff3571791e39611d31c381e3a41a3af07b4987/README.md",
+          "reason": "Publisher's Apache-2.0 weight declaration, separate from the phonemizer licence."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "sherpa-onnx 1.13.8, CPU 2 threads",
+      "languages": [
+        "en"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/hexgrad/Kokoro-82M"
+      ],
+      "language_note": "Pinned English-only v0.19 artifact.",
+      "tested_languages": [],
+      "alternative_without_gpl": "ming_tts"
+    },
+    {
+      "id": "melo",
+      "job": "voice",
+      "display_name": "MeloTTS zh_en",
+      "line": "The current compact Chinese and English voice.",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 16.47% across 2 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md.",
+      "recommended": false,
+      "size_bytes": 167006755,
+      "installed_size_bytes": 191246256,
+      "files": [
+        {
+          "path": "vits-melo-tts-zh_en.tar.bz2",
+          "size_bytes": 167006755,
+          "sha256": "e58351ed7149f290a54534538badd4077cdbe6fddc964b24d0bee870415d1514",
+          "sources": [
+            "https://model-assets.yansu.app/sherpa/tts/vits-melo-tts-zh_en.tar.bz2",
+            "https://release.yansu.app/sherpa/tts/vits-melo-tts-zh_en.tar.bz2",
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2"
+          ]
+        }
+      ],
+      "sources": [
+        "https://model-assets.yansu.app/sherpa/tts/vits-melo-tts-zh_en.tar.bz2",
+        "https://release.yansu.app/sherpa/tts/vits-melo-tts-zh_en.tar.bz2",
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2"
+      ],
+      "licence": {
+        "name": "MIT",
+        "url": "https://spdx.org/licenses/MIT.html"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/melo.json",
+      "verification": "downloaded SHA-256",
+      "runtime_components": [
+        "See requirements-october.txt for the Python evaluation environment; app runtime packaging is separate from these model bytes."
+      ],
+      "notes": "Existing mirror URLs copied from bundled_tts.go; mirror bytes not fetched in this survey. All sources must satisfy the same SHA-256.",
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://spdx.org/licenses/MIT.html",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/myshell-ai/MeloTTS-Chinese/blob/af5d207a364ea4208c6f589c89f57f88414bdd16/README.md",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "sherpa-onnx 1.13.8, CPU 2 threads",
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-melo-tts-zh_en.tar.bz2"
+      ],
+      "language_note": "The pinned zh_en checkpoint has one speaker. Other Melo languages require different checkpoints; German is not in the upstream family.",
+      "tested_languages": [
+        "en",
+        "zh"
+      ],
+      "evaluation_profile": "melo",
+      "primary_voices": {
+        "en": "0",
+        "zh": "0"
+      },
+      "speed_qualified": false,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-melo.json"
+    },
+    {
+      "id": "kokoro11",
+      "job": "voice",
+      "display_name": "Kokoro bilingual v1.1 int8",
+      "line": "GPL component: Many Chinese voices, slower native synthesis in this pilot.",
+      "evidence_line": "October pilot, three sentences/primary voice, Qwen3-ASR 1.7B verifier: en WER 0.0%, zh CER 4.9%; 300-word English 90.9s; 552-character Chinese 165.1s.",
+      "recommended": false,
+      "size_bytes": 147031220,
+      "installed_size_bytes": 215321602,
+      "files": [
+        {
+          "path": "kokoro-int8-multi-lang-v1_1.tar.bz2",
+          "size_bytes": 147031220,
+          "sha256": "a1e94694776049035c4f2c6529f003aaece993c76aae9a78995831c3c4dcafc6",
+          "sources": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-multi-lang-v1_1.tar.bz2"
+          ]
+        }
+      ],
+      "sources": [
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-multi-lang-v1_1.tar.bz2"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/kokoro11.json",
+      "verification": "downloaded SHA-256",
+      "runtime_components": [
+        "See requirements-october.txt for the Python evaluation environment; app runtime packaging is separate from these model bytes."
+      ],
+      "component_licences": [
+        {
+          "component": "eSpeak-ng phonemizer and data",
+          "name": "GPL-3.0-or-later",
+          "url": "https://github.com/espeak-ng/espeak-ng/blob/master/COPYING",
+          "obligations": "GPL component: needs source offer and notices if bundled"
+        }
+      ],
+      "gpl_components": [
+        "eSpeak-ng phonemizer and data"
+      ],
+      "licence_status": "restricted",
+      "licence_status_note": "GPL component: needs source offer and notices if bundled",
+      "restriction_acceptance_flag": "gplComplianceAccepted",
+      "licence_evidence": [
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://github.com/espeak-ng/espeak-ng/blob/master/COPYING",
+          "reason": "Phonemization includes a GPL component separately from the Apache-2.0 Kokoro weights."
+        },
+        {
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh",
+          "reason": "Publisher's Apache-2.0 weight declaration, separate from the phonemizer licence."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "sherpa-onnx 1.13.8, CPU 2 threads",
+      "languages": [
+        "zh",
+        "en"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh"
+      ],
+      "language_note": "Pinned v1.1 Chinese/English artifact; do not infer v1.0 voice coverage.",
+      "tested_languages": [],
+      "alternative_without_gpl": "ming_tts"
+    },
+    {
+      "id": "kokoro_mlx",
+      "job": "voice",
+      "display_name": "Kokoro bilingual v1.0 MLX",
+      "line": "GPL component: Reads the brief in English and Chinese, with several voices.",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 0.18% across 5 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md.",
+      "recommended": false,
+      "size_bytes": 355322783,
+      "installed_size_bytes": 355322783,
+      "files": [
+        {
+          "path": "config.json",
+          "size_bytes": 2351,
+          "sha256": "5abb01e2403b072bf03d04fde160443e209d7a0dad49a423be15196b9b43c17f",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/config.json"
+          ]
+        },
+        {
+          "path": "kokoro-v1_0.safetensors",
+          "size_bytes": 327115152,
+          "sha256": "4e9ecdf03b8b6cf906070390237feda473dc13327cb8d56a43deaa374c02acd8",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/kokoro-v1_0.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_alloy.safetensors",
+          "size_bytes": 522320,
+          "sha256": "5bb848d02ade7e37981809acad52a1761ef7a586ff9f30d02d65fd71c4af95f9",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_alloy.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_aoede.safetensors",
+          "size_bytes": 522320,
+          "sha256": "23809148777f2a2378983dd856bc14b9c261018279f916f98c23d86e844409a5",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_aoede.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_bella.safetensors",
+          "size_bytes": 522320,
+          "sha256": "112d310468cbb3cf23404d3d0b50ad3adf017b87bf38bf9edd15f4ad572df6a3",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_bella.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_heart.safetensors",
+          "size_bytes": 522320,
+          "sha256": "2c1c733b0e6576c810e268d3e440c21dea4e0f0131a3ba4cfc98d7fe6136d094",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_heart.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_jessica.safetensors",
+          "size_bytes": 522320,
+          "sha256": "c358448e4277b79e8b13b92033711660a1a2205c3940c2dfb16698b99fed58a8",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_jessica.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_kore.safetensors",
+          "size_bytes": 522320,
+          "sha256": "c491174280cb1ad25210a842f2f34b46a9ef904ec6f6a8e784839531795fa278",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_kore.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_nicole.safetensors",
+          "size_bytes": 522320,
+          "sha256": "574656386022c81a029e9a72558191925f44c3de2dad2fa2e45751938557d062",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_nicole.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_nova.safetensors",
+          "size_bytes": 522320,
+          "sha256": "242b9a0a01eac1ac2865c69fc617a756b20d86df82d5fae3970533e2312ca50e",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_nova.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_river.safetensors",
+          "size_bytes": 522320,
+          "sha256": "82c866b0b976d50e82cbd781ac7bc771471ce5bd21decf05ab92812a08fb1c04",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_river.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_sarah.safetensors",
+          "size_bytes": 522320,
+          "sha256": "4940072182542f54c1035d1daf4c1cf3136ca9baa9ac57c8e006b4befcc50be6",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_sarah.safetensors"
+          ]
+        },
+        {
+          "path": "voices/af_sky.safetensors",
+          "size_bytes": 522320,
+          "sha256": "957af332330db8e9bd7f9dc449475a946cb0d7d689afef64b91007bbbf20eaa0",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_sky.safetensors"
+          ]
+        },
+        {
+          "path": "voices/am_adam.safetensors",
+          "size_bytes": 522320,
+          "sha256": "a4f60a3b9c20353c2604a17485ba53260502a758681a84d41e8af53cc559d929",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_adam.safetensors"
+          ]
+        },
+        {
+          "path": "voices/am_echo.safetensors",
+          "size_bytes": 522320,
+          "sha256": "031fc608a900332c4e1a29bd0884f5d0e84bd0348261fa79981e5cbd138c950d",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_echo.safetensors"
+          ]
+        },
+        {
+          "path": "voices/am_eric.safetensors",
+          "size_bytes": 522320,
+          "sha256": "1fb4a61dcee1f114f90886ecf29bc2feed05e29eed9caa6ddb109f1934d73274",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_eric.safetensors"
+          ]
+        },
+        {
+          "path": "voices/am_fenrir.safetensors",
+          "size_bytes": 522320,
+          "sha256": "9abed964b906c4cae6f404d9849e76260689aea862bc6ca85fc3f5207ba96538",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_fenrir.safetensors"
+          ]
+        },
+        {
+          "path": "voices/am_liam.safetensors",
+          "size_bytes": 522320,
+          "sha256": "66b65a96e16c3d91035a6e9019d9986ed524d27ce35b487270cdf61c99e3ebad",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_liam.safetensors"
+          ]
+        },
+        {
+          "path": "voices/am_michael.safetensors",
+          "size_bytes": 522320,
+          "sha256": "3940147ded35deba0bb52e8132f89b719298e0520258c34584358aa5a24da2ea",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_michael.safetensors"
+          ]
+        },
+        {
+          "path": "voices/am_onyx.safetensors",
+          "size_bytes": 522320,
+          "sha256": "b5d6132a5747648d98c82c9c4aaa9cf52d7230e63e403c1cb9c12858446ca5f5",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_onyx.safetensors"
+          ]
+        },
+        {
+          "path": "voices/am_puck.safetensors",
+          "size_bytes": 522320,
+          "sha256": "9a8c2e56413bd2063f814cb4c3885fc425876157369117c3f8258d03c8a9ad89",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_puck.safetensors"
+          ]
+        },
+        {
+          "path": "voices/am_santa.safetensors",
+          "size_bytes": 522320,
+          "sha256": "d1f433b57ffccf105ea9e434ea19af6c2a8a7916ba6d1a73c34f0046bd226084",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_santa.safetensors"
+          ]
+        },
+        {
+          "path": "voices/bf_alice.safetensors",
+          "size_bytes": 522320,
+          "sha256": "9c77e390d93d9db7c4a7526c3b1f393290a2be46f233b89a00b8188e850c20a8",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bf_alice.safetensors"
+          ]
+        },
+        {
+          "path": "voices/bf_emma.safetensors",
+          "size_bytes": 522320,
+          "sha256": "8878a75a6661305849eeb1d6293a7177250193616e161b4c3100636434dfe69f",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bf_emma.safetensors"
+          ]
+        },
+        {
+          "path": "voices/bf_isabella.safetensors",
+          "size_bytes": 522320,
+          "sha256": "f7b6076f025649699fcfed1a6debf13049a87afdc7aafc8c72b7d81246db6ead",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bf_isabella.safetensors"
+          ]
+        },
+        {
+          "path": "voices/bf_lily.safetensors",
+          "size_bytes": 522320,
+          "sha256": "ee77a419046a765420ac82cb46e8b8cf5754a0b9d20c340fece1d4b18be7ecdb",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bf_lily.safetensors"
+          ]
+        },
+        {
+          "path": "voices/bm_daniel.safetensors",
+          "size_bytes": 522320,
+          "sha256": "b195dec592ee024f57ddc5bf481464596082ba60998a2a295eba90bfc1064f4b",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bm_daniel.safetensors"
+          ]
+        },
+        {
+          "path": "voices/bm_fable.safetensors",
+          "size_bytes": 522320,
+          "sha256": "9fa80184e96d016a744bc13b0b2e7695e55d6b855556fa003325cb1e5ebf2c2b",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bm_fable.safetensors"
+          ]
+        },
+        {
+          "path": "voices/bm_george.safetensors",
+          "size_bytes": 522320,
+          "sha256": "a3d9b8995cbbe5536f954b6be2a0f1f312f077118ba0d4d2178fc41dc8306672",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bm_george.safetensors"
+          ]
+        },
+        {
+          "path": "voices/bm_lewis.safetensors",
+          "size_bytes": 522320,
+          "sha256": "e1e68013c21a141efe527aaec561e1174c2f5a6951b3bcecc8396adab315b247",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bm_lewis.safetensors"
+          ]
+        },
+        {
+          "path": "voices/ef_dora.safetensors",
+          "size_bytes": 522320,
+          "sha256": "13f6dfe8a498ce97a384186af045b586db6292869acbfde123a0fa2798229351",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/ef_dora.safetensors"
+          ]
+        },
+        {
+          "path": "voices/em_alex.safetensors",
+          "size_bytes": 522320,
+          "sha256": "e3bc4bf56ab47f0d52074cd3f84cd4f1713187285fdd85a545c6e167dfa3ab77",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/em_alex.safetensors"
+          ]
+        },
+        {
+          "path": "voices/em_santa.safetensors",
+          "size_bytes": 522320,
+          "sha256": "37c44211b77b3f29512f420bd5a2e146c7769a5ad3d904b3455cccd55055db62",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/em_santa.safetensors"
+          ]
+        },
+        {
+          "path": "voices/ff_siwis.safetensors",
+          "size_bytes": 522320,
+          "sha256": "5c659c9b9e12be28b98a4aa0cd6b1e66f359b6381ba5680264e9072945ac32b8",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/ff_siwis.safetensors"
+          ]
+        },
+        {
+          "path": "voices/hf_alpha.safetensors",
+          "size_bytes": 522320,
+          "sha256": "e93355a43e6f57e8cfde96874008c858f1fb7fd8b65dd043114d451882cad3f6",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/hf_alpha.safetensors"
+          ]
+        },
+        {
+          "path": "voices/hf_beta.safetensors",
+          "size_bytes": 522320,
+          "sha256": "976ea52ba7edce5da049c41ef06a663f3807fd470d2ea5c359245dfc2fb00d66",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/hf_beta.safetensors"
+          ]
+        },
+        {
+          "path": "voices/hm_omega.safetensors",
+          "size_bytes": 522320,
+          "sha256": "227f0c710d1169686bf617fac486e8496982e96cc01617a3acd3579db75dd126",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/hm_omega.safetensors"
+          ]
+        },
+        {
+          "path": "voices/hm_psi.safetensors",
+          "size_bytes": 522320,
+          "sha256": "03efb26b99e78c8d40ade3217f9c9905f8f84bbad7f21f921e270c036b01144e",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/hm_psi.safetensors"
+          ]
+        },
+        {
+          "path": "voices/if_sara.safetensors",
+          "size_bytes": 522320,
+          "sha256": "2f3d092c8ba16f2007e8b234c9a55bdebec614a1e50143e41b39dd7f89fdb45b",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/if_sara.safetensors"
+          ]
+        },
+        {
+          "path": "voices/im_nicola.safetensors",
+          "size_bytes": 522320,
+          "sha256": "96b62f7d25c3e7efce4f2506beeaa9f63bcc73524c7b2862738c65433fe9ba16",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/im_nicola.safetensors"
+          ]
+        },
+        {
+          "path": "voices/jf_alpha.safetensors",
+          "size_bytes": 522320,
+          "sha256": "455f78a6ebe633929cf314ce7c4a6b595ad1fb0ec7de6de7bc1d62d37e5264d2",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jf_alpha.safetensors"
+          ]
+        },
+        {
+          "path": "voices/jf_gongitsune.safetensors",
+          "size_bytes": 522320,
+          "sha256": "30d744337db7a7a91185b129dfd24ca86c19f7d46acadf2daf077ba78edaba81",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jf_gongitsune.safetensors"
+          ]
+        },
+        {
+          "path": "voices/jf_nezumi.safetensors",
+          "size_bytes": 522320,
+          "sha256": "65743c88fa1c8d30d7f41e402ce30a6ce461e2b0f8095c252e51905eb0c0754a",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jf_nezumi.safetensors"
+          ]
+        },
+        {
+          "path": "voices/jf_tebukuro.safetensors",
+          "size_bytes": 522320,
+          "sha256": "0cc28d928ce14b2ba4586b4c552edba36828a0961a37649530f80b3ad809bdec",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jf_tebukuro.safetensors"
+          ]
+        },
+        {
+          "path": "voices/jm_kumo.safetensors",
+          "size_bytes": 522320,
+          "sha256": "9f6b9d85ae099c409193924add0f1c478d7c9b6904ef181f2297154bfe05cc2c",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jm_kumo.safetensors"
+          ]
+        },
+        {
+          "path": "voices/pf_dora.safetensors",
+          "size_bytes": 522320,
+          "sha256": "9a8d587d60d0e041f593f7e7488943e7a6821f0136961bf0e554572e12c91c77",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/pf_dora.safetensors"
+          ]
+        },
+        {
+          "path": "voices/pm_alex.safetensors",
+          "size_bytes": 522320,
+          "sha256": "bec864eaeb05cc1a6fa12777ad31faaae1b2ed6d5eb2a6f7370fb9cdc48e3e2f",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/pm_alex.safetensors"
+          ]
+        },
+        {
+          "path": "voices/pm_santa.safetensors",
+          "size_bytes": 522320,
+          "sha256": "5009747fd93841c0865830be0f577ed50800b41b2122c469dedf51bb8311f78d",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/pm_santa.safetensors"
+          ]
+        },
+        {
+          "path": "voices/zf_xiaobei.safetensors",
+          "size_bytes": 522320,
+          "sha256": "cbda378bbe266c735aa13c94c20b6224f2f8d0e16cf3abe612a4e6d93ebeab51",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zf_xiaobei.safetensors"
+          ]
+        },
+        {
+          "path": "voices/zf_xiaoni.safetensors",
+          "size_bytes": 522320,
+          "sha256": "ef37a82850e10eb15f18a4549c76707a8eebd682e61facdda6ee4a4dc4eb0bf0",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zf_xiaoni.safetensors"
+          ]
+        },
+        {
+          "path": "voices/zf_xiaoxiao.safetensors",
+          "size_bytes": 522320,
+          "sha256": "cf507ad2319c50121aca4755cd3b9793bde10eea9aa9caca6cb3b5914d5f258f",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zf_xiaoxiao.safetensors"
+          ]
+        },
+        {
+          "path": "voices/zf_xiaoyi.safetensors",
+          "size_bytes": 522320,
+          "sha256": "1f2b7ce315a84870170ca83b2e4c0a072242bacbbd869f8a3b22377cc7d59e0b",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zf_xiaoyi.safetensors"
+          ]
+        },
+        {
+          "path": "voices/zm_yunjian.safetensors",
+          "size_bytes": 522320,
+          "sha256": "a08940c5dd3d8aadfda8a5576aa0f688a184ccbd5e4408d7a2a8144ab1fb3040",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zm_yunjian.safetensors"
+          ]
+        },
+        {
+          "path": "voices/zm_yunxi.safetensors",
+          "size_bytes": 522320,
+          "sha256": "78d8bb5ba4a2ea75a7f22c6148214a7434b436db85dc791a2ddf2aa7f6cc6fab",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zm_yunxi.safetensors"
+          ]
+        },
+        {
+          "path": "voices/zm_yunxia.safetensors",
+          "size_bytes": 522320,
+          "sha256": "59a4ba431ffa7165b95d5b953097affb71110b3039f81c4439cf0f7464bcb2ee",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zm_yunxia.safetensors"
+          ]
+        },
+        {
+          "path": "voices/zm_yunyang.safetensors",
+          "size_bytes": 522320,
+          "sha256": "8ad45c1077ab0d973ebb85ebb84f797caf6c6b188255c1178511a6feba3a0611",
+          "sources": [
+            "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zm_yunyang.safetensors"
+          ]
+        }
+      ],
+      "sources": [
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/config.json",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/kokoro-v1_0.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_alloy.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_aoede.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_bella.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_heart.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_jessica.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_kore.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_nicole.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_nova.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_river.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_sarah.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/af_sky.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_adam.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_echo.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_eric.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_fenrir.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_liam.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_michael.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_onyx.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_puck.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/am_santa.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bf_alice.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bf_emma.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bf_isabella.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bf_lily.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bm_daniel.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bm_fable.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bm_george.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/bm_lewis.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/ef_dora.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/em_alex.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/em_santa.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/ff_siwis.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/hf_alpha.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/hf_beta.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/hm_omega.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/hm_psi.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/if_sara.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/im_nicola.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jf_alpha.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jf_gongitsune.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jf_nezumi.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jf_tebukuro.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/jm_kumo.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/pf_dora.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/pm_alex.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/pm_santa.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zf_xiaobei.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zf_xiaoni.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zf_xiaoxiao.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zf_xiaoyi.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zm_yunjian.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zm_yunxi.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zm_yunxia.safetensors",
+        "https://huggingface.co/mlx-community/Kokoro-82M-bf16/resolve/a71e4d38b236d968966a2002c4c895dbd12b1c3c/voices/zm_yunyang.safetensors"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/kokoro_mlx.json",
+      "verification": "downloaded SHA-256",
+      "runtime_components": [
+        "See requirements-october.txt for the Python evaluation environment; app runtime packaging is separate from these model bytes."
+      ],
+      "component_licences": [
+        {
+          "component": "eSpeak-ng phonemizer and data",
+          "name": "GPL-3.0-or-later",
+          "url": "https://github.com/espeak-ng/espeak-ng/blob/master/COPYING",
+          "obligations": "GPL component: needs source offer and notices if bundled"
+        }
+      ],
+      "requires": [
+        "kokoro-english-g2p",
+        "kokoro-japanese-g2p"
+      ],
+      "gpl_components": [
+        "eSpeak-ng phonemizer and data"
+      ],
+      "licence_status": "restricted",
+      "licence_status_note": "GPL component: needs source offer and notices if bundled",
+      "restriction_acceptance_flag": "gplComplianceAccepted",
+      "alternative_without_gpl": "ming_tts",
+      "licence_evidence": [
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://github.com/espeak-ng/espeak-ng/blob/master/COPYING",
+          "reason": "Phonemization includes a GPL component separately from the Apache-2.0 Kokoro weights."
+        },
+        {
+          "url": "https://huggingface.co/hexgrad/Kokoro-82M/blob/f3ff3571791e39611d31c381e3a41a3af07b4987/README.md",
+          "reason": "Publisher's Apache-2.0 weight declaration, separate from the phonemizer licence."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-audio 0.6.1 / Misaki, Metal GPU",
+      "languages": [
+        "en",
+        "es",
+        "fr",
+        "hi",
+        "it",
+        "ja",
+        "pt",
+        "zh"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/hexgrad/Kokoro-82M"
+      ],
+      "language_note": "Eight languages, nine locale codes (US/UK English); no German. The conversion card en-only tag is incomplete; runtime and included voice packs establish the evaluated paths.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "es",
+        "fr"
+      ],
+      "evaluation_profile": "kokoro_mlx",
+      "primary_voices": {
+        "en": "af_heart",
+        "zh": "zf_xiaobei",
+        "ja": "jf_alpha",
+        "es": "ef_dora",
+        "fr": "ff_siwis"
+      },
+      "speed_qualified": false,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-kokoro_mlx.json"
+    },
+    {
+      "id": "ming_tts",
+      "job": "voice",
+      "display_name": "Ming 3.0 TTS 0.5B MLX 8-bit",
+      "line": "Seven-language voice; six decoder steps enable faster sentence delivery.",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 0.30% across 6 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md.",
+      "recommended": true,
+      "size_bytes": 1617175588,
+      "installed_size_bytes": 1617175588,
+      "files": [
+        {
+          "path": "LICENSE",
+          "size_bytes": 1067,
+          "sha256": "2872f1918dfc04fdeb7f5d66d8d1b773594c9375e7c8f7bda39780bb97ad4fba",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/LICENSE"
+          ]
+        },
+        {
+          "path": "added_tokens.json",
+          "size_bytes": 1785,
+          "sha256": "34394b1e16d7da2db16618bd43a0f970902ade0075480bcd812fe62d559ec319",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/added_tokens.json"
+          ]
+        },
+        {
+          "path": "campplus.safetensors",
+          "size_bytes": 27699096,
+          "sha256": "a479586bd8f8f96cdb414eaa2fa07c6cd54d6d1636562e2d75a0211cb3b0a6fd",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/campplus.safetensors"
+          ]
+        },
+        {
+          "path": "config.json",
+          "size_bytes": 6087,
+          "sha256": "8ea3e685a870fd1a535d3b4a4c975fc20c4fca56e67acdef06fe40004064c73b",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/config.json"
+          ]
+        },
+        {
+          "path": "configuration.json",
+          "size_bytes": 51,
+          "sha256": "6720b8448f6ad5b4631689a60857bdeb238053a37f6cc6a5936eb50c2a3b9296",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/configuration.json"
+          ]
+        },
+        {
+          "path": "merges.txt",
+          "size_bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/merges.txt"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 1573366591,
+          "sha256": "e88a4b53cb5b705703e961389f3d7f0e8b72c240b4dad796bf9961cc018971fc",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/model.safetensors"
+          ]
+        },
+        {
+          "path": "model.safetensors.index.json",
+          "size_bytes": 201850,
+          "sha256": "f59991abebed1a4f798a9488568af496d925e6eea507450aa8051a06f475a2ce",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/model.safetensors.index.json"
+          ]
+        },
+        {
+          "path": "special_tokens_map.json",
+          "size_bytes": 2726,
+          "sha256": "2c2ec51b9da5db654ac20de8310350d0c9c1a65918ae0181b80dacd2919b4fc3",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/special_tokens_map.json"
+          ]
+        },
+        {
+          "path": "tokenizer.json",
+          "size_bytes": 11431389,
+          "sha256": "87d54ca3b44ea2f822ba39a0a45cb1b61644bd6606d9d3536dea75367bffb06d",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/tokenizer.json"
+          ]
+        },
+        {
+          "path": "tokenizer_config.json",
+          "size_bytes": 16260,
+          "sha256": "12d6162c815edef24f8606e65b60d43fe0d92b0a4e150a0db8fa01c523aaf36a",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/tokenizer_config.json"
+          ]
+        },
+        {
+          "path": "vocab.json",
+          "size_bytes": 2776833,
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "sources": [
+            "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/vocab.json"
+          ]
+        }
+      ],
+      "sources": [
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/LICENSE",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/added_tokens.json",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/campplus.safetensors",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/config.json",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/configuration.json",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/merges.txt",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/model.safetensors",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/model.safetensors.index.json",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/special_tokens_map.json",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/tokenizer.json",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/tokenizer_config.json",
+        "https://huggingface.co/mlx-community/Ming-3.0-tts-0.5B-8bit/resolve/d0d1da6f627e4b3f20cc2db6ba4aee86d45343ad/vocab.json"
+      ],
+      "licence": {
+        "name": "MIT",
+        "url": "https://spdx.org/licenses/MIT.html"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/ming_tts.json",
+      "verification": "downloaded SHA-256",
+      "runtime_components": [
+        "See survey-2026-10-multilingual/requirements-main.txt for the shared evaluation environment. Package the Ming route separately from unused GPL comparison dependencies."
+      ],
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "MIT weights and selected distribution; the evaluated text-tokenizer/AudioVAE path does not use eSpeak or another GPL phonemizer.",
+      "licence_evidence": [
+        {
+          "url": "https://spdx.org/licenses/MIT.html",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/inclusionAI/Ming-3.0-tts-0.5B/blob/8d66b70a00f05ad183fa8a863b4ce609fc83cbc0/README.md",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-audio 0.6.1 / MLX 0.32.4; ddpm_steps=6; explicit lang_code required",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/inclusionAI/Ming-3.0-tts-0.5B"
+      ],
+      "language_note": "Multilingual prompt required beyond Chinese/English. Built-in English presets are reused across languages in this pilot.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "ming_fast",
+      "primary_voices": {
+        "en": "UK_Charlotte",
+        "zh": "灵小柔",
+        "ja": "UK_Charlotte",
+        "es": "UK_Charlotte",
+        "fr": "US_James",
+        "de": "UK_Charlotte"
+      },
+      "speed_qualified": true,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-ming_fast.json",
+      "generation_config": {
+        "artifact": "ming_tts",
+        "ddpm_steps": 6,
+        "temperature": 0.7,
+        "max_tokens": 4096,
+        "seed_per_sentence": 42
+      },
+      "latency_scope": "Resident model, complete sentence PCM before sound-device queue. Greeting first; informative sentence and playback gaps remain in the report."
+    },
+    {
+      "id": "parakeet-v2",
+      "job": "live",
+      "display_name": "Parakeet TDT v2 MLX",
+      "line": "English only; keep the shared speaker pack.",
+      "evidence_line": "June 500-clip evaluation: English clean WER 2.49%; no Chinese. Not rerun in October.",
+      "recommended": false,
+      "size_bytes": 2471862935,
+      "installed_size_bytes": 2471862935,
+      "files": [
+        {
+          "path": "config.json",
+          "size_bytes": 36176,
+          "sha256": "9bd323e60afe2615c983a5d9fc3a2c0470df2a03edf90c0f861bd59509d07264",
+          "sources": [
+            "https://huggingface.co/mlx-community/parakeet-tdt-0.6b-v2/resolve/8ae155301e23d820d82aa60d24817c900e69e487/config.json"
+          ],
+          "verification": "downloaded small file SHA-256"
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 2471559904,
+          "sha256": "b958c37a6baa6874a279108755c8f2818e27bf647d72d54800a234a421341dfe",
+          "sources": [
+            "https://huggingface.co/mlx-community/parakeet-tdt-0.6b-v2/resolve/8ae155301e23d820d82aa60d24817c900e69e487/model.safetensors"
+          ],
+          "verification": "Hugging Face LFS SHA-256 (not downloaded in October)"
+        },
+        {
+          "path": "tokenizer.model",
+          "size_bytes": 251396,
+          "sha256": "5a3a82c48998709f9bc9f5db2924d99a899d20bf82550ca52272da7c7557b0a0",
+          "sources": [
+            "https://huggingface.co/mlx-community/parakeet-tdt-0.6b-v2/resolve/8ae155301e23d820d82aa60d24817c900e69e487/tokenizer.model"
+          ],
+          "verification": "Hugging Face LFS SHA-256 (not downloaded in October)"
+        },
+        {
+          "path": "tokenizer.vocab",
+          "size_bytes": 10393,
+          "sha256": "dbe7ec6bd066c4526080940e1614e6582b9161515e856c2c39a1d49267c88cbc",
+          "sources": [
+            "https://huggingface.co/mlx-community/parakeet-tdt-0.6b-v2/resolve/8ae155301e23d820d82aa60d24817c900e69e487/tokenizer.vocab"
+          ],
+          "verification": "downloaded small file SHA-256"
+        },
+        {
+          "path": "vocab.txt",
+          "size_bytes": 5066,
+          "sha256": "70b25deed256d79365a3c290d6191c31cc2315d952faf18d5c3a334f46e4866e",
+          "sources": [
+            "https://huggingface.co/mlx-community/parakeet-tdt-0.6b-v2/resolve/8ae155301e23d820d82aa60d24817c900e69e487/vocab.txt"
+          ],
+          "verification": "downloaded small file SHA-256"
+        }
+      ],
+      "sources": [
+        "https://huggingface.co/mlx-community/parakeet-tdt-0.6b-v2/tree/8ae155301e23d820d82aa60d24817c900e69e487"
+      ],
+      "licence": {
+        "name": "CC-BY-4.0",
+        "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2/blob/ae9ad07059c7c739ffaf932226a8fe64ae2620b0/README.md"
+      },
+      "non_commercial": false,
+      "revision": "8ae155301e23d820d82aa60d24817c900e69e487",
+      "verification": "upstream LFS weight hashes; small files downloaded",
+      "october_measured": false,
+      "requires": [
+        "speaker-pack"
+      ],
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2/blob/ae9ad07059c7c739ffaf932226a8fe64ae2620b0/README.md",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2/blob/ae9ad07059c7c739ffaf932226a8fe64ae2620b0/README.md",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "see results report",
+      "languages": [
+        "en"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2"
+      ],
+      "language_note": "English only; v3 is a different checkpoint.",
+      "tested_languages": []
+    },
+    {
+      "id": "whisper-turbo",
+      "job": "live",
+      "display_name": "Whisper large-v3-turbo MLX",
+      "line": "One hundred language tokens; the seven-language global runner-up.",
+      "evidence_line": "FLEURS 100/supported language: EN WER 5.60%; ZH CER 9.62%; JA CER 5.76%; KO CER 3.14%; ES WER 3.18%; FR WER 6.69%; DE WER 6.47%; max RTF 0.195. ASR-only warm throughput.",
+      "recommended": false,
+      "size_bytes": 1613977880,
+      "installed_size_bytes": 1613977880,
+      "files": [
+        {
+          "path": "config.json",
+          "size_bytes": 268,
+          "sha256": "b34fc29e4e11e0a25e812775dd67f4dd16fc2c8eb43d28ae25ff7d660ecb6379",
+          "sources": [
+            "https://huggingface.co/mlx-community/whisper-large-v3-turbo/resolve/a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb/config.json"
+          ],
+          "verification": "downloaded small file SHA-256"
+        },
+        {
+          "path": "weights.safetensors",
+          "size_bytes": 1613977612,
+          "sha256": "951ed3fc1203e6a62467abb2144a96ce7eafca8fa77e3704fdb8635ff3e7f8a6",
+          "sources": [
+            "https://huggingface.co/mlx-community/whisper-large-v3-turbo/resolve/a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb/weights.safetensors"
+          ],
+          "verification": "Hugging Face LFS SHA-256 (not downloaded in October)"
+        }
+      ],
+      "sources": [
+        "https://huggingface.co/mlx-community/whisper-large-v3-turbo/tree/a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb"
+      ],
+      "licence": {
+        "name": "MIT",
+        "url": "https://github.com/openai/whisper/blob/main/LICENSE"
+      },
+      "non_commercial": false,
+      "revision": "a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb",
+      "verification": "upstream LFS weight hashes; small files downloaded",
+      "october_measured": false,
+      "requires": [
+        "speaker-pack"
+      ],
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://github.com/openai/whisper/blob/main/LICENSE",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://github.com/openai/whisper/blob/main/LICENSE",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-whisper 0.4.3 / MLX 0.32.4, word timestamps disabled",
+      "languages": [
+        "en",
+        "zh",
+        "de",
+        "es",
+        "ru",
+        "ko",
+        "fr",
+        "ja",
+        "pt",
+        "tr",
+        "pl",
+        "ca",
+        "nl",
+        "ar",
+        "sv",
+        "it",
+        "id",
+        "hi",
+        "fi",
+        "vi",
+        "he",
+        "uk",
+        "el",
+        "ms",
+        "cs",
+        "ro",
+        "da",
+        "hu",
+        "ta",
+        "no",
+        "th",
+        "ur",
+        "hr",
+        "bg",
+        "lt",
+        "la",
+        "mi",
+        "ml",
+        "cy",
+        "sk",
+        "te",
+        "fa",
+        "lv",
+        "bn",
+        "sr",
+        "az",
+        "sl",
+        "kn",
+        "et",
+        "mk",
+        "br",
+        "eu",
+        "is",
+        "hy",
+        "ne",
+        "mn",
+        "bs",
+        "kk",
+        "sq",
+        "sw",
+        "gl",
+        "mr",
+        "pa",
+        "si",
+        "km",
+        "sn",
+        "yo",
+        "so",
+        "af",
+        "oc",
+        "ka",
+        "be",
+        "tg",
+        "sd",
+        "gu",
+        "am",
+        "yi",
+        "lo",
+        "uz",
+        "fo",
+        "ht",
+        "ps",
+        "tk",
+        "nn",
+        "mt",
+        "sa",
+        "lb",
+        "my",
+        "bo",
+        "tl",
+        "mg",
+        "as",
+        "tt",
+        "haw",
+        "ln",
+        "ha",
+        "ba",
+        "jw",
+        "su",
+        "yue"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://github.com/openai/whisper/blob/main/whisper/tokenizer.py"
+      ],
+      "language_note": "100 language tokens in large-v3/turbo, including Cantonese; language-token presence is not an accuracy guarantee.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "whisper",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-whisper.json"
+    },
+    {
+      "id": "kokoro-english-g2p",
+      "job": "voice",
+      "display_name": "Kokoro English pronunciation support",
+      "line": "English pronunciation support for the chosen Kokoro voice.",
+      "evidence_line": "en_core_web_sm 3.8.0; explicit pinned wheel, not an unannounced model download.",
+      "recommended": false,
+      "size_bytes": 12806118,
+      "installed_size_bytes": 15251718,
+      "files": [
+        {
+          "path": "en_core_web_sm-3.8.0-py3-none-any.whl",
+          "size_bytes": 12806118,
+          "sha256": "1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85",
+          "sources": [
+            "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+          ]
+        }
+      ],
+      "sources": [
+        "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+      ],
+      "licence": {
+        "name": "MIT",
+        "url": "https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.8.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/kokoro-english-g2p.json",
+      "verification": "downloaded SHA-256",
+      "kind": "support_asset",
+      "selectable": false,
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.8.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.8.0",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "see results report",
+      "languages": [
+        "en"
+      ],
+      "language_scope": "support asset",
+      "language_evidence": [
+        "https://github.com/explosion/spacy-models/releases/tag/en_core_web_sm-3.8.0"
+      ],
+      "language_note": "English pronunciation support, not a TTS voice.",
+      "tested_languages": [
+        "en"
+      ]
+    },
+    {
+      "id": "apple-vision",
+      "job": "ocr",
+      "display_name": "Apple Vision text recognition",
+      "line": "On-device multilingual screen text, with automatic language detection.",
+      "evidence_line": "30 generated screenshots: JA99.67%, KO100%, ES99.84%, FR99.84%, DE99.55% character accuracy. Warm language mean latency85.9-147.6ms. Existing Chinese-first app configuration is weak on Japanese/Korean.",
+      "recommended": true,
+      "size_bytes": 0,
+      "installed_size_bytes": 0,
+      "files": [],
+      "sources": [
+        "https://developer.apple.com/documentation/vision"
+      ],
+      "licence": {
+        "name": "Apple macOS software and SDK terms (system API)",
+        "url": "https://www.apple.com/legal/sla/"
+      },
+      "non_commercial": false,
+      "delivery": "system",
+      "notes": "Use the OS framework. Do not redistribute or invent checksums for Apple's private model weights.",
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Cleared for the system API route under macOS/SDK terms; no permission to redistribute Apple's private weights.",
+      "licence_evidence": [
+        {
+          "url": "https://www.apple.com/legal/sla/",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://www.apple.com/legal/sla/",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "system",
+      "languages": [
+        "en-US",
+        "fr-FR",
+        "it-IT",
+        "de-DE",
+        "es-ES",
+        "pt-BR",
+        "zh-Hans",
+        "zh-Hant",
+        "yue-Hans",
+        "yue-Hant",
+        "ko-KR",
+        "ja-JP",
+        "ru-RU",
+        "uk-UA",
+        "th-TH",
+        "vi-VT",
+        "ar-SA",
+        "ars-SA",
+        "tr-TR",
+        "id-ID",
+        "cs-CZ",
+        "da-DK",
+        "nl-NL",
+        "no-NO",
+        "nn-NO",
+        "nb-NO",
+        "ms-MY",
+        "pl-PL",
+        "ro-RO",
+        "sv-SE"
+      ],
+      "language_scope": "system API reported on this host",
+      "language_evidence": [
+        "https://developer.apple.com/documentation/vision/vnrecognizetextrequest/supportedrecognitionlanguages()"
+      ],
+      "language_note": "Query supportedRecognitionLanguages at runtime. Part-2 automatic detection fixes the CJK configuration failure; the app is unchanged by this evaluation.",
+      "tested_languages": [
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "recognition_configuration": {
+        "recognition_level": "accurate",
+        "automatically_detects_language": true,
+        "recognition_languages": "Query supportedRecognitionLanguages on the actual OS/request"
+      },
+      "integration_gap": "The benchmark alone changes. The app must replace its Chinese-first language configuration before claiming these multilingual results."
+    },
+    {
+      "id": "apple-documents",
+      "job": "ocr",
+      "display_name": "Apple Vision document recognition",
+      "line": "macOS 26 document structure for tables and lists.",
+      "evidence_line": "October 30-screen pilot: 98.0% character accuracy; 171 ms/frame; 101% CPU during calls (100% = one core).",
+      "recommended": false,
+      "size_bytes": 0,
+      "installed_size_bytes": 0,
+      "files": [],
+      "sources": [
+        "https://developer.apple.com/documentation/vision"
+      ],
+      "licence": {
+        "name": "Apple macOS software and SDK terms (system API)",
+        "url": "https://www.apple.com/legal/sla/"
+      },
+      "non_commercial": false,
+      "delivery": "system",
+      "notes": "Use the OS framework. Do not redistribute or invent checksums for Apple's private model weights.",
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Cleared for the system API route under macOS/SDK terms; no permission to redistribute Apple's private weights.",
+      "licence_evidence": [
+        {
+          "url": "https://www.apple.com/legal/sla/",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://www.apple.com/legal/sla/",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "system",
+      "languages": [
+        "en",
+        "fr",
+        "it",
+        "de",
+        "es",
+        "pt",
+        "zh",
+        "zh-TW",
+        "yue-CN",
+        "yue",
+        "ko",
+        "ja",
+        "ru",
+        "uk",
+        "th",
+        "vi-VT",
+        "ar-SA",
+        "ars",
+        "tr",
+        "id",
+        "cs",
+        "da",
+        "nl",
+        "no",
+        "nn",
+        "nb",
+        "ms",
+        "pl",
+        "ro",
+        "sv"
+      ],
+      "language_scope": "system API reported on this host",
+      "language_evidence": [
+        "https://developer.apple.com/documentation/vision/recognizedocumentsrequest"
+      ],
+      "language_note": "Queried separately from VNRecognizeTextRequest on macOS 26.2. Accuracy beyond English/Chinese was not measured for this request type.",
+      "tested_languages": []
+    },
+    {
+      "id": "ppocr6",
+      "job": "ocr",
+      "display_name": "PP-OCRv6 tiny ONNX",
+      "line": "Small downloadable OCR; higher CPU use than native Vision.",
+      "evidence_line": "October 30-screen pilot: 99.2% character accuracy; 183 ms/frame; 190% CPU during calls.",
+      "recommended": false,
+      "size_bytes": 6319431,
+      "installed_size_bytes": 6319431,
+      "files": [
+        {
+          "path": "PP-OCRv6_det_tiny.onnx",
+          "size_bytes": 1829618,
+          "sha256": "f42c0fbd294d95eac1a550e131b277dac97462c8025fa4b6c3cec1b7894bd3d5",
+          "sources": [
+            "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/det/PP-OCRv6_det_tiny.onnx"
+          ]
+        },
+        {
+          "path": "PP-OCRv6_rec_tiny.onnx",
+          "size_bytes": 4489813,
+          "sha256": "e16e242de5937ad92609223f19bc2aff3727ee40b095f996907c24749bad251b",
+          "sources": [
+            "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/rec/PP-OCRv6_rec_tiny.onnx"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/det/PP-OCRv6_det_tiny.onnx",
+        "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv6/rec/PP-OCRv6_rec_tiny.onnx"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/ppocr6.json",
+      "verification": "downloaded SHA-256",
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://github.com/PaddlePaddle/PaddleOCR/releases/tag/v3.7.0",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "RapidOCR 3.10.0 / ONNX Runtime 1.31.0, CPU 2 threads",
+      "languages": [
+        "zh-Hans",
+        "zh-Hant",
+        "en",
+        "fr",
+        "de",
+        "it",
+        "es",
+        "pt",
+        "nl",
+        "pl",
+        "ro",
+        "cs",
+        "sv",
+        "no",
+        "da",
+        "fi",
+        "hu",
+        "tr",
+        "vi",
+        "id",
+        "ms",
+        "az",
+        "af",
+        "bs",
+        "hr",
+        "cy",
+        "et",
+        "ga",
+        "is",
+        "ku",
+        "lt",
+        "lv",
+        "mt",
+        "mi",
+        "oc",
+        "sk",
+        "sl",
+        "sq",
+        "sw",
+        "tl",
+        "uz",
+        "la",
+        "sr-Latn",
+        "ca",
+        "eu",
+        "gl",
+        "lb",
+        "rm",
+        "qu"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/version3.x/algorithm/PP-OCRv6/PP-OCRv6.en.md"
+      ],
+      "language_note": "Tiny tier excludes Japanese and Korean; the small/medium 50-language list must not be attached to this artifact.",
+      "tested_languages": []
+    },
+    {
+      "id": "speaker-pack",
+      "job": "speaker-pack",
+      "display_name": "Silero VAD + pyannote segmentation + CAM++",
+      "line": "Required speech boundaries and speaker separation for every live engine.",
+      "evidence_line": "Same model SHA-256 pins as production; see the public two-speaker smoke test, not a meeting DER benchmark.",
+      "recommended": false,
+      "size_bytes": 30465498,
+      "installed_size_bytes": 30465498,
+      "files": [
+        {
+          "path": "silero_vad.onnx",
+          "size_bytes": 643854,
+          "sha256": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6",
+          "sources": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx"
+          ]
+        },
+        {
+          "path": "campplus.onnx",
+          "size_bytes": 28281138,
+          "sha256": "f682b514c05d947ee3fa91cd6ec6c5c7543479a128373fa29b1faedccd21fd11",
+          "sources": [
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx"
+          ]
+        },
+        {
+          "path": "segmentation.onnx",
+          "size_bytes": 1540506,
+          "sha256": "d582f4b4c6b48205de7e0643c57df0df5615a3c176189be3fc461e9d18827b5d",
+          "sources": [
+            "https://huggingface.co/csukuangfj/sherpa-onnx-pyannote-segmentation-3-0/resolve/9403a6902bb58e3d5ae8c7e77c3422de279db2e0/model.int8.onnx"
+          ]
+        }
+      ],
+      "sources": [
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx",
+        "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx",
+        "https://huggingface.co/csukuangfj/sherpa-onnx-pyannote-segmentation-3-0/resolve/9403a6902bb58e3d5ae8c7e77c3422de279db2e0/model.int8.onnx"
+      ],
+      "licence": {
+        "name": "MIT (Silero/pyannote); Apache-2.0 (CAM++)",
+        "url": "https://github.com/k2-fsa/sherpa-onnx"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/speakers.json",
+      "verification": "downloaded SHA-256",
+      "component_licences": [
+        {
+          "component": "Silero VAD",
+          "name": "MIT",
+          "url": "https://github.com/snakers4/silero-vad/blob/master/LICENSE"
+        },
+        {
+          "component": "pyannote segmentation 3.0",
+          "name": "MIT",
+          "url": "https://huggingface.co/pyannote/segmentation-3.0/blob/main/LICENSE"
+        },
+        {
+          "component": "3D-Speaker CAM++",
+          "name": "Apache-2.0",
+          "url": "https://github.com/modelscope/3D-Speaker/blob/main/LICENSE"
+        }
+      ],
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://github.com/k2-fsa/sherpa-onnx",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://github.com/snakers4/silero-vad/blob/master/LICENSE",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        },
+        {
+          "url": "https://github.com/snakers4/silero-vad/blob/master/LICENSE",
+          "reason": "Selected component licence."
+        },
+        {
+          "url": "https://huggingface.co/pyannote/segmentation-3.0/blob/main/LICENSE",
+          "reason": "Selected component licence."
+        },
+        {
+          "url": "https://github.com/modelscope/3D-Speaker/blob/main/LICENSE",
+          "reason": "Selected component licence."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "sherpa-onnx 1.13.8, CPU 1 thread/component",
+      "languages": [],
+      "language_scope": "language-independent support",
+      "language_evidence": [
+        "https://github.com/k2-fsa/sherpa-onnx"
+      ],
+      "language_note": "VAD/segmentation/embeddings do not transcribe languages. Multilingual diarization quality is not established by the part-1 two-speaker smoke test.",
+      "tested_languages": []
+    },
+    {
+      "id": "after-call-none",
+      "job": "after-call",
+      "display_name": "None",
+      "line": "Keep the live transcript.",
+      "evidence_line": "No second-pass inference or download.",
+      "recommended": false,
+      "size_bytes": 0,
+      "installed_size_bytes": 0,
+      "files": [],
+      "sources": [],
+      "licence": {
+        "name": "Not applicable",
+        "url": null
+      },
+      "non_commercial": false,
+      "delivery": "disabled",
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "No model or runtime is downloaded or redistributed.",
+      "licence_evidence": [
+        {
+          "url": "https://github.com/example/isoform/blob/508fe59f/docs/setup/handoff.md",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "see results report",
+      "languages": [],
+      "language_scope": "disabled; inherits live transcript",
+      "language_evidence": [
+        "https://github.com/example/isoform/blob/aeeb952f/docs/setup/handoff.md"
+      ],
+      "language_note": "No second model; language capability comes from the selected live recognizer.",
+      "tested_languages": []
+    },
+    {
+      "id": "qwen17-live",
+      "job": "live",
+      "display_name": "Qwen3-ASR 1.7B MLX 8-bit",
+      "line": "Use the same verified multilingual recognizer for this job.",
+      "evidence_line": "FLEURS 100/supported language: EN WER 4.04%; ZH CER 8.23%; JA CER 5.33%; KO CER 2.63%; ES WER 2.53%; FR WER 4.95%; DE WER 3.05%; max RTF 0.132. ASR-only warm throughput.",
+      "recommended": true,
+      "size_bytes": 2467856503,
+      "installed_size_bytes": 2467856503,
+      "files": [
+        {
+          "path": "chat_template.json",
+          "size_bytes": 1161,
+          "sha256": "75a8cfca24f00de72d796fbfed6858fc9614ef3dabd8696684cc3bc03a9c58ff",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/chat_template.json"
+          ]
+        },
+        {
+          "path": "config.json",
+          "size_bytes": 7188,
+          "sha256": "1b76b3b6c655fc54595da025f7a96474ad9fa86363303fbdd61a7d8483ccfaf7",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/config.json"
+          ]
+        },
+        {
+          "path": "generation_config.json",
+          "size_bytes": 142,
+          "sha256": "1da527824d81e07118facff437e03f2e24a23311e3bdeb2368973fe77e5f275c",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/generation_config.json"
+          ]
+        },
+        {
+          "path": "merges.txt",
+          "size_bytes": 1671853,
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/merges.txt"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 2463307541,
+          "sha256": "bf304b009cc7eca79283056f787b44c952d24ac22cec787b39732bba3c23c13c",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors"
+          ]
+        },
+        {
+          "path": "model.safetensors.index.json",
+          "size_bytes": 78968,
+          "sha256": "0a5d0ec11188602242ff81a9969883d0fdeb98cd5d85cd1413089d897c201af5",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors.index.json"
+          ]
+        },
+        {
+          "path": "preprocessor_config.json",
+          "size_bytes": 330,
+          "sha256": "45e120a4eda2c20c5d7f2ea9354e63536bf35e27aa573fb7cdf78017b378770d",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/preprocessor_config.json"
+          ]
+        },
+        {
+          "path": "tokenizer_config.json",
+          "size_bytes": 12487,
+          "sha256": "4942d005604266809309cabc9f4e9cb89ce855d59b14681fdc0e1cc62ea26c4c",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/tokenizer_config.json"
+          ]
+        },
+        {
+          "path": "vocab.json",
+          "size_bytes": 2776833,
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "sources": [
+            "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/vocab.json"
+          ]
+        }
+      ],
+      "sources": [
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/chat_template.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/config.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/generation_config.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/merges.txt",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/model.safetensors.index.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/preprocessor_config.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/tokenizer_config.json",
+        "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-8bit/resolve/a8379a2e2f9e313c9292cdf1af4055ab56d50d55/vocab.json"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "inventory": "survey-2026-10/assets/qwen17.json",
+      "verification": "downloaded SHA-256",
+      "gpl_components": [],
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permissive artifact licence; preserve copyright, attribution and licence notices.",
+      "licence_evidence": [
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Declared licence text or publisher declaration."
+        },
+        {
+          "url": "https://huggingface.co/Qwen/Qwen3-ASR-1.7B/blob/7278e1e70fe206f11671096ffdd38061171dd6e5/README.md",
+          "reason": "Publisher's model declaration, selected distribution licence, or documented system/disabled delivery route."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-qwen3-asr 0.4.4 / MLX 0.32.4, Metal GPU",
+      "artifact_id": "qwen17",
+      "requires": [
+        "speaker-pack"
+      ],
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "hu",
+        "mk",
+        "ro"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/Qwen/Qwen3-ASR-1.7B/blob/7278e1e70fe206f11671096ffdd38061171dd6e5/README.md"
+      ],
+      "language_note": "30 languages plus 22 Chinese dialect/accent labels; dialect labels are not counted as 22 additional languages.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "ko",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "qwen17",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-qwen17.json",
+      "integration_gap": "The production backend is native Qwen 0.6B. The measured 1.7B MLX artifact needs a runtime bridge and live pipeline validation."
+    },
+    {
+      "id": "granite-ctc",
+      "job": "live",
+      "display_name": "Granite Speech 5.0 TurboCTC 470M",
+      "line": "Fast multilingual CTC; does not cover Mandarin or Korean.",
+      "evidence_line": "FLEURS 100/supported language: EN WER 4.87%; JA CER 5.88%; ES WER 4.06%; FR WER 7.81%; DE WER 5.84%; max RTF 0.007. ASR-only warm throughput.",
+      "inventory": "survey-2026-10-multilingual/assets/granite_ctc.json",
+      "sources": [
+        "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/blob/1dd23f46f6d4e6eae2531982ba2e33220086dd97/README.md"
+      ],
+      "licence": {
+        "name": "Apache-2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/blob/1dd23f46f6d4e6eae2531982ba2e33220086dd97/README.md",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://www.apache.org/licenses/LICENSE-2.0",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-audio 0.6.1 / MLX Metal",
+      "gpl_components": [],
+      "requires": [
+        "speaker-pack"
+      ],
+      "verification": "downloaded SHA-256",
+      "files": [
+        {
+          "path": "config.json",
+          "size_bytes": 921,
+          "sha256": "aabd64a2da736a1a1c21237c896b71628f6dd7364f1f5ec8a77f5e04b3ef1011",
+          "url": "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/config.json",
+          "sources": [
+            "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/config.json"
+          ]
+        },
+        {
+          "path": "generation_config.json",
+          "size_bytes": 153,
+          "sha256": "ad32e8b87734e621ede4a52e64072a90b42b1599973a7c008efc1268541ea034",
+          "url": "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/generation_config.json",
+          "sources": [
+            "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/generation_config.json"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 946311576,
+          "sha256": "5b569c3744c42a9172ac976881539926b66176d03fbaaa3c51b5d2960067f6fc",
+          "url": "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/model.safetensors",
+          "sources": [
+            "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/model.safetensors"
+          ]
+        },
+        {
+          "path": "processor_config.json",
+          "size_bytes": 430,
+          "sha256": "3d7c14d3ed7a5218b2fd6797eaa5b3aa615c681938bd1734a510d7a6f8c1b9fb",
+          "url": "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/processor_config.json",
+          "sources": [
+            "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/processor_config.json"
+          ]
+        },
+        {
+          "path": "tokenizer.json",
+          "size_bytes": 1699784,
+          "sha256": "a1c3ca763ce0690faf0df3456365358547acfdf766122c9e4a69be8e8708042e",
+          "url": "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/tokenizer.json",
+          "sources": [
+            "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/tokenizer.json"
+          ]
+        },
+        {
+          "path": "tokenizer_config.json",
+          "size_bytes": 223,
+          "sha256": "2f61ece3468bf7ca7a1b6dd3fd5b809814315bea9c298feea035fda4931b9f02",
+          "url": "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/tokenizer_config.json",
+          "sources": [
+            "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/resolve/1dd23f46f6d4e6eae2531982ba2e33220086dd97/tokenizer_config.json"
+          ]
+        }
+      ],
+      "revision": "1dd23f46f6d4e6eae2531982ba2e33220086dd97",
+      "size_bytes": 948013087,
+      "installed_size_bytes": 948013087,
+      "recommended": false,
+      "languages": [
+        "en",
+        "fr",
+        "de",
+        "es",
+        "pt",
+        "it",
+        "ja"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/ibm-granite/granite-speech-5.0-470m-turboctc/blob/1dd23f46f6d4e6eae2531982ba2e33220086dd97/README.md"
+      ],
+      "language_note": "October 21 multilingual weights; no Mandarin/Korean input ASR.",
+      "tested_languages": [
+        "en",
+        "ja",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "granite_ctc",
+      "evidence_source": "survey-2026-10-multilingual/runs/asr-granite_ctc.json"
+    },
+    {
+      "id": "chatterbox",
+      "job": "voice",
+      "display_name": "Chatterbox multilingual v3 MLX",
+      "line": "One reference voice across 23 languages.",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 6.97% across 6 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md.",
+      "inventory": "survey-2026-10-multilingual/assets/chatterbox.json",
+      "sources": [
+        "https://huggingface.co/ResembleAI/chatterbox"
+      ],
+      "licence": {
+        "name": "MIT weights/runtime; Apache-2.0 speech codec",
+        "url": "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/blob/03565773edd72e949572557597af8063bb49a18a/README.md"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/ResembleAI/chatterbox",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/blob/03565773edd72e949572557597af8063bb49a18a/README.md",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-audio 0.6.1 / MLX 0.32.4; public float16 parameter conversion and cached reference conditionals",
+      "gpl_components": [],
+      "requires": [
+        "s3tokenizer"
+      ],
+      "requires_reference_audio": true,
+      "reference_samples": "survey-2026-10-multilingual/voice-references.json",
+      "shipping_gap": "The evaluated synthetic reference WAVs are external listening artifacts, not a hosted preset pack. Announce and pin the selected reference pack, or explicitly use user-provided reference audio, before shipping this route.",
+      "licence_scope": "Evaluated v3 NFKD/full-case EN/ZH/JA/ES/FR/DE frontend. Optional legacy G2P packages are not part of this evaluated route.",
+      "verification": "downloaded SHA-256",
+      "files": [
+        {
+          "path": "Cangjie5_TC.json",
+          "size_bytes": 1920163,
+          "sha256": "7073fd9de919443ae88e0bd2449917a65fe54898a4413ed1edcc4b67f28bce8c",
+          "url": "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/resolve/03565773edd72e949572557597af8063bb49a18a/Cangjie5_TC.json",
+          "sources": [
+            "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/resolve/03565773edd72e949572557597af8063bb49a18a/Cangjie5_TC.json"
+          ]
+        },
+        {
+          "path": "config.json",
+          "size_bytes": 666,
+          "sha256": "b2097a15078624f41fcdaad9fc82f7b91ab0d39771aebc1af1775b0feaafe309",
+          "url": "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/resolve/03565773edd72e949572557597af8063bb49a18a/config.json",
+          "sources": [
+            "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/resolve/03565773edd72e949572557597af8063bb49a18a/config.json"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 2711113780,
+          "sha256": "e702f2c441e040bd360e59a86c85d462539759d665e41cfd1938adadd74187a3",
+          "url": "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/resolve/03565773edd72e949572557597af8063bb49a18a/model.safetensors",
+          "sources": [
+            "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/resolve/03565773edd72e949572557597af8063bb49a18a/model.safetensors"
+          ]
+        },
+        {
+          "path": "tokenizer.json",
+          "size_bytes": 69989,
+          "sha256": "69632f47220a788a52ce2661d096453c5655e9bf25289d89a8d832c46ee07dbf",
+          "url": "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/resolve/03565773edd72e949572557597af8063bb49a18a/tokenizer.json",
+          "sources": [
+            "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/resolve/03565773edd72e949572557597af8063bb49a18a/tokenizer.json"
+          ]
+        }
+      ],
+      "revision": "03565773edd72e949572557597af8063bb49a18a",
+      "size_bytes": 2713104598,
+      "installed_size_bytes": 2713104598,
+      "recommended": false,
+      "languages": [
+        "ar",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "fi",
+        "fr",
+        "he",
+        "hi",
+        "it",
+        "ja",
+        "ko",
+        "ms",
+        "nl",
+        "no",
+        "pl",
+        "pt",
+        "ru",
+        "sv",
+        "sw",
+        "tr",
+        "zh"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/mlx-community/chatterbox-multilingual-v3/blob/03565773edd72e949572557597af8063bb49a18a/README.md"
+      ],
+      "language_note": "23 languages; reference voices are prior-survey synthetic presets, not real-person clones.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "chatterbox_fp16",
+      "primary_voices": {
+        "en": "synthetic_charlotte",
+        "zh": "synthetic_charlotte",
+        "ja": "synthetic_charlotte",
+        "es": "synthetic_charlotte",
+        "fr": "synthetic_charlotte",
+        "de": "synthetic_charlotte"
+      },
+      "speed_qualified": false,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-chatterbox_fp16.json",
+      "generation_config": {
+        "artifact": "chatterbox",
+        "floating_parameter_dtype": "float16",
+        "conditioning_float_dtype": "float16",
+        "parameter_conversion": "Module.set_dtype",
+        "include_codec": true,
+        "source_checkpoint_precision": "float32",
+        "integer_conditioning": "unchanged token IDs and lengths",
+        "temperature": 0.8,
+        "max_new_tokens": 1000,
+        "requested_exaggeration": 0.1,
+        "exaggeration": 0.0999755859375,
+        "seed_per_sentence": 42
+      }
+    },
+    {
+      "id": "cosyvoice3",
+      "job": "voice",
+      "display_name": "CosyVoice 3 0.5B MLX 8-bit",
+      "line": "Nine-language synthesis with a reference voice.",
+      "evidence_line": "Part-2 five-sentence primary voice macro back-ASR 16.69% across 6 supported test languages; full latency/throughput and alternate voices in RESULTS-2026-10-multilingual.md.",
+      "inventory": "survey-2026-10-multilingual/assets/cosyvoice3.json",
+      "sources": [
+        "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/blob/177baf277ac75e04e810f7db7f0d9c0ce5a17854/README.md"
+      ],
+      "licence": {
+        "name": "Apache-2.0 weights; MIT MLX port",
+        "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/blob/177baf277ac75e04e810f7db7f0d9c0ce5a17854/README.md",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md",
+          "reason": "Selected licence terms."
+        },
+        {
+          "url": "https://github.com/DePasqualeOrg/mlx-audio-plus/blob/4c9ec6a8489e790b5ba8964ab1f1d63150476f9f/LICENSE",
+          "reason": "MIT licence of the pinned MLX runtime port."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md",
+          "reason": "Publisher Apache-2.0 weight declaration; the conversion card does not supply a separate licence tag."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "mlx-audio-plus 0.1.8, Git 4c9ec6a8489e790b5ba8964ab1f1d63150476f9f; MLX Metal",
+      "gpl_components": [],
+      "requires": [
+        "s3tokenizer3"
+      ],
+      "requires_reference_audio": true,
+      "requires_reference_transcript": true,
+      "reference_samples": "survey-2026-10-multilingual/voice-references.json",
+      "shipping_gap": "Ship or announce a verified synthetic reference pack separately from the model files. No unhosted reference audio is represented as an invented download URL.",
+      "evaluation_mode": "zero-shot with reference transcript, including cross-language target text",
+      "reference_transcript_scope": "Required for this tested zero-shot profile. The public reference-only cross-lingual mode omits it and was not measured.",
+      "verification": "downloaded SHA-256",
+      "files": [
+        {
+          "path": "config.json",
+          "size_bytes": 1505,
+          "sha256": "246f963c180f8049933660555ed723a53a5e43eb8a7c53b3ca1d00e3a1d5aae7",
+          "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/config.json",
+          "sources": [
+            "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/config.json"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 1396984202,
+          "sha256": "3852566b9d43eb9227e73998c289e90ce124869c5f9a3ec555b3942a8388d9e6",
+          "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/model.safetensors",
+          "sources": [
+            "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/model.safetensors"
+          ]
+        },
+        {
+          "path": "tokenizer.json",
+          "size_bytes": 10523354,
+          "sha256": "5e3855f008ece7e02f09bad5c0aa492cd1594529a796b80193f4ef640200e58b",
+          "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/tokenizer.json",
+          "sources": [
+            "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/tokenizer.json"
+          ]
+        },
+        {
+          "path": "tokenizer_config.json",
+          "size_bytes": 973,
+          "sha256": "46a369aa40642d4be780e4842ea299e08764ff8edc64c2ad7738e04d94a51637",
+          "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/tokenizer_config.json",
+          "sources": [
+            "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/tokenizer_config.json"
+          ]
+        }
+      ],
+      "revision": "177baf277ac75e04e810f7db7f0d9c0ce5a17854",
+      "size_bytes": 1407510034,
+      "installed_size_bytes": 1407510034,
+      "recommended": false,
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "de",
+        "es",
+        "fr",
+        "it",
+        "ru"
+      ],
+      "language_scope": "artifact-declared",
+      "language_evidence": [
+        "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md"
+      ],
+      "language_note": "Nine languages; requires a speaker reference and speech tokenizer, not only LLM weights.",
+      "tested_languages": [
+        "en",
+        "zh",
+        "ja",
+        "es",
+        "fr",
+        "de"
+      ],
+      "evaluation_profile": "cosyvoice3",
+      "primary_voices": {
+        "en": "synthetic_charlotte",
+        "zh": "synthetic_charlotte",
+        "ja": "synthetic_charlotte",
+        "es": "synthetic_charlotte",
+        "fr": "synthetic_charlotte",
+        "de": "synthetic_charlotte"
+      },
+      "speed_qualified": false,
+      "resident_model_required": true,
+      "sentence_streaming_required": true,
+      "evidence_source": "survey-2026-10-multilingual/runs/tts-cosyvoice3.json"
+    },
+    {
+      "id": "s3tokenizer",
+      "job": "voice",
+      "display_name": "Chatterbox S3 speech tokenizer v2",
+      "line": "Required speech codec, not a separate selectable voice.",
+      "evidence_line": "See RESULTS-2026-10-multilingual.md for completed per-language observations and limits.",
+      "inventory": "survey-2026-10-multilingual/assets/s3tokenizer.json",
+      "sources": [
+        "https://huggingface.co/mlx-community/S3TokenizerV2/blob/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/README.md"
+      ],
+      "licence": {
+        "name": "Apache-2.0 (CosyVoice2 source weights)",
+        "url": "https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/mlx-community/S3TokenizerV2/blob/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/README.md",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/CosyVoice2-0.5B",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "MLX codec component",
+      "gpl_components": [],
+      "requires": [],
+      "kind": "support_asset",
+      "selectable": false,
+      "verification": "downloaded SHA-256",
+      "files": [
+        {
+          "path": "config.json",
+          "size_bytes": 126,
+          "sha256": "8591fcc0eaae8c2bbfc69cf9d439933ecdf2d58cb9be63d00ce88736c4f2aa9d",
+          "url": "https://huggingface.co/mlx-community/S3TokenizerV2/resolve/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/config.json",
+          "sources": [
+            "https://huggingface.co/mlx-community/S3TokenizerV2/resolve/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/config.json"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 494868984,
+          "sha256": "928726bc1f206a613d36b8f49e297eae9c5593a21bf9b92ddfe2c23f85eb92cc",
+          "url": "https://huggingface.co/mlx-community/S3TokenizerV2/resolve/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/model.safetensors",
+          "sources": [
+            "https://huggingface.co/mlx-community/S3TokenizerV2/resolve/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/model.safetensors"
+          ]
+        }
+      ],
+      "revision": "e0c9886f0e1c35ae85b1f27277416fb19fc72bec",
+      "size_bytes": 494869110,
+      "installed_size_bytes": 494869110,
+      "recommended": false,
+      "languages": [],
+      "language_scope": "language-independent support",
+      "language_evidence": [
+        "https://huggingface.co/mlx-community/S3TokenizerV2/blob/e0c9886f0e1c35ae85b1f27277416fb19fc72bec/README.md"
+      ],
+      "language_note": "",
+      "tested_languages": []
+    },
+    {
+      "id": "s3tokenizer3",
+      "job": "voice",
+      "display_name": "CosyVoice 3 S3 speech tokenizer v3",
+      "line": "Required speech codec, not a separate selectable voice.",
+      "evidence_line": "See RESULTS-2026-10-multilingual.md for completed per-language observations and limits.",
+      "inventory": "survey-2026-10-multilingual/assets/s3tokenizer3.json",
+      "sources": [
+        "https://huggingface.co/mlx-community/S3TokenizerV3/blob/b143914b3e912278104824da706edc9c2d317c4e/README.md"
+      ],
+      "licence": {
+        "name": "Apache-2.0 (CosyVoice3 source weights)",
+        "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://huggingface.co/mlx-community/S3TokenizerV3/blob/b143914b3e912278104824da706edc9c2d317c4e/README.md",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512/blob/29e01c4e8d000f4bcd70751be16fa94bf3d85a18/README.md",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "MLX codec component",
+      "gpl_components": [],
+      "requires": [],
+      "kind": "support_asset",
+      "selectable": false,
+      "verification": "downloaded SHA-256",
+      "files": [
+        {
+          "path": "config.json",
+          "size_bytes": 174,
+          "sha256": "355c1cc1337107c89c786d7c2675d7a30322b204456f1a273acc037e291111cc",
+          "url": "https://huggingface.co/mlx-community/S3TokenizerV3/resolve/b143914b3e912278104824da706edc9c2d317c4e/config.json",
+          "sources": [
+            "https://huggingface.co/mlx-community/S3TokenizerV3/resolve/b143914b3e912278104824da706edc9c2d317c4e/config.json"
+          ]
+        },
+        {
+          "path": "model.safetensors",
+          "size_bytes": 968059321,
+          "sha256": "ee05a65d4472f089d55b5dfcd9e19f42e3245f4f19d612b90c04cb051a80105e",
+          "url": "https://huggingface.co/mlx-community/S3TokenizerV3/resolve/b143914b3e912278104824da706edc9c2d317c4e/model.safetensors",
+          "sources": [
+            "https://huggingface.co/mlx-community/S3TokenizerV3/resolve/b143914b3e912278104824da706edc9c2d317c4e/model.safetensors"
+          ]
+        }
+      ],
+      "revision": "b143914b3e912278104824da706edc9c2d317c4e",
+      "size_bytes": 968059495,
+      "installed_size_bytes": 968059495,
+      "recommended": false,
+      "languages": [],
+      "language_scope": "language-independent support",
+      "language_evidence": [
+        "https://huggingface.co/mlx-community/S3TokenizerV3"
+      ],
+      "language_note": "Required speech codec for CosyVoice 3, separate from text tokenization.",
+      "tested_languages": []
+    },
+    {
+      "id": "kokoro-japanese-g2p",
+      "job": "voice",
+      "display_name": "Kokoro Japanese pronunciation dictionary",
+      "line": "Explicit UniDic-lite support for the Japanese frontend.",
+      "evidence_line": "See RESULTS-2026-10-multilingual.md for completed per-language observations and limits.",
+      "inventory": "survey-2026-10-multilingual/assets/kokoro-japanese-g2p.json",
+      "sources": [
+        "https://pypi.org/project/unidic-lite/1.0.8/"
+      ],
+      "licence": {
+        "name": "MIT wrapper; BSD-3-Clause dictionary option",
+        "url": "https://github.com/polm/unidic-lite/blob/master/LICENSE.unidic"
+      },
+      "non_commercial": false,
+      "licence_status": "cleared",
+      "licence_status_note": "Documented permitted artifact/runtime route; retain licence, copyright and attribution notices.",
+      "licence_evidence": [
+        {
+          "url": "https://pypi.org/project/unidic-lite/1.0.8/",
+          "reason": "Pinned publisher declaration or source package licence for the selected artifact."
+        },
+        {
+          "url": "https://github.com/polm/unidic-lite/blob/master/LICENSE.unidic",
+          "reason": "Selected licence terms."
+        }
+      ],
+      "licence_reviewed_on": "2026-10-23",
+      "runtime": "UniDic-lite 1.0.8 / Misaki Cutlet; BSD dictionary option selected",
+      "gpl_components": [],
+      "requires": [],
+      "kind": "support_asset",
+      "selectable": false,
+      "verification": "downloaded SHA-256",
+      "files": [
+        {
+          "path": "unidic-lite-1.0.8.tar.gz",
+          "size_bytes": 47356746,
+          "sha256": "db9d4572d9fdd4d00a97949d4b0741ec480ee05a7e7e2e32f547500dae27b245",
+          "url": "https://files.pythonhosted.org/packages/55/2b/8cf7514cb57d028abcef625afa847d60ff1ffbf0049c36b78faa7c35046f/unidic-lite-1.0.8.tar.gz",
+          "sources": [
+            "https://files.pythonhosted.org/packages/55/2b/8cf7514cb57d028abcef625afa847d60ff1ffbf0049c36b78faa7c35046f/unidic-lite-1.0.8.tar.gz"
+          ]
+        }
+      ],
+      "revision": null,
+      "size_bytes": 47356746,
+      "installed_size_bytes": 260468912,
+      "recommended": false,
+      "languages": [
+        "ja"
+      ],
+      "language_scope": "support asset",
+      "language_evidence": [
+        "https://pypi.org/project/unidic-lite/1.0.8/"
+      ],
+      "language_note": "UniDic-lite dictionary for the explicitly configured Misaki/Cutlet Japanese frontend; not a separate TTS model.",
+      "tested_languages": [
+        "ja"
+      ]
+    }
+  ],
+  "language_semantics": "languages lists artifact-declared BCP-47/ISO language codes; tested_languages lists completed part-2 subsets only. Language-independent support and disabled choices use an empty list, not invented ASR/TTS capabilities.",
+  "multilingual_evidence": "survey-2026-10-multilingual/manifest-update.json",
+  "survey_reports": [
+    "RESULTS-2026-10.md",
+    "RESULTS-2026-10-multilingual.md"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "cosyvoice3",
+  "repo": "mlx-community/Fun-CosyVoice3-0.5B-2512-8bit",
+  "revision": "177baf277ac75e04e810f7db7f0d9c0ce5a17854",
+  "files": [
+    {
+      "path": "config.json",
+      "size_bytes": 1505,
+      "sha256": "246f963c180f8049933660555ed723a53a5e43eb8a7c53b3ca1d00e3a1d5aae7",
+      "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/config.json"
+    },
+    {
+      "path": "model.safetensors",
+      "size_bytes": 1396984202,
+      "sha256": "3852566b9d43eb9227e73998c289e90ce124869c5f9a3ec555b3942a8388d9e6",
+      "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/model.safetensors"
+    },
+    {
+      "path": "tokenizer.json",
+      "size_bytes": 10523354,
+      "sha256": "5e3855f008ece7e02f09bad5c0aa492cd1594529a796b80193f4ef640200e58b",
+      "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/tokenizer.json"
+    },
+    {
+      "path": "tokenizer_config.json",
+      "size_bytes": 973,
+      "sha256": "46a369aa40642d4be780e4842ea299e08764ff8edc64c2ad7738e04d94a51637",
+      "url": "https://huggingface.co/mlx-community/Fun-CosyVoice3-0.5B-2512-8bit/resolve/177baf277ac75e04e810f7db7f0d9c0ce5a17854/tokenizer_config.json"
+    }
+  ],
+  "licence_metadata": null
+}

@@ -1,0 +1,148 @@
+package main
+
+import (
+	"testing"
+)
+
+func TestChooseSetupWindowLandingPrefersVisibleMenuBarItem(t *testing.T) {
+	in := setupWindowLandingInput{
+		ItemVisible:    true,
+		Item:           setupWindowRect{X: 1300, Y: 877, W: 24, H: 22},
+		MenuBarVisible: true,
+		MenuBarTop:     900,
+		Bounds:         setupWindowRect{X: 0, Y: 0, W: 1440, H: 900},
+		WindowScreen:   setupWindowRect{X: 0, Y: 0, W: 1440, H: 900},
+	}
+	got := chooseSetupWindowLanding(in)
+	if got.Landed != setupLandedItem {
+		t.Fatalf("Landed = %q, want %q", got.Landed, setupLandedItem)
+	}
+	if got.Center != (setupWindowPoint{X: 1312, Y: 888}) {
+		t.Fatalf("Center = %+v, want the item's centre", got.Center)
+	}
+	if got.Anchor != (setupWindowPoint{X: 1312, Y: 877}) {
+		t.Fatalf("Anchor = %+v, want the item's bottom centre", got.Anchor)
+	}
+}
+
+func TestChooseSetupWindowLandingFallsBackToTopCentre(t *testing.T) {
+	base := setupWindowLandingInput{
+		ItemVisible:    true,
+		Item:           setupWindowRect{X: 1300, Y: 877, W: 24, H: 22},
+		MenuBarVisible: true,
+		MenuBarTop:     900,
+		Bounds:         setupWindowRect{X: 0, Y: 0, W: 1440, H: 900},
+		WindowScreen:   setupWindowRect{X: 0, Y: 0, W: 1440, H: 900},
+	}
+	cases := map[string]func(*setupWindowLandingInput){
+		"item not visible":            func(in *setupWindowLandingInput) { in.ItemVisible = false },
+		"menu bar auto-hidden":        func(in *setupWindowLandingInput) { in.MenuBarVisible = false },
+		"zero-size item":              func(in *setupWindowLandingInput) { in.Item.W = 0 },
+		"item off the displays":       func(in *setupWindowLandingInput) { in.Item.X = 1700 },
+		"item below the menu bar":     func(in *setupWindowLandingInput) { in.Item.Y = 600 },
+		"item behind the notch":       func(in *setupWindowLandingInput) { in.HasNotch = true; in.NotchX = 1280; in.NotchW = 120 },
+		"item above the menu bar top": func(in *setupWindowLandingInput) { in.Item.Y = 950 },
+	}
+	for name, mutate := range cases {
+		in := base
+		mutate(&in)
+		got := chooseSetupWindowLanding(in)
+		if got.Landed != setupLandedTopCenter {
+			t.Errorf("%s: Landed = %q, want %q", name, got.Landed, setupLandedTopCenter)
+			continue
+		}
+		if got.Center != (setupWindowPoint{X: 720, Y: 888}) {
+			t.Errorf("%s: Center = %+v, want the top centre of the window's display", name, got.Center)
+		}
+		if got.Anchor != (setupWindowPoint{X: 720, Y: 876}) {
+			t.Errorf("%s: Anchor = %+v, want below the menu bar", name, got.Anchor)
+		}
+	}
+}
+
+func TestChooseSetupWindowLandingUsesWindowDisplayForTopCentre(t *testing.T) {
+	in := setupWindowLandingInput{
+		MenuBarTop:   900,
+		Bounds:       setupWindowRect{X: -1920, Y: 0, W: 3360, H: 900},
+		WindowScreen: setupWindowRect{X: -1920, Y: 0, W: 1920, H: 1080},
+	}
+	got := chooseSetupWindowLanding(in)
+	if got.Landed != setupLandedTopCenter {
+		t.Fatalf("Landed = %q, want %q", got.Landed, setupLandedTopCenter)
+	}
+	if got.Center.X != -960 || got.Center.Y != 1068 {
+		t.Fatalf("Center = %+v, want the top centre of the second display", got.Center)
+	}
+}
+
+func TestSetupLaunchStateFor(t *testing.T) {
+	cases := []struct {
+		name                string
+		done, watching      bool
+		wantSetup, wantMenu bool
+	}{
+		{"fresh install", false, false, true, false},
+		{"watching started, setup unfinished", false, true, true, true},
+		{"onboarding finished", true, false, false, true},
+		{"finished and watching", true, true, false, true},
+	}
+	for _, tc := range cases {
+		got := setupLaunchStateFor(tc.done, tc.watching)
+		if got.SetupNeeded != tc.wantSetup || got.MenuBarVisible != tc.wantMenu {
+			t.Errorf("%s: got %+v, want SetupNeeded=%v MenuBarVisible=%v", tc.name, got, tc.wantSetup, tc.wantMenu)
+		}
+	}
+}
+
+func TestOnboardingStateDone(t *testing.T) {
+	cases := map[string]bool{
+		"":                        false,
+		"not json":                false,
+		`{}`:                      false,
+		`{"completed":false}`:     false,
+		`{"completed":true}`:      true,
+		`{"neverShowAgain":true}`: true,
+		`{"completed":false,"neverShowAgain":false}`: false,
+	}
+	for raw, want := range cases {
+		if got := onboardingStateDone(raw); got != want {
+			t.Errorf("onboardingStateDone(%q) = %v, want %v", raw, got, want)
+		}
+	}
+}
+
+func TestSetupWindowStateBookkeeping(t *testing.T) {
+	var s setupWindowState
+	if s.isActive() {
+		t.Fatal("a new state must be inactive")
+	}
+	frame := setupWindowRect{X: 100, Y: 200, W: 1200, H: 800}
+	if !s.enter(frame, true) {
+		t.Fatal("first enter must report a change")
+	}
+	if s.enter(setupWindowRect{X: 1, Y: 1, W: 600, H: 560}, true) {
+		t.Fatal("a second enter must not change anything")
+	}
+	got, hasFrame, wasActive := s.leave()
+	if !wasActive || !hasFrame || got != frame {
+		t.Fatalf("leave = (%+v, %v, %v), want the first frame back", got, hasFrame, wasActive)
+	}
+	if _, _, wasActive := s.leave(); wasActive {
+		t.Fatal("a second leave must report that setup mode was already off")
+	}
+}
+
+func TestSetupWindowStateLaunchHasNoFrame(t *testing.T) {
+	var s setupWindowState
+	s.enterAtLaunch()
+	if !s.isActive() {
+		t.Fatal("enterAtLaunch must turn setup mode on")
+	}
+	if s.enter(setupWindowRect{W: 600, H: 560}, true) {
+		t.Fatal("enter after a launch must not remember the setup-size frame")
+	}
+	_, hasFrame, wasActive := s.leave()
+	if !wasActive || hasFrame {
+		t.Fatalf("leave after launch = (hasFrame %v, wasActive %v), want (false, true)", hasFrame, wasActive)
+	}
+}

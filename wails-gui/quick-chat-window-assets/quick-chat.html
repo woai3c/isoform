@@ -1,0 +1,180 @@
+<!doctype html>
+<html>
+<head>
+<meta charset='utf-8'>
+<title>Yansu Quick Chat</title>
+<style>
+  :root {
+    --bg: rgba(28, 28, 32, 0.88);
+    --panel: rgba(42, 42, 48, 0.95);
+    --border: rgba(255, 255, 255, 0.10);
+    --ink: #e8e6e2;
+    --muted: rgba(232, 230, 226, 0.55);
+    --accent: #d4603a;
+    --accent-bg: rgba(212, 96, 58, 0.14);
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: rgba(250, 248, 246, 0.92); --panel: rgba(255, 255, 255, 0.96);
+            --border: rgba(0,0,0,0.08); --ink: #2a2320; --muted: rgba(42,35,32,0.55);
+            --accent-bg: rgba(212, 96, 58, 0.10); }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: transparent;
+    font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif;
+    color: var(--ink); height: 100%; overflow: hidden; }
+  .container { background: var(--bg); border: 1px solid var(--border);
+    border-radius: 14px; backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px); height: 100vh;
+    display: flex; flex-direction: column; overflow: hidden; }
+  .header { padding: 14px 16px 10px 16px; }
+  .brand-row { display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 10px; min-width: 0; }
+  .brand { display: flex; align-items: center; gap: 8px; min-width: 0;
+    color: var(--ink); font-size: 12px; font-weight: 600; }
+  .brand-logo { width: 20px; height: 20px; flex: 0 0 20px; }
+  .brand-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .label { min-width: 0; flex: 1; font-size: 11px; color: var(--muted);
+    text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .input-row { display: flex; align-items: center; gap: 8px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 999px; padding: 8px 14px; transition: border 0.15s; }
+  .input-row:focus-within { border-color: rgba(212, 96, 58, 0.45); }
+  input { flex: 1; background: transparent; border: 0; outline: none;
+    color: var(--ink); font-size: 14px; font-family: inherit; }
+  input::placeholder { color: var(--muted); }
+  .send-btn { width: 26px; height: 26px; border-radius: 50%; border: 0;
+    background: var(--accent); color: white; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s; flex-shrink: 0; }
+  .send-btn:disabled { background: var(--border); cursor: not-allowed; opacity: 0.4; }
+  .suggestions { padding: 8px 10px 14px 10px; overflow-y: auto; flex: 1; border-top: 1px solid var(--border); }
+  .suggestions-title { font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.08em; font-weight: 600; color: var(--muted);
+    padding: 10px 6px 8px 6px; }
+  .suggestion { display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center; gap: 10px; padding: 10px; border-radius: 8px; cursor: pointer;
+    color: var(--ink); font-size: 13px; transition: background 0.1s, color 0.1s; }
+  .suggestion:hover, .suggestion.selected { background: var(--accent-bg); color: var(--accent); }
+  .suggestion .copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .suggestion .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .suggestion .desc { color: var(--muted); font-size: 11px; line-height: 1.35;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .suggestion .hint { font-size: 10px; color: var(--muted); }
+  .suggestion:hover .hint, .suggestion.selected .hint { color: var(--accent); opacity: 0.75; }
+  .empty { padding: 20px 10px; color: var(--muted); font-size: 12px; text-align: center; }
+  .loading { padding: 8px 6px; display: flex; flex-direction: column; gap: 6px; }
+  .skeleton { height: 28px; background: var(--border); border-radius: 999px; opacity: 0.5;
+    animation: pulse 1.5s infinite; }
+  .skeleton:nth-child(2) { width: 70%; }
+  .skeleton:nth-child(3) { width: 82%; }
+  @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 0.55; } }
+</style>
+</head>
+<body>
+<div class='container'>
+  <div class='header'>
+    <div class='brand-row'>
+      <div class='brand' aria-label='Yansu Quick Chat'>
+        <svg class='brand-logo' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg' aria-hidden='true'>
+          <rect x='0.5' y='0.5' width='23' height='23' rx='5.5' fill='#5965dc' />
+          <g transform='translate(2.5 2.5)'>
+          <path fill-rule='evenodd' clip-rule='evenodd' d='M12.7953 8.48523C12.7953 7.41031 13.6666 6.53906 14.7415 6.53906C15.8163 6.53906 16.6876 7.41031 16.6876 8.48523C16.6876 9.56015 15.8163 10.4314 14.7415 10.4314C13.6666 10.4314 12.7953 9.56015 12.7953 8.48523Z' fill='white' />
+          <path fill-rule='evenodd' clip-rule='evenodd' d='M10.0205 0C10.5638 3.33167e-05 11.0047 0.442587 11.0049 0.988281C11.0049 1.53416 10.564 1.97751 10.0205 1.97754H9.43236C8.69024 1.97754 8.16294 2.70001 8.38921 3.4068C8.68217 4.32189 10.028 4.485 10.7821 3.88954C11.1183 3.62404 11.4993 3.38239 11.9316 3.17578C14.2252 2.07992 16.3303 2.66503 17.7041 3.42285C18.1803 3.68556 18.355 4.28626 18.0938 4.76465C17.8321 5.24313 17.2332 5.41808 16.7568 5.15527C15.7308 4.5893 14.3155 4.22617 12.7773 4.96094C11.8343 5.41157 11.2451 6.10223 10.8522 6.84285C10.1904 8.09039 10.3688 9.58799 10.7997 10.9329L11.927 14.4509C12.2684 15.5164 13.2591 16.2393 14.3779 16.2393C14.9213 16.2394 15.3613 16.6817 15.3613 17.2275C15.3612 17.7733 14.9212 18.2157 14.3779 18.2158H8.26856C7.72515 18.2158 7.28428 17.7734 7.28418 17.2275C7.28418 16.6816 7.72509 16.2393 8.26856 16.2393H8.86485C9.64004 16.2393 10.1907 15.4845 9.95418 14.7463L9.12844 12.1696C9.11065 12.1141 9.03683 12.11 9.01075 12.1621C8.45147 13.2791 7.58115 14.5191 6.24512 15.1826C4.85841 15.8712 3.53994 15.667 2.50879 15.2041C1.50444 14.7533 0.725164 14.0412 0.287113 13.5996C-0.0963769 13.213 -0.0955171 12.5875 0.289066 12.2021C0.673941 11.8169 1.29703 11.8177 1.68067 12.2041C2.05949 12.586 2.6361 13.0962 3.31153 13.3994C3.96008 13.6905 4.64564 13.7723 5.37305 13.4111C6.15124 13.0247 6.7741 12.2299 7.25293 11.2734C7.31534 11.1488 7.37417 11.0235 7.42961 10.8986C7.97844 9.66239 7.87492 8.25701 7.46246 6.96885L6.45986 3.83764C6.10502 2.72944 5.07475 1.97754 3.91114 1.97754C3.36767 1.97754 2.92676 1.53418 2.92676 0.988281C2.92698 0.442566 3.3678 0 3.91114 0H10.0205Z' fill='white' />
+          </g>
+        </svg>
+        <span class='brand-name'>Yansu Quick Chat</span>
+      </div>
+      <div class='label' id='label'>Ask about your recent work</div>
+    </div>
+    <div class='input-row'>
+      <input id='prompt' type='text' placeholder='What do you want to know?' autofocus />
+      <button id='send' class='send-btn' disabled aria-label='Send'>↑</button>
+    </div>
+  </div>
+  <div class='suggestions'>
+    <div class='suggestions-title'>Suggestions</div>
+    <div id='list'><div class='loading'><div class='skeleton'></div><div class='skeleton'></div><div class='skeleton'></div></div></div>
+  </div>
+</div>
+<script>
+(function(){
+  const bridge = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.quickChat;
+  function send(msg) { if (bridge) bridge.postMessage(msg); }
+  const input = document.getElementById('prompt');
+  const sendBtn = document.getElementById('send');
+  const list = document.getElementById('list');
+  const label = document.getElementById('label');
+  let suggestions = [];
+  let selectedIdx = -1;
+  function render() {
+    if (suggestions.length === 0) {
+      list.innerHTML = '<div class="empty">No suggestions yet. Start working and they will appear.</div>';
+      return;
+    }
+    function escapeHTML(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    const html = suggestions.map(function(q, i) {
+      var sel = (i === selectedIdx) ? ' selected' : '';
+      var safeTitle = escapeHTML(q.title || q.prompt || 'Ask Yansu');
+      var safePrompt = escapeHTML(q.prompt || q.title || '');
+      return '<div class="suggestion' + sel + '" data-i="' + i + '" title="' + safePrompt + '">'
+           + '<span class="copy"><span class="title">' + safeTitle + '</span>'
+           + '<span class="desc">' + safePrompt + '</span></span>'
+           + '<span class="hint">Ask</span>'
+           + '</div>';
+    }).join('');
+    list.innerHTML = html;
+    list.querySelectorAll('.suggestion').forEach(el => {
+      el.addEventListener('click', () => {
+        const i = parseInt(el.getAttribute('data-i'), 10);
+        if (suggestions[i]) send({ type: 'submit', prompt: suggestions[i].prompt });
+      });
+    });
+  }
+  function setLoading() {
+    list.innerHTML = '<div class="loading"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>';
+  }
+  window.__quickChatSetSuggestions = function(items) { suggestions = items || []; selectedIdx = -1; render(); };
+  window.__quickChatSetLabel = function(text) { label.textContent = text || 'Ask about your recent work'; };
+  window.__quickChatFocus = function() { try { input.focus(); input.select(); } catch(e){} };
+  window.__quickChatLoading = setLoading;
+  input.addEventListener('input', () => { sendBtn.disabled = !input.value.trim(); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedIdx >= 0 && suggestions[selectedIdx] && !input.value.trim()) {
+        send({ type: 'submit', prompt: suggestions[selectedIdx].prompt });
+        return;
+      }
+      const v = input.value.trim();
+      if (v) send({ type: 'submit', prompt: v });
+    } else if (e.key === 'Escape') {
+      send({ type: 'close' });
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (suggestions.length === 0) return;
+      selectedIdx = (selectedIdx + 1) % suggestions.length;
+      render();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (suggestions.length === 0) return;
+      selectedIdx = selectedIdx <= 0 ? suggestions.length - 1 : selectedIdx - 1;
+      render();
+    }
+  });
+  sendBtn.addEventListener('click', () => {
+    const v = input.value.trim();
+    if (v) send({ type: 'submit', prompt: v });
+  });
+  send({ type: 'request-suggestions', bundleID: window.__quickChatBundleID || '' });
+  setTimeout(() => { try { input.focus(); } catch(e){} }, 50);
+})();
+</script>
+</body>
+</html>

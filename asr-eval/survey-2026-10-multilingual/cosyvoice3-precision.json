@@ -1,0 +1,8 @@
+{
+  "stored_tensor_bytes_by_dtype": {
+    "U32": 357826560,
+    "F16": 1038914874
+  },
+  "file": "model.safetensors",
+  "model": "CosyVoice3 8bit conversion; only selected components quantized"
+}

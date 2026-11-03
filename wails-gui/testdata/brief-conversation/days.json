@@ -1,0 +1,5 @@
+[
+ {"date":"2026-10-18","summary":"The gloves are still in the cart.","zhSummary":"手套还在购物车里。","state":"cart_left","kind":"commerce","action":"order","next":"Place the gloves order after confirming size and delivery.","zhNext":"确认尺码和配送信息后下单。"},
+ {"date":"2026-10-19","summary":"RTK is settled: MIT, bundling allowed.","zhSummary":"RTK已确定：MIT许可，允许打包。","state":"conclusion","kind":"research","action":"review","next":"Note the MIT license in the plan.","zhNext":"把MIT许可记入计划。"},
+ {"date":"2026-10-20","summary":"The launch checklist is a draft.","zhSummary":"发布清单仍是草稿。","state":"draft","kind":"document","action":"review","next":"Draft the remaining launch checks.","zhNext":"起草剩余的发布检查项。"}
+]

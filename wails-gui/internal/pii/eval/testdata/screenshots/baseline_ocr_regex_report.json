@@ -1,0 +1,270 @@
+{
+  "Categories": [
+    {
+      "Category": "account_number",
+      "TP": 9,
+      "FP": 13,
+      "FN": 0,
+      "Precision": 0.4090909090909091,
+      "Recall": 1,
+      "F1": 0.5806451612903226,
+      "Support": 9
+    },
+    {
+      "Category": "api_key",
+      "TP": 10,
+      "FP": 16,
+      "FN": 1,
+      "Precision": 0.38461538461538464,
+      "Recall": 0.9090909090909091,
+      "F1": 0.5405405405405405,
+      "Support": 11
+    },
+    {
+      "Category": "credit_card",
+      "TP": 5,
+      "FP": 2,
+      "FN": 0,
+      "Precision": 0.7142857142857143,
+      "Recall": 1,
+      "F1": 0.8333333333333333,
+      "Support": 5
+    },
+    {
+      "Category": "cvv",
+      "TP": 2,
+      "FP": 0,
+      "FN": 0,
+      "Precision": 1,
+      "Recall": 1,
+      "F1": 1,
+      "Support": 2
+    },
+    {
+      "Category": "device_id",
+      "TP": 2,
+      "FP": 0,
+      "FN": 0,
+      "Precision": 1,
+      "Recall": 1,
+      "F1": 1,
+      "Support": 2
+    },
+    {
+      "Category": "government_id",
+      "TP": 2,
+      "FP": 0,
+      "FN": 0,
+      "Precision": 1,
+      "Recall": 1,
+      "F1": 1,
+      "Support": 2
+    },
+    {
+      "Category": "license_plate",
+      "TP": 0,
+      "FP": 1,
+      "FN": 0,
+      "Precision": 0,
+      "Recall": 0,
+      "F1": 0,
+      "Support": 0
+    },
+    {
+      "Category": "one_time_password",
+      "TP": 4,
+      "FP": 2,
+      "FN": 0,
+      "Precision": 0.6666666666666666,
+      "Recall": 1,
+      "F1": 0.8,
+      "Support": 4
+    },
+    {
+      "Category": "password",
+      "TP": 6,
+      "FP": 2,
+      "FN": 2,
+      "Precision": 0.75,
+      "Recall": 0.75,
+      "F1": 0.75,
+      "Support": 8
+    },
+    {
+      "Category": "private_email",
+      "TP": 17,
+      "FP": 14,
+      "FN": 0,
+      "Precision": 0.5483870967741935,
+      "Recall": 1,
+      "F1": 0.7083333333333333,
+      "Support": 17
+    },
+    {
+      "Category": "private_link",
+      "TP": 4,
+      "FP": 0,
+      "FN": 0,
+      "Precision": 1,
+      "Recall": 1,
+      "F1": 1,
+      "Support": 4
+    },
+    {
+      "Category": "private_org",
+      "TP": 1,
+      "FP": 0,
+      "FN": 0,
+      "Precision": 1,
+      "Recall": 1,
+      "F1": 1,
+      "Support": 1
+    },
+    {
+      "Category": "private_phone",
+      "TP": 13,
+      "FP": 4,
+      "FN": 1,
+      "Precision": 0.7647058823529411,
+      "Recall": 0.9285714285714286,
+      "F1": 0.8387096774193549,
+      "Support": 14
+    },
+    {
+      "Category": "session_id",
+      "TP": 9,
+      "FP": 7,
+      "FN": 1,
+      "Precision": 0.5625,
+      "Recall": 0.9,
+      "F1": 0.6923076923076923,
+      "Support": 10
+    },
+    {
+      "Category": "street_address",
+      "TP": 3,
+      "FP": 0,
+      "FN": 1,
+      "Precision": 1,
+      "Recall": 0.75,
+      "F1": 0.8571428571428571,
+      "Support": 4
+    }
+  ],
+  "MacroAvg": {
+    "Category": "macro avg",
+    "TP": 0,
+    "FP": 0,
+    "FN": 0,
+    "Precision": 0.7200167769190541,
+    "Recall": 0.8825108225108226,
+    "F1": 0.7734008396911621,
+    "Support": 93
+  },
+  "WeightedAvg": {
+    "Category": "weighted avg",
+    "TP": 0,
+    "FP": 0,
+    "FN": 0,
+    "Precision": 0.6538080177288722,
+    "Recall": 0.9354838709677419,
+    "F1": 0.749179242649586,
+    "Support": 93
+  },
+  "MicroAvg": {
+    "Category": "micro avg",
+    "TP": 0,
+    "FP": 0,
+    "FN": 0,
+    "Precision": 0.5878378378378378,
+    "Recall": 0.9354838709677419,
+    "F1": 0.7219917012448133,
+    "Support": 93
+  },
+  "Benchmark": {
+    "PrivacyLeakRate": 0.032258064516129004,
+    "PrivacyBlockRate": 0.967741935483871,
+    "UtilityScore": 0.6081081081081081,
+    "OverallScore": 0.7468879668049794
+  },
+  "Scorecard": {
+    "CriticalLeakCount": 2,
+    "HighRiskLeakCount": 1,
+    "TargetLeakCount": 3,
+    "TargetSupport": 93,
+    "RiskWeightedSupport": 573,
+    "RiskWeightedLeakCost": 23,
+    "CriticalProtectionRate": 0.9523809523809523,
+    "HighRiskProtectionRate": 0.9803921568627451,
+    "RiskWeightedExposureRate": 0.04013961605584642,
+    "RiskWeightedProtectionScore": 0.9598603839441536,
+    "OverProtectionCount": 58,
+    "OverProtectionExtent": 0.5221296688760605,
+    "ContextLossRate": 0.01631655215237689,
+    "ContextPreservationScore": 0.9836834478476231,
+    "DecisionScore": 0.9646249967248476,
+    "ReadyForUserClaim": false,
+    "Gates": [
+      {
+        "Name": "critical_leak_count",
+        "Passed": false,
+        "Value": 2,
+        "Threshold": 0,
+        "Direction": "\u003c="
+      },
+      {
+        "Name": "risk_weighted_exposure_rate",
+        "Passed": false,
+        "Value": 0.04013961605584642,
+        "Threshold": 0.02,
+        "Direction": "\u003c="
+      },
+      {
+        "Name": "high_risk_protection_rate",
+        "Passed": true,
+        "Value": 0.9803921568627451,
+        "Threshold": 0.95,
+        "Direction": "\u003e="
+      },
+      {
+        "Name": "context_preservation_score",
+        "Passed": true,
+        "Value": 0.9836834478476231,
+        "Threshold": 0.8,
+        "Direction": "\u003e="
+      }
+    ]
+  },
+  "Performance": {
+    "SampleCount": 32,
+    "InitMs": 0,
+    "TotalDetectionMs": 11701.946792,
+    "MeanSampleMs": 365.68583725,
+    "P95SampleMs": 425.796917,
+    "MaxSampleMs": 500.498167,
+    "SamplesPerSecond": 2.734587720213931
+  },
+  "Tiers": [
+    {
+      "Tier": "Critical",
+      "BlockRate": 0.9523809523809523,
+      "Utility": 0.5714285714285714,
+      "Overall": 0.7142857142857142,
+      "Support": 42,
+      "TP": 40,
+      "FP": 30,
+      "FN": 2
+    },
+    {
+      "Tier": "High",
+      "BlockRate": 0.9803921568627451,
+      "Utility": 0.6410256410256411,
+      "Overall": 0.7751937984496123,
+      "Support": 51,
+      "TP": 50,
+      "FP": 28,
+      "FN": 1
+    }
+  ],
+  "TotalSamples": 32
+}

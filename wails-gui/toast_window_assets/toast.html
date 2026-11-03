@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* Shared brand declarations are injected by renderToastHTML. */
+  /*__BRAND_TOKENS__*/
+  :root {
+    --panel: var(--color-panel);
+    --ink: var(--color-ink);
+    --muted: var(--color-muted);
+    --border: var(--color-border);
+    --border-hover: var(--color-border-strong);
+    --close-bg: var(--color-surface-hover);
+    --close-ink: var(--color-ink);
+    --shadow:
+      0 1px 2px rgba(0, 0, 0, 0.06),
+      0 8px 22px -6px rgba(0, 0, 0, 0.16);
+    --shadow-hover:
+      0 1px 2px rgba(0, 0, 0, 0.07),
+      0 10px 26px -6px rgba(0, 0, 0, 0.22);
+    --highlight: transparent;
+  }
+
+  :root.dark {
+      --panel: var(--color-panel);
+      --ink: var(--color-ink);
+      --muted: var(--color-muted);
+      --border: var(--color-border);
+      --border-hover: var(--color-border-strong);
+      --close-bg: var(--color-surface-hover);
+      --close-ink: var(--color-ink);
+      --shadow:
+        0 1px 2px rgba(0, 0, 0, 0.40),
+        0 10px 26px -6px rgba(0, 0, 0, 0.50);
+      --shadow-hover:
+        0 1px 2px rgba(0, 0, 0, 0.45),
+        0 12px 30px -6px rgba(0, 0, 0, 0.60);
+      --highlight: rgba(255, 255, 255, 0.05);
+  }
+
+  html, body {
+    background: transparent;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: var(--ink);
+    user-select: none;
+    cursor: default;
+  }
+
+  /* Top/left padding gives the overlapping close button room to render;
+     right/bottom padding gives the card's drop shadow room to bleed.
+     Keep in sync with the geometry constants in toast_window_darwin.go. */
+  body {
+    padding: 8px 14px 20px 8px;
+  }
+
+  .toast {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 13px 15px 13px 13px;
+    box-shadow: var(--shadow), inset 0 1px 0 var(--highlight);
+    opacity: 0;
+    transform: translateX(16px) scale(0.98);
+    transition:
+      opacity 220ms cubic-bezier(0.21, 1, 0.55, 1),
+      transform 260ms cubic-bezier(0.21, 1, 0.55, 1),
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+    cursor: pointer;
+  }
+
+  .toast:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-hover), inset 0 1px 0 var(--highlight);
+  }
+
+  .toast.in {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  .toast.out {
+    opacity: 0;
+    transform: translateX(20px) scale(0.98);
+    transition: opacity 150ms ease-in, transform 150ms ease-in;
+  }
+
+  .close {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--close-bg);
+    color: var(--close-ink);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.85);
+    transition: opacity 140ms ease-out, transform 140ms ease-out;
+    padding: 0;
+  }
+
+  .toast:hover .close,
+  .close:focus {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .close svg { width: 9px; height: 9px; display: block; }
+
+  /* The app icon ships with its own squircle shape and transparent margins
+     baked in (macOS icon convention), so it renders bare — no tile behind it. */
+  .icon {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .icon.empty { display: none; }
+
+  .icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .content {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .title {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+    line-height: 1.35;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+  }
+
+  .desc {
+    margin-top: 3px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--muted);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+  }
+
+  /* The one action a notification offers, the same button the phone push
+     shows. It sits beside the text so the card keeps its height. */
+  .action {
+    flex: 0 0 auto;
+    align-self: center;
+    max-width: 96px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--color-solid-btn-bg);
+    background: var(--color-solid-btn-bg);
+    color: var(--color-solid-btn-fg);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: border-color 140ms ease, background 140ms ease;
+  }
+
+  .action:hover { opacity: 0.9; }
+  .action.empty { display: none; }
+</style>
+</head>
+<body>
+<script>
+  // The host (Go side) replaces the sentinel below with a JSON object literal
+  // containing {title, body, icon, theme} for this specific toast.
+  window.__TOAST_DATA = /*__TOAST_DATA__*/ null;
+
+  // Follow the app's selected theme (paper/onedark), not the OS appearance,
+  // so the toast always matches the Yansu window. Falls back to the system
+  // scheme only when the host didn't provide a theme. Runs before the card
+  // markup parses, so there is no flash of the wrong palette.
+  (function () {
+    var theme = (window.__TOAST_DATA && window.__TOAST_DATA.theme) || '';
+    var dark = theme === 'dark' ||
+      (theme === '' && window.matchMedia &&
+       window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.documentElement.classList.add('dark');
+  })();
+</script>
+<div class="toast" id="toast">
+  <button class="close" id="close" aria-label="Close">
+    <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+      <path d="M1.5 1.5 L8.5 8.5 M8.5 1.5 L1.5 8.5" />
+    </svg>
+  </button>
+  <div class="icon" id="icon"></div>
+  <div class="content">
+    <div class="title" id="title"></div>
+    <div class="desc" id="desc"></div>
+  </div>
+  <button class="action empty" id="action" type="button"></button>
+</div>
+<script>
+(function () {
+  function send(type, extra) {
+    try {
+      const msg = Object.assign({ type: type }, extra || {});
+      window.webkit.messageHandlers.toast.postMessage(msg);
+    } catch (e) { /* no-op in non-WKWebView contexts */ }
+  }
+
+  const data = window.__TOAST_DATA || {};
+
+  document.getElementById('title').textContent = data.title || '';
+  document.getElementById('desc').textContent  = data.body  || '';
+  if (!(data.title || '').trim() && !(data.body || '').trim()) {
+    send('failed');
+    return;
+  }
+
+  const iconEl = document.getElementById('icon');
+  if (data.icon) {
+    const img = document.createElement('img');
+    img.src = data.icon;
+    img.onerror = function () { iconEl.classList.add('empty'); };
+    iconEl.appendChild(img);
+  } else {
+    iconEl.classList.add('empty');
+  }
+
+  const toastEl = document.getElementById('toast');
+  const closeEl = document.getElementById('close');
+  const actionEl = document.getElementById('action');
+  if (data.action) {
+    actionEl.textContent = data.action;
+    actionEl.classList.remove('empty');
+    actionEl.addEventListener('click', function (e) {
+      e.stopPropagation();
+      send('action');
+    });
+  }
+
+  // Hidden WKWebViews can suspend animation frames. Signal only after the
+  // content is populated, without waiting for a frame that needs a visible
+  // window. The entrance animation starts after the host reveals the panel.
+  send('ready');
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      toastEl.classList.add('in');
+    });
+  });
+
+  closeEl.addEventListener('click', function (e) {
+    e.stopPropagation();
+    send('close');
+  });
+
+  toastEl.addEventListener('click', function () { send('click'); });
+  toastEl.addEventListener('mouseenter', function () { send('pause'); });
+  toastEl.addEventListener('mouseleave', function () { send('resume'); });
+
+  // Host will call window.__toastFadeOut() before closing the window so the
+  // exit transition plays; after 160ms the host actually closes the window.
+  window.__toastFadeOut = function () {
+    toastEl.classList.remove('in');
+    toastEl.classList.add('out');
+  };
+})();
+</script>
+</body>
+</html>

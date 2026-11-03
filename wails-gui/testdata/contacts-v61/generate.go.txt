@@ -1,0 +1,82 @@
+// Run against storage from 7ca7cd10c65607ab5cd86161f115e30a6acc6d03 (schema 61),
+// not the current package. See README.md for reproduction commands.
+package main
+
+import (
+	"compress/gzip"
+	"context"
+	"io"
+	"os"
+	"path/filepath"
+
+	"wails-gui/storage"
+)
+
+func main() {
+	dir, err := os.MkdirTemp("", "contacts-v61-")
+	check(err)
+	defer os.RemoveAll(dir)
+	path := filepath.Join(dir, "state.db")
+	st, err := storage.New(path)
+	check(err)
+	ctx := context.Background()
+	add := func(id, name, source, ref string, handles ...string) {
+		createdFrom := source
+		if createdFrom == "" {
+			createdFrom = "manual"
+		}
+		_, err := st.CreatePrincipal(ctx, storage.PrincipalRow{
+			ID: id, Kind: storage.PrincipalKindContact, DisplayName: name,
+			CreatedFrom: createdFrom, Source: source, ExternalRef: ref,
+			Notes: "Keep this note", Aliases: []string{"Keep " + name},
+		})
+		check(err)
+		for i := 0; i < len(handles); i += 2 {
+			_, err := st.BindAppHandle(ctx, id, handles[i], handles[i+1], handles[i+1])
+			check(err)
+		}
+	}
+	add("legacy", "Ana", "system_contacts", "legacy-card",
+		"contacts", "legacy-card", "imessage", "+14155550101", "email", "ana@example.com")
+	add("curated", "My chosen name", "", "",
+		"imessage", "+14155550103", "email", "curated@example.com", "contacts", "curated-card")
+	add("shared", "Shared", "system_contacts", "shared-a",
+		"contacts", "shared-a", "imessage", "+14155550104", "email", "shared@example.com", "contacts", "shared-b")
+	add("mixed", "Mixed", "system_contacts", "mixed-card",
+		"contacts", "mixed-card", "imessage", "+14155550105", "email", "mixed@example.com", "vcard", "file-card")
+	add("edited", "Edited", "system_contacts", "edited-card",
+		"contacts", "edited-card", "imessage", "+14155550106", "email", "edited@example.com",
+		"imessage", "+14155550107", "email", "personal@example.com", "wechat", "curated-wechat")
+	// The v61 editor allowed these shapes without changing import provenance.
+	for _, h := range []struct{ app, id, display string }{
+		{"imessage", "", "+14155550108"},
+		{"imessage", "+14155550109", ""},
+		{"imessage", "+14155550110", "+14155550111"},
+		{"email", "", "display-only@example.com"},
+		{"email", "id-only@example.com", ""},
+		{"email", "manual-id@example.com", "manual-display@example.com"},
+		{"contacts", "", "manual-display-card"},
+		{"contacts", "manual-id-card", ""},
+		{"contacts", "manual-other-card", "manual-card-label"},
+	} {
+		_, err := st.BindAppHandle(ctx, "edited", h.app, h.id, h.display)
+		check(err)
+	}
+	check(st.Close())
+	in, err := os.Open(path)
+	check(err)
+	defer in.Close()
+	out, err := os.Create(os.Args[1])
+	check(err)
+	gz := gzip.NewWriter(out)
+	_, err = io.Copy(gz, in)
+	check(err)
+	check(gz.Close())
+	check(out.Close())
+}
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
+}

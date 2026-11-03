@@ -1,0 +1,1937 @@
+@import "tailwindcss";
+
+@source "../index.html";
+@source "./**/*.{js,ts,jsx,tsx}";
+
+@custom-variant dark (&:is(.dark *, [data-theme='onedark'] *));
+
+/*
+   Wails WebView may report `(hover: none)` in some desktop environments.
+   Tailwind v4 gates `hover`/`group-hover` utilities behind `@media (hover: hover)`,
+   which makes "show-on-hover" controls permanently hidden.
+   Override the hover variant to use plain :hover without the media query.
+*/
+@custom-variant hover (&:hover);
+
+@theme {
+    /* Brand violet: violet is Isoform, copper waits on you, ink is the user.
+       Keep values in step with docs/violet/ds/tokens.css. */
+    --color-background: #f6f6f9;
+    --color-background-accent: #f1f1f6;
+    --color-panel: #ffffff;
+    --color-panel-warm: #f0f1f6;
+    --color-panel-code: #e9eaf1;
+    --color-panel-result: #ffffff;
+    --color-panel-user: #ebecf2;
+    --color-ink: #16161d;
+    --color-muted: #5d5f6e;
+    --color-accent: #4f5ed8;
+    --color-accent-light: rgba(89, 104, 223, 0.1);
+    --color-accent-2: #4f5ed8;
+    --color-accent-2-light: rgba(89, 104, 223, 0.1);
+    --color-border: #e2e3ec;
+    --color-border-light: #ececf2;
+    --color-border-strong: #d4d6e2;
+    --color-border-focus: #9ea7f0;
+    --color-selection-bg: #d5d9fa;
+    --color-selection-code-fg: #16161d;
+    --color-app-sage-bg: #eef1ea;
+    --color-app-sage-border: #d8ded0;
+    --color-app-sage-text: #647155;
+    --color-app-teal-bg: #ebf1f0;
+    --color-app-teal-border: #d1ddda;
+    --color-app-teal-text: #5a726d;
+    --color-app-amber-bg: #f3eee5;
+    --color-app-amber-border: #e0d6c5;
+    --color-app-amber-text: #7c6952;
+    --color-app-rose-bg: #f3ebea;
+    --color-app-rose-border: #e2d1cf;
+    --color-app-rose-text: #806466;
+    --color-app-indigo-bg: #edf0f5;
+    --color-app-indigo-border: #d5dbe6;
+    --color-app-indigo-text: #606d8b;
+    --color-app-plum-bg: #f1ecf3;
+    --color-app-plum-border: #ddd2e1;
+    --color-app-plum-text: #776586;
+    --color-app-stone-bg: #efedea;
+    --color-app-stone-border: #dcd6d0;
+    --color-app-stone-text: #736a62;
+    --color-error: #a12538;
+    --color-error-bg: rgba(161, 37, 56, 0.12);
+    --color-error-border: rgba(161, 37, 56, 0.22);
+    --color-error-strong: rgba(161, 37, 56, 0.6);
+    --color-success: #2a7a44;
+    --color-success-bg: rgba(42, 122, 68, 0.12);
+    --color-success-border: rgba(42, 122, 68, 0.22);
+    --color-waiting-badge: var(--color-warning);
+    --color-waiting-badge-fg: var(--color-background);
+    --color-warning: #9b4f1d;
+    --color-warning-bg: rgba(155, 79, 29, 0.12);
+    --color-warning-border: rgba(155, 79, 29, 0.22);
+    --color-info: #4f5ed8;
+    --color-info-bg: rgba(89, 104, 223, 0.12);
+    --color-info-border: rgba(89, 104, 223, 0.22);
+    --color-code-bg: #15151c;
+    --color-code-fg: #e3e4ee;
+    --color-seaweed: #52b78c;
+    --color-seaweed-deep: #41a37a;
+    --color-seaweed-light: #7fcca8;
+    --color-seaweed-foam: #b8e4ce;
+    --color-seaweed-olive: #64c19a;
+    --color-automation: #4f5ed8;
+    --color-automation-deep: #3c49b8;
+    --color-automation-light: #aab3f5;
+    --color-extractor: #c08a2e;
+    --color-claude: #d97757;
+    --color-solid: #5968df;
+    --color-solid-fg: #ffffff;
+    --color-subtle: #6f7185;
+    --color-faint: #b4b6c4;
+    --color-label: #6f7185;
+    --color-dropdown-label: #5d5f6e;
+    --color-welcome-sub: #5d5f6e;
+    --color-heading-strong: #16161d;
+    --color-icon-subtle: #424453;
+    --color-border-subtle: #e8e9f0;
+    --color-border-divider: #e2e3ec;
+    --color-border-input: #e2e3ec;
+    --color-border-emphasis: #d4d6e2;
+    --color-border-strong-alt: #d4d6e2;
+    --color-card-warm: #ffffff;
+    --color-card-cool: #ffffff;
+    --color-card-warm-alt: #f6f6f9;
+    --color-card-cool-alt: #ffffff;
+    --color-card-placeholder: #f0f1f6;
+    --color-card-progress: #e2e3ec;
+    --color-sample-border: rgba(89, 104, 223, 0.35);
+    --color-sample-text: #4f5ed8;
+    --color-button-solid: #16161d;
+    --color-overlay-ink-25: rgba(0, 0, 0, 0.25);
+    --color-card-edge: #ffffff;
+    --color-surface-hover: #f0f1f6;
+    --color-surface-active: #e9eaf1;
+    --color-active-row-bg: #e9eaf1;
+    --color-sample-badge-bg: #f0f1f6;
+    --color-solid-btn-bg: #5968df;
+    --color-solid-btn-fg: #ffffff;
+    --color-btn-connect-bg: #f0f1f6;
+    --color-composer-bg: #ffffff;
+    --color-composer-border: #d4d6e2;
+    --color-chip-bg: #f0f1f6;
+    --color-chip-border: #d4d6e2;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px -8px rgba(0, 0, 0, 0.16);
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-composer-focus: 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+    --shadow-button: none;
+    --shadow-button-hover: none;
+    --shadow-accent: none;
+    --shadow-solid-btn: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable", "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-serif: "Palatino", "Book Antiqua", "Georgia", serif;
+    --font-mono: "SF Mono", "SFMono-Regular", "Monaco", "JetBrains Mono", "Consolas", monospace;
+    --text-heading-1: 22px;
+    --text-heading-2: 18px;
+    --text-heading-3: 16px;
+    --text-body: 14px;
+    --text-body-sm: 13px;
+    --text-caption: 12px;
+    --text-label: 11px;
+    --text-micro: 10px;
+    --text-card-title: 32px;
+    --spacing: 0.25rem;
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+    --radius-full: 9999px;
+
+    --animate-rise-in: rise-in 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    --animate-pulse-slow: pulse-slow 1.5s ease infinite;
+    --animate-breathe: breathe 1.6s ease-in-out infinite;
+    --animate-fade-in: fade-in 120ms cubic-bezier(0.16, 1, 0.3, 1);
+
+    --animate-shimmer-sweep: shimmer-sweep 2.5s ease-in-out infinite;
+    --animate-handoff-shimmer: handoff-shimmer 2.2s ease-in-out infinite;
+
+    --transition-fast: 120ms ease;
+    --transition-normal: 200ms ease;
+    --transition-slow: 320ms ease;
+
+    /* ── Motion design tokens ──
+       Conservative motion language shared across the app (sidebar hover,
+       command palette entrance, dialog overlays). Use the `fast` duration
+       for hover/state swaps, `base` for element entrances, and `slow` only
+       for larger surface transitions. The `ease-out` curve lands with a
+       gentle decel that matches the reference design; `ease-in-out` is
+       reserved for reversible motion (open/close on the same element). */
+    --motion-duration-fast: 120ms;
+    --motion-duration-base: 180ms;
+    --motion-duration-slow: 260ms;
+    --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    /* Gentle spring overshoot (~10%) for playful entrances. Reserve for
+       small elements popping in (chips, badges, pickers). Too bouncy for
+       large surfaces — use --motion-ease-out there. */
+    --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --color-copper: #b4642d;
+    --color-automation-bg: rgba(89, 104, 223, 0.12);
+    --color-automation-border: rgba(89, 104, 223, 0.22);
+}
+
+/* The writing dot on Your portrait. */
+@keyframes portrait-breathe {
+    50% {
+        opacity: 0.35;
+        transform: scale(0.8);
+    }
+}
+
+/* After an answer (answer feedback section 12). A confirmed phrase's dotted
+   underline fades while a solid one draws left to right; a phrase that wraps
+   draws on every line at once (box-decoration-break: clone). --draw-delay
+   staggers the phrases. */
+.answer-underline-draw {
+    text-decoration-color: transparent;
+    transition: text-decoration-color 340ms cubic-bezier(0.3, 0.7, 0.3, 1);
+    background-image: linear-gradient(color-mix(in srgb, var(--color-accent) 80%, transparent), color-mix(in srgb, var(--color-accent) 80%, transparent));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 1.5px;
+    /* Inline padding moves the drawn line down to the underline's 4px
+       offset without changing the line height. */
+    padding-bottom: 3px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    animation: answer-underline-draw 340ms cubic-bezier(0.3, 0.7, 0.3, 1) var(--draw-delay, 120ms) forwards;
+}
+
+@keyframes answer-underline-draw {
+    to {
+        background-size: 100% 1.5px;
+    }
+}
+
+/* The result line fades up 3px. */
+@keyframes answer-line-in {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+}
+
+/* A card or person landing: violet at 24% that holds briefly and fades to
+   nothing over 1.8s. An inset shadow paints over the card's own background
+   and under its content, so the card keeps its surface. */
+@keyframes answer-wash {
+    0%,
+    25% {
+        box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--color-accent) 24%, transparent);
+    }
+    100% {
+        box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--color-accent) 0%, transparent);
+    }
+}
+
+.answer-line {
+    animation: answer-line-in 180ms ease-out;
+}
+
+.answer-wash {
+    animation: answer-wash 1.8s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .answer-underline-draw {
+        animation: none;
+        transition: none;
+        background-size: 100% 1.5px;
+    }
+
+    .answer-line,
+    .answer-wash {
+        animation: none;
+    }
+}
+
+@keyframes rise-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes step-enter {
+    from {
+        opacity: 0;
+        transform: translateX(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes step-enter-back {
+    from {
+        opacity: 0;
+        transform: translateX(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse-slow {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* Equalizer bars shown on the chat "read aloud" button while a reply is being
+   spoken. Four bars rise and fall out of phase for a gentle "now playing"
+   motion (matches the speaker-with-animation pattern, not a static stop icon). */
+@keyframes tts-bar {
+    0%,
+    100% {
+        transform: scaleY(0.35);
+    }
+    50% {
+        transform: scaleY(1);
+    }
+}
+
+.tts-bars {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 0.875rem; /* matches size-3.5 icons */
+}
+
+.tts-bars > span {
+    width: 2px;
+    height: 100%;
+    border-radius: 9999px;
+    background: currentColor;
+    transform-origin: center;
+    animation: tts-bar 0.9s ease-in-out infinite;
+}
+
+.tts-bars > span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.tts-bars > span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.tts-bars > span:nth-child(4) {
+    animation-delay: 0.45s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tts-bars > span {
+        animation: none;
+        transform: scaleY(0.7);
+    }
+}
+
+/* Antivirus-style shield used in the Activity privacy notice.
+   Quiet, on-brand motion: a soft accent ring pulses outward while a
+   scan beam sweeps the shield interior, signalling active redaction
+   without resorting to neon glow or jittery effects. */
+.redaction-shield-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.redaction-shield-svg {
+    position: relative;
+    z-index: 1;
+    color: var(--color-automation-deep);
+    animation: redaction-shield-breathe 3.2s ease-in-out infinite;
+}
+
+.redaction-shield-ring {
+    position: absolute;
+    inset: -2px;
+    border-radius: 9999px;
+    background: radial-gradient(
+        circle,
+        color-mix(in srgb, var(--color-automation) 38%, transparent) 0%,
+        transparent 65%
+    );
+    animation: redaction-shield-ring 2.6s ease-out infinite;
+    pointer-events: none;
+}
+
+.redaction-shield-beam {
+    fill: color-mix(in srgb, var(--color-automation) 75%, transparent);
+    animation: redaction-shield-beam 2.6s ease-in-out infinite;
+    transform-box: fill-box;
+}
+
+@keyframes redaction-shield-breathe {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.06);
+    }
+}
+
+@keyframes redaction-shield-ring {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.55;
+    }
+    80% {
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1.7);
+        opacity: 0;
+    }
+}
+
+@keyframes redaction-shield-beam {
+    0% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+    12% {
+        opacity: 1;
+    }
+    78% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+}
+
+/* One-shot keyword redaction. React drives the phase classes so each
+   keyword steps through them in sequence (visible -> flashing ->
+   masking -> masked). Hover on a settled keyword temporarily reveals
+   the original text. CSS only owns the rendering of each phase. */
+.redaction-keyword {
+    position: relative;
+    display: inline-grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+    white-space: nowrap;
+    vertical-align: baseline;
+}
+
+.redaction-keyword::before {
+    content: "";
+    position: absolute;
+    inset: -2px -3px;
+    border: 1px dotted var(--color-automation-deep);
+    border-radius: 3px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.redaction-keyword-flashing::before {
+    animation: redaction-border-flash 0.7s ease-in-out 1;
+}
+
+.redaction-keyword-shadow,
+.redaction-keyword-text {
+    grid-area: 1 / 1;
+}
+
+.redaction-keyword-shadow {
+    pointer-events: none;
+    user-select: none;
+    filter: blur(2.5px);
+    /* Hidden by default: fully clipped from the right edge. As the
+       masking phase begins, the right inset shrinks from 100% -> 0%,
+       so the blurred copy reveals from left to right exactly in step
+       with the sharp text's clip-path retreating in the same
+       direction. */
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 0.5s ease-in-out;
+    will-change: clip-path;
+}
+
+.redaction-keyword-masking .redaction-keyword-shadow,
+.redaction-keyword-masked .redaction-keyword-shadow {
+    clip-path: inset(0 0 0 0);
+}
+
+.redaction-keyword-text {
+    clip-path: inset(0 0 0 0);
+    transition: clip-path 0.5s ease-in-out;
+    will-change: clip-path;
+}
+
+.redaction-keyword-masking .redaction-keyword-text,
+.redaction-keyword-masked .redaction-keyword-text {
+    clip-path: inset(0 0 0 100%);
+}
+
+/* Hover override has to come after the masked rules so it wins at
+   equal specificity. Both layers swap clip-path on the same 0.2s
+   curve so the reveal stays in lockstep. */
+.redaction-keyword:hover .redaction-keyword-text {
+    clip-path: inset(0 0 0 0);
+    transition: clip-path 0.2s ease;
+}
+
+.redaction-keyword:hover .redaction-keyword-shadow {
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 0.2s ease;
+}
+
+@keyframes redaction-border-flash {
+    0%,
+    20%,
+    40%,
+    60%,
+    100% {
+        opacity: 0;
+    }
+    10%,
+    30%,
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* One-shot locate ring for Activities-outline jumps: after the sidebar
+   scrolls a card into view, the card breathes once — a hairline ink ring
+   plus a soft halo bloom in as the scroll lands, the halo dissipates while
+   the hairline lingers, then everything dissolves. Neutral ink rather than
+   an accent hue — matches the chrome's near-monochrome selection language.
+   Per-segment easing: swift bloom (ease-out), long unhurried dissolve. */
+@keyframes activity-card-locate {
+    0% {
+        box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--color-ink) 0%, transparent),
+            0 0 0 0 color-mix(in srgb, var(--color-ink) 0%, transparent);
+        animation-timing-function: var(--motion-ease-out);
+    }
+    18% {
+        box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--color-ink) 40%, transparent),
+            0 0 26px 1px color-mix(in srgb, var(--color-ink) 9%, transparent);
+        animation-timing-function: var(--motion-ease-in-out);
+    }
+    58% {
+        box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--color-ink) 30%, transparent),
+            0 0 14px 0 color-mix(in srgb, var(--color-ink) 4%, transparent);
+        animation-timing-function: var(--motion-ease-in-out);
+    }
+    100% {
+        box-shadow:
+            0 0 0 1px color-mix(in srgb, var(--color-ink) 0%, transparent),
+            0 0 0 0 color-mix(in srgb, var(--color-ink) 0%, transparent);
+    }
+}
+
+/* Reduced-motion variant: no blooming halo, just a steady hairline ring
+   that crossfades away — still tells the user which card was targeted. */
+@keyframes activity-card-locate-reduced {
+    0%,
+    55% {
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-ink) 32%, transparent);
+    }
+    100% {
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-ink) 0%, transparent);
+    }
+}
+
+.activity-card-locate {
+    /* Wrapper hugs the card exactly, so mirroring the card's rounded-xl
+       keeps the ring flush with its corners. */
+    border-radius: 0.75rem;
+    animation: activity-card-locate 1.4s linear both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .activity-card-locate {
+        animation: activity-card-locate-reduced 1.2s ease both;
+    }
+}
+
+@keyframes onboarding-demo-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes onboarding-demo-row-in {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes onboarding-demo-scan {
+    from {
+        opacity: 0.55;
+        transform: scaleX(0);
+    }
+    to {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+}
+
+@keyframes onboarding-demo-card-pop {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes onboarding-observed-tap {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    45% {
+        opacity: 0.72;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(-1px);
+    }
+}
+
+@keyframes onboarding-flow-dot {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -28px) scale(0.75);
+    }
+    18% {
+        opacity: 0.85;
+    }
+    68% {
+        opacity: 0.85;
+        transform: translate(-50%, 26px) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, 30px) scale(0.9);
+    }
+}
+
+@keyframes onboarding-arrow-nudge {
+    0%,
+    100% {
+        opacity: 0.76;
+        transform: translateY(0);
+    }
+    55% {
+        opacity: 1;
+        transform: translateY(4px);
+    }
+}
+
+@keyframes onboarding-output-tap {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    55% {
+        transform: translateY(-3px) scale(1.01);
+        opacity: 0.96;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes onboarding-badge-tap {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    55% {
+        opacity: 0.82;
+        transform: translateY(-1px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@keyframes shimmer-sweep {
+    0% {
+        transform: translateX(-100%) rotate(15deg);
+    }
+    100% {
+        transform: translateX(100%) rotate(15deg);
+    }
+}
+
+/* Handoff "running" indicator: a subtle gradient band sweeps across the
+   row label text, making it visibly alive without adding chrome. The
+   gradient moves between the resting label colour and the brand accent
+   so the row reads as "working" without screaming for attention. */
+@keyframes handoff-shimmer {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+.handoff-shimmer-text {
+    background-image: linear-gradient(
+        90deg,
+        var(--color-label) 0%,
+        var(--color-accent) 50%,
+        var(--color-label) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: var(--animate-handoff-shimmer);
+}
+
+/* Processing-block "Working" tail shimmer. A gentle muted-to-ink-and-back
+   colour cycle on the label and timer (with a matching one on the separator
+   dot) reads as "alive" while keeping the footer subtle. Deliberately a
+   colour cycle rather than the handoff variant's background-clip:text
+   gradient sweep: clipped transparent text renders blank in this footer's
+   element context, so animating real colours keeps it bulletproof. All three
+   share the same 2.2s timing, so the whole "Working / dot / timer" run
+   shimmers in sync. */
+@keyframes working-shimmer {
+    0%,
+    100% {
+        color: var(--color-muted);
+    }
+    50% {
+        color: var(--color-ink);
+    }
+}
+
+.working-shimmer-text {
+    color: var(--color-muted);
+    animation: working-shimmer 2.2s ease-in-out infinite;
+}
+
+@keyframes working-shimmer-dot {
+    0%,
+    100% {
+        background-color: var(--color-muted);
+    }
+    50% {
+        background-color: var(--color-ink);
+    }
+}
+
+.working-shimmer-dot {
+    background-color: var(--color-muted);
+    animation: working-shimmer-dot 2.2s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+    0% {
+        background-position: 0% center;
+    }
+    50% {
+        background-position: 100% center;
+    }
+    100% {
+        background-position: 0% center;
+    }
+}
+
+@keyframes breathe {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.5);
+    }
+}
+
+/* Three-dot cycling ellipsis used by inline "running" labels.
+   Each dot fades in 200ms after the previous one, so the trailing
+   "..." appears to grow and reset on a 1.2s loop. The keyframe is
+   shared by three spans with staggered animation-delay values. */
+@keyframes ellipsis-dot {
+    0%,
+    20% {
+        opacity: 0;
+    }
+    50%,
+    100% {
+        opacity: 1;
+    }
+}
+
+/* ── TypingIndicator: ink-sheen ellipsis ──
+   One element, three dots carved out by a repeating circular mask. The dots
+   themselves are static faint ink; the only motion is a deeper-ink sheen
+   flowing through them left-to-right, then resting a beat before the next
+   pass. No blinking, no bouncing — light moving through still ink. Both
+   gradient stops derive from `--color-ink` so the effect holds in dark
+   themes. */
+.typing-ink-dots {
+    --tid-dot: 6px;
+    --tid-gap: 4px;
+    width: calc(var(--tid-dot) * 3 + var(--tid-gap) * 2);
+    height: var(--tid-dot);
+    background-image: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--color-ink) 24%, transparent) 0% 36%,
+        color-mix(in srgb, var(--color-ink) 85%, transparent) 50%,
+        color-mix(in srgb, var(--color-ink) 24%, transparent) 64% 100%
+    );
+    background-size: 300% 100%;
+    background-repeat: no-repeat;
+    -webkit-mask-image: radial-gradient(
+        circle at calc(var(--tid-dot) / 2) 50%,
+        #000 calc(var(--tid-dot) / 2 - 0.5px),
+        transparent calc(var(--tid-dot) / 2)
+    );
+    mask-image: radial-gradient(
+        circle at calc(var(--tid-dot) / 2) 50%,
+        #000 calc(var(--tid-dot) / 2 - 0.5px),
+        transparent calc(var(--tid-dot) / 2)
+    );
+    -webkit-mask-size: calc(var(--tid-dot) + var(--tid-gap)) 100%;
+    mask-size: calc(var(--tid-dot) + var(--tid-gap)) 100%;
+    -webkit-mask-repeat: repeat-x;
+    mask-repeat: repeat-x;
+    animation: typing-ink-sweep 2s ease-in-out infinite;
+}
+
+/* Background is 3x the element width with the sheen at its center; sliding
+   background-position 100% -> 0% carries the sheen through the dots
+   left-to-right. Both gradient ends are the same faint ink, so the hold
+   from 60% onward (and the loop restart) is invisible — just still dots. */
+@keyframes typing-ink-sweep {
+    0% {
+        background-position: 100% 0;
+    }
+    60%,
+    100% {
+        background-position: 0% 0;
+    }
+}
+
+/* Orbiting particle via pseudo-element — full circle around an indicator
+   gem. Used by the automation indicator's orbit ring. */
+@keyframes automation-orbit {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Automation indicator running animations ── */
+
+.automation-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+}
+
+.automation-orbit-ring {
+    position: absolute;
+    inset: -1px;
+    border-radius: 50%;
+    animation: automation-orbit 2.4s linear infinite;
+}
+.automation-orbit-ring::after {
+    content: "";
+    position: absolute;
+    width: 1.5px;
+    height: 1.5px;
+    border-radius: 50%;
+    top: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: currentColor;
+    box-shadow: 0 0 3px currentColor;
+}
+
+@keyframes automation-second-hand {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes automation-glow {
+    0%,
+    100% {
+        filter: drop-shadow(
+                0 0 2px
+                    color-mix(in srgb, var(--color-automation) 40%, transparent)
+            )
+            drop-shadow(
+                0 0 4px
+                    color-mix(
+                        in srgb,
+                        var(--color-automation-light) 15%,
+                        transparent
+                    )
+            );
+    }
+    50% {
+        filter: drop-shadow(
+                0 0 4px
+                    color-mix(in srgb, var(--color-automation) 65%, transparent)
+            )
+            drop-shadow(
+                0 0 8px
+                    color-mix(
+                        in srgb,
+                        var(--color-automation-light) 30%,
+                        transparent
+                    )
+            );
+    }
+}
+
+/* Brand violet dark. */
+:root[data-theme="onedark"] {
+    --color-background: #121217;
+    --color-background-accent: #15151b;
+    --color-panel: #1a1a21;
+    --color-panel-warm: #1f1f27;
+    --color-panel-code: #0e0e13;
+    --color-panel-result: #1f1f27;
+    --color-panel-user: #26262f;
+    --color-ink: #ececf2;
+    --color-muted: #a6a8b8;
+    --color-accent: #7a8aff;
+    --color-accent-light: rgba(122, 138, 255, 0.14);
+    --color-accent-2: #7a8aff;
+    --color-accent-2-light: rgba(122, 138, 255, 0.14);
+    --color-border: #2a2b35;
+    --color-border-light: #212129;
+    --color-border-strong: #353746;
+    --color-border-focus: #4a52a0;
+    --color-selection-bg: #333a7a;
+    --color-selection-code-fg: var(--color-code-fg);
+    --color-app-sage-bg: #14201a;
+    --color-app-sage-border: #1f2f26;
+    --color-app-sage-text: #8fb89c;
+    --color-app-teal-bg: #0f1e20;
+    --color-app-teal-border: #1d2e30;
+    --color-app-teal-text: #8db0b0;
+    --color-app-amber-bg: #1f1a14;
+    --color-app-amber-border: #2f281d;
+    --color-app-amber-text: #c4a87a;
+    --color-app-rose-bg: #1f1617;
+    --color-app-rose-border: #2e2224;
+    --color-app-rose-text: #c49096;
+    --color-app-indigo-bg: #131720;
+    --color-app-indigo-border: #222838;
+    --color-app-indigo-text: #98a9d1;
+    --color-app-plum-bg: #1a151e;
+    --color-app-plum-border: #2b2432;
+    --color-app-plum-text: #ab95c1;
+    --color-app-stone-bg: #181716;
+    --color-app-stone-border: #272524;
+    --color-app-stone-text: #9d948b;
+    --color-error: #f07380;
+    --color-error-bg: rgba(240, 115, 128, 0.16);
+    --color-error-border: rgba(240, 115, 128, 0.3);
+    --color-error-strong: rgba(240, 115, 128, 0.6);
+    --color-success: #62c98d;
+    --color-success-bg: rgba(98, 201, 141, 0.16);
+    --color-success-border: rgba(98, 201, 141, 0.3);
+    --color-waiting-badge: var(--color-warning);
+    --color-warning: #e8a066;
+    --color-warning-bg: rgba(232, 160, 102, 0.16);
+    --color-warning-border: rgba(232, 160, 102, 0.3);
+    --color-info: #7a8aff;
+    --color-info-bg: rgba(122, 138, 255, 0.16);
+    --color-info-border: rgba(122, 138, 255, 0.3);
+    --color-code-bg: #0e0e13;
+    --color-code-fg: #e3e4ee;
+    --color-seaweed: #52b78c;
+    --color-seaweed-deep: #41a37a;
+    --color-seaweed-light: #7fcca8;
+    --color-seaweed-foam: #b8e4ce;
+    --color-seaweed-olive: #64c19a;
+    --color-automation: #7a8aff;
+    --color-automation-deep: #5c6be6;
+    --color-automation-light: #b3bbff;
+    --color-extractor: #d9a24a;
+    --color-claude: #e08a6c;
+    --color-solid: #7a8aff;
+    --color-solid-fg: #101016;
+    --color-subtle: #868899;
+    --color-faint: #4f5162;
+    --color-label: #868899;
+    --color-dropdown-label: #a6a8b8;
+    --color-welcome-sub: #a6a8b8;
+    --color-heading-strong: #ececf2;
+    --color-icon-subtle: #babcca;
+    --color-border-subtle: #23232c;
+    --color-border-divider: #2a2b35;
+    --color-border-input: #2a2b35;
+    --color-border-emphasis: #353746;
+    --color-border-strong-alt: #353746;
+    --color-card-warm: #1a1a21;
+    --color-card-cool: #1a1a21;
+    --color-card-warm-alt: #1f1f27;
+    --color-card-cool-alt: #26262f;
+    --color-card-placeholder: #15151b;
+    --color-card-progress: #353746;
+    --color-sample-border: rgba(122, 138, 255, 0.4);
+    --color-sample-text: #7a8aff;
+    --color-button-solid: #ececf2;
+    --color-overlay-ink-25: rgba(255, 255, 255, 0.55);
+    --color-card-edge: #24242e;
+    --color-surface-hover: #1f1f27;
+    --color-surface-active: #24242e;
+    --color-active-row-bg: #24242e;
+    --color-sample-badge-bg: #1f1f27;
+    --color-solid-btn-bg: #7a8aff;
+    --color-solid-btn-fg: #101016;
+    --color-btn-connect-bg: #1f1f27;
+    --color-composer-bg: #1a1a21;
+    --color-composer-border: #353746;
+    --color-chip-bg: #1f1f27;
+    --color-chip-border: #353746;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -8px rgba(0, 0, 0, 0.7);
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-composer-focus: 0 2px 8px -2px rgba(0, 0, 0, 0.6);
+    --shadow-button: none;
+    --shadow-button-hover: none;
+    --shadow-accent: none;
+    --shadow-solid-btn: none;
+    --color-copper: #c9733a;
+    --color-automation-bg: rgba(122, 138, 255, 0.16);
+    --color-automation-border: rgba(122, 138, 255, 0.3);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* Browsers and Tailwind preflight default <button> to `cursor: default`, which
+   makes interactive buttons feel dead on hover. Force a pointer cursor on every
+   enabled button (and role=button) so we don't have to remember `cursor-pointer`
+   on each call site. Disabled buttons keep `not-allowed` via the disabled:* utility. */
+button:not(:disabled):not([aria-disabled="true"]),
+[role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+}
+
+/* ── Form-control focus baseline ──
+   Wails on Windows uses WebView2 (Chromium), which paints the OS-default
+   focus ring on any <input>/<textarea>/<select> that doesn't explicitly
+   override `outline` — including the orange/yellow Windows system accent
+   on some setups. Force a quiet, theme-neutral baseline so any form
+   control that forgets `outline-none` / `focus:ring-…` still picks up a
+   restrained gray edge instead of the OS color. The look matches the
+   composer's understated focus treatment (border darkens, no halo) — no
+   blue ring, no accent halo. Lives in `@layer base` so per-component
+   Tailwind utilities (e.g. `outline-none`, custom `focus:ring-*`) always
+   win without an `!important`.
+   `accent-color` covers the same concern for native checked-state UI
+   (checkbox/radio/range/progress), which Chromium also tints from the
+   system accent. */
+@layer base {
+    :root {
+        accent-color: var(--color-accent-2);
+    }
+
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible {
+        outline: 1px solid var(--color-border-focus);
+        outline-offset: 0;
+    }
+}
+
+html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+/* Text selection stays quiet and cool. Per-theme values live in the
+   token blocks (--color-selection-bg) alongside the rest of the palette. */
+::selection {
+    background: var(--color-selection-bg);
+    color: inherit;
+}
+
+/* Code blocks keep their own (dark-on-light-theme) surface, so inherited
+   light code text would vanish on the light selection wash — give it an
+   explicit per-theme foreground instead. */
+pre::selection,
+pre ::selection,
+code::selection,
+code ::selection {
+    color: var(--color-selection-code-fg);
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    /* Antialiased (not subpixel) smoothing app-wide: strokes render a hair
+       lighter and cleaner on WebKit, which is most of the difference between
+       "heavy web text" and refined native-feeling text. */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: var(--color-ink);
+    background: var(--color-background);
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Allow text selection in inputs, textareas, code blocks, and markdown content */
+input,
+textarea,
+[contenteditable="true"],
+pre,
+code,
+.prose {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Window drag for page headers and the empty space above them. Wails moves
+   the window when the element under the pointer computes
+   --wails-draggable: drag, and the property inherits, so every control inside
+   the region is turned back to no-drag here: a click on it stays a click. */
+.window-drag {
+    --wails-draggable: drag;
+}
+.window-drag
+    :is(
+        a,
+        button,
+        input,
+        textarea,
+        select,
+        summary,
+        label,
+        [role="button"],
+        [role="link"],
+        [contenteditable="true"]
+    ) {
+    --wails-draggable: no-drag;
+}
+
+/* Sidebar scrollbar — use standard properties to preserve native overlay scrollbar on macOS.
+   ::-webkit-scrollbar pseudo-elements force classic (space-taking) scrollbars,
+   causing layout shift when content becomes scrollable. */
+.sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-ink) 10%, transparent)
+        transparent;
+}
+
+.sidebar-filter-pills {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.sidebar-filter-pills::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Sidebar motion polish ──
+   Smooth hover/active state swaps on nav rows without adding animation
+   to item mount. Paired with the existing `transition-colors` utility
+   already on the rows; this just layers in a softer curve + duration so
+   arrow-key navigation feels continuous rather than instant. */
+.sidebar-row {
+    transition:
+        background-color var(--motion-duration-fast) var(--motion-ease-out),
+        color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+/* Active-session pill: fade in the highlight on first mount so that
+   switching sessions doesn't flash the pill instantly. */
+@keyframes sidebar-active-in {
+    from {
+        background-color: transparent;
+    }
+    to {
+        background-color: color-mix(in srgb, var(--color-ink) 8%, transparent);
+    }
+}
+.sidebar-active-in {
+    animation: sidebar-active-in var(--motion-duration-base)
+        var(--motion-ease-out) both;
+}
+
+/* ── Sidebar entrance stagger ──
+   When the sidebar mounts (app load, project switch that remounts the
+   list), fade + slide each nav row in from the left. Stagger via inline
+   `animationDelay` on the callsite, capped at ~180ms total so the whole
+   sidebar lands fast without feeling laggy. */
+@keyframes sidebar-row-in {
+    from {
+        opacity: 0;
+        transform: translateX(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+.sidebar-row-in {
+    animation: sidebar-row-in var(--motion-duration-base) var(--motion-ease-out)
+        both;
+}
+
+/* Composer suggestion chips: cascade in one-by-one with a subtle spring
+   overshoot so the entrance feels refined and playful rather than a
+   synchronous pop. The chip starts small + below its resting spot, fades
+   in over the first ~45% of the curve, overshoots slightly past its
+   final position around ~70%, then settles. Per-chip delay (set inline
+   via `animationDelay`) is wide enough that the eye can track the
+   cascade before the next chip launches. */
+@keyframes suggestion-pill-in {
+    0% {
+        opacity: 0;
+        transform: translateY(12px) scale(0.88);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+.suggestion-pill-in {
+    opacity: 0;
+    animation: suggestion-pill-in 460ms var(--motion-ease-spring) both;
+    will-change: transform, opacity;
+    transform-origin: center bottom;
+}
+
+/* ── Sidebar expand / collapse motion ──
+   The <aside> stays mounted and animates between the open width and
+   the 56px rail. Both layouts stay visible and interactive throughout;
+   Sidebar switches their contents when the collapsed state changes.
+   Expand settles more slowly; collapse uses the snappier base duration. */
+.sidebar-width-transition-expand {
+    transition: width var(--motion-duration-slow) var(--motion-ease-out);
+}
+.sidebar-width-transition-collapse {
+    transition: width var(--motion-duration-base) var(--motion-ease-out);
+}
+
+/* ── Page enter animation ──
+   Subtle fade + 4px translate-up applied to the main content root when
+   the user swaps views (chat → activity → settings, etc). Paired with a
+   React key on the container so the animation re-runs on view change. */
+@keyframes page-enter {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.page-enter {
+    animation: page-enter var(--motion-duration-base) var(--motion-ease-out)
+        both;
+}
+
+/* ── Launchpad / command palette entrance ──
+   Match the Littlebird reference: overlay scrim fades crisply; panel
+   pops with a slightly stronger scale (0.94→1) and its shadow settles
+   a tick after the opacity so it lands with weight without feeling
+   heavy. Exit is snappier than enter (standard UX pattern) so dismissal
+   feels instant. Radix toggles `data-state="open|closed"`; keying off
+   that attribute keeps the motion purely CSS-driven (no framer-motion)
+   and lets Radix handle unmount timing. */
+@keyframes launchpad-panel-in {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 4px) scale(0.94);
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    }
+    60% {
+        opacity: 1;
+        box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.18);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+        box-shadow: var(--shadow-card);
+    }
+}
+@keyframes launchpad-panel-out {
+    from {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translate(-50%, 0) scale(0.97);
+    }
+}
+.launchpad-overlay[data-state="open"] {
+    animation: fade-in var(--motion-duration-fast) var(--motion-ease-out);
+}
+.launchpad-overlay[data-state="closed"] {
+    animation: fade-in 120ms var(--motion-ease-out) reverse;
+}
+.launchpad-panel[data-state="open"] {
+    animation: launchpad-panel-in var(--motion-duration-base)
+        var(--motion-ease-out);
+}
+.launchpad-panel[data-state="closed"] {
+    animation: launchpad-panel-out 140ms var(--motion-ease-out) forwards;
+}
+
+/* Pulsing dot used in front of sidebar custom-group sessions that host a
+   pending approval. Both the size and the colour animate so the
+   entry is unmistakable against the static muted dots of sibling sessions. */
+@keyframes pending-approval-dot-pulse {
+    0%,
+    100% {
+        width: 6px;
+        height: 6px;
+        background-color: color-mix(
+            in srgb,
+            var(--color-accent) 55%,
+            transparent
+        );
+        box-shadow: 0 0 0 0
+            color-mix(in srgb, var(--color-accent) 35%, transparent);
+    }
+    50% {
+        width: 9px;
+        height: 9px;
+        background-color: var(--color-accent);
+        box-shadow: 0 0 0 3px
+            color-mix(in srgb, var(--color-accent) 18%, transparent);
+    }
+}
+.pending-approval-dot {
+    display: inline-block;
+    border-radius: 9999px;
+    animation: pending-approval-dot-pulse 1.4s ease-in-out infinite;
+    /* Reserve the peak size so the surrounding layout does not jiggle as the
+       dot grows — the parent span is already a 16×16 flex container. */
+    flex-shrink: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .pending-approval-dot {
+        animation: none;
+        width: 7px;
+        height: 7px;
+        background-color: var(--color-accent);
+    }
+}
+
+/* Sidebar "Observing in background" dot. Soft opacity pulse signals a live
+   monitor. `will-change: opacity` promotes the dot onto its own compositing
+   layer so the animation runs on the compositor fast-path. Without it WKWebView
+   re-runs a full-tree RenderLayerCompositor::computeCompositingRequirements pass
+   on every display refresh while the dot animates — a measured CPU sink, because
+   the cost scales with the whole layer tree, not the 5px dot. The component also
+   pauses this animation while the window is hidden (animation-play-state). */
+@keyframes observing-dot-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.35;
+    }
+}
+.observing-dot {
+    animation: observing-dot-pulse 2s ease-in-out infinite;
+    will-change: opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+    .observing-dot {
+        animation: none;
+    }
+}
+
+/* ============================================================
+   Settings surface — Little Bird inspired visual pass
+   Scoped entirely to `.settings-surface`. Nothing here affects
+   the rest of the application. Tokens use local CSS custom
+   properties so they stay self-contained.
+
+   Light/dark adaptation: the `--s-*` tokens below reference the
+   global `--color-*` tokens, which themselves flip between light
+   and dark under `:root[data-theme='onedark']`. This means the
+   Settings surface automatically inherits the correct palette in
+   both modes — no parallel dark-mode `--s-*` block is required.
+   Only theme-independent radii / shadow alphas are hardcoded.
+   The accent token used to be hardcoded terracotta (#d4603a) per
+   the previous brand guidance, but that colour has been retired
+   from the palette and was leaking back into the UI as a brown
+   focus ring on settings inputs and the accent CTA button. Both
+   --s-accent and its derived alpha tokens now defer to the global
+   `--color-accent-2`, so any future brand colour swap propagates
+   here automatically.
+   ============================================================ */
+/* Paint the drag-region band + dialog background with the global app
+   surfaces: the left 212px (sidebar column) gets the panel color so it
+   matches the settings nav, and the remainder gets the base background,
+   same as the main app's content areas. Using `var(--color-*)` lets this
+   gradient auto-track theme changes (light/dark). */
+.settings-overlay {
+    background: linear-gradient(
+        to right,
+        var(--color-panel) 0,
+        var(--color-panel) 212px,
+        var(--color-background) 212px,
+        var(--color-background) 100%
+    );
+}
+
+.settings-surface {
+    /* Surfaces — mapped to global app tokens so Settings blends with
+       the rest of the app in both light (paper) and dark (onedark). */
+    --s-bg: var(--color-background);
+    --s-sidebar-bg: var(--color-panel);
+    --s-card: var(--color-card-cool);
+    --s-muted-surface: var(--color-card-warm);
+    --s-hover: color-mix(in srgb, var(--color-ink) 4%, transparent);
+    --s-selected-bg: var(--color-active-row-bg);
+
+    /* Text hierarchy — neutral grays to match the rest of the app */
+    --s-ink: var(--color-ink);
+    --s-ink-strong: var(--color-heading-strong);
+    --s-muted: var(--color-muted);
+    --s-muted-soft: var(--color-muted);
+
+    /* Borders — derived from global border tokens */
+    --s-border: var(--color-border);
+    --s-border-strong: var(--color-border-strong);
+    --s-divider: var(--color-border-divider);
+
+    /* Accent — defers to the global brand accent so Settings stays
+       in sync as the brand evolves. Previously hardcoded to
+       #d4603a (terracotta), which has been retired from the
+       palette; that hardcode was the source of the "brown ring"
+       on focused settings inputs and the brown .settings-btn-accent
+       background. Soft / ring alphas are derived via color-mix so
+       we don't have to maintain parallel rgba() literals. */
+    --s-accent: var(--color-accent-2);
+    --s-accent-soft: color-mix(in srgb, var(--color-accent-2) 12%, transparent);
+    --s-accent-ring: color-mix(in srgb, var(--color-accent-2) 25%, transparent);
+
+    /* Misc surface tokens — neutral, derived from global ink */
+    --s-switch-off: color-mix(in srgb, var(--color-ink) 18%, transparent);
+    --s-shadow-seg: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+    /* Radius + shadow tokens — card shadow matches the onboarding
+       provider cards (`shadow-[0px_4px_13.6px_0px_rgba(241,245,251,0.92)]`)
+       so Settings surfaces share the same warm lift. */
+    --s-radius-card: 12px;
+    --s-radius-control: 8px;
+    --s-radius-chip: 6px;
+    /* Whisper contact shadow — the 1px --s-border carries the card's
+       definition (Littlebird-style). The previous cool blue-white glow
+       (rgba(241,245,251)) read as a hazy halo on the warm cream bg. */
+    --s-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --s-shadow-pop: 0 4px 14px rgba(0, 0, 0, 0.06);
+
+    /* Transparent so the `.settings-overlay` gradient (sidebar cream on
+       the left, content cream on the right) shows through the drag
+       region band at the top. The `.settings-nav` and content column
+       paint their own backgrounds below that band. */
+    background: transparent;
+    color: var(--s-ink);
+    /* No font-feature-settings here: ss01/cv11 are Inter-specific sets
+       that mutate SF Pro glyphs and made Settings text render subtly
+       different from the rest of the app. */
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Sidebar */
+.settings-surface .settings-nav {
+    background: var(--s-sidebar-bg);
+    border-right: 1px solid var(--s-border);
+}
+/* Matches the main sidebar's group-label treatment (LIBRARY / RECENT:
+   11px, font-medium, tracking-wide) so the two sidebars read as one
+   family — the previous 10px/0.14em/600 read as a foreign, shouty cap. */
+.settings-surface .settings-nav-soon {
+    flex: none;
+    border-radius: 999px;
+    padding: 0 7px;
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 18px;
+    color: var(--color-copper);
+    background: color-mix(in srgb, var(--color-copper) 12%, transparent);
+}
+
+.settings-surface .settings-nav-label {
+    color: var(--s-muted-soft);
+    letter-spacing: 0.025em;
+    font-weight: 500;
+}
+.settings-surface .settings-nav-item {
+    color: var(--s-muted);
+    border-radius: var(--s-radius-control);
+    transition:
+        background-color 120ms ease,
+        color 120ms ease;
+}
+.settings-surface .settings-nav-item:hover {
+    background: var(--s-hover);
+    color: var(--s-ink);
+}
+.settings-surface .settings-nav-item[data-active="true"] {
+    background: var(--color-background);
+    color: var(--color-accent);
+}
+.settings-surface .settings-nav-item[data-active="true"] svg {
+    color: var(--color-accent);
+}
+.settings-surface .settings-nav-group-divider {
+    border-top: 1px solid var(--s-divider);
+}
+.settings-surface .settings-nav-footer {
+    color: var(--s-muted-soft);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+}
+
+/* Page header — SF Pro wants slightly negative tracking at display
+   sizes (positive tracking above ~20px reads loose, not airy), and a
+   tighter leading keeps the title feeling set rather than floating. */
+.settings-surface .settings-page-title {
+    color: var(--s-ink-strong);
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+}
+.settings-surface .settings-page-sub {
+    color: var(--s-muted);
+    font-size: 13px;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+}
+
+/* Card + Row primitives — hairline border + whisper contact shadow;
+   padding follows the onboarding provider cards (px-[20px] py-[16px]). */
+.settings-surface .settings-card {
+    background: var(--s-card);
+    border: 1px solid var(--s-border);
+    border-radius: var(--s-radius-card);
+    box-shadow: var(--s-shadow-card);
+    padding: 6px 20px;
+}
+.settings-surface .settings-card--padded {
+    padding: 20px 20px 16px;
+}
+.settings-surface .settings-card-title {
+    color: var(--s-ink-strong);
+    font-size: 14px;
+    font-weight: 550;
+    letter-spacing: -0.005em;
+    line-height: 1.35;
+}
+.settings-surface .settings-card-desc {
+    color: var(--s-muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+.settings-surface .settings-section-heading {
+    color: var(--s-ink-strong);
+    font-size: 14px;
+    font-weight: 550;
+    letter-spacing: -0.005em;
+    line-height: 1.35;
+}
+.settings-surface .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--s-divider);
+}
+.settings-surface .settings-row:last-child {
+    border-bottom: 0;
+}
+.settings-surface .settings-row-title {
+    color: var(--s-ink-strong);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.002em;
+    line-height: 1.4;
+}
+.settings-surface .settings-row-desc {
+    color: var(--s-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 3px;
+}
+
+/* Form controls scoped to settings */
+.settings-surface input[type="text"],
+.settings-surface input[type="email"],
+.settings-surface input[type="search"],
+.settings-surface input[type="number"],
+.settings-surface input:not([type]),
+.settings-surface textarea,
+.settings-surface select {
+    border-radius: var(--s-radius-control);
+    border-color: var(--s-border-strong);
+    background: var(--s-card);
+    color: var(--s-ink);
+}
+.settings-surface input[type="text"]:focus-visible,
+.settings-surface input[type="email"]:focus-visible,
+.settings-surface input[type="search"]:focus-visible,
+.settings-surface input[type="number"]:focus-visible,
+.settings-surface input:not([type]):focus-visible,
+.settings-surface textarea:focus-visible,
+.settings-surface select:focus-visible {
+    outline: none;
+    border-color: var(--color-border-focus);
+    box-shadow: none;
+}
+
+/* Toggles (Radix Switch) — scoped override.
+   Use a monochrome on-state tied to `--color-ink` so switches read as
+   neutral black-on-light / white-on-dark rather than echoing the
+   brand accent (`--s-accent` ≡ `--color-accent-2`) on every row. */
+.settings-surface [data-state="checked"][role="switch"] {
+    background-color: var(--color-ink) !important;
+}
+.settings-surface [data-state="unchecked"][role="switch"] {
+    background-color: var(--s-switch-off) !important;
+}
+.settings-surface [data-state="checked"][role="switch"] > span {
+    background-color: var(--color-panel) !important;
+}
+
+/* Buttons — accent primary inside settings */
+.settings-surface .settings-btn-accent {
+    background: var(--s-accent);
+    color: var(--color-solid-btn-fg);
+    border-radius: var(--s-radius-control);
+    padding: 7px 13px;
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: filter 120ms ease;
+}
+.settings-surface .settings-btn-accent:hover {
+    filter: brightness(0.94);
+}
+.settings-surface .settings-btn-ghost {
+    background: var(--s-muted-surface);
+    color: var(--s-ink-strong);
+    border: 1px solid var(--s-border);
+    border-radius: var(--s-radius-control);
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+}
+.settings-surface .settings-btn-ghost:hover {
+    background: var(--s-selected-bg);
+}
+
+/* Color-mode preview cards (Appearance) */
+.settings-surface .mode-card {
+    background: var(--s-card);
+    border: 1px solid var(--s-border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease,
+        transform 120ms ease;
+}
+.settings-surface .mode-card:hover {
+    border-color: var(--s-border-strong);
+}
+.settings-surface .mode-card[data-selected="true"] {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--s-border);
+}
+
+/* Segmented pill (used for Exclude Apps / Exclude Websites) */
+.settings-surface .settings-segment {
+    display: inline-flex;
+    padding: 3px;
+    background: var(--s-muted-surface);
+    border-radius: 999px;
+    border: 1px solid var(--s-border);
+    gap: 2px;
+}
+.settings-surface .settings-segment button {
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--s-muted);
+    transition:
+        background-color 120ms ease,
+        color 120ms ease;
+}
+.settings-surface .settings-segment button[data-active="true"] {
+    background: var(--s-card);
+    color: var(--color-accent);
+    box-shadow: var(--s-shadow-seg);
+}
+
+/* ── Dark-mode adjustments for the settings surface ──
+   Most `--s-*` tokens auto-follow the global `--color-*` tokens (which
+   flip under `:root[data-theme='onedark']`), so no palette re-skin is
+   needed. We only override tokens whose dark equivalents need different
+   alphas or shadow depths than the `color-mix`/rgba expressions in the
+   light definitions produce. The `.settings-overlay` gradient also
+   already references `var(--color-panel)` / `var(--color-background)`
+   directly, so it auto-tracks dark mode without a parallel rule. */
+:root[data-theme="onedark"] .settings-surface {
+    /* Accent alphas — bump slightly so the brand accent reads
+       against the near-black foundation. Derived via color-mix
+       from the dark-mode --color-accent-2 (blue), replacing the
+       earlier hardcoded terracotta rgba()s that no longer match
+       the current palette. */
+    --s-accent-soft: color-mix(in srgb, var(--color-accent-2) 18%, transparent);
+    --s-accent-ring: color-mix(in srgb, var(--color-accent-2) 35%, transparent);
+
+    /* Deeper shadows on dark backgrounds */
+    --s-shadow-seg: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --s-shadow-card: 0 1px 0 rgba(0, 0, 0, 0.35);
+    --s-shadow-pop: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* Research dossier "working" indicator: an indeterminate bar segment that
+   sweeps left→right across the track while the agent searches / reads / writes.
+   Pairs with the live phase label so a multi-minute run reads as alive. */
+@keyframes research-progress-indeterminate {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(300%);
+    }
+}
+.research-progress-indeterminate {
+    animation: research-progress-indeterminate 1.15s ease-in-out infinite;
+    will-change: transform;
+}
+
+/* The dot of the Yansu logo doubles as an eye. Each cycle it stays open,
+   squashes shut for one quick blink, then a double blink later on, so the
+   mark reads as alive without pulling attention. Applied to the dot <path>
+   via LogoIcon's `blink` prop. */
+@keyframes logo-eye-blink {
+    0%,
+    43%,
+    47%,
+    84%,
+    88%,
+    91%,
+    95%,
+    100% {
+        transform: scaleY(1);
+    }
+    45%,
+    86%,
+    93% {
+        transform: scaleY(0.08);
+    }
+}
+
+.logo-eye-blink {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: logo-eye-blink 6.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .logo-eye-blink {
+        animation: none;
+    }
+}
+
+/* Hover variant for the wordmark (sidebar header): the dot answers with a
+   quick double blink when the pointer passes over the logo. The animation is
+   finite, so it plays once per hover-in and the eye rests open while the
+   pointer stays. Applied via LogoWithFontIcon's `blinkOnHover` prop. */
+@keyframes logo-eye-blink-hello {
+    0%,
+    40%,
+    55%,
+    95%,
+    100% {
+        transform: scaleY(1);
+    }
+    20%,
+    75% {
+        transform: scaleY(0.08);
+    }
+}
+
+.logo-eye-hover {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.logo-hover-blink:hover .logo-eye-hover {
+    animation: logo-eye-blink-hello 0.65s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .logo-hover-blink:hover .logo-eye-hover {
+        animation: none;
+    }
+}
+
+/* Bundle Book, its italic and SemiBold for display moments; optional preserves first paint. */
+@font-face {
+    font-family: "PP Mori";
+    src: url("./assets/fonts/PPMori-Book.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: optional;
+}
+@font-face {
+    font-family: "PP Mori";
+    src: url("./assets/fonts/PPMori-BookItalic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+    font-display: optional;
+}
+@font-face {
+    font-family: "PP Mori";
+    src: url("./assets/fonts/PPMori-SemiBold.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: optional;
+}
+/* Brand display type. PP Mori is the brand face and appears on display moments only: the Today title, the About you portrait,
+   the Activity headline and the welcome or empty-state line (.display). Everything else stays on the system font.
+   Register fonts/PPMori-Book.woff2 as "PP Mori" 400 and fonts/PPMori-SemiBold.woff2 as "PP Mori" 600; do not register
+   PPMori-Regular under the same family and weight. */
+:root {
+  --font-display: "PP Mori", "PPMori", var(--font-sans);
+  --text-display: 400 30px/1.25 var(--font-display); /* Today title, Activity headline, welcome line. Letter-spacing -0.01em. */
+  --text-portrait: 400 16px/1.66 var(--font-display); /* The About you portrait paragraph only (portrait v1.0.0). */
+}
+.display { font: var(--text-display); letter-spacing: -0.01em; }
+.display b, .display strong { font-weight: 600; }
+.portrait { font: var(--text-portrait); letter-spacing: 0; }
+
+/* Selected tabs identify the current Isoform destination in every surface. */
+[role="tab"][aria-selected="true"],
+[data-main-chat-filter][aria-pressed="true"] {
+    color: var(--color-accent);
+    background-color: var(--color-panel);
+}
+
+/* Reply text is ink (chat-review v1.0.3 #1); only links and the Isoform label use the accent. */
+[data-isoform-line] :is(h1, h2, h3, h4, h5, h6, p, li, strong, em) {
+    color: var(--color-ink);
+}
+
+/* Flat surfaces in every window. Compatibility variables and classes are inert. */
+:root { --texture-grain: none; --texture-mottle-hi: none; --texture-mottle-lo: none; --texture-copper-hi: none; }
+.patina-ground, .patina-verdigris { background-image: none; }
+
+/* Respond to the composer column, including when a wide window has a narrow panel. */
+.composer-surface {
+    container-type: inline-size;
+    container-name: composer;
+}
+/* Topic columns follow the Today page width, including its 24px insets. */
+.today-page-content {
+    container-type: inline-size;
+    container-name: today-page;
+}
+.today-topics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container today-page (min-width: 700px) {
+    .today-topics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* The phone-sized reading column keeps the same calendar drawing, with less chrome. */
+@container today-page (max-width: 477px) {
+    .today-day-hour-secondary, .today-day-caption { display: none; }
+    .today-day-strip [data-testid="today-day-track"] { height: 32px !important; }
+    .today-day-strip [data-testid="today-day-event"], .today-day-strip [data-testid="today-day-hold"], .today-day-block-label { height: 24px !important; margin-top: -2px; }
+    .today-day-strip [data-inset="true"] { height: 16px !important; }
+}
