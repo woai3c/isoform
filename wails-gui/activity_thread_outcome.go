@@ -85,7 +85,16 @@ func threadOutcomeText(value string, limit int) string {
 	return mobileBriefText(redactThreadOutcomeText(value), limit)
 }
 
+// threadOutcomeRedactions holds recent outcome redactions: readers check the
+// same observation frames on every Today, Chat and brief read.
+var threadOutcomeRedactions = newRedactionMemo(4096)
+
 func redactThreadOutcomeText(value string) string {
+	return threadOutcomeRedactions.redact(value, redactThreadOutcomeTextUncached)
+}
+
+func redactThreadOutcomeTextUncached(value string) string {
+	recordMemoryExternalReadLoad("threadOutcomeRedact")
 	value = threadOrderNumber.ReplaceAllString(value, "${1}[masked]")
 	return pii.RedactCodes(redactActivityModelText(value))
 }

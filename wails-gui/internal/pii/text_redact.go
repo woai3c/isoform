@@ -2,7 +2,15 @@ package pii
 
 import (
 	"strings"
+	"sync/atomic"
 )
+
+// redactTextCalls counts RedactText scans, so tests can prove that hot
+// readers reuse redactions instead of scanning again on every read.
+var redactTextCalls atomic.Int64
+
+// RedactTextCalls reports how many times RedactText has scanned text.
+func RedactTextCalls() int64 { return redactTextCalls.Load() }
 
 // redactHit is an internal match record used by RedactText.
 type redactHit struct {
@@ -18,6 +26,7 @@ type redactHit struct {
 // boxes, this works on flat text (e.g. AX tree output) and is intended to
 // be called before persisting such text to disk/database.
 func RedactText(text string) (string, int) {
+	redactTextCalls.Add(1)
 	if text == "" {
 		return text, 0
 	}

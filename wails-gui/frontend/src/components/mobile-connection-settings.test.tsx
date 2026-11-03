@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
+import { pageQueryCache } from "@/lib/query-cache";
 import type {
     MobileBriefSchedule,
     MobileConnectionStatus,
@@ -137,6 +138,7 @@ function openAdvanced(label: RegExp = /Advanced/) {
 describe("MobileConnectionSettings component", () => {
     beforeEach(async () => {
         vi.clearAllMocks();
+        pageQueryCache.clear();
         window.localStorage.clear();
         await i18n.changeLanguage("en");
         mocks.getStatus.mockResolvedValue(idleStatus);

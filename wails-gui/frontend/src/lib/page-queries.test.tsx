@@ -158,11 +158,12 @@ describe('cached page hooks through shim spies', () => {
         await act(async () => {});
         for (const mock of fixture.bindings.values()) mock.mockClear();
         await act(async () => window.dispatchEvent(new Event('focus')));
-        await waitFor(() => expect(binding('GetMobileBriefHealth')).toHaveBeenCalledTimes(1));
-        for (const name of ['GetGoalCheckIn', 'GetEngagementWeekSummary', 'GetMobileBriefHealth']) {
+        await waitFor(() => expect(binding('GetEngagementWeekSummary')).toHaveBeenCalledTimes(1));
+        for (const name of ['GetGoalCheckIn', 'GetEngagementWeekSummary']) {
             expect(binding(name), name).toHaveBeenCalledTimes(1);
         }
-        const budgeted = ['GetTodayTopics', 'GetTodayQuietLines', 'GetLatestBrief', 'GetTodayDayShape'];
+        // Brief health is cached-first: focus inside its minute reads nothing.
+        const budgeted = ['GetMobileBriefHealth', 'GetTodayTopics', 'GetTodayQuietLines', 'GetLatestBrief', 'GetTodayDayShape'];
         for (const name of budgeted) expect(binding(name), name).not.toHaveBeenCalled();
         vi.spyOn(Date, 'now').mockReturnValue(Date.now() + reads.TODAY_TOPICS_TTL_MS + 1);
         await act(async () => window.dispatchEvent(new Event('focus')));

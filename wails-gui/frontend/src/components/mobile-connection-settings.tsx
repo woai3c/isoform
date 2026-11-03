@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { NativeClipboardSetText } from "../../wailsjs/go/main/App";
 import { BrowserOpenURL, ClipboardSetText, EventsOn } from "../../wailsjs/runtime/runtime";
 import { IPHONE_APP_LINK } from "@/lib/iphone-app-link";
+import { GetMobileBriefHealth } from "@/lib/page-queries";
 import { notifyToast } from "@/lib/notify";
 // The shim declares the iPhone bindings with the PROTOCOL.md section 12 types,
 // so the calls and the state below agree on one shape.
@@ -15,7 +16,6 @@ import {
     EnableMobileConnectionUsingRelay,
     GenerateMobileBriefNow,
     GenerateMobileConnectionCode,
-    GetMobileBriefHealth,
     GetMobileBriefSchedule,
     GetMobileConnectionStatus,
     GetMobileKeepAwake,

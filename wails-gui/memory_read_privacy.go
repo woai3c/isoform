@@ -78,17 +78,11 @@ func (a *App) memoryEntriesForExternalRead() ([]MemoryEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	entries, err := a.GetMemoryEntries()
+	snapshot, err := a.memoryExternalSnapshot()
 	if err != nil {
 		return nil, err
 	}
-	out := make([]MemoryEntry, 0, len(entries))
-	for _, entry := range entries {
-		if allowRead(entry.ID, entry.Content) && memoryInUse(entry.Content) {
-			out = append(out, redactMemoryEntryForExternalRead(entry))
-		}
-	}
-	return out, nil
+	return snapshot.redactedEntries(snapshot.allowed(allowRead)), nil
 }
 
 func (a *App) memoryEntryForExternalRead(id string) (MemoryEntry, error) {

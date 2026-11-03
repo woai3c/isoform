@@ -1386,6 +1386,7 @@ func (a *App) markMemoryDirty(reason string) {
 }
 
 func (a *App) markMemoryDirtyWithCorrelation(reason, correlation string) {
+	a.invalidateMemoryExternalReads()
 	a.mu.Lock()
 	store := a.memoryStore
 	a.mu.Unlock()

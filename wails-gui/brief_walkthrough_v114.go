@@ -354,14 +354,19 @@ func mobileBriefParagraphProvesToday(brief MobileBriefV1, para MobileBriefPara, 
 }
 
 // mobileBriefExclusions is what the person said to keep out of their briefs,
-// read from their notes each time so a change takes effect at once.
+// read from their notes. The scan is cached until memory changes, and every
+// memory write drops the cache, so a change takes effect at once.
 func (a *App) mobileBriefExclusions() []string {
 	if a == nil {
 		return nil
 	}
-	entries, err := a.memoryEntriesForExternalRead()
+	allowRead, err := a.memoryReadFilter()
 	if err != nil {
 		return nil
 	}
-	return mobileBriefStatedExclusions(entries)
+	snapshot, err := a.memoryExternalSnapshot()
+	if err != nil {
+		return nil
+	}
+	return snapshot.statedExclusions(snapshot.allowed(allowRead))
 }

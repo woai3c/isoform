@@ -17,7 +17,8 @@ export interface TodayStatusData {
  * The two facts under the Today header: the weekly line ("Isoform spoke up 9
  * times this week, you acted on 6") and scheduled brief health (last run,
  * next run, missed runs). Each half fails on its own, so one missing binding
- * never hides the other. Refreshes when a brief is stored and on focus.
+ * never hides the other. Refreshes when a brief is stored and on focus;
+ * focus re-reads brief health only once its cached view is stale.
  */
 export function useTodayStatus(enabled: boolean): TodayStatusData {
     const [week, setWeek] = useState<EngagementWeekSummary | null>(() => pageQueryCache.peek('GetEngagementWeekSummary') ?? null);
@@ -47,7 +48,9 @@ export function useTodayStatus(enabled: boolean): TodayStatusData {
         if (!enabled) return;
         refresh();
         const unsubscribe = EventsOn("mobile:updated", refresh);
-        const onFocus = () => { pageQueryCache.invalidate(['GetEngagementWeekSummary', 'GetMobileBriefHealth']); refresh(); };
+        // Brief health shows its cached view on focus; a stored brief or a
+        // mobile change already invalidates it, and it re-reads once stale.
+        const onFocus = () => { pageQueryCache.invalidate(['GetEngagementWeekSummary']); refresh(); };
         window.addEventListener("focus", onFocus);
         return () => {
             version.current += 1;

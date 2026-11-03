@@ -158,6 +158,7 @@ type App struct {
 	composioActivationSF      singleflight.Group              // dedups managed Composio MCP activation per app
 	composioActivationErrs    map[string]string               // app → last activation error string (cleared on success); guarded by mu
 	memoryStore               *MemoryStore                    // FTS5-indexed memory search (markdown files)
+	memoryExternalReads       memoryExternalReadCache         // redacted model-facing memory, kept until memory changes
 	memoryGenerator           *MemoryGenerator                // generative memory pipeline (triage → generate → save)
 	memoryDream               *MemoryDreamService             // nightly memory consolidator: dedup, expire, similarity merge, Haiku-mediated synthesis
 	aboutYouPortrait          *AboutYouPortraitService        // source-bound weekly owner portrait
