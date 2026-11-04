@@ -14,12 +14,15 @@ import (
 
 func TestTopicFollowingLargeFixtureSkipsSlowReadFilterAndHonorsContext(t *testing.T) {
 	a := newThreadTestApp(t)
-	configureTopicRegistryTest(a, topicRegistryTestNow)
-	seedThreadMoment(t, a, threadFixtureMoment{id: "work", title: "Atlas", app: "Code", start: topicRegistryTestNow.Add(-time.Hour), end: topicRegistryTestNow.Add(-time.Minute)})
+	// The read filter re-derives named evidence within a window relative to
+	// wall time, so this fixture must stay inside that window.
+	now := time.Now()
+	configureTopicRegistryTest(a, now)
+	seedThreadMoment(t, a, threadFixtureMoment{id: "work", title: "Atlas", app: "Code", start: now.Add(-time.Hour), end: now.Add(-time.Minute)})
 	const activityCount = 3000
 	if _, err := a.activity.store.db.Exec(`WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<?)
 		INSERT INTO activity_sessions(id,start_time,end_time,app_names,triage_status,trigger_kind,event_count,segment_count,created_at)
-		SELECT 'capture-'||x,?,?, '["Code"]','pending','test',1,1,? FROM n`, activityCount, topicRegistryTestNow.Add(-time.Hour).UnixMilli(), topicRegistryTestNow.UnixMilli(), topicRegistryTestNow.UnixMilli()); err != nil {
+		SELECT 'capture-'||x,?,?, '["Code"]','pending','test',1,1,? FROM n`, activityCount, now.Add(-time.Hour).UnixMilli(), now.UnixMilli(), now.UnixMilli()); err != nil {
 		t.Fatal(err)
 	}
 	for _, query := range []string{
@@ -30,7 +33,7 @@ func TestTopicFollowingLargeFixtureSkipsSlowReadFilterAndHonorsContext(t *testin
 		 SELECT 'load-'||s.id,seed.day_start_ms,s.start_time,?,seed.title,seed.status,json_array('load-run-'||s.id),seed.active_ms_by_app,seed.entities,s.created_at,s.created_at FROM activity_sessions s CROSS JOIN activities seed WHERE s.id LIKE 'capture-%' AND seed.id='work'`,
 		`UPDATE activity_timeline_group_summaries SET activity_type='research',entities='["Atlas"]' WHERE group_id='run-work'`,
 	} {
-		if _, err := a.activity.store.db.Exec(query, topicRegistryTestNow.Add(-2*time.Minute).UnixMilli()); err != nil {
+		if _, err := a.activity.store.db.Exec(query, now.Add(-2*time.Minute).UnixMilli()); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -38,9 +41,10 @@ func TestTopicFollowingLargeFixtureSkipsSlowReadFilterAndHonorsContext(t *testin
 	for i := 1; i <= 10; i++ {
 		item := testInterest(fmt.Sprintf("following-%d", i), fmt.Sprintf("Research topic %d", i), "Current research")
 		item.Evidence[0].Key = fmt.Sprintf("activity:load-capture-%d", i)
+		item.Evidence[0].At = now.Add(-time.Minute).UnixMilli()
 		list = append(list, item)
 	}
-	list[0].Evidence = append(list[0].Evidence, interests.Ref{Key: "named:" + interestHash("atlas"), Source: interests.SourceNamed, At: topicRegistryTestNow.Add(-time.Minute).UnixMilli()})
+	list[0].Evidence = append(list[0].Evidence, interests.Ref{Key: "named:" + interestHash("atlas"), Source: interests.SourceNamed, At: now.Add(-time.Minute).UnixMilli()})
 	storeTestInterests(t, a, list...)
 	svc := a.interestsSvc()
 	svc.readFilter = a.interestsReadFilter
