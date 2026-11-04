@@ -291,6 +291,7 @@ var browserRPCStateChangers = map[string]string{
 	"PostTodayClosingAnswer":             "the person's explicit brief answer and its chat row",
 	"OpenTodayReplyDraft":                "the person requests a source-checked unsent reply draft",
 	"CancelTodayReplyDraft":              "the person stops a requested draft",
+	"OpenPersonReplyDraft":               "the person requests a source-checked unsent reply draft from Who you know",
 	"AddTodayNoticedSchedule":            "the person explicitly schedules a current suggestion",
 	"UndoTodayNoticedSchedule":           "the person takes back that unchanged schedule",
 	"EditTodayNoticedSchedule":           "the person edits that unchanged schedule",
@@ -380,6 +381,9 @@ var browserRPCReadOnly = []string{
 	"GetTodayPanelAnswer",
 	"GetTodayMeetingNote",
 	"GetTodayBriefDraft",
+	// Who you know's Brief me: open loops, the waiting card and the last
+	// meeting, with no model run and no write.
+	"GetPersonBrief",
 	"GetTodayBriefDraftRoute",
 	"GetMailOverview",
 	"GetMcpServer",
