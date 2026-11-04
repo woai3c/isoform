@@ -757,6 +757,7 @@ export function TodayPage({
                         <TodayStatus
                             date={todayLabel(i18n.language)}
                             brief={status.brief}
+                            building={latest.view?.building || latest.make === "making"}
                             onMissedWhy={handlers.onOpenBriefDetail}
                         />
                     </header>

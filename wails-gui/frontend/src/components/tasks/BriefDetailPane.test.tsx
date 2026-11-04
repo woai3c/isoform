@@ -107,6 +107,14 @@ describe("BriefDetailPane (K3)", () => {
         expect(await screen.findByText(line)).toBeInTheDocument();
     });
 
+    it.each([["en", "Tried 3 times. Your AI is signed out."], ["zh-CN", "已尝试 3 次。你的 AI 已退出登录。"]])("shows signed-out failures in %s", async (language, line) => {
+        await i18n.changeLanguage(language);
+        mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "failed", status: "failed", scheduledAt: at(0, 7).toISOString(), at: "", attempts: 3, failureCause: "signed_out" }] }));
+        render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
+        expect(await screen.findByText(line)).toBeInTheDocument();
+        await i18n.changeLanguage("en");
+    });
+
     it("says the cause and the next try in one sentence (today-review v1.1.13 D3)", async () => {
         mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "failed", status: "failed", scheduledAt: at(0, 7).toISOString(), at: "", attempts: 9, failureCause: "timeout", nextTryAt: at(0, 13, 34).toISOString() }] }));
         render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);

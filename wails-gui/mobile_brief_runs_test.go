@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	"yansu-agent/agent/native"
 
 	"wails-gui/internal/engagement"
 	"wails-gui/storage"
@@ -594,5 +595,59 @@ func TestMobileBriefScheduleTurnedBackOnDoesNotReportTheOffPeriod(t *testing.T) 
 	}
 	if enabledAt := svc.config.load().EnabledAt; enabledAt != "2026-10-10T14:00:00Z" {
 		t.Fatalf("enabledAt must not move while on: %q", enabledAt)
+	}
+}
+
+func TestMobileBriefOnRequestStopsFailedScheduledRetry(t *testing.T) {
+	for _, adaptive := range []bool{false, true} {
+		t.Run(catchUpMode(adaptive), func(t *testing.T) {
+			clock := &fakeMobileBriefClock{now: mobileBriefTestDay(7, 0)}
+			svc, _, _ := catchUpRig(t, clock, adaptive)
+			original := svc.gather
+			scheduled := 0
+			svc.gather = func(ctx context.Context, slot string, start, asOf time.Time) (mobileBriefInput, error) {
+				if slot == mobileBriefSlotMorning {
+					scheduled++
+					return mobileBriefInput{}, context.DeadlineExceeded
+				}
+				return original(ctx, slot, start, asOf)
+			}
+			svc.checkDue(context.Background())
+			clock.Set(mobileBriefTestDay(9, 1))
+			if _, err := svc.generate(context.Background(), mobileBriefSlotOnRequest, mobileBriefReasonSettings); err != nil {
+				t.Fatal(err)
+			}
+			svc.checkDue(context.Background())
+			if scheduled != 1 {
+				t.Fatalf("scheduled attempts=%d", scheduled)
+			}
+			health := svc.Health()
+			if health.PendingSlot != "" || health.RetryAt != "" || health.NextSlot == mobileBriefSlotMorning && health.NextRunAt == formatMobileBriefTime(clock.Now()) {
+				t.Fatalf("health=%+v", health)
+			}
+		})
+	}
+}
+
+func TestMobileBriefRetryTimeDoesNotSlide(t *testing.T) {
+	settings := mobileBriefSettings{Enabled: true, Morning: "07:00", Evening: "18:00"}
+	retry := mobileBriefTestDay(8, 45)
+	facts := mobileBriefScheduleFacts{RetryAt: func(string) time.Time { return retry }}
+	for _, now := range []time.Time{mobileBriefTestDay(8, 46), mobileBriefTestDay(8, 47)} {
+		got, _ := mobileBriefSlotNextRun(now, time.UTC, settings, mobileBriefSlotMorning, facts)
+		if !got.Equal(retry) {
+			t.Fatalf("at %v retry moved to %v", now, got)
+		}
+	}
+}
+
+func TestMobileBriefFailureRecordsProvenSignedOutCause(t *testing.T) {
+	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(7, 0)}
+	svc, _ := missedBriefRig(t, clock)
+	occurrence := mobileBriefSlotOccurrence{BriefID: "2026-10-09-morning", Slot: mobileBriefSlotMorning, ScheduledAt: clock.Now()}
+	svc.recordFailure(occurrence, &native.HTTPError{Status: 401})
+	runs := svc.runs.list()
+	if len(runs) != 1 || runs[0].FailureCause != "signed_out" {
+		t.Fatalf("runs=%+v", runs)
 	}
 }

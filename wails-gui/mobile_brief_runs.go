@@ -393,7 +393,7 @@ func mobileBriefSlotNextRun(now time.Time, loc *time.Location, settings mobileBr
 			}
 			next := now
 			if facts.RetryAt != nil {
-				if retry := facts.RetryAt(occurrence.BriefID); retry.After(next) {
+				if retry := facts.RetryAt(occurrence.BriefID); !retry.IsZero() {
 					next = retry
 				}
 			}

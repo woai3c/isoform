@@ -570,6 +570,13 @@ describe("TodayBriefSection while today's brief is on its way", () => {
         await i18n.changeLanguage("en");
     });
 
+    it.each([["en", "Tried 3 times. Your AI is signed out. Isoform tries again at 9:40 AM."], ["zh-CN", "已尝试 3 次。你的 AI 已退出登录。Isoform 会在 9:40 再试一次。"]])("shows the proven signed-out cause in %s", async (language, line) => {
+        await i18n.changeLanguage(language);
+        renderSection({ view: view({ pendingSlot: "morning", pendingAt: new Date(2026, 9, 15, 7).toISOString(), pendingAttempts: 3, pendingCause: "signed_out", retryAt: new Date(2026, 9, 15, 9, 40).toISOString() }) });
+        expect(screen.getByTestId("brief-pending-line")).toHaveTextContent(line);
+        await i18n.changeLanguage("en");
+    });
+
     it("has no line without a scheduled retry: just the button", () => {
         renderSection({ view: view({ pendingSlot: "morning", pendingAt: new Date(2026, 9, 15, 7, 0).toISOString(), pendingAttempts: 6 }) });
         const card = screen.getByTestId("brief-pending");
@@ -589,7 +596,7 @@ describe("TodayBriefSection while today's brief is on its way", () => {
 
     it("says it is making the brief now, without the button", () => {
         renderSection({ view: view({ building: true, pendingSlot: "morning", pendingAt: new Date(2026, 9, 15, 7, 0).toISOString() }) });
-        expect(screen.getByTestId("brief-pending")).toHaveTextContent("Making your morning brief now...");
+        expect(screen.getByTestId("brief-pending")).toHaveTextContent("Making your morning brief now.");
         expect(screen.queryByRole("button", { name: "Make my brief now" })).not.toBeInTheDocument();
         // One line says it, not two.
         expect(screen.queryByText("Making your brief...")).not.toBeInTheDocument();
@@ -1125,7 +1132,7 @@ describe("the brief's card (RC 1)", () => {
         renderSection({ view: first });
         const card = screen.getByTestId("brief-pending");
         expect(card).toHaveTextContent("Your first brief");
-        expect(card).toHaveTextContent("Making it from today's calendar and your Claude Code history.");
+        expect(card).toHaveTextContent("Making your morning brief now.");
         expect(within(card).queryByRole("button", { name: "Make my brief now" })).not.toBeInTheDocument();
         expect(screen.queryByTestId("brief-pending-last")).not.toBeInTheDocument();
         expect(screen.getByTestId("brief-narrative")).toHaveTextContent("You have two meetings and the release is close.");

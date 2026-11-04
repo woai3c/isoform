@@ -171,7 +171,7 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
     const attempts = run.attempts ?? 0;
     const nextTry = run.status === "failed" && run.nextTryAt ? new Date(run.nextTryAt) : null;
     const next = nextTry && !Number.isNaN(nextTry.getTime()) ? clock(nextTry) : "";
-    const recordedFailure = attempts > 0 && run.failureCause === "timeout" ? t(next ? "briefDetail.triedTimeoutNext" : "briefDetail.triedTimeout", { count: attempts, time: next }) : "";
+    const recordedFailure = attempts > 0 && run.failureCause === "timeout" ? t(next ? "briefDetail.triedTimeoutNext" : "briefDetail.triedTimeout", { count: attempts, time: next }) : attempts > 0 && run.failureCause === "signed_out" ? t(next ? "briefDetail.triedSignedOutNext" : "briefDetail.triedSignedOut", { count: attempts, time: next }) : "";
     const line = recordedFailure || (run.status === "failed"
         ? attempts > 0 ? t(next ? "briefDetail.triedNext" : "briefDetail.tried", { count: attempts, time: next }) : t(next ? "briefDetail.didntFinishNext" : "briefDetail.didntFinish", { time: next })
         : run.reason === "asleep" ? t("briefDetail.missedAsleep", { time })

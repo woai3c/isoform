@@ -800,7 +800,6 @@ export function TodayBriefSection({
             retryAt={view?.retryAt ?? ""}
             attempts={view?.pendingAttempts ?? 0}
             cause={view?.pendingCause}
-            firstBrief={!!view?.firstBrief}
             lastBriefId={view?.firstBrief ? "" : view?.lastBriefId || (brief?.briefId ?? "")}
             lastSlot={view?.lastBriefId ? view.lastSlot ?? "" : brief?.displaySlot ?? brief?.slot ?? ""}
             lastAt={view?.lastBriefId ? view.lastAt ?? "" : brief?.asOf ?? ""}
@@ -865,11 +864,9 @@ function lastBriefDay(at: Date, now: Date, language: string, tr: Translate): str
     return at.toLocaleDateString(language, { weekday: "long" });
 }
 
-function PendingBrief({ slot, firstBrief = false, building, retryAt, attempts, cause, lastBriefId, lastSlot, lastAt, strip, make, nextAllowedAt, onMakeNow, onOpenBrief, now, tr, blind }: {
+function PendingBrief({ slot, building, retryAt, attempts, cause, lastBriefId, lastSlot, lastAt, strip, make, nextAllowedAt, onMakeNow, onOpenBrief, now, tr, blind }: {
     blind?: ReactNode;
     slot: "morning" | "evening";
-    /** No brief has ever been made (today-review v1.1.11 #1). */
-    firstBrief?: boolean;
     building: boolean;
     retryAt: string;
     attempts: number;
@@ -903,11 +900,11 @@ function PendingBrief({ slot, firstBrief = false, building, retryAt, attempts, c
             {building ? (
                 <p className="flex items-center gap-2 text-[13.5px] text-muted" role="status">
                     <Loader2 className="size-3.5 animate-spin" />
-                    {tr(firstBrief ? "todayBrief.pending.makingFirst" : slot === "evening" ? "todayBrief.pending.makingEvening" : "todayBrief.pending.makingMorning")}
+                    {tr(slot === "evening" ? "todayBrief.pending.makingEvening" : "todayBrief.pending.makingMorning")}
                 </p>
             ) : retry ? (
                 <p className="text-[14px] text-ink" role="status" data-testid="brief-pending-line">
-                    {attempts > 0 ? tr(cause === "timeout" ? "todayBrief.pending.triedTimeout" : "todayBrief.pending.tried", { count: attempts, time: retry }) : tr("todayBrief.pending.retry", { time: retry })}
+                    {attempts > 0 ? tr(cause === "timeout" ? "todayBrief.pending.triedTimeout" : cause === "signed_out" ? "todayBrief.pending.triedSignedOut" : "todayBrief.pending.tried", { count: attempts, time: retry }) : tr("todayBrief.pending.retry", { time: retry })}
                 </p>
             ) : null}
             {strip}

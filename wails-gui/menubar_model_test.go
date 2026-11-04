@@ -120,7 +120,7 @@ func TestMenuBarBriefRow(t *testing.T) {
 	if got := menuBarBriefRow(w, "en", MobileBriefV1{}, false, false, MobileBriefHealth{NextRunAt: next}, now); got.Kind != "none" || got.Title != "No brief yet today" || got.Meta != "Next brief tomorrow at 7:00 AM" {
 		t.Fatalf("none %+v", got)
 	}
-	if got := menuBarBriefRow(w, "en", morning, true, true, MobileBriefHealth{}, now); got.Kind != "making" || got.Title != "Making your brief…" || got.Meta != "About a minute" {
+	if got := menuBarBriefRow(w, "en", morning, true, true, MobileBriefHealth{}, now); got.Kind != "making" || got.Title != "Making your brief…" || got.Meta != "" {
 		t.Fatalf("making %+v", got)
 	}
 	if got := menuBarBriefRow(menuBarWords("zh-CN"), "zh-CN", evening, true, false, MobileBriefHealth{}, now); got.Title != "阅读简报" || got.Meta != "今天 19:30" {
@@ -512,6 +512,17 @@ func TestMenuBarBriefRowNamesTheDayAndTheTries(t *testing.T) {
 	if got := menuBarBriefRow(menuBarWords("en"), "en", MobileBriefV1{}, false, false, once, now); got.Title != "Tried once without finishing. Isoform tries again at 4:35 PM." {
 		t.Errorf("once %q", got.Title)
 	}
+	for _, tc := range []struct{ lang, cause, want string }{
+		{"en", "timeout", "Tried 13 times. It timed out. Isoform tries again at 4:35 PM."},
+		{"en", "signed_out", "Tried 13 times. Your AI is signed out. Isoform tries again at 4:35 PM."},
+		{"zh-CN", "timeout", "试了 13 次。超时了。Isoform 会在16:35再试。"},
+		{"zh-CN", "signed_out", "已尝试 13 次。你的 AI 已退出登录。Isoform 会在 16:35 再试一次。"},
+	} {
+		trying.PendingCause = tc.cause
+		if got := menuBarBriefRow(menuBarWords(tc.lang), tc.lang, MobileBriefV1{}, false, false, trying, now); got.Title != tc.want {
+			t.Errorf("%s %s: %q", tc.lang, tc.cause, got.Title)
+		}
+	}
 	// A retry time already past is not a promise: the latest brief shows.
 	past := MobileBriefHealth{PendingSlot: mobileBriefSlotMorning, PendingAttempts: 13, RetryAt: time.Date(2026, 11, 3, 16, 0, 0, 0, time.Local).Format(time.RFC3339)}
 	if got := menuBarBriefRow(menuBarWords("en"), "en", brief(2, 17, 18), true, false, past, now); got.Kind != "read" {
@@ -549,5 +560,45 @@ func TestMenuBarPausedStateSaysUntilWhen(t *testing.T) {
 	}
 	if got := menuBarPausedState(menuBarWords("en"), "en", DoingNow{Kind: doingNowPaused}); got != "Observing paused" {
 		t.Fatalf("no timer: got %q", got)
+	}
+}
+
+func TestMenuBarBriefRunChangesUpdateRetryWithoutStampingBrief(t *testing.T) {
+	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(8, 0)}
+	service, _ := newTestMobileBriefService(t, clock)
+	settings := defaultMobileBriefSettings()
+	settings.Adaptive = false
+	if err := service.config.save(settings); err != nil {
+		t.Fatal(err)
+	}
+	latest := MobileBriefV1{BriefID: "2026-10-08-evening", AsOf: mobileBriefTestDay(18, 0).AddDate(0, 0, -1).Format(time.RFC3339)}
+	occurrence := mobileBriefTodaySlots(clock.Now(), time.UTC, settings)[0]
+	service.retryFor, service.retryAfter = occurrence.BriefID, clock.Now().Add(10*time.Minute)
+	writeFailure := func(cause string) {
+		t.Helper()
+		_, err := service.runs.record(mobileBriefRun{BriefID: occurrence.BriefID, Slot: occurrence.Slot, ScheduledAt: formatMobileBriefTime(occurrence.ScheduledAt), Status: mobileBriefRunFailed, At: formatMobileBriefTime(clock.Now()), FailureCause: cause})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFailure("timeout")
+	before := mobileBriefFinishedReadKeys.Load()
+	for i := 0; i < 3; i++ {
+		health := service.app.menuBarBriefHealth(service, latest, true)
+		if health.PendingAttempts != 1 || health.PendingCause != "timeout" || health.RetryAt == "" {
+			t.Fatalf("tick %d: %+v", i, health)
+		}
+	}
+	writeFailure("signed_out")
+	health := service.app.menuBarBriefHealth(service, latest, true)
+	if health.PendingAttempts != 2 || health.PendingCause != "signed_out" {
+		t.Fatalf("updated run: %+v", health)
+	}
+	clock.Advance(10 * time.Minute)
+	if got := service.app.menuBarBriefHealth(service, latest, true); got.RetryAt != "" {
+		t.Fatalf("expired retry: %+v", got)
+	}
+	if stamps := mobileBriefFinishedReadKeys.Load() - before; stamps != 0 {
+		t.Fatalf("run changes and ticks stamped the brief %d times", stamps)
 	}
 }

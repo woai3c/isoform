@@ -24,13 +24,20 @@ describe("TodayStatus", () => {
         expect(screen.queryByText(/didn't come/)).toBeNull();
     });
 
+    it("does not say the brief missed its time while a try is running", () => {
+        render(<TodayStatus date="DATE" building brief={{ enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: at(0, 18), nextSlot: "evening", missedRuns: 0, failingSlot: "morning", failedAttempts: 3, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt: at(0, 7), pendingAttempts: 3 }} />);
+        expect(screen.getByTestId("today-status")).toHaveTextContent("DATE");
+        expect(screen.getByTestId("today-status")).not.toHaveTextContent(/didn't come|next brief/);
+    });
+
     it.each(["en", "zh-CN"])("says what comes next once the slot has given way (today-review v1.1.22 R51) in %s", async (language) => {
         await i18n.changeLanguage(language);
         const now = new Date(2026, 10, 4, 11, 50);
         const nextRunAt = new Date(2026, 10, 4, 18, 0).toISOString();
         const base = { enabled: true, lastRunAt: "", lastSlot: "", nextRunAt, nextSlot: "evening", missedRuns: 0, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt: new Date(2026, 10, 4, 7, 0).toISOString(), pendingAttempts: 5, pendingCause: "timeout" };
         const { rerender } = render(<TodayStatus brief={{ ...base, retryAt: "" }} now={now} />);
-        expect(screen.getByTestId("today-status-next")).toHaveTextContent(i18n.t("today:status.nextEveningAt", { time: language === "en" ? "6:00 PM" : "18:00" }));
+        expect(screen.queryByTestId("today-status-next")).toBeNull();
+        expect(screen.queryByText(/didn't come|没有在/)).toBeNull();
         rerender(<TodayStatus brief={{ ...base, nextRunAt: new Date(2026, 10, 5, 7, 0).toISOString(), nextSlot: "morning", retryAt: "" }} now={new Date(2026, 10, 4, 23, 40)} />);
         expect(screen.getByTestId("today-status-next")).toHaveTextContent(i18n.t("today:status.nextMorningTomorrowAt", { time: "7:00" + (language === "en" ? " AM" : "") }));
         rerender(<TodayStatus brief={{ ...base, retryAt: new Date(2026, 10, 4, 11, 58).toISOString() }} now={now} />);
@@ -152,7 +159,7 @@ describe("TodayStatus", () => {
 });
 it.each(['en', 'zh-CN'])('shows the current missed slot in %s without historical counts', async (language) => {
     await i18n.changeLanguage(language);
-    render(<TodayStatus date="DATE" brief={{ enabled: true, lastRunAt: at(0, 7), lastSlot: 'morning', nextRunAt: at(0, 18), nextSlot: 'evening', missedRuns: 4, failingSlot: '', failedAttempts: 0, latestBriefId: '', currentBriefId: '', pendingSlot: 'morning', pendingAt: at(0, 7) }} />);
+    render(<TodayStatus date="DATE" now={new Date(2026, 9, 14, 13)} brief={{ enabled: true, lastRunAt: at(0, 7), lastSlot: 'morning', nextRunAt: at(0, 18), nextSlot: 'evening', missedRuns: 4, failingSlot: '', failedAttempts: 0, latestBriefId: '', currentBriefId: '', pendingSlot: 'morning', pendingAt: at(0, 7) }} />);
     const status = screen.getByTestId('today-status');
     expect(status).toHaveTextContent(language === 'en' ? "Your morning brief didn't come at" : '早间简报没有在');
     expect(status).not.toHaveTextContent(/DATE|Last brief|7 days/);

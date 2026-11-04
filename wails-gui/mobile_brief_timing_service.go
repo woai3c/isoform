@@ -38,6 +38,9 @@ func (s *mobileBriefService) nextAdaptivePredictionFor(now time.Time, settings m
 			if (slot != "" && p.Slot != slot) || p.ScheduledAt.IsZero() || !now.Before(p.Deadline) || s.store.exists(p.BriefID) {
 				continue
 			}
+			if fixed, found := s.slotOccurrence(p.ScheduledAt, settings, p.Slot); found && fixed.BriefID == p.BriefID && s.slotHasRequestedBrief(fixed, settings) {
+				continue
+			}
 			nextEligible := now.In(loc)
 			if retryFor == p.BriefID && retryAfter.After(nextEligible) {
 				nextEligible = retryAfter.In(loc)
@@ -94,12 +97,12 @@ func (s *mobileBriefService) checkAdaptiveDue(ctx context.Context, now time.Time
 	s.mu.Lock()
 	windows := append([]mobileBriefWakeWindow(nil), s.wakeWindows...)
 	s.mu.Unlock()
-	if recovery, ok := mobileBriefWakeSlot(now, loc, settings, s.store.exists, windows); ok {
+	if recovery, ok := mobileBriefWakeSlot(now, loc, settings, s.store.exists, windows); ok && !s.slotHasRequestedBrief(recovery, settings) {
 		s.runAdaptiveSlot(ctx, recovery, mobileBriefReasonWake, &MobileBriefGeneration{Reason: "mac_asleep", ScheduledAt: formatMobileBriefTime(recovery.ScheduledAt)})
 		return
 	}
 	for _, p := range predictions {
-		if p.ScheduledAt.IsZero() || now.Before(p.ScheduledAt) || !now.Before(p.Deadline) || s.store.exists(p.BriefID) || !s.catchUpAllowed(slotAt[p.BriefID], now, settings) {
+		if p.ScheduledAt.IsZero() || now.Before(p.ScheduledAt) || !now.Before(p.Deadline) || s.store.exists(p.BriefID) || !s.catchUpAllowed(slotAt[p.BriefID], now, settings) || s.slotHasRequestedBrief(mobileBriefSlotOccurrence{BriefID: p.BriefID, Slot: p.Slot, ScheduledAt: slotAt[p.BriefID]}, settings) {
 			continue
 		}
 		s.runAdaptiveSlot(ctx, p.mobileBriefSlotOccurrence, mobileBriefReasonAdaptive, nil)

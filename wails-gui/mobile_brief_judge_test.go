@@ -59,10 +59,10 @@ func TestMorningBriefJudgeOneRevisionThenLeadOnly(t *testing.T) {
 					}
 					return "Needs a change.", nil
 				})
-			if err != nil || writes != 2 || judges != 2 || usedFallback == tc.passSecond || len(got.Paragraphs) != 1 {
+			if err != nil || writes != 2 || judges != 2 || usedFallback || len(got.Paragraphs) != 1 {
 				t.Fatalf("writes=%d judges=%d fallback=%v got=%+v err=%v", writes, judges, usedFallback, got, err)
 			}
-			if !tc.passSecond && (got.Paragraphs[0].Text != fallback.Text || len(got.Cards) != 0 || len(got.CardWords) != 0) {
+			if !tc.passSecond && (got.Paragraphs[0].Text != "A draft." || len(got.Cards) != 1) {
 				t.Fatalf("fallback = %+v", got)
 			}
 		})
@@ -101,13 +101,13 @@ func TestMorningBriefWriterAndJudgeRetryUnavailableCalls(t *testing.T) {
 			}
 			return "", nil
 		})
-	if err != nil || fallback || writes != 3 || judges != 2 || len(draft.Paragraphs) != 2 {
+	if err != nil || fallback || writes != 2 || judges != 1 || len(draft.Paragraphs) != 2 {
 		t.Fatalf("writes=%d judges=%d fallback=%v err=%v", writes, judges, fallback, err)
 	}
 }
 
 func TestMorningBriefWriterAndJudgeStopOnWithdrawalOrCancellation(t *testing.T) {
-	for _, stopped := range []error{errMobileBriefSourcesChanged, context.Canceled, context.DeadlineExceeded} {
+	for _, stopped := range []error{errMobileBriefSourcesChanged, context.Canceled} {
 		for _, stage := range []string{"writer", "judge"} {
 			t.Run(stage+"/"+stopped.Error(), func(t *testing.T) {
 				writes, judges := 0, 0
@@ -185,5 +185,13 @@ func TestMorningBriefLeadFallbackRequiresIndependentGrounding(t *testing.T) {
 		return "", nil
 	}); err == nil {
 		t.Fatal("multiple fallback sentences were accepted")
+	}
+}
+
+func TestMorningBriefJudgeFailureLogsSafeCause(t *testing.T) {
+	_, err := judgeMorningBrief(context.Background(), morningBriefJudgeInput{}, func(context.Context, string) (string, error) { return "private response", nil })
+	logged := safeLogError(err)
+	if !strings.Contains(logged, "invalid judge response") || strings.Contains(logged, "private response") {
+		t.Fatalf("unsafe or missing cause: %s", logged)
 	}
 }

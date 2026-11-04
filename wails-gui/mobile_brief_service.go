@@ -333,8 +333,10 @@ func (s *mobileBriefService) checkDue(ctx context.Context) {
 	}
 	slot, due, _ := mobileBriefPendingSlot(now, s.location, settings, s.store.exists)
 	recovery, recovering := mobileBriefWakeSlot(now, s.location, settings, s.store.exists, wakeWindows)
-	if recovering {
+	if recovering && !s.slotHasRequestedBrief(recovery, settings) {
 		slot, due = recovery.Slot, true
+	} else {
+		recovering = false
 	}
 	// Slots before the schedule was first watched, or before it was last
 	// turned on, are never missed.
@@ -605,8 +607,11 @@ func (s *mobileBriefService) recordFailure(occurrence mobileBriefSlotOccurrence,
 		key = kind
 	}
 	cause := ""
-	if errors.Is(err, context.DeadlineExceeded) {
+	switch true {
+	case errors.Is(err, context.DeadlineExceeded):
 		cause = "timeout"
+	case handoffRunAuthFailed(err):
+		cause = "signed_out"
 	}
 	stored := s.recordRun(mobileBriefRun{BriefID: occurrence.BriefID, Slot: occurrence.Slot,
 		ScheduledAt: formatMobileBriefTime(occurrence.ScheduledAt), Status: mobileBriefRunFailed, At: formatMobileBriefTime(s.now()), FailureKey: key, FailureCause: cause})
@@ -746,6 +751,13 @@ func (s *mobileBriefService) onRequestBriefBetween(from, to time.Time) (string, 
 		briefID, first = brief.BriefID, at
 	}
 	return briefID, first, briefID != ""
+}
+
+// slotHasRequestedBrief reports an on-request brief made in this slot's
+// delivery window. A prior scheduled brief does not suppress wake recovery.
+func (s *mobileBriefService) slotHasRequestedBrief(occurrence mobileBriefSlotOccurrence, settings mobileBriefSettings) bool {
+	_, _, found := s.onRequestBriefBetween(occurrence.ScheduledAt, mobileBriefSlotCloses(occurrence, s.location, settings))
+	return found
 }
 
 // briefSince reports a stored brief made at or after at.
@@ -1005,12 +1017,22 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 	var weekLead, weekLeadFacts string
 	if rankedMorning {
 		var draft morningBriefDraft
+		original := brief
 		brief, modelBinding, draft, err = s.composeRankedMorning(ctx, input, brief, gathered)
 		if err != nil {
-			return MobileBriefV1{}, withLogStage("ranked morning", err)
+			if !mobileBriefWriteJudgeFailed(err) || ctx.Err() != nil || errors.Is(err, errMobileBriefSourcesChanged) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return MobileBriefV1{}, withLogStage("ranked morning", err)
+			}
+			log.Printf("[mobile-brief] ranked morning writing failed (%s); using on-request composer", safeLogError(err))
+			brief, rankedMorning = original, false
+			modelBinding = s.app.captureMobileBriefModelSources(ctx, brief, gathered)
+			_, brief.Offers = mobileBriefClosing(brief, language)
+			cards = mobileBriefPatternCards(brief, language)
+			paragraphs, status, words, weekLead, weekLeadFacts = composeMobileBriefNarrativeWithLeadAt(ctx, s.app, brief, cards, s.now)
+		} else {
+			paragraphs, status = draft.Paragraphs, "ok"
+			rankedCards = draft.Cards
 		}
-		paragraphs, status = draft.Paragraphs, "ok"
-		rankedCards = draft.Cards
 	} else if s.composeWithLead != nil {
 		paragraphs, status, words, weekLead, weekLeadFacts = s.composeWithLead(ctx, s.app, brief, cards)
 	} else if s.compose != nil {
@@ -1801,4 +1823,16 @@ func mobileBriefPendingSlot(
 		missed = append(missed, briefID)
 	}
 	return "", false, missed
+}
+
+// Only a writing failure can use the ordinary composer; source admission and
+// withdrawal failures must retain their existing fail-closed behavior.
+func mobileBriefWriteJudgeFailed(err error) bool {
+	for err != nil {
+		if stage, ok := err.(*logStageError); ok && stage.stage == "write and judge" {
+			return true
+		}
+		err = errors.Unwrap(err)
+	}
+	return false
 }

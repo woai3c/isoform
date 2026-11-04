@@ -26,3 +26,12 @@ func TestMorningBriefDraftOnlyCitesSelectedItems(t *testing.T) {
 		}
 	}
 }
+
+func TestMorningBriefDraftTrimsTrailingContent(t *testing.T) {
+	lead := morningBriefCandidate{ID: "garden", Refs: []string{"e1"}}
+	raw := `{"paragraphs":[{"text":"Review the garden plan.","items":["garden"]}]} Additional notes should not appear.`
+	draft, err := parseMorningBriefDraft(raw, morningBriefSelection{Lead: &lead})
+	if err != nil || len(draft.Paragraphs) != 1 || draft.Paragraphs[0].Text != "Review the garden plan." || len(draft.Paragraphs[0].Refs) != 1 {
+		t.Fatalf("draft=%+v err=%v", draft, err)
+	}
+}

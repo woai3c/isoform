@@ -82,8 +82,10 @@ var menuBarCopy = map[string]map[string]string{
 		"read":    "Read your brief",
 		"dayTime": "{day}, {time}", "today": "Today", "yesterday": "Yesterday",
 		"tried": "Tried {n} times without finishing. Isoform tries again at {time}.", "triedOnce": "Tried once without finishing. Isoform tries again at {time}.",
+		"triedTimeout": "Tried {n} times. It timed out. Isoform tries again at {time}.", "triedTimeoutOnce": "Tried 1 time. It timed out. Isoform tries again at {time}.",
+		"triedSignedOut": "Tried {n} times. Your AI is signed out. Isoform tries again at {time}.", "triedSignedOutOnce": "Tried 1 time. Your AI is signed out. Isoform tries again at {time}.",
 		"retry": "Isoform tries again at {time}.", "none": "No brief yet today", "next": "Next brief tomorrow at {time}", "nextToday": "Next brief today at {time}",
-		"making": "Making your brief…", "makingMeta": "About a minute", "playing": "{elapsed} of {length}",
+		"making": "Making your brief…", "playing": "{elapsed} of {length}",
 		"waiting": "Waiting on you", "seeAll": "See all {n} in Chat", "empty": "Nothing is waiting on you.",
 		"failed": "Could not load what is waiting on you. Your chat still has everything.",
 		"update": "Isoform {version} is ready", "restart": "Restart",
@@ -101,8 +103,10 @@ var menuBarCopy = map[string]map[string]string{
 		"read":    "阅读简报",
 		"dayTime": "{day} {time}", "today": "今天", "yesterday": "昨天",
 		"tried": "试了 {n} 次都没完成。Isoform 会在 {time} 再试。", "triedOnce": "试了 1 次都没完成。Isoform 会在 {time} 再试。",
+		"triedTimeout": "试了 {n} 次。超时了。Isoform 会在{time}再试。", "triedTimeoutOnce": "试了 1 次。超时了。Isoform 会在{time}再试。",
+		"triedSignedOut": "已尝试 {n} 次。你的 AI 已退出登录。Isoform 会在 {time} 再试一次。", "triedSignedOutOnce": "已尝试 1 次。你的 AI 已退出登录。Isoform 会在 {time} 再试一次。",
 		"retry": "Isoform 会在 {time} 再试。", "none": "今天还没有简报", "next": "下一份在明天 {time}", "nextToday": "下一份在今天 {time}",
-		"making": "正在生成简报…", "makingMeta": "大约一分钟", "playing": "{elapsed} / {length}",
+		"making": "正在生成简报…", "playing": "{elapsed} / {length}",
 		"waiting": "等你处理", "seeAll": "在聊天中查看全部 {n} 项", "empty": "没有等你处理的事。",
 		"failed": "没能读取等你处理的事。聊天里的内容都还在。",
 		"update": "Isoform {version} 已就绪", "restart": "重新启动",
@@ -382,7 +386,7 @@ func menuBarDay(w map[string]string, lang string, when, now time.Time) string {
 // the row is Today's tries line; otherwise it is the latest brief with its day.
 func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, hasLatest, building bool, health MobileBriefHealth, now time.Time) menuBarBrief {
 	if building {
-		return menuBarBrief{Kind: "making", Title: w["making"], Meta: w["makingMeta"]}
+		return menuBarBrief{Kind: "making", Title: w["making"]}
 	}
 	today := now.Local().Format("2006-01-02")
 	if retry, err := time.Parse(time.RFC3339, health.RetryAt); health.PendingSlot != "" && err == nil && retry.After(now) {
@@ -396,6 +400,21 @@ func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, has
 			title = menuBarFill(w["triedOnce"], "time", at)
 		} else if attempts > 1 {
 			title = menuBarFill(w["tried"], "n", fmt.Sprint(attempts), "time", at)
+		}
+		if attempts > 0 {
+			key := ""
+			switch health.PendingCause {
+			case "timeout":
+				key = "triedTimeout"
+			case "signed_out":
+				key = "triedSignedOut"
+			}
+			if key != "" {
+				if attempts == 1 {
+					key += "Once"
+				}
+				title = menuBarFill(w[key], "n", fmt.Sprint(attempts), "time", at)
+			}
 		}
 		return menuBarBrief{Kind: "trying", Title: title}
 	}
@@ -472,7 +491,7 @@ func (a *App) menuBarView(lang string, readWaiting bool) (perfValue menuBarView,
 		if b, can := svc.(mobileBriefBuilding); can {
 			building = b.Building()
 		}
-		view.Brief = menuBarBriefRow(w, lang, latest, ok, building, svc.Health(), time.Now())
+		view.Brief = menuBarBriefRow(w, lang, latest, ok, building, a.menuBarBriefHealth(svc, latest, ok), time.Now())
 	} else {
 		view.Brief = menuBarBrief{Kind: "none", Title: w["none"]}
 	}
@@ -527,6 +546,78 @@ func (a *App) menuBarLatestBrief(svc mobileBriefSource) (MobileBriefV1, bool) {
 		}
 	}
 	return svc.LatestMobileBrief()
+}
+
+// menuBarBriefHealth uses the already-read brief and the cached run record
+// for the retry row. Time and the building state remain live on every tick.
+func (a *App) menuBarBriefHealth(source mobileBriefSource, latest MobileBriefV1, hasLatest bool) MobileBriefHealth {
+	service, ok := source.(*mobileBriefService)
+	if !ok || service == nil {
+		return source.Health()
+	}
+	settings := service.config.load()
+	now := service.now()
+	view := MobileBriefHealth{}
+	pending, found := mobileBriefPendingOccurrence(now, service.location, settings, latest, hasLatest, func(at time.Time) bool {
+		return service.catchUpAllowed(at, now, settings)
+	})
+	if found {
+		view.PendingSlot = pending.Slot
+		if run, ok := menuBarRunMemo.failedRun(service.runs, pending.BriefID); ok {
+			view.PendingAttempts, view.PendingCause = run.Attempts, run.FailureCause
+		}
+		service.mu.Lock()
+		retryAfter, retryFor := service.retryAfter, service.retryFor
+		service.mu.Unlock()
+		if retryAfter.After(now) && retryFor == pending.BriefID && retryAfter.Before(mobileBriefSlotCloses(pending, service.location, settings)) {
+			view.RetryAt = formatMobileBriefTime(retryAfter)
+		}
+	}
+	if !hasLatest && view.RetryAt == "" && settings.Enabled {
+		// Only the empty row displays NextRunAt. Adaptive predictions can
+		// change with activity, so ask the scheduler when this row is visible.
+		if settings.Adaptive {
+			if next, found := service.nextAdaptivePrediction(now, settings); found {
+				view.NextRunAt = formatMobileBriefTime(mobileBriefReadyAt(next, now, service.location, settings))
+			}
+		} else if next, found := mobileBriefScheduledNextRun(now, service.location, settings, service.scheduleFacts(now, settings)); found {
+			view.NextRunAt = formatMobileBriefTime(next.ScheduledAt)
+		}
+	}
+	return view
+}
+
+// menuBarRunMemo parses and indexes the run record only when its contents
+// change. Reading the small record does not read or stamp the saved brief.
+var menuBarRunMemo menuBarRunCache
+
+type menuBarRunCache struct {
+	mu     sync.Mutex
+	store  *mobileBriefRunStore
+	record string
+	failed map[string]mobileBriefRun
+}
+
+func (c *menuBarRunCache) failedRun(store *mobileBriefRunStore, briefID string) (mobileBriefRun, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	store.mu.Lock()
+	data, _ := os.ReadFile(store.path)
+	store.mu.Unlock()
+	if c.store != store || c.record != string(data) {
+		c.store, c.record = store, string(data)
+		c.failed = make(map[string]mobileBriefRun)
+		var file mobileBriefRunsFile
+		if json.Unmarshal(data, &file) == nil && file.Version == mobileBriefRunsVersion {
+			for _, run := range file.Runs {
+				if run.Status == mobileBriefRunFailed {
+					c.failed[run.BriefID] = run
+				}
+			}
+		}
+	}
+	run, ok := c.failed[briefID]
+	return run, ok
 }
 
 // menuBarBriefMemo keeps the status tick's brief row input while nothing the

@@ -195,3 +195,22 @@ func TestMobileBriefAdaptiveEveningRunsAtConfiguredTimeWhileActivityAndMeetingCo
 		t.Fatalf("the evening was announced missed: %+v", moments)
 	}
 }
+
+func TestMobileBriefWakeDoesNotRepeatRequestedBrief(t *testing.T) {
+	for _, adaptive := range []bool{false, true} {
+		t.Run(catchUpMode(adaptive), func(t *testing.T) {
+			clock := &fakeMobileBriefClock{now: mobileBriefTestDay(6, 50)}
+			svc, _, _ := catchUpRig(t, clock, adaptive)
+			svc.systemStateChanged(activitymon.SystemStateChange{Kind: activitymon.SystemStateSleep, At: clock.Now()})
+			clock.Set(mobileBriefTestDay(9, 0))
+			svc.systemStateChanged(activitymon.SystemStateChange{Kind: activitymon.SystemStateWake, At: clock.Now()})
+			if _, err := svc.generate(context.Background(), mobileBriefSlotOnRequest, mobileBriefReasonSettings); err != nil {
+				t.Fatal(err)
+			}
+			svc.checkDue(context.Background())
+			if svc.store.exists("2026-10-09-morning") {
+				t.Fatal("wake recovery repeated the requested brief")
+			}
+		})
+	}
+}

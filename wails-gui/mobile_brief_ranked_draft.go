@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
-	"io"
 	"strings"
 )
 
@@ -26,10 +24,6 @@ func parseMorningBriefDraft(raw string, selection morningBriefSelection) (mornin
 	var reply morningBriefDraftReply
 	if err := decoder.Decode(&reply); err != nil {
 		return morningBriefDraft{}, err
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
-		return morningBriefDraft{}, codeError("extra content after draft")
 	}
 	if selection.Lead == nil || len(reply.Paragraphs) == 0 || len(reply.Paragraphs) > mobileBriefMaxWords {
 		return morningBriefDraft{}, codeError("invalid draft structure")

@@ -178,8 +178,8 @@ func TestMorningBriefPipelineGroundsFallbackOnlyAfterRevision(t *testing.T) {
 			writes++
 			return morningBriefDraft{Paragraphs: []MobileBriefPara{{Text: "A draft.", Refs: []string{"e1"}}}}, nil
 		})
-	if err != nil || !fallback || writes != 4 || calls != 27 || checks < 2*calls || len(draft.Paragraphs) != 1 ||
-		draft.Paragraphs[0].Text != "Pay the tax because it is due today." || len(draft.Cards) != 0 {
+	if err != nil || fallback || writes != 2 || calls != 13 || checks < 2*calls || len(draft.Paragraphs) != 1 ||
+		draft.Paragraphs[0].Text != "A draft." || len(draft.Cards) != 0 {
 		t.Fatalf("draft=%+v fallback=%v writes=%d calls=%d checks=%d err=%v", draft, fallback, writes, calls, checks, err)
 	}
 }

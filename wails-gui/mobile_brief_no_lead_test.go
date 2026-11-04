@@ -178,7 +178,7 @@ func TestScheduledMorningIsWrittenWhenTheScorerPicksNoLead(t *testing.T) {
 			}, Answers: []mobileBriefCardWords{{Label: "Unblock it", Message: "Yes, help me unblock the " + leadTitle + "."}, {Label: "Not now", Message: "No, leave it."}}})
 			return string(reply), err
 		case strings.Contains(prompt, "Judge the morning brief"):
-			return `{"critique":"Pass","pass":true}`, nil
+			return "", errors.New("judge unavailable")
 		default:
 			t.Fatalf("unexpected model call: %s", prompt)
 			return "", nil
@@ -201,5 +201,65 @@ func TestScheduledMorningIsWrittenWhenTheScorerPicksNoLead(t *testing.T) {
 	stored, found := svc.store.load(brief.BriefID)
 	if !found || len(svc.app.mobileBriefForDelivery(stored).Narrative) != 3 {
 		t.Fatalf("the plain-order brief was not stored and delivered: %+v", stored.Narrative)
+	}
+}
+
+func TestScheduledMorningUsesOrdinaryComposerWhenWritingFails(t *testing.T) {
+	now := time.Now().Truncate(time.Second)
+	svc, _ := newTestMobileBriefService(t, &fakeMobileBriefClock{now: now})
+	svc.app.mobileBriefSvc, svc.compose = svc, nil
+	work, err := handoff.NewStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc.app.handoffStore = work
+	for i, entry := range []handoff.Entry{
+		{ID: "lantern-permit", Title: "Lantern festival permit", Source: handoff.SourceMobile, Status: handoff.StatusBlocked},
+		{ID: "orchard-quote", Title: "Orchard Lane quote", Source: handoff.SourceMobile, Status: handoff.StatusBlocked},
+	} {
+		entry.CreatedAt = now.Add(-time.Duration(i+1) * time.Hour).UnixMilli()
+		entry.UpdatedAt = now.Add(-time.Duration(i+1) * time.Minute).UnixMilli()
+		if _, err := work.Save(entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	svc.gather = func(_ context.Context, slot string, start, asOf time.Time) (mobileBriefInput, error) {
+		input := mobileBriefInput{Slot: slot, WindowStart: start, AsOf: asOf, Location: time.UTC}
+		collectMobileBriefWork(svc.app, &input)
+		return input, nil
+	}
+	permit := mobileBriefItemKey("candidate", "history", "lantern-permit")
+	quote := mobileBriefItemKey("candidate", "history", "orchard-quote")
+	scores, writes := 0, 0
+	svc.modelCall = func(_ context.Context, prompt string) (string, error) {
+		switch true {
+		case strings.Contains(prompt, "chief of staff's first pass"):
+			scores++
+			reply, err := json.Marshal(morningBriefScores{Items: []morningBriefScore{
+				{ID: permit, Critique: "Blocked on you.", Score: .7, Pick: "need"},
+				{ID: quote, Critique: "Blocked on you.", Score: .6, Pick: "need"},
+			}})
+			return string(reply), err
+		case strings.Contains(prompt, "You write the user's morning brief"):
+			writes++
+			return "", errors.New("writer unavailable")
+		case strings.Contains(prompt, "Judge the morning brief"):
+			return "", errors.New("judge unavailable")
+		default:
+			t.Fatalf("unexpected model call: %s", prompt)
+			return "", nil
+		}
+	}
+	svc.publish = func(MobileBriefV1, bool) error { return nil }
+	brief, err := svc.generate(context.Background(), mobileBriefSlotMorning, mobileBriefReasonSchedule)
+	if err != nil {
+		t.Fatalf("the brief failed (%s): %s", mobileBriefFailureKind(err), safeLogError(err))
+	}
+	svc.wg.Wait()
+	if scores != 1 || writes == 0 || brief.rankedEdition {
+		t.Fatalf("ordinary composer not used: scores=%d writes=%d ranked=%v", scores, writes, brief.rankedEdition)
+	}
+	if _, found := svc.store.load(brief.BriefID); !found {
+		t.Fatal("ordinary brief was not saved")
 	}
 }
