@@ -182,13 +182,13 @@ export function stitchedTitles(threads: ActivityThreadView[], t: TFunction<'acti
         const parts = splitThreadTitle(thread.title);
         const words = parts.detail.split(/\s+/);
         let detail = words.slice(0, 3).join(' ');
-        if (Array.from(t('stitched.titleDetail', { title: parts.title, detail })).length > 32) detail = words.slice(0, 2).join(' ');
+        if (Array.from(t('stitched.titleDetail', { title: parts.title, detail })).length > TITLE_LIMIT) detail = words.slice(0, 2).join(' ');
         const base = boundedThreadTitle((heads.get(parts.title) ?? 0) > 1 && parts.detail
             ? t('stitched.titleDetail', { title: parts.title, detail }) : parts.title);
         let title = base;
         for (let count = 2; used.has(title); count++) {
             const suffix = t('stitched.titleNumber', { title: '', count });
-            title = t('stitched.titleNumber', { title: boundedThreadTitle(base, 32 - Array.from(suffix).length), count });
+            title = t('stitched.titleNumber', { title: boundedThreadTitle(base, TITLE_LIMIT - Array.from(suffix).length), count });
         }
         used.add(title);
         titles.set(thread.id, title);
@@ -196,7 +196,11 @@ export function stitchedTitles(threads: ActivityThreadView[], t: TFunction<'acti
     return titles;
 }
 
-function boundedThreadTitle(title: string, limit = 32): string {
+/** A title of 60 characters or fewer is never cut; it wraps instead
+ *  (activity review v1.0.8 AR55, thursday-polish A4). */
+export const TITLE_LIMIT = 60;
+
+export function boundedThreadTitle(title: string, limit = TITLE_LIMIT): string {
     const chars = Array.from(title);
     return chars.length <= limit ? title : chars.slice(0, limit - 1).join('').trimEnd() + '…';
 }
@@ -570,7 +574,8 @@ function PickUpCard({
         >
             <Undo2 className="size-[18px] shrink-0 text-muted" aria-hidden />
             <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-0.5">
-                <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
+                {/* No capitals in Chinese: "Isoform 注意到" (activity review v1.0.7 AR49). */}
+                <span className={cn('text-[11px] font-medium tracking-[0.08em] text-muted', i18n.language.startsWith('zh') ? 'normal-case' : 'uppercase')}>
                     {t('stitched.pickUp.label')}
                 </span>
                 <span className="text-[14px] font-semibold text-ink">{t('stitched.pickUp.title', { title: notice.title })}</span>
@@ -769,7 +774,7 @@ function StitchedTimeline({
                             <button key={id} type="button" data-thread-lane={id} data-interruption={item.interruption ? 'true' : undefined}
                                 aria-pressed={selected} onClick={() => select(id)} className={rowClass(id)}>
                                 <span className={cn(LABEL_COLUMN, 'flex flex-col gap-px pl-2 pr-3')} title={laneTip}>
-                                    <span className="line-clamp-2 break-words text-[13px] font-semibold text-ink" title={item.thread.title}>{titles.get(id) ?? title.title}</span>
+                                    <span className="break-words text-[13px] font-semibold text-ink" title={item.thread.title}>{titles.get(id) ?? title.title}</span>
                                     {item.continuesBefore && <span className="text-[11px] text-muted">{t('stitched.continuesBefore')}</span>}
                                     <span className="flex text-[11.5px] text-muted" title={meta}>
                                         {detail && <span className="truncate">{detail}</span>}

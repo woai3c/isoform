@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import i18n from '@/i18n';
 import { formatDurationMs, formatRoundedDurationMs, formatTimeFromMs, formatTimeRangeFromMs } from './timeline/useCalendarData';
-import { pointWhat, readableName, stripChipsFit } from './activity-stitched';
+import { pointWhat, readableName, stitchedTitles, stripChipsFit } from './activity-stitched';
+import type { ActivityThreadView } from '@/lib/wails-shim-app';
 import { weekParagraphs } from './activity-week-view';
 
 const at = (h: number, m: number) => new Date(2026, 10, 2, h, m).getTime();
@@ -62,5 +63,15 @@ describe('Activity path to 80 (activity review v1.0.6, v1.0.7)', () => {
             .toBe('Monday you planned the release.\n\nTuesday you wrote the tests.\n- one\n- two');
         expect(weekParagraphs('A.\n\nB.')).toBe('A.\n\nB.');
         expect(weekParagraphs(undefined)).toBe('');
+    });
+
+    it('AR55: a title of 60 characters or fewer is never cut', () => {
+        const thread = (id: string, title: string) => ({ id, title, startMs: 0 } as unknown as ActivityThreadView);
+        const t = i18n.getFixedT('en', 'activity');
+        const long = 'Reviewing the Northwind invoice sync connector with Priya and Ana today';
+        const titles = stitchedTitles([thread('a', 'Answering Northwind support tickets'), thread('b', long)], t);
+        expect(titles.get('a')).toBe('Answering Northwind support tickets');
+        expect([...titles.get('b')!].length).toBe(60);
+        expect(titles.get('b')!.endsWith('…')).toBe(true);
     });
 });

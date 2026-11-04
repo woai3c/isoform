@@ -264,8 +264,8 @@
     },
     "stepVerbs": {
         "clicked": "点击了",
-        "typed": "输入了",
-        "focused": "聚焦",
+        "typed": "输入",
+        "focused": "查看",
         "said": "说",
         "heard": "听到",
         "switchedApp": "切换应用",

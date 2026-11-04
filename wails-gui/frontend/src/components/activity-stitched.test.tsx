@@ -882,7 +882,7 @@ describe('Stitched cleanup: row policy and story', () => {
         expect(document.querySelectorAll('[data-aggregate-lane]')).toHaveLength(2);
         expect(onCountsChange).toHaveBeenLastCalledWith({ workedOn: 8, learned: 0 });
         const title = within(lane('work-0')).getByText('OpenClaw cleanup');
-        expect(title).toHaveClass('line-clamp-2', 'break-words');
+        expect(title).toHaveClass('break-words');
         expect(title).toHaveAttribute('title', dense.threads[0].title);
         expect(title.parentElement?.className).toContain('min-w-[200px]');
         expect(title.parentElement?.className).toContain('min-[1440px]:w-[240px]');

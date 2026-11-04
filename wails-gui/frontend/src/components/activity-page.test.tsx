@@ -281,8 +281,8 @@ describe('ActivityPage section panel', () => {
         await i18n.changeLanguage('zh-CN');
         const t = i18n.getFixedT('zh-CN', 'activity') as unknown as Parameters<typeof eventActionLabel>[1];
         const verb = (evt: Partial<activitymon.ActivityEvent>) => eventActionLabel(evt as activitymon.ActivityEvent, t).verb;
-        expect(verb({ kind: 'focus', focusLabel: 'connector/retry.go' })).toBe('聚焦');
-        expect(verb({ kind: 'keyboard', typedText: 'retry on 429 with backoff' })).toBe('输入了');
+        expect(verb({ kind: 'focus', focusLabel: 'connector/retry.go' })).toBe('查看');
+        expect(verb({ kind: 'keyboard', typedText: 'retry on 429 with backoff' })).toBe('输入');
         expect(verb({ kind: 'click', clickLabel: 'Merge' })).toBe('点击了');
         expect(verb({ kind: 'speech', speechSource: 'microphone', speechText: "Let's ship the connector on Friday." })).toBe('说');
         expect(verb({ kind: 'app_switch', appName: 'Slack' })).toBe('切换应用');
