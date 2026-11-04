@@ -393,6 +393,9 @@ func TestMobileRemoteAccessInvitationAndReset(t *testing.T) {
 	}
 	relay.nextFrame(t, "pairing_open")
 	invitation := mobileTestDecodeInvitation(t, bridge.connectionStatus().ConnectionCode)
+	if invitation.Relay != "" {
+		t.Fatalf("remote invitation contains relay %q", invitation.Relay)
+	}
 	if invitation.Iroh != "endpointabcdefghijklmnopqrstuv" {
 		t.Fatalf("remote invitation ticket = %q", invitation.Iroh)
 	}

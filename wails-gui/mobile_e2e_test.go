@@ -5,10 +5,9 @@ package main
 // encrypted request, and delivers a brief the device asked for. The test
 // builds and spawns the relay, so it only runs with YANSU_MOBILE_E2E=1.
 //
-// YANSU_MOBILE_E2E_HOLD=<duration> keeps the hub running afterwards with a
-// fresh invitation printed to the test log, approves every claim after
-// logging its confirmation code, and sends a sample brief to each device, so
-// an iOS simulator can pair against this hub for a visual check.
+// The automated device connects directly to the local relay. Its invitation
+// uses a public test origin because loopback invitations are never offered.
+// Manual simulator pairing needs a reachable relay or a real remote ticket.
 
 import (
 	"bytes"
@@ -77,7 +76,7 @@ func TestMobileEndToEndThroughRelayBinary(t *testing.T) {
 		return current.RelayState == mobileRelayConnected
 	})
 
-	status, err = app.GenerateMobileConnectionCode()
+	status, err = mobileE2EOpenInvitation(app)
 	if err != nil || status.ConnectionCode == "" {
 		t.Fatalf("generate: %+v %v", status, err)
 	}
@@ -137,6 +136,15 @@ func TestMobileEndToEndThroughRelayBinary(t *testing.T) {
 		return
 	}
 	mobileE2EHold(t, app, hold)
+}
+
+// The test phone connects to relayURL directly; this origin is only used in
+// the encoded fixture and is never dialed or offered to a physical phone.
+func mobileE2EOpenInvitation(app *App) (MobileConnectionStatus, error) {
+	if err := app.mobileBridgeForUse().openPairingWithRelay("https://relay.example.com"); err != nil {
+		return MobileConnectionStatus{}, err
+	}
+	return app.GetMobileConnectionStatus()
 }
 
 // mobileE2EHold keeps the hub reachable for manual simulator pairing.

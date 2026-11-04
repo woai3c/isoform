@@ -156,6 +156,8 @@
         "copiedLink": "已复制",
         "linkHint": "只有在相机无法扫描配对码时才使用此链接。链接是私密的，只能使用一次。",
         "copyFailed": "无法复制链接。请重试。",
+        "retryPairing": "重试",
+        "relayUnreachable": "手机暂时无法连接到这台电脑。请开启远程访问。",
         "generateFailed": "无法生成配对码。请检查连接后重试。",
         "qrTitle": "手机版 Isoform 的配对码",
         "waitingForApproval": "{{name}} 正在等待你确认配对码。",

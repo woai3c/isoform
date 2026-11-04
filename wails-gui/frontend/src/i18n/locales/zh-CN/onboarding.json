@@ -777,6 +777,8 @@
             "pendingCode": "你的手机上显示 {{code}}。",
             "approve": "配对",
             "decline": "不是这台",
+            "relayRetry": "重试",
+            "relayUnreachable": "手机暂时无法连接到这台电脑。请开启远程访问。",
             "pairFailed": "没能配对，请再扫一次。"
         },
         "finish": {

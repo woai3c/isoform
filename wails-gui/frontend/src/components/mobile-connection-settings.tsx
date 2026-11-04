@@ -493,8 +493,9 @@ export function MobileConnectionSettings({
                 setError("statusLoad");
                 onSuccess?.();
             }
-        } catch {
-            if (mounted.current) setError(scope, failure);
+        } catch (error) {
+            const unreachable = kind === "code" && String(error).includes("remote access is not ready");
+            if (mounted.current) setError(scope, unreachable ? t("mobileConnection.relayUnreachable") : failure);
         } finally {
             actionRef.current = null;
             if (mounted.current) setAction(null);
@@ -1233,7 +1234,9 @@ export function MobileConnectionSettings({
                                 ) : showCode ? (
                                     <RefreshCw className="size-4" />
                                 ) : null}
-                                {showCode
+                                {errors.code
+                                    ? t("mobileConnection.retryPairing")
+                                    : showCode
                                     ? t("mobileConnection.newCode")
                                     : hasDevices
                                       ? t("mobileConnection.pairAnother")

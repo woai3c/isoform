@@ -62,7 +62,7 @@ var errMobilePairingRejected = errors.New("the phone's pairing request could not
 // secret never reaches the relay; only the hash of the claim token does.
 type mobileInvitation struct {
 	V           int    `json:"v"`
-	Relay       string `json:"relay"`
+	Relay       string `json:"relay,omitempty"`
 	Hub         string `json:"hub"`
 	Pairing     string `json:"pairing"`
 	Secret      string `json:"secret"`

@@ -156,6 +156,8 @@
         "copiedLink": "Copied",
         "linkHint": "Use the link only if the camera cannot scan the code. It is private and works once.",
         "copyFailed": "Could not copy the link. Try again.",
+        "retryPairing": "Try again",
+        "relayUnreachable": "Your phone can't reach this computer yet. Turn on remote access.",
         "generateFailed": "Could not create a pairing code. Check the connection and try again.",
         "qrTitle": "Pairing code for Isoform on your phone",
         "waitingForApproval": "{{name}} is waiting for you to confirm the code.",

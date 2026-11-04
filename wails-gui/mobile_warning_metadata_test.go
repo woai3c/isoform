@@ -12,12 +12,15 @@ func TestMobileLoopbackWarningCarriesTranslationMetadata(t *testing.T) {
 	})
 	phone := newMobileTestPhone(t)
 	mobileTestAddDevice(t, bridge, phone, []string{mobileScopeBriefRead})
-	if err := bridge.openPairing(); err != nil {
+	if err := bridge.openPairingWithRelay("https://relay.example.com"); err != nil {
 		t.Fatal(err)
 	}
 	status := bridge.connectionStatus()
 	invitation := mobileTestDecodeInvitation(t, status.ConnectionCode)
-	for name, value := range map[string]any{"status": status, "invitation": invitation} {
+	if invitation.Warning != "" {
+		t.Fatal("public invitation must not carry a loopback warning")
+	}
+	for name, value := range map[string]any{"status": status} {
 		raw, err := json.Marshal(value)
 		if err != nil {
 			t.Fatal(err)

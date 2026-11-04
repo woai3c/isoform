@@ -9,7 +9,7 @@ import {
     NativeClipboardSetText,
     type MobileConnectionStatus,
 } from "@/lib/wails-shim-app";
-import { GetSetupPermissions, OpenPermissionSettings, RequestPermission } from "../../../../../wailsjs/go/main/App";
+import { GetSetupPermissions, RequestPermission } from "../../../../../wailsjs/go/main/App";
 import { BrowserOpenURL, ClipboardSetText, EventsOn } from "../../../../../wailsjs/runtime/runtime";
 import { IPHONE_APP_LINK } from "@/lib/iphone-app-link";
 import { SetupIcon } from "../SetupIcons";
@@ -75,11 +75,11 @@ export function ReachesScene({ onNext, reduced, still, enter }: SceneProps) {
     const [status, setStatus] = useState<MobileConnectionStatus | null>(null);
     const [notifications, setNotifications] = useState<"unknown" | "off" | "asking" | "on">("unknown");
     const [notificationError, setNotificationError] = useState(false);
-    const [notificationDenied, setNotificationDenied] = useState(false);
     const notificationReadVersion = useRef(0);
     const requestingNotifications = useRef(false);
     const [copied, setCopied] = useState(false);
     const [pairFailed, setPairFailed] = useState(false);
+    const [relayUnreachable, setRelayUnreachable] = useState(false);
     const phone = useRef<HTMLDivElement>(null);
     const getapp = useRef<HTMLDivElement>(null);
     const pn1 = useRef<HTMLDivElement>(null);
@@ -124,8 +124,9 @@ export function ReachesScene({ onNext, reduced, still, enter }: SceneProps) {
         const fresh = async () => {
             try {
                 take(await GenerateMobileConnectionCode());
-            } catch {
-                /* The last code stays until the next try. */
+                if (live) setRelayUnreachable(false);
+            } catch (error) {
+                if (live && String(error).includes("remote access is not ready")) setRelayUnreachable(true);
             }
         };
         void (async () => {
@@ -134,7 +135,7 @@ export function ReachesScene({ onNext, reduced, still, enter }: SceneProps) {
                 if (!current.enabled) current = take(await EnableMobileConnectionUsingRelay(""));
                 if (!current.devices?.length && !current.pendingPairing) await fresh();
             } catch {
-                /* Without a connection the card keeps its empty code. */
+                if (live) setRelayUnreachable(true);
             }
         })();
         const timer = window.setInterval(() => {
@@ -201,7 +202,6 @@ export function ReachesScene({ onNext, reduced, still, enter }: SceneProps) {
             if (typeof granted !== "boolean") throw new Error("Notification permission unavailable");
             setNotifications(granted ? "on" : "off");
             setNotificationError(false);
-            if (granted) setNotificationDenied(false);
             return granted;
         } catch {
             if (version === notificationReadVersion.current) {
@@ -225,28 +225,29 @@ export function ReachesScene({ onNext, reduced, still, enter }: SceneProps) {
         requestingNotifications.current = true;
         setNotifications("asking");
         setNotificationError(false);
+        let timer: number | undefined;
         try {
-            await RequestPermission("notifications");
-            const granted = await readNotifications();
-            if (granted === false) {
-                setNotificationDenied(true);
-                await OpenPermissionSettings("notifications");
-                return;
-            }
-            if (granted !== true) return;
-            const run = new Run(reduced);
-            finishing.current = run;
-            run.go(async () => {
-                await run.wait(reduced ? T.notificationsOnReduced : T.notificationsOn);
+            const granted = await Promise.race([
+                RequestPermission("notifications").catch(() => false),
+                new Promise<false>((resolve) => { timer = window.setTimeout(() => resolve(false), 3000); }),
+            ]);
+            if (granted) {
+                setNotifications("on");
+                const run = new Run(reduced);
+                finishing.current = run;
+                run.go(async () => {
+                    await run.wait(reduced ? T.notificationsOnReduced : T.notificationsOn);
+                    onNext();
+                });
+            } else {
+                setNotifications("off");
                 onNext();
-            });
-        } catch {
-            await readNotifications();
-            setNotificationError(true);
+            }
         } finally {
+            if (timer !== undefined) window.clearTimeout(timer);
             requestingNotifications.current = false;
         }
-    }, [notifications, reduced, onNext, readNotifications]);
+    }, [notifications, reduced, onNext]);
     const finishing = useRef<Run | null>(null);
     useEffect(() => () => finishing.current?.cancel(), []);
 
@@ -327,6 +328,16 @@ export function ReachesScene({ onNext, reduced, still, enter }: SceneProps) {
                                 </span>
                                 {sealed}
                             </>
+                        ) : relayUnreachable ? (
+                            <>
+                                <p role="alert" className="error">{t("v2.reaches.relayUnreachable")}</p>
+                                <button className="link" type="button" onClick={() => {
+                                    void GenerateMobileConnectionCode().then((next) => {
+                                        setStatus(next);
+                                        setRelayUnreachable(false);
+                                    }).catch(() => {});
+                                }}>{t("v2.reaches.relayRetry")}</button>
+                            </>
                         ) : (
                             <>
                                 <span className="qrbox" role="img" aria-label={t("v2.reaches.codeLabel")}>
@@ -389,7 +400,6 @@ export function ReachesScene({ onNext, reduced, still, enter }: SceneProps) {
                 </button>
             </div>
             {notificationError && <p role="alert" className="error">{t("v2.reaches.notificationFailed")}</p>}
-            {notificationDenied && !notificationError && <p role="status">{t("v2.reaches.notificationDenied")}</p>}
         </section>
     );
 }

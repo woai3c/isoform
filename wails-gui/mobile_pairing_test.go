@@ -41,7 +41,8 @@ func mobileTestOpenInvitation(t *testing.T) (*mobileBridge, *mobileTestRelay, *m
 	t.Helper()
 	bridge, relay := mobileTestHub(t)
 	conn := relay.acceptRegistration(t, nil)
-	if err := bridge.openPairing(); err != nil {
+	mobileTestWaitFor(t, "relay connected", func() bool { return bridge.connectionStatus().RelayState == mobileRelayConnected })
+	if err := bridge.openPairingWithRelay("https://relay.example.com"); err != nil {
 		t.Fatal(err)
 	}
 	status := bridge.connectionStatus()
@@ -56,7 +57,7 @@ func TestMobilePairingInvitationAndOpenFrame(t *testing.T) {
 	if !strings.HasPrefix(bridge.connectionStatus().ConnectionCode, mobileInvitationPrefix) {
 		t.Fatal("new pairing invitations must use the Isoform scheme")
 	}
-	if invitation.V != 1 || invitation.Hub != bridge.identity.HubID || invitation.Relay != relay.url() {
+	if invitation.V != 1 || invitation.Hub != bridge.identity.HubID || invitation.Relay != "https://relay.example.com" {
 		t.Fatalf("invitation metadata is wrong: %+v", invitation)
 	}
 	secret, err := base64.RawURLEncoding.DecodeString(invitation.Secret)
@@ -274,5 +275,39 @@ func TestMobilePairingInvitationExpiresLocally(t *testing.T) {
 	}
 	if err := bridge.confirmPairing(invitation.Pairing, true); err == nil {
 		t.Fatal("an expired invitation was confirmed")
+	}
+}
+
+func TestMobileInvitationRelayReachability(t *testing.T) {
+	for _, tc := range []struct {
+		origin string
+		valid  bool
+	}{
+		{"http://127.0.0.1:57559", false}, {"https://localhost", false},
+		{"https://[::1]", false}, {"https://169.254.1.2", false},
+		{"https://192.168.1.3", false}, {"https://100.64.0.1", false},
+		{"https://relay.local", false}, {"https://relay.example.com", true},
+		{"https://8.8.8.8", true}, {"https://[2606:4700:4700::1111]", true},
+	} {
+		t.Run(tc.origin, func(t *testing.T) {
+			if got := mobileInvitationRelayReachable(tc.origin); got != tc.valid {
+				t.Fatalf("got %v", got)
+			}
+		})
+	}
+	bridge, relay := mobileTestHub(t)
+	relay.acceptRegistration(t, nil)
+	mobileTestWaitFor(t, "relay connected", func() bool { return bridge.connectionStatus().RelayState == mobileRelayConnected })
+	if err := bridge.openPairing(); err != errMobileRemoteAccessNotReady {
+		t.Fatalf("loopback error = %v", err)
+	}
+	if bridge.connectionStatus().ConnectionCode != "" {
+		t.Fatal("loopback invitation was shown")
+	}
+	if err := bridge.openPairingWithRelay("https://relay.example.com"); err != nil {
+		t.Fatal(err)
+	}
+	if got := mobileTestDecodeInvitation(t, bridge.connectionStatus().ConnectionCode).Relay; got != "https://relay.example.com" {
+		t.Fatalf("relay = %q", got)
 	}
 }

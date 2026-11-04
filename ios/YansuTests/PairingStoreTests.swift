@@ -274,6 +274,15 @@ final class PairingStoreTests: XCTestCase {
         }
     }
 
+    func testTicketOnlyInvitationIsAccepted() throws {
+        let hub = TestHub()
+        let ticket = "endpointabcdefghijklmnopqrst"
+        let parsed = try PairingInvitation.parse(invitation(["iroh": ticket], hub: hub, removing: ["relay"]), now: now)
+        XCTAssertEqual(parsed.irohTicket, ticket)
+        XCTAssertEqual(parsed.relayOrigin.absoluteString, "https://iroh.invalid")
+        XCTAssertThrowsError(try PairingInvitation.parse(invitation([:], hub: hub, removing: ["relay"]), now: now))
+    }
+
     func testLoopbackHTTPWithoutTicketIsRefusedWhenDevelopmentIsDisabled() {
         let hub = TestHub()
         XCTAssertThrowsError(
@@ -509,7 +518,7 @@ final class PairingStoreTests: XCTestCase {
         guard case .failed(let message) = fixture.store.phase else {
             return XCTFail("expected a failure, got \(fixture.store.phase)")
         }
-        XCTAssertTrue(message.contains("reach the relay"))
+        XCTAssertTrue(message.contains("reach your computer"))
     }
 
     func testExpiredInvitationNeverReachesTheRelay() throws {

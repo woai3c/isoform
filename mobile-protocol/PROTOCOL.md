@@ -39,7 +39,7 @@ isoform://pair#<base64url(JSON)>
 
 Readers also accept the legacy `yansu://pair#` prefix.
 
-JSON payload (the shown fields are required; `iroh` is optional):
+JSON payload (the shown fields are required for a direct relay; a ticket-based invitation omits `relay` and includes `iroh`):
 
 ```json
 {"v":1,"relay":"https://relay.example","hub":"<hubId>","pairing":"<pairingId>",
@@ -52,9 +52,7 @@ JSON payload (the shown fields are required; `iroh` is optional):
 - `iroh`, when present, is the computer's dumbpipe endpoint ticket. A remote-mode phone uses it
   to reach the computer's relay from another network; it is never sent to the relay. A remote
   invitation is not created until the ticket is ready.
-- The ticket matches `endpoint[a-z2-7]{20,}`. The phone uses its iroh forwarder to reach the
-  invitation's loopback relay origin; it never dials that loopback address directly. Remote-mode
-  invitations omit the loopback reachability warning. Older phones ignore this additive field.
+- The ticket matches `endpoint[a-z2-7]{20,}`. The phone uses its iroh forwarder to reach the computer relay. Ticket-only invitations require an updated phone app; older versions need an update to read them.
 - The fragment is never sent over HTTP (fragments are not transmitted) and never logged.
 - Optional `warning` is a localized, one-line advisory for the pairing screen. With a
   loopback relay and a known physical phone, it reads, for example,
@@ -3118,7 +3116,7 @@ The relay runs as a sidecar on the user's computer and binds only to `127.0.0.1`
 Dumbpipe runs beside it and forwards an iroh connection to that loopback listener. The desktop
 is the hub and initiates the relay connection; the phone uses the optional invitation `iroh`
 ticket to reach the hub from cellular or another network. The phone must not dial the invitation's
-loopback `relay` address directly when `iroh` is present: its local forwarder maps that connection
+a `relay` address when `iroh` is present: its local forwarder maps that connection
 to the computer's tunnel endpoint. A missing `iroh` means an explicitly configured HTTPS relay.
 
 The computer stores one random 32-byte node secret as 64 lowercase hexadecimal characters in

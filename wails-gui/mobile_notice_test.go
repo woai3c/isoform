@@ -480,7 +480,7 @@ func TestMobileNoticeThroughRelayBinary(t *testing.T) {
 		current, _ := app.GetMobileConnectionStatus()
 		return current.RelayState == mobileRelayConnected
 	})
-	status, err = app.GenerateMobileConnectionCode()
+	status, err = mobileE2EOpenInvitation(app)
 	if err != nil || status.ConnectionCode == "" {
 		t.Fatalf("generate: %+v %v", status, err)
 	}

@@ -230,10 +230,24 @@ func (bridge *mobileBridge) loopbackWarningLocked(origin string, now time.Time) 
 
 // openPairing replaces any open invitation with a new one (PROTOCOL.md 3.5).
 func (bridge *mobileBridge) openPairing() error {
+	return bridge.openPairingWithRelay("")
+}
+
+// An override permits protocol tests to use a public invitation origin while
+// their relay transport remains local.
+func (bridge *mobileBridge) openPairingWithRelay(override string) error {
 	bridge.mu.Lock()
-	if bridge.stopped || !bridge.relay.Enabled || bridge.client == nil || bridge.identity == nil {
+	if bridge.stopped || !bridge.relay.Enabled || bridge.identity == nil {
 		bridge.mu.Unlock()
 		return errMobileConnectionOff
+	}
+	if bridge.client == nil {
+		bridge.mu.Unlock()
+		return errMobileRemoteAccessNotReady
+	}
+	if state, _ := bridge.client.snapshot(); state != mobileRelayConnected {
+		bridge.mu.Unlock()
+		return errMobileRemoteAccessNotReady
 	}
 	secret := make([]byte, 32)
 	if _, err := rand.Read(secret); err != nil {
@@ -244,20 +258,29 @@ func (bridge *mobileBridge) openPairing() error {
 	expires := time.Now().Add(mobilePairingLifetime).Truncate(time.Second)
 	hash := mobileClaimTokenHash(mobileClaimToken(secret, pairingID))
 	iroh := ""
+	relayOrigin := bridge.client.origin
+	if override != "" {
+		relayOrigin = override
+	}
 	if mobileRemoteAccessMode(bridge.relay.URL) {
 		if bridge.remoteAccess == nil {
 			bridge.mu.Unlock()
 			return errMobileRemoteAccessNotReady
 		}
-		iroh = bridge.remoteAccess.Snapshot().Ticket
-		if iroh == "" {
+		snapshot := bridge.remoteAccess.Snapshot()
+		iroh = snapshot.Ticket
+		if snapshot.State != remoteaccess.StateReady || iroh == "" {
 			bridge.mu.Unlock()
 			return errMobileRemoteAccessNotReady
 		}
+		relayOrigin = "" // The ticket is the transport; never publish the local listener.
+	} else if !mobileInvitationRelayReachable(relayOrigin) {
+		bridge.mu.Unlock()
+		return errMobileRemoteAccessNotReady
 	}
-	warning, warningCode, warningHost := bridge.loopbackWarningLocked(bridge.client.origin, time.Now())
+	warning, warningCode, warningHost := bridge.loopbackWarningLocked(relayOrigin, time.Now())
 	invitation, err := encodeMobileInvitation(mobileInvitation{
-		V: 1, Relay: bridge.client.origin, Hub: bridge.identity.HubID, Pairing: pairingID,
+		V: 1, Relay: relayOrigin, Hub: bridge.identity.HubID, Pairing: pairingID,
 		Secret: base64.RawURLEncoding.EncodeToString(secret),
 		HubPub: base64.RawURLEncoding.EncodeToString(bridge.identity.Public.Bytes()),
 		Exp:    expires.Unix(), Iroh: iroh,
@@ -285,6 +308,23 @@ func (bridge *mobileBridge) openPairing() error {
 	_ = client.send(open)
 	bridge.notify()
 	return nil
+}
+
+// mobileInvitationRelayReachable rejects addresses that cannot be reached by a
+// phone away from this computer. DNS and service availability can still change.
+func mobileInvitationRelayReachable(origin string) bool {
+	u, err := url.Parse(origin)
+	if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
+		return false
+	}
+	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") || strings.HasSuffix(host, ".local") {
+		return false
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsGlobalUnicast() && !ip.IsPrivate() && !ip.IsLoopback() && !ip.IsLinkLocalUnicast() && !(&net.IPNet{IP: net.ParseIP("100.64.0.0"), Mask: net.CIDRMask(10, 32)}).Contains(ip)
+	}
+	return strings.Contains(host, ".")
 }
 
 // handlePairingClaim authenticates a claim and holds it for the user's decision.

@@ -85,7 +85,7 @@ struct PairingInvitation: Equatable, Sendable {
         guard !payload.isEmpty, payload.utf8.count <= maxPayloadBytes,
               let json = try? RelayCrypto.base64URLDecode(payload),
               let wire = try? JSONDecoder().decode(Wire.self, from: json),
-              let version = wire.v, let relayText = wire.relay, let hub = wire.hub,
+              let version = wire.v, let hub = wire.hub,
               let pairing = wire.pairing, let secretText = wire.secret,
               let hubPubText = wire.hubPub, let exp = wire.exp else {
             throw ParseError.malformed
@@ -106,7 +106,15 @@ struct PairingInvitation: Equatable, Sendable {
               let hubPublicKey = try? RelayCrypto.decodeKey(hubPubText) else {
             throw ParseError.malformed
         }
-        let origin = try relayOrigin(relayText, allowsLoopback: irohTicket != nil || allowsDevelopmentLoopback)
+        let origin: URL
+        if let relayText = wire.relay {
+            origin = try relayOrigin(relayText, allowsLoopback: irohTicket != nil || allowsDevelopmentLoopback)
+        } else if irohTicket != nil {
+            // A ticket-only invitation never dials this stored placeholder.
+            origin = URL(string: "https://iroh.invalid")!
+        } else {
+            throw ParseError.malformed
+        }
         return PairingInvitation(version: version, relayOrigin: origin, irohTicket: irohTicket,
                                  hubID: hub, pairingID: pairing,
                                  secret: secret, hubPublicKey: hubPublicKey,

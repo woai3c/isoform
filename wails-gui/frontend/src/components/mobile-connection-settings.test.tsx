@@ -1033,3 +1033,13 @@ describe("brief time labels (ST69)", () => {
         expect(clockOptions("07:00")).toHaveLength(96);
     });
 });
+
+it.each(["en", "zh-CN"])("shows why an unreachable relay cannot produce a code in %s", async (language) => {
+    await i18n.changeLanguage(language);
+    mocks.getStatus.mockResolvedValue(noPhoneStatus);
+    mocks.generateCode.mockRejectedValue(new Error("remote access is not ready; try again when the relay is available"));
+    await renderReady();
+    fireEvent.click(screen.getByRole("button", { name: language === "en" ? en.mobileConnection.showCode : zh.mobileConnection.showCode }));
+    expect(await screen.findByText(language === "en" ? en.mobileConnection.relayUnreachable : zh.mobileConnection.relayUnreachable)).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: QR_NAME })).not.toBeInTheDocument();
+});

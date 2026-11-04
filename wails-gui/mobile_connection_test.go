@@ -105,15 +105,15 @@ func TestMobileLoopbackPairingWarnsWithoutRefusing(t *testing.T) {
 				t.Fatalf("loopback pairing was refused: %v", err)
 			}
 			relay.nextFrame(t, "pairing_approve")
-			if err := bridge.openPairing(); err != nil {
+			if err := bridge.openPairingWithRelay("https://relay.example.com"); err != nil {
 				t.Fatal(err)
 			}
 			status := bridge.connectionStatus()
 			if len(status.Devices) != 1 || status.Devices[0].Simulator == tc.warn || (status.Warning != "") != tc.warn {
 				t.Fatalf("paired status: %+v", status)
 			}
-			if got := mobileTestDecodeInvitation(t, status.ConnectionCode).Warning; got != status.Warning {
-				t.Fatalf("invitation warning = %q, want %q", got, status.Warning)
+			if got := mobileTestDecodeInvitation(t, status.ConnectionCode).Warning; got != "" {
+				t.Fatalf("public invitation warning = %q, want none", got)
 			}
 			saved, _, err := loadMobileDeviceStore(bridge.stateDir, time.Now())
 			if err != nil || saved[phone.deviceID] == nil || saved[phone.deviceID].Simulator == tc.warn {
@@ -206,7 +206,13 @@ func TestMobileConnectionLifecycleThroughBindings(t *testing.T) {
 		return current.RelayState == mobileRelayConnected
 	})
 
-	status, err = app.GenerateMobileConnectionCode()
+	if _, err = app.GenerateMobileConnectionCode(); err != errMobileRemoteAccessNotReady {
+		t.Fatalf("loopback code error = %v", err)
+	}
+	if err = app.mobileBridgeForUse().openPairingWithRelay("https://relay.example.com"); err != nil {
+		t.Fatal(err)
+	}
+	status, err = app.GetMobileConnectionStatus()
 	if err != nil || status.ConnectionCode == "" || status.ExpiresAt == "" || status.HubID != hubID {
 		t.Fatalf("generate: %+v %v", status, err)
 	}

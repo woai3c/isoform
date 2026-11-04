@@ -777,6 +777,8 @@
             "pendingCode": "Your phone shows {{code}}.",
             "approve": "Pair",
             "decline": "Not this one",
+            "relayRetry": "Try again",
+            "relayUnreachable": "Your phone can't reach this computer yet. Turn on remote access.",
             "pairFailed": "Couldn't pair. Scan again."
         },
         "finish": {
