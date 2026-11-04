@@ -5,10 +5,10 @@ import type { BriefScheduleDetail } from "@/lib/wails-shim-app";
 import { BriefDetailPane } from "./BriefDetailPane";
 
 const mocks = vi.hoisted(() => ({
-    detail: vi.fn(), make: vi.fn(),
+    detail: vi.fn(), make: vi.fn(), signIn: vi.fn(async () => undefined),
     events: new Map<string, (...args: unknown[]) => void>(),
 }));
-vi.mock("@/lib/wails-shim-app", () => ({ GetBriefScheduleDetail: mocks.detail, GenerateTodayMissedBrief: mocks.make }));
+vi.mock("@/lib/wails-shim-app", () => ({ GetBriefScheduleDetail: mocks.detail, GenerateTodayMissedBrief: mocks.make, OpenAssistantSignIn: mocks.signIn }));
 vi.mock("../../../wailsjs/runtime/runtime", () => ({
     EventsOn: vi.fn((name: string, fn: (...args: unknown[]) => void) => { mocks.events.set(name, fn); return () => mocks.events.delete(name); }),
 }));
@@ -36,6 +36,27 @@ beforeEach(async () => {
 afterEach(async () => { await i18n.changeLanguage("en"); });
 
 describe("BriefDetailPane (K3)", () => {
+    it("offers the affected assistant sign in and hides make now", async () => {
+        mocks.signIn.mockClear();
+        mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "blocked", status: "failed", scheduledAt: at(0).toISOString(), at: at(0).toISOString(), attempts: 3, failureCause: "signed_out", failureAssistant: "codex", waitingForSignIn: true }] }));
+        render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
+        const signIn = await screen.findByRole("button", { name: "Sign in" });
+        expect(screen.getByText(/Tried 3 times. Your AI is signed out./)).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Make it now" })).toBeNull();
+        fireEvent.click(signIn);
+        expect(mocks.signIn).toHaveBeenCalledWith("codex");
+    });
+
+    it("refreshes the blocked detail after the brief is stored", async () => {
+        mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "blocked", status: "failed", scheduledAt: at(0).toISOString(), at: at(0).toISOString(), attempts: 3, failureCause: "signed_out", failureAssistant: "codex", waitingForSignIn: true }] }));
+        render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
+        await screen.findByRole("button", { name: "Sign in" });
+        mocks.detail.mockResolvedValue(detail());
+        act(() => mocks.events.get("brief:stored")?.());
+        expect(await screen.findByRole("button", { name: "Make it now" })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
+    });
+
     it("keeps the v1.0.11 detail controls and the last three openable runs", async () => {
         mocks.detail.mockResolvedValue(detail({ runs: [-2, -1, 0].map((day) => ({ briefId: `run-${day}`, status: "ok", scheduledAt: at(day, 7, 0).toISOString(), at: at(day, 7, 0).toISOString() })) }));
         render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);

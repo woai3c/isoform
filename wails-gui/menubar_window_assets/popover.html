@@ -37,6 +37,9 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
 .pl.acc { color:var(--color-accent); }
 .br .tx { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
 .br .tx b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.br.sign-in .tx b { white-space:normal; color:var(--color-copper); }
+.br.sign-in .tx b span { color:var(--color-accent); }
+#make[hidden] { display:none; }
 .meta { font-size:12px; color:var(--color-muted); font-variant-numeric:tabular-nums; }
 .bar { height:3px; border-radius:2px; background:var(--color-border-light); margin:4px 0 2px; overflow:hidden; }
 .bar i { display:block; height:100%; width:0; background:var(--color-accent); }
@@ -109,6 +112,7 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         const w = model.words, brief = model.brief || {}, row = el('br'), pl = el('pl');
         const playing = !model.loading && brief.kind === 'ready' && playback.briefId === brief.id && (playback.state === 'playing' || playback.state === 'loading');
         row.classList.toggle('on', playing);
+        row.classList.toggle('sign-in', brief.kind === 'sign_in');
         row.disabled = !!model.loading || brief.kind === 'none' || brief.kind === 'making' || brief.kind === 'trying';
         pl.className = 'pl';
         el('bar').hidden = !playing;
@@ -116,6 +120,11 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         row.hidden = !!model.loading;
         if (model.loading) return;
         el('briefTitle').textContent = brief.title || '';
+        if (brief.kind === 'sign_in') {
+            const action = document.createElement('span');
+            action.textContent = ' ' + w.signIn;
+            el('briefTitle').append(action);
+        }
         if (brief.kind === 'ready') {
             setIcon(pl, playing && playback.state === 'playing' ? 'pause' : 'play');
             if (playing) {
@@ -125,7 +134,7 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
             } else el('briefMeta').textContent = brief.meta || '';
         } else if (brief.kind === 'read') {
             pl.className = 'pl ghost'; setIcon(pl, 'page'); el('briefMeta').textContent = brief.meta || '';
-        } else if (brief.kind === 'trying') {
+        } else if (brief.kind === 'trying' || brief.kind === 'sign_in') {
             pl.className = 'pl ghost dim'; setIcon(pl, 'page'); el('briefMeta').textContent = '';
         } else if (brief.kind === 'making') {
             pl.className = 'pl ghost acc'; setIcon(pl, 'spin'); el('briefMeta').textContent = brief.meta || '';
@@ -193,6 +202,7 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         el('failed').hidden = !failed;
         el('failed').textContent = failed ? w.failed : '';
         el('makeText').textContent = w.make;
+        el('make').hidden = !!model.brief && model.brief.kind === 'sign_in';
         el('make').disabled = !!model.loading || (model.brief && model.brief.kind === 'making');
         el('openText').textContent = w.open;
         el('shortcut').textContent = w.openShortcut;
@@ -250,6 +260,7 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         const brief = model.brief || {};
         if (brief.kind === 'ready') playBrief(brief);
         else if (brief.kind === 'read') send('read:' + brief.id);
+        else if (brief.kind === 'sign_in') send('signIn:' + brief.id);
     };
     el('more').onclick = () => send('waiting');
     el('make').onclick = () => send('makeHere');

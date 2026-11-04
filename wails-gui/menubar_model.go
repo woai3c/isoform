@@ -83,6 +83,7 @@ var menuBarCopy = map[string]map[string]string{
 		"dayTime": "{day}, {time}", "today": "Today", "yesterday": "Yesterday",
 		"tried": "Tried {n} times without finishing. Isoform tries again at {time}.", "triedOnce": "Tried once without finishing. Isoform tries again at {time}.",
 		"triedSignedOut": "Tried {n} times. Your AI is signed out. Isoform tries again at {time}.", "triedSignedOutOnce": "Tried 1 time. Your AI is signed out. Isoform tries again at {time}.",
+		"signIn": "Sign in", "signedOut": "Tried {n} times. Your AI is signed out.", "signedOutOnce": "Tried 1 time. Your AI is signed out.",
 		"retry": "Isoform tries again at {time}.", "none": "No brief yet today", "next": "Next brief tomorrow at {time}", "nextToday": "Next brief today at {time}",
 		"making": "Making your brief now.", "makingMorning": "Making your morning brief now.", "makingEvening": "Making your evening brief now.", "triedTimeout": "Tried {n} times. It timed out. Isoform tries again at {time}.", "triedTimeoutOnce": "Tried once. It timed out. Isoform tries again at {time}.", "playing": "{elapsed} of {length}",
 		"waiting": "Waiting on you", "seeAll": "See all {n} in Chat", "empty": "Nothing is waiting on you.",
@@ -103,6 +104,7 @@ var menuBarCopy = map[string]map[string]string{
 		"dayTime": "{day} {time}", "today": "今天", "yesterday": "昨天",
 		"tried": "试了 {n} 次都没完成。Isoform 会在{time}再试。", "triedOnce": "试了 1 次都没完成。Isoform 会在{time}再试。",
 		"triedSignedOut": "已尝试 {n} 次。你的 AI 已退出登录。Isoform 会在 {time} 再试一次。", "triedSignedOutOnce": "已尝试 1 次。你的 AI 已退出登录。Isoform 会在 {time} 再试一次。",
+		"signIn": "登录", "signedOut": "已尝试 {n} 次。你的 AI 已退出登录。", "signedOutOnce": "已尝试 1 次。你的 AI 已退出登录。",
 		"retry": "Isoform 会在{time}再试。", "none": "今天还没有简报", "next": "下一份在明天 {time}", "nextToday": "下一份在今天 {time}",
 		"making": "正在生成简报。", "makingMorning": "正在生成你的早间简报。", "makingEvening": "正在生成你的晚间简报。", "triedTimeout": "试了 {n} 次。超时了。Isoform 会在{time}再试。", "triedTimeoutOnce": "试了 1 次。超时了。Isoform 会在{time}再试。", "playing": "{elapsed} / {length}",
 		"waiting": "等你处理", "seeAll": "在聊天中查看全部 {n} 项", "empty": "没有等你处理的事。",
@@ -392,6 +394,13 @@ func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, has
 		}
 		return menuBarBrief{Kind: "making", Title: w[key]}
 	}
+	if health.PendingSlot != "" && health.PendingCause == "signed_out" && health.PendingAssistant != "" && health.PendingAttempts > 0 {
+		key := "signedOut"
+		if health.PendingAttempts == 1 {
+			key = "signedOutOnce"
+		}
+		return menuBarBrief{Kind: "sign_in", ID: health.PendingAssistant, Title: menuBarFill(w[key], "n", fmt.Sprint(health.PendingAttempts))}
+	}
 	today := now.Local().Format("2006-01-02")
 	if retry, err := time.Parse(time.RFC3339, health.RetryAt); health.PendingSlot != "" && err == nil && retry.After(now) {
 		at := observationMenuClock(retry.Local(), lang)
@@ -499,6 +508,9 @@ func (a *App) menuBarView(lang string, readWaiting bool) (perfValue menuBarView,
 	} else {
 		view.Brief = menuBarBrief{Kind: "none", Title: w["none"]}
 	}
+	if view.Brief.Kind == "sign_in" {
+		view.Menu[1] = menuBarMenuItem{ID: "signIn:" + view.Brief.ID, Title: w["signIn"]}
+	}
 	if !readWaiting {
 		return view, nil
 	}
@@ -568,7 +580,7 @@ func (a *App) menuBarBriefHealth(source mobileBriefSource, latest MobileBriefV1,
 	if found {
 		view.PendingSlot = pending.Slot
 		if run, ok := menuBarRunMemo.failedRun(service.runs, pending.BriefID); ok {
-			view.PendingAttempts, view.PendingCause = run.Attempts, run.FailureCause
+			view.PendingAttempts, view.PendingCause, view.PendingAssistant = run.Attempts, run.FailureCause, run.FailureAssistant
 		}
 		service.mu.Lock()
 		retryAfter, retryFor := service.retryAfter, service.retryFor

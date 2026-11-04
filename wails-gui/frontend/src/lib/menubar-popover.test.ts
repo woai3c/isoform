@@ -116,6 +116,14 @@ describe("menu bar embedded page", () => {
         expect(postMessage).not.toHaveBeenCalledWith(expect.objectContaining({ command: expect.stringMatching(/^(play|read):/) }));
         expect((document.querySelector("#make") as HTMLButtonElement).hidden).toBe(false);
     });
+    it("offers the affected assistant sign-in in the brief line", () => {
+        const { document, postMessage } = page({ brief: { kind: "sign_in", id: "codex", title: "Tried 3 times. Your AI is signed out." } }, { signIn: "Sign in" });
+        const row = document.querySelector("#br") as HTMLButtonElement;
+        expect(row.textContent).toContain("Tried 3 times. Your AI is signed out. Sign in");
+        expect((document.querySelector("#make") as HTMLButtonElement).hidden).toBe(true);
+        row.click();
+        expect(postMessage).toHaveBeenCalledWith({ command: "signIn:codex" });
+    });
     // B6: the footer link names the sheet it opens.
     it("labels the footer link with the sheet's name", () => {
         const { document } = page();

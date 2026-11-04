@@ -59,7 +59,8 @@ type TodayBriefView struct {
 	// when its run record counts them.
 	PendingAttempts int `json:"pendingAttempts,omitempty"`
 	// PendingCause is why the last try failed, when Isoform knows (e.g. "timeout").
-	PendingCause string `json:"pendingCause,omitempty"`
+	PendingCause     string `json:"pendingCause,omitempty"`
+	PendingAssistant string `json:"pendingAssistant,omitempty"`
 	// LastBriefID names the newest stored brief when it is not the one shown,
 	// so Today can open it; LastSlot and LastAt describe it.
 	LastBriefID string `json:"lastBriefId,omitempty"`
@@ -125,6 +126,7 @@ func todayBriefView(now time.Time, loc *time.Location, latest MobileBriefV1, has
 	if health.PendingSlot != "" {
 		view.PendingAttempts = health.PendingAttempts
 		view.PendingCause = health.PendingCause
+		view.PendingAssistant = health.PendingAssistant
 	}
 	if view.Missing == nil {
 		view.Missing = []string{}

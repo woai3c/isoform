@@ -148,7 +148,7 @@ func (a *App) buildAssistantRoutingRunner(native *agent.NativeAgentRunner, allow
 	router.SetPolicyProvider(policy)
 	router.SetObserver(a.recordAgentRunRoute)
 	router.SetRunScope(a.issueAgentRunScope)
-	router.SetHealthObserver(func() { a.emitBrowserEvent(assistantHealthChangedEvent) })
+	router.SetHealthObserver(a.assistantHealthDidChange)
 	a.mu.Lock()
 	a.assistantProbes = cache
 	a.mu.Unlock()
@@ -238,6 +238,18 @@ func probeAssistantRoute(ctx context.Context, cfg agent.ExternalAgentConfig) age
 // assistantHealthChangedEvent tells Settings to read the health lines again.
 const assistantHealthChangedEvent = "assistant-health:changed"
 
+// A health change wakes the brief scheduler; its normal tick also catches a
+// sign-in made outside Isoform, where there may be no health event yet.
+func (a *App) assistantHealthDidChange() {
+	a.emitBrowserEvent(assistantHealthChangedEvent)
+	if service, ok := a.mobileBriefSource().(*mobileBriefService); ok {
+		select {
+		case service.wake <- struct{}{}:
+		default:
+		}
+	}
+}
+
 // AssistantHealthView is one assistant's health line in Settings. Code names
 // the state; the page words it. Diagnostics stay in the log.
 type AssistantHealthView struct {
@@ -316,4 +328,25 @@ func (a *App) refreshAssistantRoutingPolicy() {
 		}
 		router.RefreshPolicy(ctx)
 	}
+}
+
+// mobileBriefAssistantState uses the router's bounded, shared CLI sign-in probe.
+func (a *App) mobileBriefAssistantState(ctx context.Context, assistant string) string {
+	a.mu.Lock()
+	cache := a.assistantProbes
+	a.mu.Unlock()
+	if cache == nil {
+		return ""
+	}
+	state, ok := cache.snapshot(ctx)[assistant]
+	if !ok {
+		return ""
+	}
+	if state.SignedIn {
+		return "signed_in"
+	}
+	if state.Available && state.Reason == "signed out" {
+		return "signed_out"
+	}
+	return ""
 }

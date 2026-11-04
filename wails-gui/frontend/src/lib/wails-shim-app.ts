@@ -923,6 +923,7 @@ export interface MobileBriefHealth {
     pendingAttempts?: number;
     /** Why the last try failed, when Isoform knows (e.g. "timeout"). */
     pendingCause?: string;
+    pendingAssistant?: string;
     latestBriefId: string;
     /** The current brief (the one Today, the menu bar and Chat show). */
     currentBriefId: string;
@@ -1179,6 +1180,7 @@ export interface TodayBriefView {
     pendingAttempts?: number;
     /** Why the last try failed, when Isoform knows (e.g. "timeout"). */
     pendingCause?: string;
+    pendingAssistant?: string;
     /** The newest stored brief when it is not the one shown, to open it. */
     lastBriefId?: string;
     lastSlot?: string;
@@ -1419,6 +1421,8 @@ export interface BriefScheduleRun {
     /** How many tries failed, when the run record counts them. */
     attempts?: number;
     failureCause?: string;
+    failureAssistant?: string;
+    waitingForSignIn?: boolean;
     /** A failed slot's next try (RFC 3339), while its window is open. */
     nextTryAt?: string;
 }

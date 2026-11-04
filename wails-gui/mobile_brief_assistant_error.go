@@ -13,7 +13,12 @@ func (a *App) mobileBriefModelCall(ctx context.Context, prompt string) (string, 
 			backend = event.Backend
 		}
 	}, mobileBriefNarrativeTimeout)
-	return result, mobileBriefAttributeAssistantError(err, backend)
+	attributed := mobileBriefAttributeAssistantError(err, backend)
+	if err != nil && backend == string(agent.BackendNative) && handoffRunAuthFailed(err) {
+		primary := answeringAgent(loadAIProviderConfig())
+		attributed = mobileBriefAttributeNativeAuth(err, primary, a.mobileBriefAssistantState(ctx, primary))
+	}
+	return result, attributed
 }
 
 // mobileBriefAssistantError retains only a backend actually selected by the
@@ -37,4 +42,16 @@ func mobileBriefAttributeAssistantError(err error, backend string) error {
 	default:
 		return err
 	}
+}
+
+// The native route does not identify an account. Only an explicit signed-out
+// probe for the configured primary supplies that missing attribution.
+func mobileBriefAttributeNativeAuth(err error, primary, state string) error {
+	if err != nil && handoffRunAuthFailed(err) && state == "signed_out" {
+		switch primary {
+		case string(agent.BackendClaudeCode), string(agent.BackendCodex):
+			return &mobileBriefAssistantError{assistant: primary, err: err}
+		}
+	}
+	return err
 }

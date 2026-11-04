@@ -32,16 +32,18 @@ type BriefScheduleDetail struct {
 // says why. MadeNow is a brief made on request (Make it now) after the slot's
 // time, listed beside the scheduled run it stood in for. Times are RFC 3339.
 type BriefScheduleRun struct {
-	BriefID      string `json:"briefId"`
-	Status       string `json:"status"`
-	ScheduledAt  string `json:"scheduledAt"`
-	At           string `json:"at"`
-	Reason       string `json:"reason,omitempty"`
-	Late         bool   `json:"late,omitempty"`
-	MadeNow      bool   `json:"madeNow,omitempty"`
-	Attempts     int    `json:"attempts,omitempty"`
-	FailureCause string `json:"failureCause,omitempty"`
-	NextTryAt    string `json:"nextTryAt,omitempty"`
+	BriefID          string `json:"briefId"`
+	Status           string `json:"status"`
+	ScheduledAt      string `json:"scheduledAt"`
+	At               string `json:"at"`
+	Reason           string `json:"reason,omitempty"`
+	Late             bool   `json:"late,omitempty"`
+	MadeNow          bool   `json:"madeNow,omitempty"`
+	Attempts         int    `json:"attempts,omitempty"`
+	FailureCause     string `json:"failureCause,omitempty"`
+	FailureAssistant string `json:"failureAssistant,omitempty"`
+	WaitingForSignIn bool   `json:"waitingForSignIn,omitempty"`
+	NextTryAt        string `json:"nextTryAt,omitempty"`
 }
 
 // GetBriefScheduleDetail returns the morning or evening brief's detail.
@@ -116,8 +118,10 @@ func briefScheduleDetailFrom(now time.Time, loc *time.Location, state upcomingBr
 			madeNow(occurrence)
 			out.Attempts = run.Attempts
 			out.FailureCause = run.FailureCause
+			out.FailureAssistant = run.FailureAssistant
+			out.WaitingForSignIn = state.Settings.Enabled && run.Status == mobileBriefRunFailed && run.FailureCause == "signed_out" && run.FailureAssistant != "" && !now.Before(scheduled) && now.Before(mobileBriefSlotCloses(occurrence, loc, state.Settings))
 			// The next run is this slot's next try only while its window is open.
-			if run.Status == mobileBriefRunFailed && item.NextRunAt > 0 {
+			if run.Status == mobileBriefRunFailed && run.FailureCause != "signed_out" && item.NextRunAt > 0 {
 				if next := time.UnixMilli(item.NextRunAt); next.Before(mobileBriefSlotCloses(occurrence, loc, state.Settings)) {
 					out.NextTryAt = formatMobileBriefTime(next)
 				}

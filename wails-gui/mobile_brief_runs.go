@@ -464,7 +464,8 @@ type MobileBriefHealth struct {
 	// from its run record; 0 when the record has no count.
 	PendingAttempts int `json:"pendingAttempts,omitempty"`
 	// PendingCause is why the last try failed, when Isoform knows (e.g. "timeout").
-	PendingCause string `json:"pendingCause,omitempty"`
+	PendingCause     string `json:"pendingCause,omitempty"`
+	PendingAssistant string `json:"pendingAssistant,omitempty"`
 	// LatestBriefID names the newest stored brief and Audio its spoken
 	// version, when one was stored, so Today can offer to play it.
 	LatestBriefID string            `json:"latestBriefId"`

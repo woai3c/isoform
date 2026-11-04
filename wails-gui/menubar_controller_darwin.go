@@ -268,6 +268,8 @@ func (a *App) runMenuBarCommand(command string) error {
 		a.emitBrowserEvent("settings:open", "activity")
 	case "restart":
 		return a.RestartToUpdate()
+	case "signIn:claude-code", "signIn:codex":
+		return a.OpenAssistantSignIn(strings.TrimPrefix(command, "signIn:"))
 	case "makeHere":
 		// From the popover: while a brief is being made the brief row shows
 		// it and the popover stays open; a wait or a failure is answered

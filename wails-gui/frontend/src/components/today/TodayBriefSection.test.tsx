@@ -11,13 +11,14 @@ import { cn } from "@/lib/utils";
 import { dayShapeFixture } from "./today-next.fixture";
 import { briefHoldSource } from "./useBriefHoldOffer";
 
-const mocks = vi.hoisted(() => ({ reopen: vi.fn(), openURL: vi.fn(), prepareDrafts: vi.fn(), postClosing: vi.fn(), addSchedule: vi.fn(), undoSchedule: vi.fn(), toast: Object.assign(vi.fn(), { error: vi.fn() }), moveGoal: vi.fn(), noteCheckIn: vi.fn(), setKindEnabled: vi.fn(), openDeliverable: vi.fn(), permissions: vi.fn(), requestPermission: vi.fn(), permissionSettings: vi.fn(), recordToday: vi.fn(), correctBelief: vi.fn(), undoBelief: vi.fn(), canUndoBelief: vi.fn(), holdSettings: vi.fn(), propose: vi.fn(), hold: vi.fn(), holdStatus: vi.fn(), undoHold: vi.fn(), dismissHold: vi.fn(), undoDismissHold: vi.fn(), removeHold: vi.fn(), undoRemove: vi.fn(), openCalendar: vi.fn(), prepForPerson: vi.fn(), draftRoute: vi.fn() }));
+const mocks = vi.hoisted(() => ({ signIn: vi.fn(async () => undefined), reopen: vi.fn(), openURL: vi.fn(), prepareDrafts: vi.fn(), postClosing: vi.fn(), addSchedule: vi.fn(), undoSchedule: vi.fn(), toast: Object.assign(vi.fn(), { error: vi.fn() }), moveGoal: vi.fn(), noteCheckIn: vi.fn(), setKindEnabled: vi.fn(), openDeliverable: vi.fn(), permissions: vi.fn(), requestPermission: vi.fn(), permissionSettings: vi.fn(), recordToday: vi.fn(), correctBelief: vi.fn(), undoBelief: vi.fn(), canUndoBelief: vi.fn(), holdSettings: vi.fn(), propose: vi.fn(), hold: vi.fn(), holdStatus: vi.fn(), undoHold: vi.fn(), dismissHold: vi.fn(), undoDismissHold: vi.fn(), removeHold: vi.fn(), undoRemove: vi.fn(), openCalendar: vi.fn(), prepForPerson: vi.fn(), draftRoute: vi.fn() }));
 
 vi.mock("sonner", () => ({ toast: mocks.toast }));
 
 vi.mock("@/hooks/useFirstBriefSeen", () => ({ useFirstBriefSeen: () => ({ current: null }) }));
 
 vi.mock("@/lib/wails-shim-app", () => ({
+    OpenAssistantSignIn: mocks.signIn,
     ReopenMainChatSetupSteps: mocks.reopen,
     PrepareTodayChatDrafts: mocks.prepareDrafts,
     PostTodayClosingAnswer: mocks.postClosing,
@@ -574,6 +575,18 @@ describe("TodayBriefSection while today's brief is on its way", () => {
         await i18n.changeLanguage(language);
         renderSection({ view: view({ pendingSlot: "morning", pendingAt: new Date(2026, 9, 15, 7).toISOString(), pendingAttempts: 3, pendingCause: "signed_out", retryAt: new Date(2026, 9, 15, 9, 40).toISOString() }) });
         expect(screen.getByTestId("brief-pending-line")).toHaveTextContent(line);
+        await i18n.changeLanguage("en");
+    });
+
+    it.each([["en", "Tried 3 times. Your AI is signed out.", "Sign in", "Make my brief now"], ["zh-CN", "已尝试 3 次。你的 AI 已退出登录。", "登录", "现在生成简报"]])("offers sign in without a retry promise in %s", async (language, line, action, make) => {
+        await i18n.changeLanguage(language);
+        mocks.signIn.mockClear();
+        renderSection({ view: view({ pendingSlot: "morning", pendingAt: new Date(2026, 9, 15, 7).toISOString(), pendingAttempts: 3, pendingCause: "signed_out", pendingAssistant: "codex", retryAt: "" }) });
+        const card = screen.getByTestId("brief-pending");
+        expect(within(card).getByTestId("brief-pending-line")).toHaveTextContent(line);
+        expect(within(card).queryByRole("button", { name: make })).toBeNull();
+        fireEvent.click(within(card).getByRole("button", { name: action }));
+        expect(mocks.signIn).toHaveBeenCalledWith("codex");
         await i18n.changeLanguage("en");
     });
 

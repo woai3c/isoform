@@ -35,7 +35,7 @@ func (s *mobileBriefService) nextAdaptivePredictionFor(now time.Time, settings m
 	s.mu.Unlock()
 	for day := 0; day < 2; day++ {
 		for _, p := range mobileBriefPredictDay(now.In(loc).AddDate(0, 0, day), loc, settings, input) {
-			if (slot != "" && p.Slot != slot) || p.ScheduledAt.IsZero() || !now.Before(p.Deadline) || s.store.exists(p.BriefID) {
+			if s.briefSignInAssistant(p.BriefID) != "" || (slot != "" && p.Slot != slot) || p.ScheduledAt.IsZero() || !now.Before(p.Deadline) || s.store.exists(p.BriefID) {
 				continue
 			}
 			if fixed, found := s.slotOccurrence(p.ScheduledAt, settings, p.Slot); found && fixed.BriefID == p.BriefID && s.slotHasRequestedBrief(fixed, settings) {
@@ -121,10 +121,20 @@ func (s *mobileBriefService) runAdaptiveSlot(ctx context.Context, occurrence mob
 		recordedOccurrence = fixed
 		fixedSchedule = true
 	}
+	if s.briefWaitingForSignIn(ctx, occurrence.BriefID) {
+		return
+	}
+	assistant := s.briefSignInAssistant(occurrence.BriefID)
 	s.mu.Lock()
-	if s.running || s.stopped || s.sleeping || s.retryHeldLocked(now, occurrence.BriefID) {
+	if s.running || s.stopped || s.sleeping || s.retryHeldLocked(now, occurrence.BriefID) || (assistant != "" && s.authResumed[assistant]) {
 		s.mu.Unlock()
 		return
+	}
+	if assistant != "" {
+		if s.authResumed == nil {
+			s.authResumed = map[string]bool{}
+		}
+		s.authResumed[assistant] = true
 	}
 	s.running = true
 	s.runningSince = now

@@ -3,6 +3,7 @@ import type { MobileBriefHealth } from "@/lib/wails-shim-app";
 import { clockTime } from "@/lib/brief-time";
 import { Button } from "@/components/ui/button";
 import { RecordTodayAction } from "@/lib/wails-shim-app";
+import { BriefSignIn } from "./BriefSignIn";
 import { TodayCaptureLine } from "./TodayCaptureLine";
 
 /** One quiet line under the status lines: a notice kind the user moved from
@@ -77,6 +78,7 @@ export function TodayStatus({
     const pendingDate = brief?.pendingAt ? new Date(brief.pendingAt) : null;
     const pending = brief?.enabled && (brief.pendingSlot === "morning" || brief.pendingSlot === "evening") && pendingDate && !Number.isNaN(pendingDate.getTime()) ? { slot: brief.pendingSlot, time: clockTime(pendingDate, i18n.language, tr) } : null;
 
+    const signedOut = !!pending && brief?.pendingCause === "signed_out" && !!brief.pendingAssistant && (brief.pendingAttempts ?? 0) > 0;
     const retryDate = pending && brief?.retryAt ? new Date(brief.retryAt) : null;
     const tries = retryDate && !Number.isNaN(retryDate.getTime()) && retryDate.getTime() > now.getTime() && (brief?.pendingAttempts ?? 0) > 0
         ? t(brief?.pendingCause === "timeout" ? "todayBrief.pending.triedTimeout" : brief?.pendingCause === "signed_out" ? "todayBrief.pending.triedSignedOut" : "todayBrief.pending.tried", { count: brief?.pendingAttempts ?? 0, time: clockTime(retryDate, i18n.language, tr) })
@@ -88,7 +90,7 @@ export function TodayStatus({
     const nextTomorrow = !!next && !!nextDate && new Date(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() === 86_400_000;
 
     // A slot with no try left has given way: say what comes next (today-review v1.1.22 R51).
-    const givenWay = !!pending && !building && !brief?.retryAt && (pending.slot === "morning" ? now.getHours() >= 12 : now.getHours() < 12);
+    const givenWay = !!pending && !building && !brief?.retryAt && !signedOut && (pending.slot === "morning" ? now.getHours() >= 12 : now.getHours() < 12);
     const nextSlot = brief?.nextSlot === "morning" || brief?.nextSlot === "evening" ? brief.nextSlot : nextDate && nextDate.getHours() < 12 ? "morning" : "evening";
 
     const quietLines = quiet.filter((line) => line.text.trim());
@@ -99,7 +101,7 @@ export function TodayStatus({
             data-testid="today-status"
             className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1 text-[12.5px] leading-snug text-muted"
         >
-            {building && pending ? <span>{t(pending.slot === "morning" ? "todayBrief.pending.makingMorning" : "todayBrief.pending.makingEvening")}</span> : tries ? <span>{tries}</span> : givenWay && pending ? <span>{t(pending.slot === "morning" ? "status.missedMorning" : "status.missedEvening", { time: pending.time })}{givenWay && next && <span data-testid="today-status-next">{i18n.language.startsWith("zh") ? "" : " "}{t(nextSlot === "morning" ? nextTomorrow ? "status.nextMorningTomorrowAt" : "status.nextMorningAt" : nextTomorrow ? "status.nextEveningTomorrowAt" : "status.nextEveningAt", { time: next })}</span>}{onMissedWhy && <> · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium hover:no-underline" onClick={() => openWhy(pending.slot as "morning" | "evening")}>{t("status.why")}</Button></>}</span> : null}
+            {building && pending ? <span>{t(pending.slot === "morning" ? "todayBrief.pending.makingMorning" : "todayBrief.pending.makingEvening")}</span> : signedOut ? <span className="text-copper">{t("todayBrief.pending.signedOut", { count: brief?.pendingAttempts ?? 0 })}{" "}<BriefSignIn assistant={brief!.pendingAssistant!} size="12.5px" /></span> : tries ? <span>{tries}</span> : givenWay && pending ? <span>{t(pending.slot === "morning" ? "status.missedMorning" : "status.missedEvening", { time: pending.time })}{givenWay && next && <span data-testid="today-status-next">{i18n.language.startsWith("zh") ? "" : " "}{t(nextSlot === "morning" ? nextTomorrow ? "status.nextMorningTomorrowAt" : "status.nextMorningAt" : nextTomorrow ? "status.nextEveningTomorrowAt" : "status.nextEveningAt", { time: next })}</span>}{onMissedWhy && <> · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium hover:no-underline" onClick={() => openWhy(pending.slot as "morning" | "evening")}>{t("status.why")}</Button></>}</span> : null}
             {(!givenWay || building || tries) && (date || next) && <span data-testid="today-status-date">{date}{date && next && " · "}{next && t(nextTomorrow ? "status.nextBriefTomorrowAt" : "status.nextBriefAt", { time: next })}</span>}
             {capture && <TodayCaptureLine text={capture.text} onOpen={capture.onOpen} />}
             {quietLines.map((line) => (

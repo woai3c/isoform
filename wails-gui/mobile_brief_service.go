@@ -67,6 +67,9 @@ type mobileBriefService struct {
 	composeWithLead func(context.Context, *App, MobileBriefV1, []MobileBriefCard) ([]MobileBriefPara, string, []mobileBriefCardWords, string, string)
 	// modelCall is a test seam; production uses the existing assistant route.
 	modelCall func(context.Context, string) (string, error)
+	// assistantState reads the same cached sign-in probe used by routing.
+	assistantState func(context.Context, string) string
+	authResumed    map[string]bool
 	// publish is the transport boundary, independent of brief persistence.
 	publish func(MobileBriefV1, bool) error
 	// speaker reads the brief aloud at build time; a zero speaker stores
@@ -168,6 +171,7 @@ func newMobileBriefService(app *App) *mobileBriefService {
 		missedLogged: map[string]bool{},
 		wake:         make(chan struct{}, 1),
 		sleepState:   activitymon.LatestSystemSleepState,
+		authResumed:  map[string]bool{},
 	}
 	svc.publish = func(brief MobileBriefV1, notify bool) error {
 		return svc.app.publishMobileBrief(brief, notify)
@@ -176,6 +180,7 @@ func newMobileBriefService(app *App) *mobileBriefService {
 		return collectMobileBriefInput(ctx, svc.app, slot, windowStart, asOf)
 	}
 	if app != nil {
+		svc.assistantState = app.mobileBriefAssistantState
 		svc.speaker = appMobileBriefSpeaker(app)
 	}
 	svc.feed = newMobileBriefFeedServer(stateDir, svc.store.dir, mobileHubName, svc.feedBriefs)
@@ -364,10 +369,20 @@ func (s *mobileBriefService) checkDue(ctx context.Context) {
 	}
 
 	occurrence, found := s.slotOccurrence(now, settings, slot)
+	if found && s.briefWaitingForSignIn(ctx, occurrence.BriefID) {
+		return
+	}
+	assistant := s.briefSignInAssistant(occurrence.BriefID)
 	s.mu.Lock()
-	if s.running || s.stopped || s.sleeping || s.retryHeldLocked(now, occurrence.BriefID) {
+	if s.running || s.stopped || s.sleeping || s.retryHeldLocked(now, occurrence.BriefID) || (assistant != "" && s.authResumed[assistant]) {
 		s.mu.Unlock()
 		return
+	}
+	if assistant != "" {
+		if s.authResumed == nil {
+			s.authResumed = map[string]bool{}
+		}
+		s.authResumed[assistant] = true
 	}
 	s.running = true
 	s.runningSince = now
@@ -622,15 +637,73 @@ func (s *mobileBriefService) recordFailure(occurrence mobileBriefSlotOccurrence,
 	case errors.Is(err, context.DeadlineExceeded):
 		cause = "timeout"
 	case handoffRunAuthFailed(err):
-		cause = "signed_out"
 		var routed *mobileBriefAssistantError
 		if errors.As(err, &routed) {
 			assistant = routed.assistant
 		}
+		if assistant != "" {
+			cause = "signed_out"
+		}
 	}
 	stored := s.recordRun(mobileBriefRun{BriefID: occurrence.BriefID, Slot: occurrence.Slot,
 		ScheduledAt: formatMobileBriefTime(occurrence.ScheduledAt), Status: mobileBriefRunFailed, At: formatMobileBriefTime(s.now()), FailureKey: key, FailureCause: cause, FailureAssistant: assistant})
-	s.retryLater(occurrence.BriefID, occurrence.Slot, stored.Attempts, err)
+	if cause == "signed_out" {
+		// The route may have used a cached signed-in probe immediately before
+		// authentication failed. Do not use that stale result to resume.
+		if s.app != nil {
+			s.app.mu.Lock()
+			probes := s.app.assistantProbes
+			s.app.mu.Unlock()
+			if probes != nil {
+				probes.invalidate()
+			}
+		}
+		s.mu.Lock()
+		s.retryAfter, s.retryFor = time.Time{}, ""
+		s.mu.Unlock()
+	} else {
+		s.retryLater(occurrence.BriefID, occurrence.Slot, stored.Attempts, err)
+	}
+	if s.app != nil {
+		s.app.emitBrowserEvent("mobile:updated")
+		s.app.emitBrowserEvent(mobileBriefBuildingEvent, false)
+	}
+}
+
+// briefSignInAssistant reads the persisted blocker without probing.
+func (s *mobileBriefService) briefSignInAssistant(briefID string) string {
+	for _, run := range s.runs.list() {
+		if run.BriefID == briefID && run.Status == mobileBriefRunFailed && run.FailureCause == "signed_out" {
+			return run.FailureAssistant
+		}
+	}
+	return ""
+}
+
+// briefWaitingForSignIn holds the failed slot across restarts. A successful
+// probe admits one retry; another authentication failure waits for a fresh
+// signed-out observation before it can be admitted again.
+func (s *mobileBriefService) briefWaitingForSignIn(ctx context.Context, briefID string) bool {
+	assistant := s.briefSignInAssistant(briefID)
+	if assistant == "" {
+		return false
+	}
+	state := ""
+	if s.assistantState != nil {
+		state = s.assistantState(ctx, assistant)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.authResumed == nil {
+		s.authResumed = map[string]bool{}
+	}
+	if state == "signed_out" {
+		delete(s.authResumed, assistant)
+	}
+	if state != "signed_in" || s.authResumed[assistant] {
+		return true
+	}
+	return false
 }
 
 // retryHeldLocked reports that a failed try of briefID is still waiting out
@@ -724,6 +797,9 @@ func (s *mobileBriefService) scheduleFacts(now time.Time, settings mobileBriefSe
 		MadeJustBefore: s.briefJustBefore,
 		CatchUpAllowed: func(at time.Time) bool { return s.catchUpAllowed(at, now, settings) },
 		RetryAt: func(briefID string) time.Time {
+			if s.briefSignInAssistant(briefID) != "" {
+				return now.Add(48 * time.Hour)
+			}
 			s.mu.Lock()
 			defer s.mu.Unlock()
 			if s.retryFor != briefID {
@@ -884,6 +960,7 @@ func (s *mobileBriefService) withPending(view MobileBriefHealth, now time.Time, 
 		if run.BriefID == pending.BriefID && run.Status == mobileBriefRunFailed {
 			view.PendingAttempts = run.Attempts
 			view.PendingCause = run.FailureCause
+			view.PendingAssistant = run.FailureAssistant
 		}
 	}
 	s.mu.Lock()

@@ -30,6 +30,7 @@ import {
 } from "@/lib/wails-shim-app";
 import type { MakeBriefState } from "@/hooks/useLatestBrief";
 import type { TodayActionHandlers } from "./types";
+import { BriefSignIn } from "./BriefSignIn";
 import { TodayPermissionControl } from "./TodayPermissionControl";
 import { isDisplayTopic } from "./topics";
 import { todayBriefCardRef, type TodayChatContextRef } from "@/lib/today-chat-navigation";
@@ -800,6 +801,7 @@ export function TodayBriefSection({
             retryAt={view?.retryAt ?? ""}
             attempts={view?.pendingAttempts ?? 0}
             cause={view?.pendingCause}
+            assistant={view?.pendingAssistant}
             lastBriefId={view?.firstBrief ? "" : view?.lastBriefId || (brief?.briefId ?? "")}
             lastSlot={view?.lastBriefId ? view.lastSlot ?? "" : brief?.displaySlot ?? brief?.slot ?? ""}
             lastAt={view?.lastBriefId ? view.lastAt ?? "" : brief?.asOf ?? ""}
@@ -864,7 +866,7 @@ function lastBriefDay(at: Date, now: Date, language: string, tr: Translate): str
     return at.toLocaleDateString(language, { weekday: "long" });
 }
 
-function PendingBrief({ slot, building, retryAt, attempts, cause, lastBriefId, lastSlot, lastAt, strip, make, nextAllowedAt, onMakeNow, onOpenBrief, now, tr, blind }: {
+function PendingBrief({ slot, building, retryAt, attempts, cause, assistant, lastBriefId, lastSlot, lastAt, strip, make, nextAllowedAt, onMakeNow, onOpenBrief, now, tr, blind }: {
     blind?: ReactNode;
     slot: "morning" | "evening";
     building: boolean;
@@ -872,6 +874,7 @@ function PendingBrief({ slot, building, retryAt, attempts, cause, lastBriefId, l
     attempts: number;
     /** Why the last try failed, when Isoform knows (e.g. "timeout"). */
     cause?: string;
+    assistant?: string;
     lastBriefId: string;
     lastSlot: string;
     lastAt: string;
@@ -885,6 +888,7 @@ function PendingBrief({ slot, building, retryAt, attempts, cause, lastBriefId, l
 }) {
     const { i18n } = useTranslation("today");
     const language = i18n.language;
+    const signedOut = cause === "signed_out" && !!assistant && attempts > 0;
     const retryDate = !building && retryAt ? new Date(retryAt) : null;
     const retry = retryDate && !Number.isNaN(retryDate.getTime()) && retryDate.getTime() > now.getTime() ? clockTime(retryDate, language, tr) : null;
     const lastDate = lastAt ? new Date(lastAt) : null;
@@ -902,13 +906,17 @@ function PendingBrief({ slot, building, retryAt, attempts, cause, lastBriefId, l
                     <Loader2 className="size-3.5 animate-spin" />
                     {tr(slot === "evening" ? "todayBrief.pending.makingEvening" : "todayBrief.pending.makingMorning")}
                 </p>
+            ) : signedOut ? (
+                <p className="text-[14px] text-copper" role="status" data-testid="brief-pending-line">
+                    {tr("todayBrief.pending.signedOut", { count: attempts })}{" "}<BriefSignIn assistant={assistant!} size="14px" />
+                </p>
             ) : retry ? (
                 <p className="text-[14px] text-ink" role="status" data-testid="brief-pending-line">
                     {attempts > 0 ? tr(cause === "timeout" ? "todayBrief.pending.triedTimeout" : cause === "signed_out" ? "todayBrief.pending.triedSignedOut" : "todayBrief.pending.tried", { count: attempts, time: retry }) : tr("todayBrief.pending.retry", { time: retry })}
                 </p>
             ) : null}
             {strip}
-            {!building && <div className="mt-1.5"><MakeNow make={make} building={building} nextAllowedAt={nextAllowedAt} onMakeNow={onMakeNow} now={now} tr={tr} /></div>}
+            {!building && !signedOut && <div className="mt-1.5"><MakeNow make={make} building={building} nextAllowedAt={nextAllowedAt} onMakeNow={onMakeNow} now={now} tr={tr} /></div>}
             {onOpenBrief && last && (
                 <p className="text-[12.5px] text-muted" data-testid="brief-pending-last">
                     {tr("todayBrief.pending.lastBrief", last)} · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium text-accent hover:no-underline" onClick={() => measureToday("T05", "open", "opened", () => onOpenBrief(lastBriefId, tr("todayBrief.pending.lastBriefTitle", last)))}>{tr("todayBrief.pending.readIt")}</Button>

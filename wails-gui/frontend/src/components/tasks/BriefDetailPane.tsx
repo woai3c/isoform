@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { clockTime } from "@/lib/brief-time";
+import { BriefSignIn } from "@/components/today/BriefSignIn";
 import { describeBriefTime } from "@/components/today/TodayStatus";
 import { briefEvery, briefNext } from "./brief-schedule-text";
 import { GenerateTodayMissedBrief, GetBriefScheduleDetail, type BriefScheduleDetail, type BriefScheduleRun } from "@/lib/wails-shim-app";
@@ -54,6 +55,12 @@ export function BriefDetailPane({ slot, onClose, onOpenToday, onChangeTimes }: {
     }, [load]);
 
     useEffect(() => {
+        const refresh = () => void load();
+        const off = [EventsOn("brief:stored", refresh), EventsOn("mobile:updated", refresh)];
+        return () => off.forEach((unsubscribe) => unsubscribe());
+    }, [load]);
+
+    useEffect(() => {
         const onKey = (event: KeyboardEvent) => {
             if (event.key !== "Escape" || event.defaultPrevented) return;
             onClose();
@@ -85,6 +92,7 @@ export function BriefDetailPane({ slot, onClose, onOpenToday, onChangeTimes }: {
     const language = i18n.language;
     const clock = (date: Date) => clockTime(date, language, tr);
     // The row's own words (brief-schedule-text), from the scheduler's next run.
+    const blockedRun = detail?.runs.find((run) => run.waitingForSignIn && !!run.failureAssistant);
     const scheduleLine = detail ? [briefEvery(detail.time, language, t, tr), detail.enabled ? briefNext(detail.nextRunAt, now, language, t, tr) : ""].filter(Boolean).join(" · ") : "";
     const dayName = (date: Date) => {
         const diff = Math.round((startOfDay(date) - startOfDay(now)) / 86_400_000);
@@ -107,7 +115,7 @@ export function BriefDetailPane({ slot, onClose, onOpenToday, onChangeTimes }: {
                 <div className="flex flex-wrap items-center gap-2 text-[13px]" data-testid="brief-detail-make">
                     {make.kind === "making" ? <span role="status" className="text-muted">{t("briefDetail.making")}</span>
                         : make.kind === "made" ? <span role="status" className="text-muted">{t("briefDetail.made", { time: clock(make.at) })} · <Button variant="link" size="sm" className="h-auto p-0 text-[13px] font-medium hover:no-underline" onClick={() => onOpenToday?.()}>{t("briefDetail.openOnToday")}</Button></span>
-                            : <Button size="sm" onClick={() => void makeNow()}>{t("briefDetail.makeNow")}</Button>}
+                            : !blockedRun && <Button size="sm" onClick={() => void makeNow()}>{t("briefDetail.makeNow")}</Button>}
                     {make.kind === "failed" && <span role="alert" className="text-error">{tToday("todayBrief.failed")}</span>}
                     {make.kind === "cooldown" && <span role="status" className="text-muted">{tToday("todayBrief.cooldown", { when: describeBriefTime(make.until, now, tr, language) ?? "" })}</span>}
                 </div>
@@ -171,7 +179,8 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
     const attempts = run.attempts ?? 0;
     const nextTry = run.status === "failed" && run.nextTryAt ? new Date(run.nextTryAt) : null;
     const next = nextTry && !Number.isNaN(nextTry.getTime()) ? clock(nextTry) : "";
-    const recordedFailure = attempts > 0 && run.failureCause === "timeout" ? t(next ? "briefDetail.triedTimeoutNext" : "briefDetail.triedTimeout", { count: attempts, time: next }) : attempts > 0 && run.failureCause === "signed_out" ? t(next ? "briefDetail.triedSignedOutNext" : "briefDetail.triedSignedOut", { count: attempts, time: next }) : "";
+    const blocked = run.waitingForSignIn && !!run.failureAssistant;
+    const recordedFailure = attempts > 0 && run.failureCause === "timeout" ? t(next ? "briefDetail.triedTimeoutNext" : "briefDetail.triedTimeout", { count: attempts, time: next }) : attempts > 0 && run.failureCause === "signed_out" ? t(!blocked && next ? "briefDetail.triedSignedOutNext" : "briefDetail.triedSignedOut", { count: attempts, time: next }) : "";
     const line = recordedFailure || (run.status === "failed"
         ? attempts > 0 ? t(next ? "briefDetail.triedNext" : "briefDetail.tried", { count: attempts, time: next }) : t(next ? "briefDetail.didntFinishNext" : "briefDetail.didntFinish", { time: next })
         : run.reason === "asleep" ? t("briefDetail.missedAsleep", { time })
@@ -183,7 +192,7 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
             <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full bg-muted" />
             <span className="min-w-0 flex-1">
                 <span className="block text-[14px] font-medium text-ink">{t("briefDetail.ran", { day: dayName(scheduled), time })}</span>
-                <span className="mt-0.5 block text-[13px] text-muted">{line}</span>
+                <span className="mt-0.5 block text-[13px] text-muted">{line}{blocked && <> <BriefSignIn assistant={run.failureAssistant!} /></>}</span>
             </span>
         </div>
     );

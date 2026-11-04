@@ -430,7 +430,7 @@ func upcomingBriefItem(now time.Time, loc *time.Location, brief upcomingBriefSta
 		(brief.Exists == nil || !brief.Exists(latest.BriefID)) &&
 		!upcomingBriefStoodIn(loc, brief, mobileBriefSlotOccurrence{BriefID: latest.BriefID, Slot: slot, ScheduledAt: latestAt}) {
 		item.DidntRunAt = latestAt.UnixMilli()
-		if latest.Status == mobileBriefRunFailed && latest.Attempts > 0 && item.NextRunAt > now.UnixMilli() {
+		if latest.Status == mobileBriefRunFailed && latest.Attempts > 0 && ((latest.FailureCause == "signed_out" && latest.FailureAssistant != "" && now.Before(mobileBriefSlotCloses(mobileBriefSlotOccurrence{BriefID: latest.BriefID, Slot: slot, ScheduledAt: latestAt}, loc, brief.Settings))) || (latest.FailureCause != "signed_out" && item.NextRunAt > now.UnixMilli())) {
 			item.TriedAttempts, item.TriedCause = latest.Attempts, latest.FailureCause
 		}
 	}

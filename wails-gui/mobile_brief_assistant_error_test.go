@@ -109,3 +109,23 @@ func TestMobileBriefAssistantFailureUsesLastRoute(t *testing.T) {
 		})
 	}
 }
+
+func TestMobileBriefNativeAuthRequiresSignedOutPrimary(t *testing.T) {
+	cause := &native.HTTPError{Status: 401}
+	for _, tc := range []struct{ primary, state, want string }{
+		{"codex", "signed_out", "codex"}, {"claude-code", "signed_out", "claude-code"},
+		{"codex", "signed_in", ""}, {"codex", "", ""}, {"native", "signed_out", ""},
+	} {
+		err := mobileBriefAttributeNativeAuth(cause, tc.primary, tc.state)
+		var attributed *mobileBriefAssistantError
+		if errors.As(err, &attributed) != (tc.want != "") {
+			t.Fatalf("%+v: %v", tc, err)
+		}
+		if attributed != nil && attributed.assistant != tc.want {
+			t.Fatalf("%+v: %v", tc, attributed.assistant)
+		}
+		if !errors.Is(err, cause) {
+			t.Fatal("lost cause")
+		}
+	}
+}
