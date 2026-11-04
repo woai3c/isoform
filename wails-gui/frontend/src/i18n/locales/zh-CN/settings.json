@@ -695,7 +695,7 @@
             "link": "免打扰时段和次数"
         },
         "samples": {
-            "first_week": "与 Isoform 的第一周。",
+            "first_week": "与 Isoform 的第一周",
             "weekly_recap": "你的一周已准备好。",
             "answer_ready": "你问的事有结果了。",
             "decision_due": "工作需要你的授权。",

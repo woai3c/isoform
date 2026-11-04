@@ -87,10 +87,18 @@ func TestEngagementCaptureSnapshotsFollowThePlatform(t *testing.T) {
 	}
 }
 
+func newTestEngagementCaptureTracker() *engagementCaptureTracker {
+	tracker := newEngagementCaptureTracker()
+	tracker.locked = func() bool { return false }
+	tracker.sleptAt = func() time.Time { return time.Time{} }
+	tracker.sleepState = nil
+	return tracker
+}
+
 func TestEngagementCaptureOutageFiresOnceAfterFifteenMinutes(t *testing.T) {
 	ctx := context.Background()
 	app, rig := engagementSignalsApp(t)
-	tracker := newEngagementCaptureTracker()
+	tracker := newTestEngagementCaptureTracker()
 	start := rig.clock
 	sample := func(after time.Duration, running bool) {
 		rig.clock = start.Add(after)
@@ -149,7 +157,7 @@ func TestEngagementCaptureOutageFiresOnceAfterFifteenMinutes(t *testing.T) {
 func TestEngagementCaptureClosedEyesNeverCounts(t *testing.T) {
 	ctx := context.Background()
 	app, rig := engagementSignalsApp(t)
-	tracker := newEngagementCaptureTracker()
+	tracker := newTestEngagementCaptureTracker()
 	start := rig.clock
 	off := func() []captureSnapshot {
 		return []captureSnapshot{{Kind: "screen", Label: "Screen capture", Granted: true, Enabled: true, Running: false}}
@@ -190,7 +198,7 @@ func TestEngagementCaptureClosedEyesNeverCounts(t *testing.T) {
 func TestEngagementCaptureNeverOnIsOnboardingNotAnOutage(t *testing.T) {
 	ctx := context.Background()
 	app, rig := engagementSignalsApp(t)
-	tracker := newEngagementCaptureTracker()
+	tracker := newTestEngagementCaptureTracker()
 	start := rig.clock
 	missing := func() []captureSnapshot {
 		return []captureSnapshot{{Kind: "screen", Label: "Screen capture", Granted: false, Enabled: true, Running: false}}
@@ -659,6 +667,107 @@ func TestEngagementMemoryDreamPreviewWithProposalsIsReviewable(t *testing.T) {
 	}
 	var nilApp *App
 	nilApp.engagementMemoryDreamPreview(ctx, true, &DreamRun{ID: "dream-2", Status: "completed"}, preview) // must not panic
+}
+
+// chat-review v1.0.10 H2: sleep, a locked screen and the person's own switch
+// are not updates; only a stop nobody chose is, and it names its cause.
+func TestEngagementCaptureOnlyAnUnchosenStopCounts(t *testing.T) {
+	ctx := context.Background()
+	app, rig := engagementSignalsApp(t)
+	tracker := newTestEngagementCaptureTracker()
+	start := rig.clock
+	on := func(kind string) captureSnapshot {
+		return captureSnapshot{Kind: kind, Label: kind, Granted: true, Enabled: true, Running: true}
+	}
+	sample := func(after time.Duration, snaps ...captureSnapshot) {
+		rig.clock = start.Add(after)
+		app.observeCaptureHealth(ctx, tracker, rig.clock, func() []captureSnapshot { return snaps })
+	}
+	pending := func() []storage.EngagementMomentRow {
+		return engagementPendingOfKind(t, rig, engagement.KindCapturePaused)
+	}
+
+	chosen := on("screen")
+	chosen.Enabled = false
+	sample(-5*time.Minute, on("screen"))
+	for after := time.Duration(0); after <= 30*time.Minute; after += 5 * time.Minute {
+		sample(after, chosen)
+	}
+	if n := len(pending()); n != 0 {
+		t.Fatalf("a source the person switched off is their choice, got %d moments", n)
+	}
+
+	// The computer slept between samples: what was off before it is dropped.
+	// Without a sleep, a long gap between samples is still an outage.
+	stopped := on("screen")
+	stopped.Running = false
+	sample(35*time.Minute, on("screen"))
+	sample(40*time.Minute, stopped)
+	tracker.sleptAt = func() time.Time { return start.Add(45 * time.Minute) }
+	sample(3*time.Hour, stopped)
+	sample(3*time.Hour+5*time.Minute, stopped)
+	if n := len(pending()); n != 0 {
+		t.Fatalf("a stop across sleep is not an outage, got %d moments", n)
+	}
+
+	revoked := on("screen")
+	revoked.Granted = false
+	sample(3*time.Hour+10*time.Minute, on("screen"))
+	for after := 3*time.Hour + 15*time.Minute; after <= 3*time.Hour+35*time.Minute; after += 5 * time.Minute {
+		sample(after, revoked)
+	}
+	got := pending()
+	if len(got) != 1 || !strings.Contains(got[0].Params, `"cause":"permission"`) {
+		t.Fatalf("expected one moment naming its cause, got %+v", got)
+	}
+}
+
+func TestEngagementCaptureLockClearsOutage(t *testing.T) {
+	ctx := context.Background()
+	app, rig := engagementSignalsApp(t)
+	tracker := newTestEngagementCaptureTracker()
+	start := rig.clock
+	locked := false
+	tracker.locked = func() bool { return locked }
+	sample := func(minutes int, running bool) {
+		rig.clock = start.Add(time.Duration(minutes) * time.Minute)
+		app.observeCaptureHealth(ctx, tracker, rig.clock, func() []captureSnapshot {
+			return []captureSnapshot{{Kind: "screen", Granted: true, Enabled: true, Running: running}}
+		})
+	}
+	sample(-5, true)
+	sample(0, false)
+	locked = true
+	sample(20, false)
+	locked = false
+	sample(25, false)
+	sample(30, false)
+	if got := engagementPendingOfKind(t, rig, engagement.KindCapturePaused); len(got) != 0 {
+		t.Fatalf("lock must clear the previous outage, got %+v", got)
+	}
+}
+
+// chat-review v1.0.10 H1: the microphone and system audio share one loop, so
+// its stop is one moment, not two.
+func TestEngagementCaptureSharedListeningLoopIsOneStop(t *testing.T) {
+	ctx := context.Background()
+	app, rig := engagementSignalsApp(t)
+	tracker := newTestEngagementCaptureTracker()
+	start := rig.clock
+	snap := func(kind string, running bool) captureSnapshot {
+		return captureSnapshot{Kind: kind, Label: kind, Granted: true, Enabled: true, Running: running}
+	}
+	for after := -5 * time.Minute; after <= 20*time.Minute; after += 5 * time.Minute {
+		running := after < 0
+		rig.clock = start.Add(after)
+		app.observeCaptureHealth(ctx, tracker, rig.clock, func() []captureSnapshot {
+			return []captureSnapshot{snap("microphone", running), snap("system_audio", running)}
+		})
+	}
+	got := engagementPendingOfKind(t, rig, engagement.KindCapturePaused)
+	if len(got) != 1 || got[0].SubjectID != "microphone" || !strings.Contains(got[0].Params, `"cause":"stopped"`) {
+		t.Fatalf("expected one listening stop, got %+v", got)
+	}
 }
 
 // settings-review ST66: a source the user switched off, a sleep or a lock is

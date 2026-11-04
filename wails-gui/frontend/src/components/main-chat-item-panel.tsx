@@ -77,7 +77,7 @@ export function MainChatItemPanel({
         ? message.briefDisplay
             ? briefTitle(message.briefDisplay as Parameters<typeof briefTitle>[0], i18n.resolvedLanguage ?? i18n.language, (key, options) => tToday(key as never, options as never) as string)
             : tToday(message.kind === 'brief_ready' ? 'todayBrief.slot.on_request' : 'todayBrief.kind.week')
-        : message.headline;
+        : message.localized?.[(i18n.resolvedLanguage ?? i18n.language)?.toLowerCase().startsWith("zh") ? "zh-CN" : "en"]?.headline ?? message.headline;
     const openTarget = (target: MainChatReportTarget) => {
         if (target.kind === "calendar") {
             void OpenExternalURL("/System/Applications/Calendar.app");
@@ -113,7 +113,7 @@ export function MainChatItemPanel({
             ? { label: t("mainChat.proactive.openInUpcoming"), target: { kind: "upcoming" as const } }
             : null;
 
-    const panelDetails = (thread?: DesktopTaskThread | null) => message.kind === "commitment_slipping" ? (message.holdSource ? <HoldCard source={{ ...message.holdSource, reason: message.body, ...(surface === "today" ? { telemetryAction: "D01" as const } : {}) }} onClose={panel.close} /> : <FindTimeAnswer />) : (<>
+    const panelDetails = (thread?: DesktopTaskThread | null, titleInHeader = false) => message.kind === "commitment_slipping" ? (message.holdSource ? <HoldCard source={{ ...message.holdSource, reason: message.body, ...(surface === "today" ? { telemetryAction: "D01" as const } : {}) }} onClose={panel.close} /> : <FindTimeAnswer />) : (<>
             {message.place?.bundleId && (
                 <div className="flex flex-wrap items-center gap-2">
                     <Button size="sm" variant="secondary" onClick={() => void track("open", "opened", returnToPlace)}>
@@ -185,7 +185,7 @@ export function MainChatItemPanel({
                     )}
                 </section>
             )}
-            <MainChatProactiveCard item={selectedItem} onOpenTarget={openTarget} compact inPanel panelSurface={surface} />
+            <MainChatProactiveCard item={selectedItem} onOpenTarget={openTarget} compact inPanel titleInHeader={titleInHeader} panelSurface={surface} />
     </>);
 
     if (task?.moment === message.momentId) return (
@@ -208,7 +208,7 @@ export function MainChatItemPanel({
                     <X className="size-4" />
                 </Button>
             </header>
-            {panelDetails()}
+            {panelDetails(null, true)}
         </aside>
     );
 }

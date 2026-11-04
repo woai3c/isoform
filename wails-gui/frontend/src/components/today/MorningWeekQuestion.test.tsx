@@ -42,6 +42,22 @@ describe("MorningWeekQuestion", () => {
         expect(mocks.save).not.toHaveBeenCalled();
     });
 
+    // Thursday polish C4: in Chat the week question has the style of every
+    // Isoform question: body text, then "You answered: … · Change".
+    it("uses the Chat question style in Chat: no rule, body-text question, one-space dot before Change", () => {
+        render(<MorningWeekQuestion briefID="2026-10-26-morning" initialAnswer="Launch" variant="chat" />);
+        const section = screen.getByTestId("morning-week-question");
+        expect(section.className).not.toContain("border-t");
+        const question = screen.getByText("What is this week about?");
+        expect(question.className).not.toContain("font-semibold");
+        expect(question.className).toContain("text-[14px]");
+        const answered = section.querySelector("[data-week-answered]")!;
+        expect(answered.textContent).toBe("You answered: Launch · Change");
+        expect(answered.className).not.toMatch(/\bgap-/);
+        fireEvent.click(screen.getByRole("button", { name: "Change" }));
+        expect(screen.getByRole("textbox")).toBeTruthy();
+    });
+
     it("enables Save for a typed answer and folds it after saving", async () => {
         mocks.save.mockResolvedValue(undefined);
         render(<MorningWeekQuestion briefID="2026-11-02-morning" />);

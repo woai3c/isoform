@@ -1566,7 +1566,7 @@ describe("TodayPage main chat panel: Isoform's cards and status rows (Claude Des
         id: "s-1", kind: "system", toolName: "main_chat_status", rowClass: "routine", localDay, sortOrder: 0,
         toolInput: JSON.stringify({ period: `${localDay}:morning`, entries: [
             { id: "e1", kind: "brief_ready", text: "Your brief is ready.", target: { kind: "today" } },
-            { id: "e2", kind: "capture_paused", text: "Isoform stopped watching for a while.", target: { kind: "settings", id: "activity" } },
+            { id: "e2", kind: "capture_paused", text: "Isoform stopped watching for a while.", captureSource: "screen", captureCause: "stopped", captureStartAt: new Date(`${localDay}T12:21:00`).getTime(), target: { kind: "settings", id: "activity" } },
         ] }),
     };
     const rows = [
@@ -1753,8 +1753,9 @@ describe("TodayPage main chat panel: Isoform's cards and status rows (Claude Des
         expect(within(fold).queryByText("Your brief is ready.")).not.toBeInTheDocument();
         expect(within(fold).getByText("todayBrief.slot.on_request")).toBeInTheDocument();
         expect(within(fold).queryByText("Isoform stopped watching for a while.")).not.toBeInTheDocument();
-        expect(within(fold).getByText(/From Observing/)).toBeInTheDocument();
-        expect(within(fold).getAllByRole("button", { name: "Show" })).toHaveLength(2);
+        expect(within(fold).getByText(/Stopped watching your screen at .+: screen capture stopped on its own\./)).toBeInTheDocument();
+        expect(within(fold).getAllByRole("button", { name: "Show" })).toHaveLength(1);
+        expect(within(fold).getAllByRole("button", { name: "Turn it back on" })).toHaveLength(1);
         expect(cards()).toHaveLength(2);
         expect(panel().querySelector(`[data-main-chat-day='${localDay}']`)).not.toBeNull();
     });

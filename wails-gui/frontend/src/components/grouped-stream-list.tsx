@@ -7,7 +7,7 @@ import {
     turnHasFinals,
     isTodayContextItem,
 } from '@/lib/stream-helpers';
-import { getMainChatStatus } from '@/lib/stream-helpers';
+import { getMainChatProactive, getMainChatStatus } from '@/lib/stream-helpers';
 import { buildMainChatDays, mainChatStreamRows } from '@/lib/main-chat-view';
 import { StreamCard } from './stream-card';
 import type { DeliverableActions } from './stream-card';
@@ -278,6 +278,14 @@ interface RowViewProps {
     showChips: boolean;
 }
 
+function isBackgroundLineItem(item: StreamItem): boolean {
+    const card = getMainChatProactive(item);
+    if (card?.kind === 'capture_paused') return true;
+    if (card?.kind !== 'meeting_prep' || !card.event?.start) return false;
+    const start = new Date(card.event.start).getTime();
+    return !Number.isNaN(start) && (item.rowClass === 'routine' || start <= Date.now());
+}
+
 function sameItems(a: readonly StreamItem[], b: readonly StreamItem[]): boolean {
     return a.length === b.length && a.every((item, i) => item === b[i]);
 }
@@ -362,11 +370,14 @@ export const StreamRowView = memo(function StreamRowView({
         return <MainChatDayDivider day={row.day} today={row.today} />;
     }
     if (row.type === 'day-fold') {
+        // Status lines, stop lines and started meetings are background lines;
+        // a fold of only those lists them at one level (C3, H3).
+        const onlyBackground = row.routine.every((item) => getMainChatStatus(item) || isBackgroundLineItem(item));
         return (
             <MainChatDayFold day={row.day} count={row.routineCount}>
                 {row.routine.map((item) =>
                     getMainChatStatus(item) ? (
-                        <MainChatStatusRow key={item.id} item={item} onOpenTarget={onOpenReportTarget} compact defaultExpanded panelSurface={surface} />
+                        <MainChatStatusRow key={item.id} item={item} onOpenTarget={onOpenReportTarget} compact defaultExpanded flat={onlyBackground} panelSurface={surface} />
                     ) : (
                         <StreamCard key={item.id} item={item} executorType={executorType} compact onOpenReportTarget={onOpenReportTarget} onUseTextedReply={onUseTextedReply} onSendOpenAnswer={onSendOpenAnswer} />
                     ),

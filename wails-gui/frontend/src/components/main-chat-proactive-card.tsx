@@ -24,7 +24,8 @@ import {
 } from '@/lib/stream-helpers';
 import type { StreamItem } from '@/types';
 import { handoffBlockedReasonKey, handoffStatusKey, handoffVerificationLine } from '@/components/handoffs/handoffStatus';
-import { notifyMainChatViewChanged } from '@/lib/main-chat-view';
+import { localDayKey, notifyMainChatViewChanged } from '@/lib/main-chat-view';
+import { mainChatBriefMissedText, mainChatPastLineText } from '@/lib/main-chat-brief-relative';
 import { MainChatTopicTags } from '@/components/main-chat/main-chat-topic-tags';
 import { communicationDraftDetails } from '@/lib/communication';
 import { cardButtons } from '@/lib/main-chat-card-spec';
@@ -46,6 +47,8 @@ interface MainChatProactiveProps {
     detailPanel?: boolean;
     /** The card drawn inside the item panel, where the draft and its Send live. */
     inPanel?: boolean;
+    /** The panel's header already reads the card's title (C5), so the card starts at its lines. */
+    titleInHeader?: boolean;
 }
 
 const openActions = new Set(['open', 'open_notes', 'open_person', 'open_settings', 'open_event', 'review', 'see', 'update', 'answer']);
@@ -91,21 +94,27 @@ function sourceLabel(kind: string, t: TFunction<'chat'>): string | null {
     }
 }
 
-/** "{start} to {end}" when both ends of a past pause are known. */
-function pauseLine(t: TFunction<'chat'>, source: string | undefined, startAt: number | undefined, endAt: number | undefined, lang: string): string {
-    const observing = source === 'screen';
+/** A stop nobody chose, with its cause (chat-review v1.0.10 H2): "Stopped
+ *  watching your screen at 12:21 PM: Screen Recording was turned off." A
+ *  recorded end gives "from {start} to {end}". */
+function pauseLine(t: TFunction<'chat'>, source: string | undefined, cause: string | undefined, startAt: number | undefined, endAt: number | undefined, lang: string): string {
+    const screen = source === 'screen';
     const clock = (at: number) => computerClock(new Date(at), lang);
-    if (startAt && endAt) return t(observing ? 'mainChat.observationPause.pausedFromTo' : 'mainChat.observationPause.captureFromTo', { start: clock(startAt), end: clock(endAt) });
-    if (endAt) return t(observing ? 'mainChat.observationPause.resumed' : 'mainChat.observationPause.captureResumed', { time: clock(endAt) });
-    if (startAt) return t(observing ? 'mainChat.observationPause.pausedAt' : 'mainChat.observationPause.capturePausedAt', { time: clock(startAt) });
-    return t('mainChat.observationPause.captureNotice');
+    const why = t(cause === 'permission'
+        ? (screen ? 'mainChat.observationPause.cause.screenPermission' : source === 'system_audio' ? 'mainChat.observationPause.cause.systemAudioPermission' : 'mainChat.observationPause.cause.microphonePermission')
+        : (screen ? 'mainChat.observationPause.cause.screenStopped' : 'mainChat.observationPause.cause.listeningStopped'));
+    if (startAt && endAt) return t(screen ? 'mainChat.observationPause.stoppedWatchingFromTo' : 'mainChat.observationPause.stoppedListeningFromTo', { start: clock(startAt), end: clock(endAt), cause: why });
+    return t(screen ? 'mainChat.observationPause.stoppedWatchingAt' : 'mainChat.observationPause.stoppedListeningAt', { time: clock(startAt ?? Date.now()), cause: why });
 }
+
+/** One style for every background line in a fold (chat-review v1.0.10 H3). */
+export const BACKGROUND_LINE_CLASS = 'flex items-start gap-3 text-[12.5px] leading-relaxed text-muted';
 
 /** Actions that step back from a card rather than act on it. */
 // Needs-you cards and explicitly requested reminders remain in the scan path.
 const needsUserKinds = new Set(['decision_due', 'work_blocked', 'commitment_slipping', 'waiting_on_reply', 'reminder']);
 
-function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicIds, panelSurface = 'chat', compact = false, detailPanel = false, inPanel = false }: { item: StreamItem; message: MainChatProactivePayload; onOpenTarget?: MainChatProactiveProps['onOpenTarget']; nested?: boolean; topicIds?: string[]; panelSurface?: MainChatItemPanelSurface; compact?: boolean; detailPanel?: boolean; inPanel?: boolean }) {
+function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicIds, panelSurface = 'chat', compact = false, detailPanel = false, inPanel = false, titleInHeader = false }: { item: StreamItem; message: MainChatProactivePayload; onOpenTarget?: MainChatProactiveProps['onOpenTarget']; nested?: boolean; topicIds?: string[]; panelSurface?: MainChatItemPanelSurface; compact?: boolean; detailPanel?: boolean; inPanel?: boolean; titleInHeader?: boolean }) {
     const { t, i18n } = useTranslation('chat');
     const { t: tToday } = useTranslation('today');
     const track = <T,>(id: string, run: () => T): T => panelSurface === "today" ? measureToday(id, "do", "done", run) : run();
@@ -471,7 +480,7 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
                         <MainChatTopicTags topicIds={topicIds} />
                     </>}
                 />
-            ) : (
+            ) : !titleInHeader && (
                 <h3 className="break-words text-[15px] font-semibold leading-snug text-ink">{message.kind === 'first_week' && message.briefId && briefDisplay
                     ? briefTitle({ ...briefDisplay, yourWeek: undefined, briefId: message.briefId } as Parameters<typeof briefTitle>[0], i18n.resolvedLanguage ?? i18n.language, (key, options) => String(tToday(key as never, options as never)))
                     : retiredBriefCopy(copy.headline) && message.kind === 'brief_ready' ? tToday('todayBrief.slot.on_request') : retiredBriefCopy(copy.headline) && message.kind === 'weekly_recap' ? tToday('todayBrief.kind.week') : copy.headline}</h3>
@@ -700,17 +709,17 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
     );
 }
 
-export function MainChatProactiveCard({ item, onOpenTarget, compact = false, panelSurface = 'chat', detailPanel = false, inPanel = false }: MainChatProactiveProps) {
+export function MainChatProactiveCard({ item, onOpenTarget, compact = false, panelSurface = 'chat', detailPanel = false, inPanel = false, titleInHeader = false }: MainChatProactiveProps) {
     const panel = useMainChatItemPanel(panelSurface);
     const streamView = useMainChatStreamView();
     const { t, i18n } = useTranslation('chat');
     const message = getMainChatProactive(item);
     if (!message) return null;
     if (streamView && message.kind === 'capture_paused') {
-        const text = pauseLine(t, message.captureSource, message.captureStartAt, message.captureEndAt, i18n.resolvedLanguage ?? 'en');
-        return <div data-main-chat-proactive="capture_paused" className="flex items-start gap-3 text-[12.5px] text-muted">
-            <span className="min-w-0 flex-1">{text} · {t('mainChat.proactive.sourceFrom', { source: t('mainChat.proactive.source.observing') })}</span>
-            {onOpenTarget && <button type="button" className="shrink-0 text-accent hover:underline" onClick={() => onOpenTarget({ kind: 'settings', id: 'activity' })}>{t('mainChat.card.button.show')}</button>}
+        const text = pauseLine(t, message.captureSource, message.captureCause, message.captureStartAt, message.captureEndAt, i18n.resolvedLanguage ?? 'en');
+        return <div data-main-chat-proactive="capture_paused" data-background-line className={BACKGROUND_LINE_CLASS}>
+            <span className="min-w-0 flex-1 break-words">{text}</span>
+            {onOpenTarget && !message.captureEndAt && <button type="button" className="shrink-0 text-accent hover:underline" onClick={() => onOpenTarget({ kind: 'settings', id: 'activity' })}>{t('mainChat.observationPause.turnBackOn')}</button>}
         </div>;
     }
     // A card says what happened: no meeting card without the meeting's title.
@@ -719,7 +728,7 @@ export function MainChatProactiveCard({ item, onOpenTarget, compact = false, pan
     if (meetingStart && !Number.isNaN(meetingStart.getTime()) && (item.rowClass === 'routine' || meetingStart.getTime() <= Date.now())) {
         // Once it has started it is no longer an action: one line in the day's updates.
         return (
-            <div data-main-chat-proactive="meeting_prep" data-meeting-started className={cn('flex items-start gap-3 text-[12.5px] text-muted', !compact && 'mx-auto w-full')}>
+            <div data-main-chat-proactive="meeting_prep" data-meeting-started data-background-line className={cn(BACKGROUND_LINE_CLASS, !compact && 'mx-auto w-full')}>
                 <span className="min-w-0 flex-1">{t('mainChat.proactive.meetingStarted', { title: message.event!.title, time: computerClock(meetingStart, i18n.resolvedLanguage ?? 'en') })} · {t('mainChat.proactive.sourceFrom', { source: t('mainChat.proactive.source.calendar') })}</span>
                 {onOpenTarget && <button type="button" className="shrink-0 text-accent hover:underline" onClick={() => onOpenTarget({ kind: 'calendar', id: message.target.id })}>{t('mainChat.card.button.show')}</button>}
             </div>
@@ -730,7 +739,7 @@ export function MainChatProactiveCard({ item, onOpenTarget, compact = false, pan
         <>
             {streamView?.firstReadStarter?.itemId === item.id && <FirstDayChatStarters items={streamView.firstReadStarter.items} onPrepare={streamView.onFillChip} />}
             <article data-main-chat-proactive={message.kind} data-panel-open={panelOpen || undefined} className={cn('flex min-w-0 flex-col', !detailPanel && 'rounded-xl', !detailPanel && !inPanel && panelOpen && 'bg-panel-warm ring-2 ring-accent-2/25', !compact && 'mx-auto w-full')}>
-                {message.kind === 'first_read' ? <FirstReadCard message={message} onOpenTarget={onOpenTarget} /> : <ProactiveMessage item={item} message={message} onOpenTarget={onOpenTarget} topicIds={item.topicIds} panelSurface={panelSurface} compact={compact} detailPanel={detailPanel} inPanel={inPanel} />}
+                {message.kind === 'first_read' ? <FirstReadCard message={message} onOpenTarget={onOpenTarget} /> : <ProactiveMessage item={item} message={message} onOpenTarget={onOpenTarget} topicIds={item.topicIds} panelSurface={panelSurface} compact={compact} detailPanel={detailPanel} inPanel={inPanel} titleInHeader={titleInHeader} />}
             </article>
         </>
     );
@@ -745,8 +754,10 @@ function statusEntryTarget(entry: MainChatStatusPayload['entries'][number]): Mai
     return entry.target;
 }
 
-function MainChatStatusEntry({ entry, expanded, onOpenTarget, today }: {
+function MainChatStatusEntry({ entry, expanded, onOpenTarget, today, day }: {
     today: boolean;
+    /** The day the line was written ("YYYY-MM-DD"); its day words are read from it. */
+    day?: string;
     entry: MainChatStatusPayload['entries'][number];
     expanded: boolean;
     onOpenTarget?: MainChatProactiveProps['onOpenTarget'];
@@ -758,39 +769,55 @@ function MainChatStatusEntry({ entry, expanded, onOpenTarget, today }: {
     // The entry is delivered with its folded row, but opening it requires
     // the actual text to be expanded into the focused viewport.
     const receiptRef = useMainChatProactiveReceipts<HTMLLIElement>(entry.momentId ? entry.id : null, expanded);
+    const view = useMainChatStreamView();
     const rawText = entry.localized?.[copyLanguage(i18n.resolvedLanguage)] ?? entry.text;
-    const text = entry.kind === 'capture_paused'
-        ? pauseLine(t, entry.captureSource, entry.captureStartAt, entry.captureEndAt, i18n.resolvedLanguage ?? 'en')
+    const pause = entry.kind === 'capture_paused';
+    const lang = i18n.resolvedLanguage ?? 'en';
+    // A missed brief's line is about the brief, so it names no source (H9).
+    const missed = entry.kind === 'brief_missed';
+    const missedText = missed ? mainChatBriefMissedText(entry, view?.today ?? localDayKey(new Date()), lang, t as (key: string, options?: Record<string, unknown>) => string, tToday as (key: string, options?: Record<string, unknown>) => string) : null;
+    const text = pause
+        ? pauseLine(t, entry.captureSource, entry.captureCause, entry.captureStartAt, entry.captureEndAt, i18n.resolvedLanguage ?? 'en')
+        : missedText ? missedText
         : (entry.kind === 'brief_ready' || entry.kind === 'weekly_recap') && retiredBriefCopy(rawText)
-            ? tToday(entry.kind === 'brief_ready' ? 'todayBrief.slot.on_request' : 'todayBrief.kind.week') : rawText;
+            ? tToday(entry.kind === 'brief_ready' ? 'todayBrief.slot.on_request' : 'todayBrief.kind.week')
+            : mainChatPastLineText(rawText, day, view?.today ?? localDayKey(new Date()), i18n.resolvedLanguage ?? 'en', t as (key: string, options?: Record<string, unknown>) => string);
     return (
-        <li ref={receiptRef} className="flex items-start gap-3">
+        <li ref={receiptRef} data-background-line className={BACKGROUND_LINE_CLASS}>
             {expanded && <>
-                <span className="min-w-0 flex-1 break-words"><span>{text}</span>{source && <> · {t('mainChat.proactive.sourceFrom', { source })}</>}</span>
-                {onOpenTarget && mainChatTargetOpens(statusEntryTarget(entry)) && <button type="button" className="shrink-0 cursor-pointer rounded-sm text-accent underline-offset-2 hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-2/40" onClick={() => today ? measureToday("T70", "open", "opened", () => onOpenTarget(statusEntryTarget(entry))) : onOpenTarget(statusEntryTarget(entry))}>{t('mainChat.card.button.show')}</button>}
+                <span className="min-w-0 flex-1 break-words"><span>{text}</span>{source && !pause && !missed && <> · {t('mainChat.proactive.sourceFrom', { source })}</>}</span>
+                {onOpenTarget && mainChatTargetOpens(statusEntryTarget(entry)) && !(pause && entry.captureEndAt) && <button type="button" className="shrink-0 cursor-pointer rounded-sm text-accent underline-offset-2 hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-2/40" onClick={() => today ? measureToday("T70", "open", "opened", () => onOpenTarget(statusEntryTarget(entry))) : onOpenTarget(statusEntryTarget(entry))}>{pause ? t('mainChat.observationPause.turnBackOn') : t('mainChat.card.button.show')}</button>}
             </>}
         </li>
     );
 }
 
-export function MainChatStatusRow({ item, onOpenTarget, compact = false, defaultExpanded = false, panelSurface = "chat" }: MainChatProactiveProps & {
+export function MainChatStatusRow({ item, onOpenTarget, compact = false, defaultExpanded = false, flat = false, panelSurface = "chat" }: MainChatProactiveProps & {
     /** Inside the main chat's day fold the entries show at once: the fold
      *  was the click that opened them. */
     defaultExpanded?: boolean;
+    /** A day fold that holds only background lines lists them right under
+     *  its own summary, with no inner "{n} background updates" (C3). */
+    flat?: boolean;
 }) {
     const { t } = useTranslation('chat');
     const [expanded, setExpanded] = useState(defaultExpanded);
     const detailsId = useId();
     const status = getMainChatStatus(item);
     if (!status || status.entries.length === 0) return null;
+    if (flat) return (
+        <ul data-main-chat-status={status.period} className="flex flex-col gap-3">
+            {status.entries.map((entry) => <MainChatStatusEntry key={entry.id} entry={entry} expanded onOpenTarget={onOpenTarget} today={panelSurface === "today"} day={item.localDay} />)}
+        </ul>
+    );
     return (
         <div data-main-chat-status={status.period} className={cn('text-[11px] leading-relaxed text-muted', !compact && 'mx-auto w-full max-w-[90%]')}>
             <button type="button" aria-expanded={expanded} aria-controls={expanded ? detailsId : undefined} className="mx-auto flex max-w-full cursor-pointer items-center justify-center gap-1 rounded-md px-2 py-1 text-muted hover:bg-ink/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-2/40" onClick={() => panelSurface === "today" ? measureToday("T69", "open", "opened", () => setExpanded(!expanded)) : setExpanded(!expanded)}>
                 <span className="truncate">{t('mainChat.status.summary', { count: status.entries.length })}</span>
                 <ChevronDown aria-hidden="true" className={cn('size-3 shrink-0 transition-transform', expanded && 'rotate-180')} />
             </button>
-            <ul id={detailsId} hidden={!expanded} className="mx-auto mt-1 max-w-xl space-y-1 px-2">
-                {status.entries.map((entry) => <MainChatStatusEntry key={entry.id} entry={entry} expanded={expanded} onOpenTarget={onOpenTarget} today={panelSurface === "today"} />)}
+            <ul id={detailsId} hidden={!expanded} className="mt-1 flex flex-col gap-3">
+                {status.entries.map((entry) => <MainChatStatusEntry key={entry.id} entry={entry} expanded={expanded} onOpenTarget={onOpenTarget} today={panelSurface === "today"} day={item.localDay} />)}
             </ul>
         </div>
     );

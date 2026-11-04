@@ -395,7 +395,7 @@ func TestThreadOutcomeProactiveCandidateDedupesAndWithdraws(t *testing.T) {
 		t.Fatalf("thread outcome target = %+v, want thread %s", item.Target, row.ID)
 	}
 	for _, lang := range engagement.Languages {
-		if !strings.Contains(item.Localized[lang].Headline, strings.TrimRight(f.NextStep, ".!?。")) {
+		if copy := item.Localized[lang]; !strings.Contains(copy.Headline+" "+copy.Body, strings.TrimRight(f.NextStep, ".!?。")) {
 			t.Fatalf("lost localized step %+v", item)
 		}
 	}

@@ -19,6 +19,6 @@ export function MainChatWeekAnswer({ briefId, answer }: { briefId: string; answe
     }, [briefId]);
     return <div data-main-chat-week-answer className="flex flex-col gap-1.5">
         <span className="text-[12px] text-accent">{t('mainChat.view.isoform')}</span>
-        <MorningWeekQuestion briefID={briefId} initialAnswer={current} />
+        <MorningWeekQuestion briefID={briefId} initialAnswer={current} variant="chat" />
     </div>;
 }

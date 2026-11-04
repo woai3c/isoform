@@ -73,13 +73,27 @@ func (s captureSnapshot) stopped() bool {
 	return s.Enabled && (!s.Granted || !s.Running)
 }
 
-// cause names why a stopped source stopped, for the notice.
+// cause says why a source is off: "permission" when its access was turned
+// off, "chosen" when the user switched it off, "stopped" when its capture
+// loop stopped on its own. Empty while it is on.
 func (s captureSnapshot) cause() string {
 	if !s.Granted {
-		return "permission"
+		return captureCausePermission
 	}
-	return "stopped"
+	if !s.Enabled {
+		return captureCauseChosen
+	}
+	if !s.Running {
+		return captureCauseStopped
+	}
+	return ""
 }
+
+const (
+	captureCausePermission = "permission"
+	captureCauseChosen     = "chosen"
+	captureCauseStopped    = "stopped"
+)
 
 // engagementCaptureSnapshots builds the watched sources from a platform's
 // permission list. Linux has no capture path the activity monitor reports on,
@@ -161,8 +175,9 @@ func (a *App) liveEngagementCaptureSnapshots() []captureSnapshot {
 type engagementCaptureOutage struct {
 	Kind  string
 	Label string
-	Cause string
 	Start time.Time
+	// Cause is why it went off (captureCausePermission or captureCauseStopped).
+	Cause string
 }
 
 // engagementCaptureTracker remembers when each watched source went off. The
@@ -170,13 +185,29 @@ type engagementCaptureOutage struct {
 // only counts as paused after it has been seen on in this process: a
 // permission that was never granted is onboarding, not an outage.
 type engagementCaptureTracker struct {
-	open   map[string]engagementCaptureOutage
-	wasOn  map[string]bool
-	lastAt time.Time
+	open       map[string]engagementCaptureOutage
+	wasOn      map[string]bool
+	last       time.Time
+	lastAt     time.Time
+	sleepState func() activitymon.SystemStateChange
+	// sleptAt is when the computer last went to sleep, zero if unknown.
+	sleptAt func() time.Time
+	locked  func() bool
 }
 
 func newEngagementCaptureTracker() *engagementCaptureTracker {
-	return &engagementCaptureTracker{open: map[string]engagementCaptureOutage{}, wasOn: map[string]bool{}}
+	return &engagementCaptureTracker{open: map[string]engagementCaptureOutage{}, wasOn: map[string]bool{}, sleptAt: latestSystemSleepAt, locked: activitymon.IsScreenLocked, sleepState: activitymon.LatestSystemSleepState}
+}
+
+func latestSystemSleepAt() time.Time {
+	state := activitymon.LatestSystemSleepState()
+	switch state.Kind {
+	case activitymon.SystemStateSleep:
+		return state.At
+	case activitymon.SystemStateWake:
+		return state.SleepAt
+	}
+	return time.Time{}
 }
 
 // observe records one sample and returns the outages that have lasted longer
@@ -185,6 +216,14 @@ func newEngagementCaptureTracker() *engagementCaptureTracker {
 func (t *engagementCaptureTracker) observe(now time.Time, snapshots []captureSnapshot) []engagementCaptureOutage {
 	seen := make(map[string]bool, len(snapshots))
 	var due []engagementCaptureOutage
+	// The computer slept since the last sample: what was off before it is
+	// not an outage nobody chose.
+	if !t.last.IsZero() && t.sleptAt != nil {
+		if slept := t.sleptAt(); !slept.IsZero() && slept.After(t.last) && !slept.After(now) {
+			clear(t.open)
+		}
+	}
+	t.last = now
 	for _, snap := range snapshots {
 		seen[snap.Kind] = true
 		if !snap.stopped() {
@@ -199,7 +238,7 @@ func (t *engagementCaptureTracker) observe(now time.Time, snapshots []captureSna
 		}
 		outage, ok := t.open[snap.Kind]
 		if !ok {
-			outage = engagementCaptureOutage{Kind: snap.Kind, Label: snap.Label, Cause: snap.cause(), Start: now}
+			outage = engagementCaptureOutage{Kind: snap.Kind, Label: snap.Label, Start: now, Cause: snap.cause()}
 			t.open[snap.Kind] = outage
 		}
 		if now.Sub(outage.Start) > engagementCaptureOutageAfter {
@@ -221,7 +260,8 @@ func (t *engagementCaptureTracker) reset() {
 }
 
 // observeCaptureHealth samples capture once. Closed-eyes mode is a deliberate
-// pause, so it clears the tracker and submits nothing.
+// pause and a locked screen stops capture on purpose, so both clear the
+// tracker and submit nothing.
 func (a *App) observeCaptureHealth(
 	ctx context.Context,
 	tracker *engagementCaptureTracker,
@@ -229,10 +269,15 @@ func (a *App) observeCaptureHealth(
 	snapshots func() []captureSnapshot,
 ) {
 	var due, ended []engagementCaptureOutage
-	// A sleep, a lock or a pause is never an outage (settings-review ST66).
-	slept := engagementCaptureSleptSince(activitymon.LatestSystemSleepState(), tracker.lastAt)
+	slept := false
+	if tracker.sleepState != nil {
+		state := tracker.sleepState()
+		if !state.At.After(now) {
+			slept = engagementCaptureSleptSince(state, tracker.lastAt)
+		}
+	}
 	tracker.lastAt = now
-	if a.IsClosedEyesModeEnabled() || slept || a.isBackgroundListeningScreenLocked() {
+	if a.IsClosedEyesModeEnabled() || slept || a.isBackgroundListeningScreenLocked() || (tracker.locked != nil && tracker.locked()) {
 		tracker.reset()
 	} else {
 		samples := snapshots()
@@ -248,11 +293,30 @@ func (a *App) observeCaptureHealth(
 	if err := a.recordCaptureOutageIntervals(ctx, due, ended, now); err != nil {
 		log.Printf("[engagement] recording capture intervals: %v", err)
 	}
-	for _, outage := range due {
+	for _, outage := range engagementCaptureEvents(due) {
 		if err := a.submitCapturePausedSignal(ctx, outage, now); err != nil {
 			log.Printf("[engagement] capture paused for %s: %v", outage.Kind, err)
 		}
 	}
+}
+
+// engagementCaptureEvents keeps one outage per stop: the microphone and
+// system audio share one capture loop, so its stop is one event, not two.
+func engagementCaptureEvents(due []engagementCaptureOutage) []engagementCaptureOutage {
+	listening := map[int64]bool{}
+	for _, outage := range due {
+		if outage.Kind == "microphone" && outage.Cause == captureCauseStopped {
+			listening[outage.Start.UnixMilli()] = true
+		}
+	}
+	out := due[:0:0]
+	for _, outage := range due {
+		if outage.Kind == "system_audio" && outage.Cause == captureCauseStopped && listening[outage.Start.UnixMilli()] {
+			continue
+		}
+		out = append(out, outage)
+	}
+	return out
 }
 
 // submitCapturePausedSignal submits the moment for one outage. The dedupe key

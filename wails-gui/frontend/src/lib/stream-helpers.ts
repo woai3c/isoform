@@ -170,6 +170,8 @@ export interface MainChatProactivePayload {
     captureStartAt?: number;
     captureEndAt?: number;
     captureSource?: string;
+    /** Why capture stopped: "permission" or "stopped"; absent for a pause nobody needs told about. */
+    captureCause?: string;
     briefDisplay?: { slot: string; asOf: string; timezone: string };
     personName?: string;
     event?: MainChatProactiveEvent;
@@ -199,7 +201,7 @@ export interface MainChatProactivePlace {
 
 export interface MainChatStatusPayload {
     period: string;
-    entries: { id: string; momentId?: string; kind: string; text: string; target: MainChatReportTarget; captureStartAt?: number; captureEndAt?: number; captureSource?: string; localized?: Record<string, string> }[];
+    entries: { id: string; momentId?: string; kind: string; text: string; target: MainChatReportTarget; captureStartAt?: number; captureEndAt?: number; captureSource?: string; captureCause?: string; briefDay?: string; briefSlot?: string; briefTime?: string; briefCause?: string; localized?: Record<string, string> }[];
 }
 
 function mainChatTarget(raw: unknown): MainChatReportTarget {
@@ -335,6 +337,7 @@ function proactivePayload(raw: unknown, nested = false): MainChatProactivePayloa
         sentAt: typeof payload.sentAt === 'number' && payload.sentAt > 0 ? payload.sentAt : undefined,
         kindMuted: payload.kindMuted === true,
         captureSource: typeof payload.captureSource === 'string' ? payload.captureSource : undefined,
+        captureCause: typeof payload.captureCause === 'string' && payload.captureCause ? payload.captureCause : undefined,
         captureStartAt: typeof payload.captureStartAt === 'number' && Number.isFinite(new Date(payload.captureStartAt).getTime()) && payload.captureStartAt > 0 ? payload.captureStartAt : undefined,
         captureEndAt: typeof payload.captureEndAt === 'number' && Number.isFinite(new Date(payload.captureEndAt).getTime()) && payload.captureEndAt > 0 ? payload.captureEndAt : undefined,
         briefId: typeof payload.briefId === 'string' ? payload.briefId : undefined,

@@ -355,6 +355,9 @@ func (a *App) proactiveItem(m engagement.Moment, text engagementText) (mainChatP
 		log.Printf("[engagement] card not posted: kind=%s reason=no_title", item.Kind)
 		return mainChatProactive{}, false
 	}
+	if m.Params["_activity_thread"] != "" {
+		applyThreadOutcomeWorkTitle(&item, copyParams["work"])
+	}
 	if copy := item.Localized[lang]; copy.Headline != "" {
 		item.Headline, item.Body = copy.Headline, copy.Body
 	}

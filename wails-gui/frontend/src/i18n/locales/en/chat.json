@@ -405,19 +405,52 @@
             "today": "today",
             "tomorrow": "tomorrow",
             "yesterday": "yesterday",
-            "wasDue": "was due {{day}}"
+            "wasDue": "was due {{day}}",
+            "lineWasDue": "was due {{day}}",
+            "lineWereDue": "were due {{day}}"
+        },
+        "briefMissed": {
+            "line": "{{when}} {{slot}} didn't come at {{time}}.",
+            "lineCause": "{{when}} {{slot}} didn't come at {{time}}: {{cause}}.",
+            "when": {
+                "thisMorning": "This morning's",
+                "thisEvening": "This evening's",
+                "lastNight": "Last night's",
+                "yesterday": "Yesterday's",
+                "weekday": "{{day}}'s",
+                "date": "The {{day}}"
+            },
+            "slot": {
+                "morning": "morning brief",
+                "evening": "evening brief"
+            },
+            "cause": {
+                "failed": "it couldn't be made"
+            }
         },
         "observationPause": {
             "paused": "Observing paused since {{time}}.",
             "resumed": "Observing again at {{time}}.",
             "pausedFromTo": "Observing paused from {{start}} to {{end}}.",
             "pausedAt": "Observing paused at {{time}}.",
+            "stoppedWatchingAt": "Stopped watching your screen at {{time}}: {{cause}}.",
+            "stoppedWatchingFromTo": "Stopped watching your screen from {{start}} to {{end}}: {{cause}}.",
+            "stoppedListeningAt": "Stopped listening at {{time}}: {{cause}}.",
+            "stoppedListeningFromTo": "Stopped listening from {{start}} to {{end}}: {{cause}}.",
+            "cause": {
+                "screenPermission": "Screen Recording was turned off",
+                "microphonePermission": "Microphone access was turned off",
+                "systemAudioPermission": "System audio recording was turned off",
+                "screenStopped": "screen capture stopped on its own",
+                "listeningStopped": "listening stopped on its own"
+            },
+            "turnBackOn": "Turn it back on",
+            "resume": "Resume",
+            "failed": "Could not resume observing. Try again.",
             "captureFromTo": "Capture paused from {{start}} to {{end}}.",
             "capturePausedAt": "Capture paused at {{time}}.",
             "captureNotice": "Capture was paused.",
-            "captureResumed": "Capture resumed at {{time}}.",
-            "resume": "Resume",
-            "failed": "Could not resume observing. Try again."
+            "captureResumed": "Capture resumed at {{time}}."
         },
         "proactive": {
             "revalidating": "Refreshing this item…",
@@ -555,7 +588,7 @@
             "foldSummary_other": "{{count}} updates from Isoform",
             "foldNote": "Routine updates fold here. Mute a kind or show it as a quiet line on Today from Settings › Notifications.",
             "isoform": "Isoform",
-            "briefLoadFailed": "Could not load this brief.",
+            "briefOpenFailed": "Couldn't open this brief.",
             "topicTags": "Topics",
             "chipsLabel": "Prepared requests",
             "notePrepared": "Prepared for you. Nothing is sent until you press Send.",
@@ -566,7 +599,8 @@
             "scope": "Choose chat scope",
             "wholeChat": "Whole chat",
             "more": "More",
-            "itemPanel": "Item"
+            "itemPanel": "Item",
+            "briefLoadFailed": "Could not load this brief."
         },
         "openAnswers": {
             "aroundResult": "I'll let you know when it's settled, around {{time}}.",

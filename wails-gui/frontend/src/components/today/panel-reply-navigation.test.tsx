@@ -115,7 +115,7 @@ it('turns a pause line into its from-to line in the same place once the pause en
     const day = '2026-10-29';
     const start = new Date(2026, 9, 29, 22, 5).getTime();
     const end = new Date(2026, 9, 29, 22, 40).getTime();
-    const pause = { id: 'pause', momentId: 'moment-pause', kind: 'capture_paused', text: 'Paused', captureSource: 'screen', captureStartAt: start, target: { kind: 'settings', id: 'activity' } };
+    const pause = { id: 'pause', momentId: 'moment-pause', kind: 'capture_paused', text: 'Paused', captureSource: 'screen', captureCause: 'permission', captureStartAt: start, target: { kind: 'settings', id: 'activity' } };
     const rows: StreamItem[] = [
         { id: 'evening', kind: 'system', toolName: 'main_chat_status', localDay: day, rowClass: 'routine', toolInput: { period: `${day}:evening`, entries: [
             { id: 'before', kind: 'observing', text: 'Before the pause', target: { kind: 'none' } },
@@ -126,10 +126,71 @@ it('turns a pause line into its from-to line in the same place once the pause en
     ];
     for (const surface of pageAndPanel(rows)) {
         fireEvent.click(within(surface).getByRole('button', { name: '3 updates from Isoform' }));
-        expect(within(surface).queryByText(/Observing paused at/)).toBeNull();
-        expect(within(surface).getAllByText('Observing paused from 10:05 PM to 10:40 PM.')).toHaveLength(1);
-        expect(foldLines(surface).map(([text]) => text)).toEqual(['Before the pause · From Observing', 'Observing paused from 10:05 PM to 10:40 PM. · From Observing', 'After the pause · From Observing']);
+        const stop = 'Stopped watching your screen from 10:05 PM to 10:40 PM: Screen Recording was turned off.';
+        expect(within(surface).queryByText(/your screen at/)).toBeNull();
+        expect(within(surface).getAllByText(stop)).toHaveLength(1);
+        expect(foldLines(surface).map(([text]) => text)).toEqual(['Before the pause · From Observing', stop, 'After the pause · From Observing']);
     }
+});
+it('shows each stop once, counts what it shows, and drops sleep, lock and chosen pauses (chat-review v1.0.10 H1, H2)', () => {
+    const day = '2026-10-29';
+    const at = (hour: number, minute: number) => new Date(2026, 9, 29, hour, minute).getTime();
+    const stop = (id: string, source: string, cause: string | undefined, startAt: number) => ({ id, momentId: id, kind: 'capture_paused', text: 'Paused', captureSource: source, captureCause: cause, captureStartAt: startAt, target: { kind: 'settings', id: 'activity' } });
+    const rows: StreamItem[] = [
+        { id: 'noon', kind: 'system', toolName: 'main_chat_status', localDay: day, rowClass: 'routine', toolInput: { period: `${day}:noon`, entries: [
+            stop('screen', 'screen', 'permission', at(12, 21)),
+            stop('screen-again', 'screen', 'permission', at(12, 21)),
+            stop('listening', 'microphone', 'stopped', at(15, 2)),
+            stop('listening-audio', 'system_audio', 'stopped', at(15, 2)),
+            stop('chosen', 'screen', 'chosen', at(16, 0)),
+            stop('old', 'screen', undefined, at(17, 0)),
+        ] } },
+        { id: 'card', kind: 'system', toolName: 'main_chat_proactive', localDay: day, rowClass: 'routine', toolInput: { momentId: 'screen', kind: 'capture_paused', headline: 'Pause', body: '', captureSource: 'screen', captureCause: 'permission', captureStartAt: at(12, 21) } },
+        { id: 'own-pause', kind: 'system', toolName: 'main_chat_observation_pause', localDay: day, rowClass: 'routine', toolInput: { startAt: at(18, 0), endAt: at(18, 30) } },
+    ];
+    for (const surface of pageAndPanel(rows)) {
+        fireEvent.click(within(surface).getByRole('button', { name: '2 updates from Isoform' }));
+        expect(foldLines(surface).map(([text]) => text)).toEqual([
+            'Stopped watching your screen at 12:21 PM: Screen Recording was turned off.',
+            'Stopped listening at 3:02 PM: listening stopped on its own.',
+        ]);
+        expect(within(surface).getAllByRole('button', { name: 'Turn it back on' })).toHaveLength(2);
+        expect(surface.textContent).not.toMatch(/Observing paused/);
+    }
+});
+it('reads the day words of a past fold line from its own day on the page and in the panel (Thursday polish C2)', () => {
+    const rows: StreamItem[] = [{ id: 'status', kind: 'system', toolName: 'main_chat_status', localDay: '2026-10-29', rowClass: 'routine', toolInput: { period: '2026-10-29', entries: [
+        { id: 'pt', kind: 'observing', text: 'PT is due Thursday.', target: { kind: 'none' } },
+        { id: 'forms', kind: 'observing', text: 'The library forms are due tomorrow.', target: { kind: 'none' } },
+    ] } }];
+    for (const surface of pageAndPanel(rows)) {
+        fireEvent.click(within(surface).getByRole('button', { name: '2 updates from Isoform' }));
+        expect(foldLines(surface).map(([text]) => text)).toEqual(['PT was due Thursday. · From Observing', 'The library forms were due Friday. · From Observing']);
+        for (const [text] of foldLines(surface)) expect(text).not.toMatch(/\bis due\b|\btoday\b|\btomorrow\b/i);
+    }
+});
+it('lists background lines right under the day fold, with no fold inside it (Thursday polish C3)', () => {
+    const day = '2026-10-29';
+    const status = (id: string, count: number): StreamItem => ({ id, kind: 'system', toolName: 'main_chat_status', localDay: day, rowClass: 'routine', toolInput: { period: `${day}:${id}`, entries: Array.from({ length: count }, (_, i) => ({ id: `${id}-${i}`, kind: 'observing', text: `${id} line ${i}`, target: { kind: 'none' } })) } });
+    for (const surface of pageAndPanel([status('morning', 5), status('evening', 4)])) {
+        fireEvent.click(within(surface).getByRole('button', { name: '9 updates from Isoform' }));
+        expect(within(surface).queryByRole('button', { name: /background update/ })).toBeNull();
+        expect(within(surface).getAllByRole('listitem').filter((line) => /line \d/.test(line.textContent ?? ''))).toHaveLength(9);
+        expect(within(surface).getByText('morning line 0')).toBeVisible();
+    }
+});
+it('keeps the inner background group when the day fold also holds a card (Thursday polish C3)', () => {
+    const day = '2026-10-29';
+    const rows: StreamItem[] = [
+        { id: 'card', kind: 'assistant', content: 'A card in the fold', localDay: day, rowClass: 'routine' },
+        { id: 'status', kind: 'system', toolName: 'main_chat_status', localDay: day, rowClass: 'routine', toolInput: { period: day, entries: [
+            { id: 'one', kind: 'observing', text: 'Line one', target: { kind: 'none' } },
+            { id: 'two', kind: 'observing', text: 'Line two', target: { kind: 'none' } },
+        ] } },
+    ];
+    const [page] = pageAndPanel(rows);
+    fireEvent.click(within(page).getByRole('button', { name: '3 updates from Isoform' }));
+    expect(within(page).getByRole('button', { name: '2 background updates' })).toBeInTheDocument();
 });
 it('keeps an in-flight reply visible when the shared session has not received it yet', () => {
     fixture.waiting = true;

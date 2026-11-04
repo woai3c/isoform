@@ -95,7 +95,7 @@ func (a *App) threadOutcomeCopyParams(ctx context.Context, m engagement.Moment) 
 	if outcome == nil {
 		return nil, false
 	}
-	params := map[string]string{"_activity_thread": row.ID, "title": outcome.Summary, "next_step": outcome.NextStep}
+	params := map[string]string{"_activity_thread": row.ID, "title": outcome.Summary, "next_step": outcome.NextStep, "work": row.Title}
 	if place := a.threadOutcomeCardPlace(ctx, *row); place != nil {
 		params["app"] = place.App
 		params["bundle_id"] = place.BundleID

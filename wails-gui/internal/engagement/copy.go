@@ -32,7 +32,7 @@ var Languages = []string{"en", "zh-CN"}
 
 var copyCatalog = map[string]map[Kind]CopySet{
 	"en": {
-		KindFirstWeek:   {PushBody: "Your first week with Isoform.", Sealed: "Open the chat for your first-week check-in.", Text: "Isoform: your first-week check-in is in the chat on your computer or phone.", Actions: map[string]string{"open": "Read it"}},
+		KindFirstWeek:   {PushBody: "Your first week with Isoform", Sealed: "Open the chat for your first-week check-in.", Text: "Isoform: your first-week check-in is in the chat on your computer or phone.", Actions: map[string]string{"open": "Read it"}},
 		KindWeeklyRecap: {PushBody: "Your week is ready.", Sealed: "A short look back at your week, and one idea for Monday. Open the brief.", Text: "Isoform: your week is ready in the brief on your computer or phone.", Actions: map[string]string{"open": "Read your week"}},
 		KindDecisionDue: {
 			PushBody: "Work needs your permission.",
@@ -170,7 +170,7 @@ var copyCatalog = map[string]map[Kind]CopySet{
 		},
 	},
 	"zh-CN": {
-		KindFirstWeek:   {PushBody: "与 Isoform 的第一周。", Sealed: "打开聊天，查看第一周的提醒。", Text: "Isoform：第一周的提醒已在电脑和手机的聊天中。", Actions: map[string]string{"open": "展开阅读"}},
+		KindFirstWeek:   {PushBody: "与 Isoform 的第一周", Sealed: "打开聊天，查看第一周的提醒。", Text: "Isoform：第一周的提醒已在电脑和手机的聊天中。", Actions: map[string]string{"open": "展开阅读"}},
 		KindWeeklyRecap: {PushBody: "你的一周已准备好。", Sealed: "简短回顾你的这一周，并给周一一个建议。打开简报查看。", Text: "Isoform：你的一周已在电脑和手机的简报中。", Actions: map[string]string{"open": "阅读你的一周"}},
 		KindDecisionDue: {
 			PushBody: "工作需要你的授权。",

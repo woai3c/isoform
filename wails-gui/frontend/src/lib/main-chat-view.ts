@@ -1,5 +1,5 @@
 import type { StreamItem } from '@/types';
-import { getMainChatProactive, getMainChatStatus } from '@/lib/stream-helpers';
+import { getMainChatProactive, getMainChatStatus, MAIN_CHAT_OBSERVATION_PAUSE_TOOL } from '@/lib/stream-helpers';
 
 /** What the main chat shows (RC 2 D1): everything, or the main chat filtered
  *  to one work topic. Waiting cards stay in the stream; Tasks › Needs you is
@@ -168,6 +168,9 @@ export function buildMainChatDays(items: readonly StreamItem[], today: string): 
 export function mainChatStreamRows(items: readonly StreamItem[]): StreamItem[] {
     const filtered = items.filter((item) => {
         if (item.kind === 'result') return false;
+        // A pause the person chose is not an update once it ends; one still
+        // going stays its card with Resume (chat-review v1.0.10 H2).
+        if (item.toolName === MAIN_CHAT_OBSERVATION_PAUSE_TOOL && endedObservationPause(item.toolInput)) return false;
         if (item.kind === 'system') {
             const content = item.content ?? '';
             if (content.includes('Run completed') || content.includes('Run created')) return false;
@@ -178,12 +181,15 @@ export function mainChatStreamRows(items: readonly StreamItem[]): StreamItem[] {
     // same moment. Keep the status line once, where it first appeared, and
     // give it the end any projection recorded (chat-review v1.0.9 #2); do not
     // merge unrelated pauses.
-    type PauseValue = { momentId?: string; captureStartAt?: number; captureEndAt?: number; captureSource?: string };
-    // Sources that read the same ("Capture paused at 1:37 PM.") are one line
-    // per event (today-review v1.1.19 R43).
-    const pauseKeys = (value: PauseValue) => [value.momentId, value.captureSource && value.captureStartAt ? `${value.captureSource}:${value.captureStartAt}` : undefined,
-        value.captureStartAt ? `line:${value.captureSource === 'screen' ? 'screen' : 'capture'}:${Math.floor(value.captureStartAt / 60_000)}` : undefined]
+    type PauseValue = { momentId?: string; captureStartAt?: number; captureEndAt?: number; captureSource?: string; captureCause?: string };
+    // One stop is one event, whichever sources it took down (H1).
+    const pauseKeys = (value: PauseValue) => [value.momentId, value.captureStartAt ? `capture:${value.captureStartAt}` : undefined,
+        value.captureStartAt && (value.captureSource === 'microphone' || value.captureSource === 'system_audio') ? `listening:${Math.floor(value.captureStartAt / 60_000)}` : undefined]
         .filter((key): key is string => !!key);
+    // Only a stop nobody chose is an update, and it states its cause (H2).
+    // Sleep, a locked screen, the person's own switch, or an old notice with
+    // no recorded cause shows nothing.
+    const unchosen = (value: PauseValue) => value.captureCause === 'permission' || value.captureCause === 'stopped';
     const statusMoments = new Set<string>();
     const pauseEnds = new Map<string, number>();
     const notePause = (value: PauseValue) => {
@@ -193,7 +199,7 @@ export function mainChatStreamRows(items: readonly StreamItem[]): StreamItem[] {
     for (const item of filtered) {
         const status = getMainChatStatus(item);
         for (const entry of status?.entries ?? []) {
-            if (entry.kind !== 'capture_paused') continue;
+            if (entry.kind !== 'capture_paused' || !unchosen(entry)) continue;
             for (const key of pauseKeys(entry)) statusMoments.add(key);
             notePause(entry);
         }
@@ -204,6 +210,7 @@ export function mainChatStreamRows(items: readonly StreamItem[]): StreamItem[] {
     const seenCards = new Set<string>();
     return filtered.flatMap((item) => {
         const card = getMainChatProactive(item);
+        if (card?.kind === 'capture_paused' && !unchosen(card)) return [];
         if (card?.kind === 'capture_paused' && pauseKeys(card).some((key) => statusMoments.has(key))) return [];
         if (card?.kind === 'capture_paused' && pauseKeys(card).length > 0) {
             const keys = pauseKeys(card);
@@ -219,6 +226,7 @@ export function mainChatStreamRows(items: readonly StreamItem[]): StreamItem[] {
         let ended = false;
         const entries = status.entries.filter((entry) => {
             const keys = pauseKeys(entry);
+            if (entry.kind === 'capture_paused' && !unchosen(entry)) return false;
             if (entry.kind !== 'capture_paused' || keys.length === 0) return true;
             if (keys.some((key) => seenStatusMoments.has(key))) return false;
             for (const key of keys) seenStatusMoments.add(key);
@@ -240,6 +248,12 @@ export function mainChatStreamRows(items: readonly StreamItem[]): StreamItem[] {
         if (!ended && grouped.size === 1 && entries.length === status.entries.length && grouped.has(item.localDay ?? '')) return [item];
         return [...grouped].map(([day, group]) => ({ ...item, id: grouped.size === 1 ? item.id : `${item.id}:${day}`, localDay: day || undefined, toolInput: { ...status, entries: group } }));
     });
+}
+
+function endedObservationPause(input: unknown): boolean {
+    if (!input || typeof input !== 'object') return false;
+    const { endAt, resumedUnknown } = input as { endAt?: unknown; resumedUnknown?: unknown };
+    return (typeof endAt === 'number' && endAt > 0) || resumedUnknown === true;
 }
 
 /** The answers of the main chat's latest turn: assistant rows with words

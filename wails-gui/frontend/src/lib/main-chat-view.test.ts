@@ -111,10 +111,10 @@ describe('main chat view helpers', () => {
 
     it('keeps one line for a pause represented by both status and card', () => {
         const line: StreamItem = { id: 'status', kind: 'system', toolName: 'main_chat_status', rowClass: 'routine', localDay: '2026-10-21', toolInput: { period: '2026-10-21', entries: [
-            { id: 'pause-line', momentId: 'moment-1', kind: 'capture_paused', text: 'Pause', target: { kind: 'settings', id: 'activity' } },
+            { id: 'pause-line', momentId: 'moment-1', kind: 'capture_paused', text: 'Pause', captureCause: 'permission', target: { kind: 'settings', id: 'activity' } },
             { id: 'other', kind: 'brief_missed', text: 'Brief', target: { kind: 'today' } },
         ] } };
-        const card: StreamItem = { id: 'pause-card', kind: 'system', toolName: 'main_chat_proactive', rowClass: 'routine', localDay: '2026-10-21', toolInput: { momentId: 'moment-1', kind: 'capture_paused', headline: 'Pause', body: '' } };
+        const card: StreamItem = { id: 'pause-card', kind: 'system', toolName: 'main_chat_proactive', rowClass: 'routine', localDay: '2026-10-21', toolInput: { momentId: 'moment-1', kind: 'capture_paused', headline: 'Pause', body: '', captureCause: 'permission' } };
         const result = mainChatStreamRows([line, card, { ...line, id: 'duplicate-status' }]);
         expect(result.map((item) => item.id)).toEqual(['status', 'duplicate-status']);
         expect(routineUpdateCount(result[0])).toBe(2);
@@ -125,10 +125,10 @@ describe('main chat view helpers', () => {
     it('keeps one pause line in its first place and gives it the end a later projection recorded', () => {
         const start = new Date(2026, 9, 29, 22, 5).getTime();
         const end = new Date(2026, 9, 29, 22, 40).getTime();
-        const pause = { id: 'pause', momentId: 'moment-pause', kind: 'capture_paused', text: 'Paused', captureSource: 'screen', captureStartAt: start, target: { kind: 'settings' } };
+        const pause = { id: 'pause', momentId: 'moment-pause', kind: 'capture_paused', text: 'Paused', captureSource: 'screen', captureCause: 'permission', captureStartAt: start, target: { kind: 'settings' } };
         const first: StreamItem = { id: 'first', kind: 'system', toolName: 'main_chat_status', rowClass: 'routine', localDay: '2026-10-29', toolInput: { period: 'evening', entries: [pause, { id: 'other', kind: 'brief_missed', text: 'Brief', target: { kind: 'today' } }] } };
         const later: StreamItem = { id: 'later', kind: 'system', toolName: 'main_chat_status', rowClass: 'routine', localDay: '2026-10-29', toolInput: { period: 'night', entries: [{ ...pause, id: 'pause-ended', momentId: undefined, captureEndAt: end }] } };
-        const card: StreamItem = { id: 'card', kind: 'system', toolName: 'main_chat_proactive', rowClass: 'routine', localDay: '2026-10-29', toolInput: { momentId: 'moment-pause', kind: 'capture_paused', headline: 'Pause', body: '' } };
+        const card: StreamItem = { id: 'card', kind: 'system', toolName: 'main_chat_proactive', rowClass: 'routine', localDay: '2026-10-29', toolInput: { momentId: 'moment-pause', kind: 'capture_paused', headline: 'Pause', body: '', captureCause: 'permission' } };
         const result = mainChatStreamRows([first, card, later]);
         expect(result.map((item) => item.id)).toEqual(['first']);
         const entries = (result[0].toolInput as { entries: { id: string; captureEndAt?: number }[] }).entries;
@@ -137,7 +137,7 @@ describe('main chat view helpers', () => {
 
     it('keeps two different pauses apart, each with its own times', () => {
         const pause = (id: string, hour: number, end?: number): StreamItem => ({ id, kind: 'system', toolName: 'main_chat_status', rowClass: 'routine', localDay: '2026-10-29', toolInput: { period: id, entries: [
-            { id, momentId: id, kind: 'capture_paused', text: 'Paused', captureSource: 'screen', captureStartAt: new Date(2026, 9, 29, hour).getTime(), captureEndAt: end, target: { kind: 'settings' } },
+            { id, momentId: id, kind: 'capture_paused', text: 'Paused', captureSource: 'screen', captureCause: 'stopped', captureStartAt: new Date(2026, 9, 29, hour).getTime(), captureEndAt: end, target: { kind: 'settings' } },
         ] } });
         const result = mainChatStreamRows([pause('early', 9), pause('late', 22, new Date(2026, 9, 29, 23).getTime())]);
         expect(result.map((item) => (item.toolInput as { entries: { captureEndAt?: number }[] }).entries[0].captureEndAt)).toEqual([undefined, new Date(2026, 9, 29, 23).getTime()]);
@@ -146,22 +146,40 @@ describe('main chat view helpers', () => {
     it('places capture entries under their recorded day even when a status row was moved today', () => {
         const start = new Date(2026, 10, 1, 22, 5).getTime();
         const status: StreamItem = { id: 'mixed', kind: 'system', toolName: 'main_chat_status', rowClass: 'routine', localDay: '2026-11-02', toolInput: { period: 'morning', entries: [
-            { id: 'capture', momentId: 'pause', kind: 'capture_paused', text: 'Old', captureStartAt: start, target: { kind: 'settings' } },
+            { id: 'capture', momentId: 'pause', kind: 'capture_paused', text: 'Old', captureCause: 'permission', captureStartAt: start, target: { kind: 'settings' } },
             { id: 'brief', kind: 'brief_missed', text: 'Brief', target: { kind: 'today' } },
         ] } };
         const days = buildMainChatDays(mainChatStreamRows([status]), '2026-11-02');
         expect(days.map((day) => [day.day, day.routineCount])).toEqual([['2026-11-01', 1], ['2026-11-02', 1]]);
     });
 
-    it('deduplicates notices with the same recorded capture source and start without merging different sources', () => {
-        const card = (id: string, source: string): StreamItem => ({ id, kind: 'system', toolName: 'main_chat_proactive', rowClass: 'routine', localDay: '2026-11-01', toolInput: { momentId: id, kind: 'capture_paused', headline: 'Pause', body: '', captureSource: source, captureStartAt: 1793595900000 } });
-        expect(mainChatStreamRows([card('one', 'screen'), card('retry', 'screen'), card('mic', 'microphone')]).map((item) => item.id)).toEqual(['one', 'mic']);
+    it('keeps one line per stop, whichever sources it took down, and counts what it shows (chat-review v1.0.10 H1)', () => {
+        const card = (id: string, source: string, startAt = 1793595900000): StreamItem => ({ id, kind: 'system', toolName: 'main_chat_proactive', rowClass: 'routine', localDay: '2026-11-01', toolInput: { momentId: id, kind: 'capture_paused', headline: 'Pause', body: '', captureSource: source, captureCause: 'stopped', captureStartAt: startAt } });
+        const entry = (id: string, startAt: number) => ({ id, momentId: id, kind: 'capture_paused', text: 'Paused', captureSource: 'microphone', captureCause: 'stopped', captureStartAt: startAt, target: { kind: 'settings', id: 'activity' } });
+        const status: StreamItem = { id: 'status', kind: 'system', toolName: 'main_chat_status', rowClass: 'routine', localDay: '2026-11-01', toolInput: { period: 'evening', entries: [entry('a', 1793599500000), entry('b', 1793599500000)] } };
+        const result = mainChatStreamRows([card('one', 'screen'), card('retry', 'screen'), card('mic', 'microphone'), status]);
+        expect(result.map((item) => item.id)).toEqual(['one', 'status']);
+        expect(routineUpdateCount(result[1])).toBe(1);
+        expect(buildMainChatDays(result, '2026-11-02')[0].routineCount).toBe(2);
+    });
+
+    it('shows no update for a pause from sleep, a locked screen or the person’s choice (chat-review v1.0.10 H2)', () => {
+        const card = (id: string, cause?: string): StreamItem => ({ id, kind: 'system', toolName: 'main_chat_proactive', rowClass: 'routine', localDay: '2026-11-01', toolInput: { momentId: id, kind: 'capture_paused', headline: 'Pause', body: '', captureSource: 'screen', captureCause: cause, captureStartAt: 1793595900000 + id.length } });
+        const chosen = (id: string, input: object): StreamItem => ({ id, kind: 'system', toolName: 'main_chat_observation_pause', rowClass: 'routine', localDay: '2026-11-01', toolInput: input });
+        const result = mainChatStreamRows([
+            card('old-notice'), card('chosen', 'chosen'),
+            chosen('ended', { startAt: 1793595900000, endAt: 1793597700000 }),
+            chosen('restart', { startAt: 1793595900000, resumedUnknown: true }),
+            chosen('active', { startAt: 1793595900000 }),
+            card('revoked', 'permission'),
+        ]);
+        expect(result.map((item) => item.id)).toEqual(['active', 'revoked']);
     });
 
     it('lists one Capture paused line per event when two capture sources paused together (today-review v1.1.19 R43)', () => {
         const start = new Date(2026, 10, 3, 13, 37).getTime();
         const status = (id: string, source: string, at: number): StreamItem => ({ id, kind: 'system', toolName: 'main_chat_status', rowClass: 'routine', localDay: '2026-11-03', toolInput: { period: id, entries: [
-            { id, momentId: id, kind: 'capture_paused', text: 'Capture paused', captureSource: source, captureStartAt: at, target: { kind: 'settings' } },
+            { id, momentId: id, kind: 'capture_paused', text: 'Capture paused', captureSource: source, captureCause: 'stopped', captureStartAt: at, target: { kind: 'settings' } },
         ] } });
         const rows = mainChatStreamRows([status('mic', 'microphone', start), status('audio', 'system_audio', start + 20_000), status('later', 'microphone', start + 3_600_000)]);
         expect(rows.map((item) => item.id)).toEqual(['mic', 'later']);

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
 import en from "@/i18n/locales/en/chat.json";
@@ -56,13 +56,17 @@ describe("MainChatBriefCard", () => {
         finish(view(withWords));
         expect(await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" })).toBeInTheDocument();
     });
-    it('keeps the recorded title, source and Read it if the brief read fails', async () => {
+    it('keeps the recorded title and source, hides Read it and offers Try again in copper if the brief read fails (H5)', async () => {
         getByID.mockRejectedValue(new Error('offline'));
         render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'morning', asOf: '2026-10-28T09:23:00Z', timezone: 'UTC' }} onOpenBrief={vi.fn()} meta={() => <span>From your brief</span>} />);
         expect(screen.getByRole('heading', { name: 'Morning brief · 9:23 AM' })).toBeInTheDocument();
         await screen.findByRole('alert');
         expect(screen.getByText('From your brief')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Read it' })).toBeInTheDocument();
+        const alert = screen.getByRole('alert');
+        expect(alert).toHaveTextContent("Couldn't open this brief. Try again");
+        expect(alert).toHaveClass('text-copper');
+        expect(within(alert).getByRole('button', { name: 'Try again' })).toHaveClass('text-accent');
+        expect(screen.queryByRole('button', { name: 'Read it' })).toBeNull();
         expect(screen.getByTestId('main-chat-brief-card')).not.toHaveClass('min-h-32');
     });
     it('recovers when a slow brief read finishes after its timeout', async () => {
@@ -141,7 +145,15 @@ describe("MainChatBriefCard", () => {
         await screen.findByRole('alert');
         expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
         expect(screen.getByText('source')).toBeInTheDocument();
-        expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(2);
+        expect(screen.getByRole('alert')).toHaveTextContent(i18n.t('chat:mainChat.view.briefOpenFailed'));
+        expect(screen.getByRole('button', { name: i18n.t('chat:mainChat.view.retry') })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: i18n.t('chat:mainChat.card.button.readIt') })).toBeNull();
+    });
+    it('shows no brief card when the brief has nothing to open (H7)', async () => {
+        getByID.mockResolvedValue(view({ ...withWords, narrative: [], audio: undefined }));
+        const { container } = render(<MainChatBriefCard briefId="brief-1" />);
+        await waitFor(() => expect(getByID).toHaveBeenCalled());
+        await waitFor(() => expect(container.querySelector('[data-testid="main-chat-brief-card"]')).toBeNull());
     });
     it("opens the whole saved brief at once when Read it is pressed while it loads (today-review v1.1.19 R27)", async () => {
         let finish!: (result: ReturnType<typeof view>) => void;

@@ -68,7 +68,7 @@ function everyRow(): StreamItem[] {
             { id: 'entry-2', kind: 'playbook_result', text: 'A playbook finished.', target: { kind: 'none' } },
         ] } },
         card('brief', 'brief_ready', 'routine'),
-        card('capture', 'capture_paused', 'routine', { actionIds: ['resume_capture'], actionLabels: { resume_capture: 'Resume' }, target: { kind: 'settings', id: 'activity' } }),
+        card('capture', 'capture_paused', 'routine', { actionIds: ['resume_capture'], actionLabels: { resume_capture: 'Resume' }, captureSource: 'screen', captureCause: 'permission', captureStartAt: new Date(2026, 9, 22, 12, 21).getTime(), target: { kind: 'settings', id: 'activity' } }),
         report('schedule-added', 'routine', { source: 'schedule', status: 'created', title: 'Daily News', action: 'open', target: { kind: 'upcoming' } }),
         // Today's other rows.
         card('waiting', 'waiting_on_reply', 'waiting', {
@@ -180,6 +180,7 @@ function openFold(day: string) {
 beforeEach(async () => {
     await i18n.changeLanguage('en');
     bindings.clear();
+    window.localStorage.clear();
 });
 afterEach(() => {
     cleanup();
@@ -278,7 +279,8 @@ describe('main chat stream (RC 2 D1)', () => {
 
         const fold = openFold(TODAY);
         expect(within(fold).getByText('brief headline')).toBeInTheDocument();
-        expect(within(fold).getByText(/Capture was paused/)).toHaveTextContent('From Observing');
+        expect(within(fold).getByText(/Stopped watching your screen at 12:21 PM: Screen Recording was turned off\./)).not.toHaveTextContent('From');
+        expect(within(fold).getByRole('button', { name: en.mainChat.observationPause.turnBackOn })).toBeInTheDocument();
         expect(within(fold).queryByRole('button', { name: en.mainChat.card.button.resume })).toBeNull();
         expect(within(fold).getByText('Your morning brief was missed.')).toBeInTheDocument();
         expect(within(fold).getByText('A playbook finished.')).toBeInTheDocument();
@@ -288,6 +290,12 @@ describe('main chat stream (RC 2 D1)', () => {
         expect(within(fold).getAllByRole('button', { name: en.mainChat.action.open }).length).toBeGreaterThan(0);
         expect(within(fold).getByText(en.mainChat.view.foldNote)).toBeInTheDocument();
         expect(en.mainChat.view.foldNote).toContain('Settings › Notifications');
+        // The note shows on the first fold open only (chat-review v1.0.10 H8).
+        const toggle = within(fold).getByRole('button', { name: '5 updates from Isoform' });
+        fireEvent.click(toggle);
+        fireEvent.click(toggle);
+        expect(within(fold).queryByText(en.mainChat.view.foldNote)).toBeNull();
+        expect(within(openFold(YESTERDAY)).queryByText(en.mainChat.view.foldNote)).toBeNull();
         // Opening a fold calls nothing on the computer.
         expect(writesCalled()).toEqual([]);
     });

@@ -20,12 +20,34 @@ export function MainChatDayDivider({ day, today }: { day: string; today: string 
     );
 }
 
+const FOLD_NOTE_SEEN_KEY = 'isoform.mainChat.foldNoteSeen';
+
+/** The fold's footer note shows the first time a fold opens, then never
+ *  again (chat-review v1.0.10 H8). */
+function foldNoteSeen(): boolean {
+    try { return window.localStorage.getItem(FOLD_NOTE_SEEN_KEY) === '1'; } catch { return false; }
+}
+
+function markFoldNoteSeen() {
+    try { window.localStorage.setItem(FOLD_NOTE_SEEN_KEY, '1'); } catch { /* storage unavailable */ }
+}
+
 /** One day's routine updates folded into one row ("3 updates from Isoform")
  *  that opens in place. The rows inside are the chat's own rows, unchanged. */
 export function MainChatDayFold({ day, count, children }: { day: string; count: number; children: ReactNode }) {
     const { t } = useTranslation('chat');
     const [open, setOpen] = useState(false);
+    const [showNote, setShowNote] = useState(false);
     const contentId = useId();
+    const toggle = () => {
+        if (!open && !foldNoteSeen()) {
+            markFoldNoteSeen();
+            setShowNote(true);
+        } else if (open) {
+            setShowNote(false);
+        }
+        setOpen((value) => !value);
+    };
     return (
         <div className="flex flex-col rounded-xl border border-border-subtle" data-main-chat-fold={day}>
             <Button
@@ -33,7 +55,7 @@ export function MainChatDayFold({ day, count, children }: { day: string; count: 
                 size="sm"
                 aria-expanded={open}
                 aria-controls={contentId}
-                onClick={() => setOpen((value) => !value)}
+                onClick={toggle}
                 className="h-9 w-full justify-start gap-2 px-3 text-[12.5px] font-normal"
             >
                 <ChevronRight aria-hidden className={cn('size-3.5 transition-transform', open && 'rotate-90')} />
@@ -41,7 +63,7 @@ export function MainChatDayFold({ day, count, children }: { day: string; count: 
             </Button>
             <div id={contentId} hidden={!open} className="flex flex-col gap-3 px-3 pb-3 pt-1">
                 {open && children}
-                <p className="text-[12px] text-muted">{t('mainChat.view.foldNote')}</p>
+                {showNote && <p className="text-[12px] text-muted">{t('mainChat.view.foldNote')}</p>}
             </div>
         </div>
     );

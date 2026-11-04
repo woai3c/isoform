@@ -405,19 +405,52 @@
             "today": "今天",
             "tomorrow": "明天",
             "yesterday": "昨天",
-            "wasDue": "{{day}}到期"
+            "wasDue": "{{day}}到期",
+            "lineWasDue": "已于{{day}}到期",
+            "lineWereDue": "已于{{day}}到期"
+        },
+        "briefMissed": {
+            "line": "{{when}}的{{slot}}没有在{{time}}送达。",
+            "lineCause": "{{when}}的{{slot}}没有在{{time}}送达：{{cause}}。",
+            "when": {
+                "thisMorning": "今早",
+                "thisEvening": "今晚",
+                "lastNight": "昨晚",
+                "yesterday": "昨天",
+                "weekday": "{{day}}",
+                "date": "{{day}}"
+            },
+            "slot": {
+                "morning": "早间简报",
+                "evening": "晚间简报"
+            },
+            "cause": {
+                "failed": "没能生成"
+            }
         },
         "observationPause": {
             "paused": "观察已从 {{time}} 暂停。",
             "resumed": "已于 {{time}} 恢复观察。",
             "pausedFromTo": "观察于 {{start}} 至 {{end}} 暂停。",
             "pausedAt": "观察于 {{time}} 暂停。",
+            "stoppedWatchingAt": "{{time}} 停止查看你的屏幕：{{cause}}。",
+            "stoppedWatchingFromTo": "{{start}} 至 {{end}} 停止查看你的屏幕：{{cause}}。",
+            "stoppedListeningAt": "{{time}} 停止聆听：{{cause}}。",
+            "stoppedListeningFromTo": "{{start}} 至 {{end}} 停止聆听：{{cause}}。",
+            "cause": {
+                "screenPermission": "屏幕录制权限被关闭了",
+                "microphonePermission": "麦克风权限被关闭了",
+                "systemAudioPermission": "系统音频录制权限被关闭了",
+                "screenStopped": "屏幕捕捉自己停止了",
+                "listeningStopped": "聆听自己停止了"
+            },
+            "turnBackOn": "重新打开",
+            "resume": "恢复",
+            "failed": "无法恢复观察，请重试。",
             "captureFromTo": "{{start}}–{{end}} 暂停了采集",
             "capturePausedAt": "{{time}} 暂停了采集",
             "captureNotice": "采集曾暂停。",
-            "captureResumed": "采集已于 {{time}} 恢复。",
-            "resume": "恢复",
-            "failed": "无法恢复观察，请重试。"
+            "captureResumed": "采集已于 {{time}} 恢复。"
         },
         "proactive": {
             "revalidating": "正在更新这条内容…",
@@ -555,7 +588,7 @@
             "foldSummary_other": "Isoform 的 {{count}} 条更新",
             "foldNote": "例行更新会折叠在这里。可以在「设置 › 通知」中静音某一类，或让它在「今天」页显示为一行提示。",
             "isoform": "Isoform",
-            "briefLoadFailed": "没能加载这份简报。",
+            "briefOpenFailed": "没能打开这份简报。",
             "topicTags": "主题",
             "chipsLabel": "准备好的请求",
             "notePrepared": "已为你准备好。按发送之前不会发出任何内容。",
@@ -566,7 +599,8 @@
             "scope": "选择聊天范围",
             "wholeChat": "整个聊天",
             "more": "更多",
-            "itemPanel": "条目"
+            "itemPanel": "条目",
+            "briefLoadFailed": "没能加载这份简报。"
         },
         "openAnswers": {
             "aroundResult": "有结果我告诉你，大约{{time}}。",

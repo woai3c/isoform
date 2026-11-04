@@ -40,7 +40,8 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
     useEffect(() => {
         let live = true;
         const timeout = window.setTimeout(() => { if (live) setFailed(true); }, 10000);
-        setBrief(null);
+        // A retry keeps the lines already on the card (chat-review v1.0.10 H5).
+        setBrief((previous) => (previous?.briefId === briefId ? previous : null));
         setFailed(false);
         Promise.resolve()
             .then(() => GetTodayBriefByID(briefId))
@@ -75,7 +76,10 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
         if (reading && week && onOpenBrief) { setReading(false); onOpenBrief(); }
     }, [reading, week, onOpenBrief]);
     // A recording never plays without its words.
-    const playable = !changedWords && briefHasWords(current) && !!current?.audio && current.audio.bytes > 0;
+    const playable = !failed && !changedWords && briefHasWords(current) && !!current?.audio && current.audio.bytes > 0;
+    const canRead = !failed && !reading && (!current || paragraphs.length > 0 || !!onOpenBrief);
+    // Every brief card has Read it or the failure line; one with nothing to open is not shown (H7).
+    if (current && !failed && paragraphs.length === 0 && !onOpenBrief) return null;
 
     return (
         <div className="flex flex-col gap-2" data-testid="main-chat-brief-card" aria-busy={!current && !failed}>
@@ -84,15 +88,16 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
                 ? paragraphs.map((text, index) => <p key={index} className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{text}</p>)
                 : lead && <p className="line-clamp-3 whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{lead}</p>}
             {(current || failed) && meta?.(current)}
-            {/* A brief that can't be opened says so in copper and stays put
-                (today-review v1.1.13 D4, v1.1.19 R27). */}
             {failed && (
-                <p role="alert" data-testid="main-chat-brief-open-failed" className="text-[13px] text-copper">
-                    {tr('todayBrief.pending.openFailed')}{' '}
-                    <button type="button" className="font-medium text-accent hover:underline" onClick={() => setAttempt((value) => value + 1)}>{tr('todayBrief.pending.tryAgain')}</button>
+                // A brief that can't open says so in copper; Try again is the accent and Read it hides (H5).
+                <p role="alert" className="text-[13px] text-copper" data-brief-open-failed>
+                    {t('mainChat.view.briefOpenFailed')}{' '}
+                    <button type="button" className="font-medium text-accent hover:underline focus-visible:underline focus-visible:outline-none" onClick={() => setAttempt((value) => value + 1)}>
+                        {t('mainChat.view.retry')}
+                    </button>
                 </p>
             )}
-            <div className="flex flex-wrap items-center gap-2">
+            {(playable || canRead || trailing) && <div className="flex flex-wrap items-center gap-2">
                 {playable && (
                     <Button
                         size="sm"
@@ -105,9 +110,7 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
                         {t('mainChat.card.button.play')}
                     </Button>
                 )}
-                {/* Read it opens the whole brief at once, even while it loads
-                    (today-review v1.1.19 R27). */}
-                {!reading && (!current || paragraphs.length > 0 || onOpenBrief) && (
+                {canRead && (
                     <Button
                         size="sm"
                         variant={playable ? 'quiet' : 'default'}
@@ -123,7 +126,7 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
                     </Button>
                 )}
                 {trailing && <span className="ml-auto">{trailing}</span>}
-            </div>
+            </div>}
         </div>
     );
 }

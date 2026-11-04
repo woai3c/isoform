@@ -568,21 +568,28 @@ describe('main chat proactive messages', () => {
         expect(screen.queryByText('From your brief · 1:50 PM')).toBeNull();
     });
 
-    it('names the pause source Observing', () => {
-        render(<MainChatViewContext.Provider value={{ today: '2026-11-02', hideRoutine: false, topicNames: new Map(), chips: {} }}><MainChatProactiveCard item={proactive({ kind: 'capture_paused', evidence: [{ kind: 'capture', id: 'capture' }] })} /></MainChatViewContext.Provider>);
-        expect(screen.getByText(/From Observing/)).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Resume' })).toBeNull();
+    it.each([
+        ['en', 'Stopped watching your screen at 12:21 PM: Screen Recording was turned off.', 'Turn it back on'],
+        ['zh-CN', '停止查看你的屏幕：屏幕录制权限被关闭了。', '重新打开'],
+    ])('states an unchosen stop with its cause and Turn it back on in %s (chat-review v1.0.10 H2)', async (language, text, action) => {
+        await i18n.changeLanguage(language);
+        const open = vi.fn();
+        const start = new Date(2026, 10, 2, 12, 21).getTime();
+        render(<MainChatViewContext.Provider value={{ today: '2026-11-02', hideRoutine: false, topicNames: new Map(), chips: {} }}><MainChatProactiveCard item={proactive({ kind: 'capture_paused', captureSource: 'screen', captureCause: 'permission', captureStartAt: start, target: { kind: 'settings', id: 'activity' } })} onOpenTarget={open} /></MainChatViewContext.Provider>);
+        const line = document.querySelector('[data-main-chat-proactive="capture_paused"]') as HTMLElement;
+        expect(line).toHaveTextContent(text);
+        expect(line).not.toHaveTextContent(/From|来自/);
+        expect(screen.queryByRole('button', { name: /Resume|恢复/ })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: action }));
+        expect(open).toHaveBeenCalledWith({ kind: 'settings', id: 'activity' });
+        await i18n.changeLanguage('en');
     });
 
-    it('dates an old pause with no recorded recovery and claims no resume time', () => {
-        const open = vi.fn();
+    it('names the listening stop the capture loop made on its own', () => {
         const start = new Date(2026, 9, 30, 14, 10).getTime();
-        render(<MainChatViewContext.Provider value={{ today: '2026-11-02', hideRoutine: false, topicNames: new Map(), chips: {} }}><MainChatProactiveCard item={proactive({ kind: 'capture_paused', captureSource: 'screen', captureStartAt: start, target: { kind: 'settings', id: 'activity' } })} onOpenTarget={open} /></MainChatViewContext.Provider>);
-        expect(screen.getByText(/Observing paused at 2:10 PM\./)).toHaveTextContent('From Observing');
-        expect(screen.queryByText(/again at|resumed at/)).toBeNull();
-        expect(screen.queryByRole('button', { name: 'Resume' })).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: 'Show' }));
-        expect(open).toHaveBeenCalledWith({ kind: 'settings', id: 'activity' });
+        render(<MainChatViewContext.Provider value={{ today: '2026-11-02', hideRoutine: false, topicNames: new Map(), chips: {} }}><MainChatProactiveCard item={proactive({ kind: 'capture_paused', captureSource: 'microphone', captureCause: 'stopped', captureStartAt: start, target: { kind: 'settings', id: 'activity' } })} onOpenTarget={vi.fn()} /></MainChatViewContext.Provider>);
+        expect(document.querySelector('[data-main-chat-proactive="capture_paused"]')).toHaveTextContent('Stopped listening at 2:10 PM: listening stopped on its own.');
+        expect(screen.getByRole('button', { name: 'Turn it back on' })).toBeInTheDocument();
     });
 
     it('uses the recorded card time while brief metadata is unavailable', () => {
@@ -600,20 +607,19 @@ describe('main chat proactive messages', () => {
         const open = vi.fn();
         render(<MainChatProactiveCard item={item} onOpenTarget={open} />);
         expect(screen.getByRole('heading', { name: 'Morning brief · 9:23 AM' })).toBeInTheDocument();
-        expect(await screen.findByRole('button', { name: 'Read it' })).toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent("Couldn't open this brief. Try again");
         expect(screen.getByText('From your brief')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Read it' }));
-        expect(open).toHaveBeenCalledWith({ kind: 'today', id: '2026-11-02-morning' });
+        expect(screen.queryByRole('button', { name: 'Read it' })).toBeNull();
     });
 
     it('uses the recorded source recovery and has no stale Resume action', () => {
         const open = vi.fn();
         const end = new Date(2026, 10, 1, 22, 5).getTime();
-        render(<MainChatViewContext.Provider value={{ today: '2026-11-02', hideRoutine: false, topicNames: new Map(), chips: {} }}><MainChatProactiveCard item={proactive({ kind: 'capture_paused', captureSource: 'screen', captureEndAt: end, target: { kind: 'settings', id: 'activity' } })} onOpenTarget={open} /></MainChatViewContext.Provider>);
-        expect(screen.getByText(/Observing again at 10:05 PM/)).toHaveTextContent('From Observing');
+        render(<MainChatViewContext.Provider value={{ today: '2026-11-02', hideRoutine: false, topicNames: new Map(), chips: {} }}><MainChatProactiveCard item={proactive({ kind: 'capture_paused', captureSource: 'screen', captureCause: 'permission', captureStartAt: end - 35 * 60_000, captureEndAt: end, target: { kind: 'settings', id: 'activity' } })} onOpenTarget={open} /></MainChatViewContext.Provider>);
+        expect(document.querySelector('[data-main-chat-proactive="capture_paused"]')).toHaveTextContent('Stopped watching your screen from 9:30 PM to 10:05 PM: Screen Recording was turned off.');
         expect(screen.queryByRole('button', { name: 'Resume' })).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: 'Show' }));
-        expect(open).toHaveBeenCalledWith({ kind: 'settings', id: 'activity' });
+        expect(screen.queryByRole('button', { name: 'Turn it back on' })).toBeNull();
     });
 
     // The shown recap is the catalog doorbell (headline only, body the same):
@@ -925,6 +931,23 @@ describe('main chat proactive messages', () => {
         expect(card().querySelector('[data-proactive-draft]')).not.toBeNull();
         expect(within(card()).queryByRole('textbox')).toBeNull();
         expect(within(card()).getAllByRole('button').map((button) => button.textContent)).toEqual([en.mainChat.action.review, 'Not now']);
+    });
+
+    // Thursday polish C5: the panel's header is the card's title, so the card
+    // under it starts at its lines.
+    it('says the waiting card title once in its draft panel, in the header', async () => {
+        const item = sendDraft({ recipient: 'Maya' }, {
+            headline: 'Maya is waiting on your notes.',
+            actionIds: ['send', 'not_now', 'copy_draft', 'open'],
+            actionLabels: { send: 'Stored send label', not_now: 'Not now', copy_draft: 'Copy draft', open: 'Stored open label' },
+        });
+        render(<TodayCardPanelHarness item={item} />);
+        fireEvent.click(screen.getByRole('button', { name: en.mainChat.action.review }));
+        const panel = await screen.findByTestId('main-chat-item-panel');
+        await waitFor(() => expect(panel).toHaveAttribute('data-panel-open', 'moment-1'));
+        expect(within(panel).getAllByText('Maya is waiting on your notes.')).toHaveLength(1);
+        expect(within(panel).getByRole('heading', { name: 'Maya is waiting on your notes.' }).tagName).toBe('H2');
+        expect(within(panel).getByRole('button', { name: 'Send to Maya · Mail' })).toBeInTheDocument();
     });
 
     it('opens the draft task thread in the 420px panel from Review', async () => {
@@ -1910,12 +1933,13 @@ describe('main chat status row', () => {
         const start = new Date(2026, 9, 29, 22, 5).getTime();
         const end = new Date(2026, 9, 29, 22, 40).getTime();
         render(<MainChatStatusRow item={{ ...status(), toolInput: { period: '2026-10-29:evening', entries: [
-            { id: 'pause-range', kind: 'capture_paused', text: '', captureSource: 'screen', captureStartAt: start, captureEndAt: end, target: { kind: 'none' } },
-            { id: 'pause-start', kind: 'capture_paused', text: '', captureSource: 'screen', captureStartAt: start, target: { kind: 'none' } },
-        ] } }} defaultExpanded />);
-        expect(screen.getByText(/paused from/).closest('li')).toHaveTextContent(/^Observing paused from 10:05 PM to 10:40 PM\. · From Observing$/);
-        expect(screen.getByText(/paused at/).closest('li')).toHaveTextContent(/^Observing paused at 10:05 PM\. · From Observing$/);
-        expect(document.body.textContent).not.toMatch(/on again|Resume/);
+            { id: 'pause-range', kind: 'capture_paused', text: '', captureSource: 'screen', captureCause: 'permission', captureStartAt: start, captureEndAt: end, target: { kind: 'none' } },
+            { id: 'pause-start', kind: 'capture_paused', text: '', captureSource: 'screen', captureCause: 'permission', captureStartAt: start, target: { kind: 'none' } },
+        ] } }} onOpenTarget={vi.fn()} defaultExpanded />);
+        expect(screen.getByText(/ from /).closest('li')).toHaveTextContent(/^Stopped watching your screen from 10:05 PM to 10:40 PM: Screen Recording was turned off\.$/);
+        expect(screen.getByText(/ at /).closest('li')).toHaveTextContent(/^Stopped watching your screen at 10:05 PM: Screen Recording was turned off\.Turn it back on$/);
+        expect(screen.getAllByRole('button', { name: 'Turn it back on' })).toHaveLength(1);
+        expect(document.body.textContent).not.toMatch(/on again|Resume|From Observing/);
     });
 
     // chat-review v1.0.7: no fallback. Show only for a real saved destination;
@@ -1993,7 +2017,7 @@ describe('main chat status row', () => {
         expect(summary).toHaveAttribute('aria-expanded', 'true');
         expect(document.getElementById(summary.getAttribute('aria-controls')!)).toBeInTheDocument();
         expect(screen.getByText('Your digest is ready.')).toBeInTheDocument();
-        fireEvent.click(screen.getAllByRole('button', { name: en.mainChat.card.button.show })[0]);
+        fireEvent.click(screen.getByRole('button', { name: en.mainChat.observationPause.turnBackOn }));
         expect(onOpen).toHaveBeenCalledWith({ kind: 'settings', id: 'activity' });
         fireEvent.click(summary);
         expect(summary).not.toHaveAttribute('aria-controls');
@@ -2013,6 +2037,24 @@ describe('main chat status row', () => {
         expect(onOpen).toHaveBeenLastCalledWith({ kind: 'today', id: TODAY_BRIEF_STATUS_TARGET });
         fireEvent.click(shows[1]);
         expect(onOpen).toHaveBeenLastCalledWith({ kind: 'today' });
+    });
+
+    // chat-review v1.0.10 H9: the line sat under Today but was about last
+    // night's 6 PM brief, with no time, no cause, and a source it didn't need.
+    it("words a missed brief from the brief's own day with its time and cause, and names no source", async () => {
+        const item = { ...status(), localDay: '2026-11-02', toolInput: { period: '2026-11-02:morning', entries: [
+            { id: 'missed-1', kind: 'brief_missed', text: "Your evening brief didn't run.", target: { kind: 'today' }, briefDay: '2026-11-01', briefSlot: 'evening', briefTime: '18:00', briefCause: 'asleep' },
+        ] } };
+        const view = { today: '2026-11-02', hideRoutine: false, topicNames: new Map(), chips: {} };
+        const { unmount } = render(<MainChatViewContext.Provider value={view}><MainChatStatusRow item={item} onOpenTarget={vi.fn()} defaultExpanded /></MainChatViewContext.Provider>);
+        const line = screen.getByText("Last night's evening brief didn't come at 6:00 PM: your computer was asleep.").closest('li') as HTMLElement;
+        expect(line.textContent).not.toMatch(/From |didn't run/);
+        unmount();
+        await i18n.changeLanguage('zh-CN');
+        render(<MainChatViewContext.Provider value={view}><MainChatStatusRow item={item} onOpenTarget={vi.fn()} defaultExpanded /></MainChatViewContext.Provider>);
+        const zhLine = screen.getByText(/^昨晚的晚间简报没有在.+送达：电脑在睡眠。$/).closest('li') as HTMLElement;
+        expect(zhLine.textContent).not.toContain('来自');
+        await i18n.changeLanguage('en');
     });
 
     it('renders through StreamCard and translates chrome in both languages', async () => {

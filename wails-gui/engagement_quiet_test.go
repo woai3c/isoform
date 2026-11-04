@@ -481,7 +481,7 @@ func TestEngagementQuietCaptureIntervalsCloseOnRecovery(t *testing.T) {
 	if err := rig.svc.SetKindQuiet(ctx, engagement.KindCapturePaused, true); err != nil {
 		t.Fatal(err)
 	}
-	tracker := newEngagementCaptureTracker()
+	tracker := newTestEngagementCaptureTracker()
 	snapshot := captureSnapshot{Kind: "screen", Label: "Screen capture", Granted: true, Enabled: true, Running: true}
 	sample := func(at time.Time) {
 		app.observeCaptureHealth(ctx, tracker, at, func() []captureSnapshot { return []captureSnapshot{snapshot} })
@@ -571,7 +571,7 @@ func TestEngagementQuietCaptureResetDoesNotInventRecovery(t *testing.T) {
 			if err := rig.svc.SetKindQuiet(t.Context(), engagement.KindCapturePaused, true); err != nil {
 				t.Fatal(err)
 			}
-			tracker := newEngagementCaptureTracker()
+			tracker := newTestEngagementCaptureTracker()
 			snapshot := captureSnapshot{Kind: "screen", Label: "Screen capture", Granted: true, Enabled: true, Running: true}
 			sample := func() []captureSnapshot { return []captureSnapshot{snapshot} }
 			start := rig.clock
