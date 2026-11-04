@@ -33,7 +33,8 @@ func TestCommitmentShortNamePreservesSourceAndConditions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if input.Title != want || input.DesiredOutcome != source {
+	// The short name is display-only; the ledger keeps the full words.
+	if input.Title != source || input.DesiredOutcome != source || mobileGoalTitle(input.Kind, input.Title) != want {
 		t.Fatalf("source or name lost: %+v", input)
 	}
 	expected := userPurposeEvidence("user-goal:commitment", "desktop", PurposeStanceSupport, source, input.OccurredAt)
@@ -63,7 +64,7 @@ func TestCommitmentShortNameKeepsFortyCharactersCutAtAWord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if utf8.RuneCountInString(input.Title) > commitmentShortNameLimit || input.Title != "Send the signed lease renewal to Priya" || input.DesiredOutcome != source {
+	if shown := mobileGoalTitle(input.Kind, input.Title); utf8.RuneCountInString(shown) > commitmentShortNameLimit || shown != "Send the signed lease renewal to Priya" || input.Title != source || input.DesiredOutcome != source {
 		t.Fatalf("short name or full words lost: title %q, detail %q", input.Title, input.DesiredOutcome)
 	}
 }

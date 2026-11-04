@@ -55,6 +55,30 @@ func TestActivityFollowUpTextIsShortAndReadable(t *testing.T) {
 	}
 }
 
+// The short name is display-only: a commitment keeps the user's full words
+// in the ledger, and Today, Goals and the phone shorten them when shown.
+func TestUserCommitmentStoresFullWords(t *testing.T) {
+	app := newMobileBriefPurposeTestApp(t)
+	now := time.Now().Add(-10 * time.Minute)
+	dictated := "Make sure I do some sort of calf race or exercise for AFO like every day"
+	detail, err := app.createUserPurpose(userPurposeCreate{Key: "full-words", Origin: "goals", Kind: PurposeKindCommitment, Text: dictated}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, _ := app.userPurposeStore()
+	stored, err := store.GetDetail(detail.OpenLoop.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current := purposeCurrentLedgerEvent(stored)
+	if current.Title != dictated || current.DesiredOutcome != dictated {
+		t.Fatalf("stored commitment = %q / %q, want the full words", current.Title, current.DesiredOutcome)
+	}
+	if got := mobileGoalTitle(stored.OpenLoop.Kind, current.Title); got != "AFO calf raises, every day" {
+		t.Fatalf("shown commitment = %q", got)
+	}
+}
+
 func TestActivityFollowUpAddRetryUndo(t *testing.T) {
 	app := newMobileBriefPurposeTestApp(t)
 	// The Purpose ledger refuses times ahead of the wall clock.

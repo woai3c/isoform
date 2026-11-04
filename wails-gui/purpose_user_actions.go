@@ -331,15 +331,11 @@ func userPurposeCreateInput(input userPurposeCreate, now time.Time) (CreatePurpo
 	if input.EvidenceKind != "" && input.EvidenceSourceID != "" {
 		evidence.SourceKind, evidence.SourceID = input.EvidenceKind, input.EvidenceSourceID
 	}
-	displayTitle := title
-	if kind == PurposeKindCommitment {
-		displayTitle = commitmentShortName(title)
-	}
 	return CreatePurposeOpenLoopInput{
 		IdempotencyKey: key,
 		CanonicalKey:   key,
 		Kind:           kind,
-		Title:          displayTitle,
+		Title:          title,
 		DesiredOutcome: title,
 		Owner:          PurposeOwnerUser,
 		Scope:          strings.TrimSpace(input.Category),
