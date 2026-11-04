@@ -42,6 +42,10 @@ type memoryExternalSnapshot struct {
 
 	externalOnce sync.Once
 
+	depsOnce  sync.Once
+	deps      []memoryReadDependencies
+	byContent map[string]int
+
 	exclusionsMu  sync.Mutex
 	exclusionsFor string
 	exclusions    []string
@@ -222,6 +226,28 @@ func (a *App) memoryExternalSnapshot() (*memoryExternalSnapshot, error) {
 		}
 	})
 	return s, nil
+}
+
+// readDependencies parses each note's read dependencies once per snapshot.
+func (s *memoryExternalSnapshot) readDependencies() []memoryReadDependencies {
+	s.depsOnce.Do(func() {
+		s.deps = make([]memoryReadDependencies, len(s.entries))
+		s.byContent = make(map[string]int, len(s.entries))
+		for i, entry := range s.entries {
+			s.deps[i] = memoryReadDependenciesOf(entry.raw.Content)
+			s.byContent[entry.raw.Content] = i
+		}
+	})
+	return s.deps
+}
+
+func (s *memoryExternalSnapshot) readDependenciesOf(content string) (memoryReadDependencies, bool) {
+	deps := s.readDependencies()
+	i, ok := s.byContent[content]
+	if !ok {
+		return memoryReadDependencies{}, false
+	}
+	return deps[i], true
 }
 
 func (s *memoryExternalSnapshot) rawEntries() []MemoryEntry {

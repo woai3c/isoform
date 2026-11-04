@@ -63,10 +63,41 @@ func (s *ActivityStore) retainedActivitySourceProvenance(id string) (activitySou
 	if err := s.reader().QueryRow(`SELECT provenance FROM activity_retained_source_privacy WHERE session_id=?`, id).Scan(&raw); err != nil {
 		return source, err
 	}
+	return decodeRetainedActivitySourceProvenance(id, raw)
+}
+
+func decodeRetainedActivitySourceProvenance(id, raw string) (activitySourceProvenance, error) {
+	var source activitySourceProvenance
 	if json.Unmarshal([]byte(raw), &source) != nil || source.SessionID != id || !source.Retained {
 		return source, errors.New("activity source unavailable")
 	}
 	return source, nil
+}
+
+// retainedActivitySourceProvenancesContext reads the stored receipts of ids in
+// one query; an id without a receipt is absent from the result.
+func (s *ActivityStore) retainedActivitySourceProvenancesContext(ctx context.Context, q activityPrivacyQueryer, ids []string) (map[string]string, error) {
+	out := make(map[string]string)
+	if len(ids) == 0 {
+		return out, nil
+	}
+	encoded, err := json.Marshal(ids)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := q.QueryContext(ctx, `SELECT session_id,provenance FROM activity_retained_source_privacy WHERE session_id IN (SELECT value FROM json_each(?))`, string(encoded))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, raw string
+		if err := rows.Scan(&id, &raw); err != nil {
+			return nil, err
+		}
+		out[id] = raw
+	}
+	return out, rows.Err()
 }
 
 func (a *App) activityDependencyAllowsModelRead(id string, storedApps []string) bool {

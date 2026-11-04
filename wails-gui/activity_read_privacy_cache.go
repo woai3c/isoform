@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -72,47 +73,35 @@ func (s *ActivityStore) activityPrivacySourceStateContext(ctx context.Context, q
 	return state, err
 }
 
+// batchActivityPrivacySourceStatesContext reads the privacy state of ids in
+// one query; an id without a session row is absent from the result.
 func (s *ActivityStore) batchActivityPrivacySourceStatesContext(ctx context.Context, q activityPrivacyQueryer, ids []string) (map[string]activityPrivacySourceState, error) {
 	out := make(map[string]activityPrivacySourceState, len(ids))
-	const chunkSize = 500
-	for start := 0; start < len(ids); start += chunkSize {
-		end := start + chunkSize
-		if end > len(ids) {
-			end = len(ids)
-		}
-		chunk := ids[start:end]
-		placeholders := strings.Repeat("?,", len(chunk))
-		placeholders = placeholders[:len(placeholders)-1]
-		args := make([]any, len(chunk))
-		for i, id := range chunk {
-			args[i] = id
-		}
-		s.readPrivacySources.metadataReads.Add(uint64(len(chunk)))
-		rows, err := q.QueryContext(ctx, `SELECT s.id,s.start_time,s.end_time,COALESCE(s.app_names,''),COALESCE(s.triage_status,''),COALESCE(s.meeting_app,''),COALESCE(r.revision,0),
-            (SELECT schema_version FROM pragma_schema_version)
-            FROM activity_sessions s LEFT JOIN activity_evidence_source_revisions r ON r.session_id=s.id
-            WHERE s.id IN (`+placeholders+`) ORDER BY s.id`, args...)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() {
-			var id string
-			state := activityPrivacySourceState{db: s.db}
-			if err := rows.Scan(&id, &state.start, &state.end, &state.apps, &state.status, &state.meeting, &state.revision, &state.schema); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			out[id] = state
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		if err := rows.Close(); err != nil {
-			return nil, err
-		}
+	if len(ids) == 0 {
+		return out, nil
 	}
-	return out, nil
+	encoded, err := json.Marshal(ids)
+	if err != nil {
+		return nil, err
+	}
+	s.readPrivacySources.metadataReads.Add(uint64(len(ids)))
+	rows, err := q.QueryContext(ctx, `SELECT s.id,s.start_time,s.end_time,COALESCE(s.app_names,''),COALESCE(s.triage_status,''),COALESCE(s.meeting_app,''),COALESCE(r.revision,0),
+        (SELECT schema_version FROM pragma_schema_version)
+        FROM activity_sessions s LEFT JOIN activity_evidence_source_revisions r ON r.session_id=s.id
+        WHERE s.id IN (SELECT value FROM json_each(?))`, string(encoded))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		state := activityPrivacySourceState{db: s.db}
+		if err := rows.Scan(&id, &state.start, &state.end, &state.apps, &state.status, &state.meeting, &state.revision, &state.schema); err != nil {
+			return nil, err
+		}
+		out[id] = state
+	}
+	return out, rows.Err()
 }
 
 func (s *ActivityStore) batchActivityPrivacyPeopleSessionFactsContext(ctx context.Context, q activityPrivacyQueryer, ids []string) (map[string]activityPrivacyPeopleSessionFact, error) {

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 
 	"wails-gui/internal/pii"
 )
@@ -65,12 +67,69 @@ func (a *App) memoryReadFilterContext(ctx context.Context) (func(string, string)
 			return nil, fmt.Errorf("read memory corrections: %w", err)
 		}
 	}
+	gate := a.memorySourceReadGateContext(ctx)
 	return func(id, content string) bool {
 		if _, corrected := suppressed[id]; corrected {
 			return false
 		}
-		return a.memorySourceAllowsReadContext(ctx, content)
+		return gate.allows(content)
 	}, nil
+}
+
+// memorySourceReadGate is memorySourceAllowsReadContext for one read of many
+// notes. On first use it reads the privacy state of every session behind the
+// current memory notes at once, so each note's check is a lookup. It is made
+// per read and keeps nothing past it.
+type memorySourceReadGate struct {
+	a        *App
+	ctx      context.Context
+	deps     *activityDependencyReadGate
+	once     sync.Once
+	snapshot *memoryExternalSnapshot
+}
+
+func (a *App) memorySourceReadGateContext(ctx context.Context) *memorySourceReadGate {
+	return &memorySourceReadGate{a: a, ctx: ctx, deps: a.newActivityDependencyReadGate(ctx)}
+}
+
+func (g *memorySourceReadGate) prefetch() {
+	if g.a == nil {
+		return
+	}
+	snapshot, err := g.a.memorySnapshot()
+	if err != nil {
+		return
+	}
+	g.snapshot = snapshot
+	var sessions []string
+	for _, deps := range snapshot.readDependencies() {
+		sessions = append(sessions, deps.sessions...)
+	}
+	g.deps.prefetch(sessions)
+}
+
+// dependencies returns the note's parsed read dependencies, from the
+// snapshot when content is a current note.
+func (g *memorySourceReadGate) dependencies(content string) memoryReadDependencies {
+	g.once.Do(g.prefetch)
+	if g.snapshot != nil {
+		if deps, ok := g.snapshot.readDependenciesOf(content); ok {
+			return deps
+		}
+	}
+	return memoryReadDependenciesOf(content)
+}
+
+func (g *memorySourceReadGate) frontmatter(content string) memoryFrontmatter {
+	return g.dependencies(content).fm
+}
+
+func (g *memorySourceReadGate) allows(content string) bool {
+	a := g.a
+	if a == nil || a.IsClosedEyesModeEnabled() && !pausedBriefReadAllowed(g.ctx) {
+		return false
+	}
+	return a.memoryReadDependenciesAllow(g.dependencies(content), g.deps.allows)
 }
 
 func (a *App) memoryEntriesForExternalRead() ([]MemoryEntry, error) {
@@ -125,6 +184,18 @@ func (a *App) memorySourceAllowsReadContext(ctx context.Context, content string)
 
 // Shared source checks also serve the owner-only stored portrait reader.
 func (a *App) memorySourceAllowsReadWithDependency(content string, allowsDependency func(string, []string) bool) bool {
+	return a.memoryReadDependenciesAllow(memoryReadDependenciesOf(content), allowsDependency)
+}
+
+// memoryReadDependencies is what a note's source check reads from the note
+// itself: its apps and sessions, with a valid read provenance merged in.
+type memoryReadDependencies struct {
+	fm             memoryFrontmatter
+	blocked        bool
+	apps, sessions []string
+}
+
+func memoryReadDependenciesOf(content string) memoryReadDependencies {
 	fm := parseMemoryFrontmatter(content)
 	apps, sessions := fm.Apps, fm.ActivitySessionIDs
 	if fm.ReadProvenance != "" {
@@ -134,11 +205,19 @@ func (a *App) memorySourceAllowsReadWithDependency(content string, allowsDepende
 		// internal recall still needs their concrete app/session privacy gates.
 		var provenance memoryReadProvenance
 		if _, yamlHeader := parseOKFDocument(content); !yamlHeader || json.Unmarshal([]byte(fm.ReadProvenance), &provenance) != nil || (provenance.Version != 1 && provenance.Version != 2) || provenance.ReadBlocked {
-			return false
+			return memoryReadDependencies{fm: fm, blocked: true}
 		}
-		apps = compactStrings(append(apps, provenance.Apps...))
-		sessions = compactStrings(append(sessions, provenance.Sessions...))
+		apps = compactStrings(append(slices.Clone(apps), provenance.Apps...))
+		sessions = compactStrings(append(slices.Clone(sessions), provenance.Sessions...))
 	}
+	return memoryReadDependencies{fm: fm, apps: apps, sessions: sessions}
+}
+
+func (a *App) memoryReadDependenciesAllow(deps memoryReadDependencies, allowsDependency func(string, []string) bool) bool {
+	if deps.blocked {
+		return false
+	}
+	apps, sessions := deps.apps, deps.sessions
 	for _, name := range apps {
 		if activitySourceAppIsSensitive(name, name) {
 			return false

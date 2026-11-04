@@ -747,6 +747,7 @@ func (s *AboutYouPortraitService) readableEntries(direct bool) ([]MemoryEntry, e
 		return nil, err
 	}
 	suppressed := map[string]struct{}{}
+	gate := s.app.memorySourceReadGateContext(context.Background())
 	if s.app.activity != nil && s.app.activity.store != nil {
 		suppressed, err = s.app.activity.store.ListCorrectedAgencyLearningTargetIDs()
 		if err != nil {
@@ -780,7 +781,7 @@ func (s *AboutYouPortraitService) readableEntries(direct bool) ([]MemoryEntry, e
 		if direct && s.app.IsClosedEyesModeEnabled() {
 			allowed = s.app.memorySourceAllowsReadWithDependency(entry.Content, allowsDependency)
 		} else {
-			allowed = s.app.memorySourceAllowsRead(entry.Content)
+			allowed = gate.allows(entry.Content)
 		}
 		if allowed {
 			out = append(out, entry)

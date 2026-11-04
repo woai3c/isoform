@@ -92,6 +92,7 @@ func TestMobileBriefAudioSurvivesLaterRewrites(t *testing.T) {
 	if err := os.Remove(filepath.Join(dir, "live-note.md")); err != nil {
 		t.Fatal(err)
 	}
+	checkMemoryFolderNow(rig.app)
 	assertBriefPlays(t, rig, svc, brief.BriefID, "after a live row left")
 	if latest, ok := svc.LatestMobileBrief(); !ok || latest.Audio == nil {
 		t.Fatalf("the phone's latest brief lost its recording: %+v", latest.Audio)

@@ -126,8 +126,9 @@ func collectInterestInput(a *App, from, now time.Time) interestInput {
 		}
 	}
 	if entries, err := a.GetMemoryEntries(); err == nil {
+		gate := a.memorySourceReadGateContext(context.Background())
 		for _, entry := range entries {
-			if a.memorySourceAllowsRead(entry.Content) {
+			if gate.allows(entry.Content) {
 				in.Memories = append(in.Memories, entry)
 			}
 		}

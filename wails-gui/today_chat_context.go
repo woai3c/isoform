@@ -317,6 +317,7 @@ func (a *App) collectTodayChatSourcesWithActivities(ctx context.Context, now tim
 		return out
 	}
 	memories, _ := a.GetMemoryEntries()
+	gate := a.memorySourceReadGateContext(ctx)
 	var candidates []MemorySearchResult
 	var suppressed map[string]struct{}
 	correctionsKnown := true
@@ -327,8 +328,8 @@ func (a *App) collectTodayChatSourcesWithActivities(ctx context.Context, now tim
 		}
 		// Display evidence links exclude comparison inputs; admission still
 		// checks the full stored privacy lineage.
-		fm := parseMemoryFrontmatter(entry.Content)
-		if !memoryInUse(entry.Content) || !a.todayChatDerivedAllowedContext(ctx, fm.Apps, fm.ActivitySessionIDs, fm.Source) {
+		fm := gate.frontmatter(entry.Content)
+		if !memoryInUse(entry.Content) || !a.todayChatDerivedAllowedWithGate(ctx, gate.deps, fm.Apps, fm.ActivitySessionIDs, fm.Source) {
 			continue
 		}
 		byID[entry.ID] = entry
@@ -352,9 +353,9 @@ func (a *App) collectTodayChatSourcesWithActivities(ctx context.Context, now tim
 		// callback takes no memory writer locks: final Today admission already
 		// owns the mutation and publication barriers.
 		allowRead := func(_ string, content string) bool {
-			fm := parseMemoryFrontmatter(content)
-			return ctx.Err() == nil && a.memorySourceAllowsReadContext(ctx, content) &&
-				a.todayChatDerivedAllowedContext(ctx, fm.Apps, fm.ActivitySessionIDs, fm.Source)
+			fm := gate.frontmatter(content)
+			return ctx.Err() == nil && gate.allows(content) &&
+				a.todayChatDerivedAllowedWithGate(ctx, gate.deps, fm.Apps, fm.ActivitySessionIDs, fm.Source)
 		}
 		if allowed, err := applyMemoryUserControls(dir, candidates, allowRead); err == nil {
 			for _, result := range allowed {
@@ -372,6 +373,12 @@ func (a *App) collectTodayChatSourcesWithActivities(ctx context.Context, now tim
 		return out
 	}
 	knowledge, _ := a.GetKnowledgeEntries()
+	var knowledgeSessions []string
+	for _, entry := range knowledge {
+		knowledgeSessions = append(knowledgeSessions, entry.SessionIDs...)
+		knowledgeSessions = append(knowledgeSessions, gate.dependencies(entry.Content).sessions...)
+	}
+	gate.deps.prefetch(knowledgeSessions)
 	for _, entry := range knowledge {
 		if ctx.Err() != nil {
 			return out
@@ -379,8 +386,8 @@ func (a *App) collectTodayChatSourcesWithActivities(ctx context.Context, now tim
 		if _, blocked := suppressed[entry.ID]; blocked || !correctionsKnown {
 			continue
 		}
-		fm := parseMemoryFrontmatter(entry.Content)
-		if a.memorySourceAllowsReadContext(ctx, entry.Content) && a.todayChatDerivedAllowedContext(ctx, strings.Split(entry.Apps, ","), entry.SessionIDs, fm.Source) {
+		fm := gate.frontmatter(entry.Content)
+		if gate.allows(entry.Content) && a.todayChatDerivedAllowedWithGate(ctx, gate.deps, strings.Split(entry.Apps, ","), entry.SessionIDs, fm.Source) {
 			out.Knowledge = append(out.Knowledge, todayChatRecord{Kind: "knowledge", ID: entry.ID, At: mobileBriefParseTime(entry.Date).UnixMilli(), Text: entry.Content})
 		}
 	}
@@ -719,6 +726,12 @@ func (a *App) todayChatDerivedAllowed(apps, sessions []string, source string) bo
 }
 
 func (a *App) todayChatDerivedAllowedContext(ctx context.Context, apps, sessions []string, source string) bool {
+	return a.todayChatDerivedAllowedWithGate(ctx, nil, apps, sessions, source)
+}
+
+// todayChatDerivedAllowedWithGate reads session state from gate when it has
+// it, so many notes in one read share one batched read.
+func (a *App) todayChatDerivedAllowedWithGate(ctx context.Context, gate *activityDependencyReadGate, apps, sessions []string, source string) bool {
 	if ctx.Err() != nil {
 		return false
 	}
@@ -741,15 +754,29 @@ func (a *App) todayChatDerivedAllowedContext(ctx context.Context, apps, sessions
 	}
 	// Default getter excludes protected sessions. Missing provenance fails
 	// closed, and re-checking app names covers protection changed after capture.
-	rows, err := a.activity.store.GetSessionsByIDsContext(ctx, sessions)
-	if err != nil {
-		return false
+	var rows map[string]*ActivitySessionRow
+	prefetched := false
+	if gate != nil {
+		rows, prefetched = gate.sessionRows(sessions)
+	}
+	if !prefetched {
+		var err error
+		rows, err = a.activity.store.GetSessionsByIDsContext(ctx, sessions)
+		if err != nil {
+			return false
+		}
+	}
+	dependencyAllows := func(id string) bool {
+		if gate != nil {
+			return gate.allows(id, nil)
+		}
+		return a.activityDependencyAllowsModelReadWithCacheContext(ctx, id, nil, nil)
 	}
 	for _, id := range sessions {
 		row := rows[id]
 		// App labels alone cannot prove that every original capture was
 		// readable. Include private events, snapshots and pause intervals.
-		if row == nil || !a.activityDependencyAllowsModelReadWithCacheContext(ctx, id, nil, nil) {
+		if row == nil || !dependencyAllows(id) {
 			return false
 		}
 		var names []string
