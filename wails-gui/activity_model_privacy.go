@@ -160,11 +160,76 @@ func (a *App) filterComposerModelCandidates(store *ActivityStore, candidates []A
 
 func (a *App) filterComposerModelCandidatesContext(ctx context.Context, store *ActivityStore, candidates []ActivityRow) []ActivityRow {
 	allowed := make([]ActivityRow, 0, len(candidates))
+	if store == nil || store.db == nil || a == nil || a.IsClosedEyesModeEnabled() && !pausedBriefReadAllowed(ctx) {
+		return allowed
+	}
+	ids := make(map[string]bool)
 	for _, candidate := range candidates {
-		if composerCandidateAllowsModelRead(candidate, func(id string) bool {
-			run, err := store.GetTimelineRunByIDContext(ctx, id)
-			return err == nil && run != nil && a.activityTimelineRunAllowsModelReadContext(ctx, store, *run)
-		}) {
+		for _, id := range composeParseStrings(candidate.RunIDs) {
+			ids[id] = true
+		}
+	}
+	if len(ids) == 0 {
+		return allowed
+	}
+	runIDs := make([]string, 0, len(ids))
+	for id := range ids {
+		runIDs = append(runIDs, id)
+	}
+	rows, err := store.reader().QueryContext(ctx, `SELECT `+timelineRunColumns+` FROM activity_timeline_groups WHERE id IN (SELECT value FROM json_each(?))`, composeJSON(runIDs))
+	if err != nil {
+		return allowed
+	}
+	runs, err := scanTimelineRunRowsContext(ctx, rows)
+	closeErr := rows.Close()
+	if err != nil || closeErr != nil {
+		return allowed
+	}
+	sessionSet := map[string]bool{}
+	for _, run := range runs {
+		for _, id := range run.SessionIDs {
+			sessionSet[id] = true
+		}
+	}
+	sessionIDs := make([]string, 0, len(sessionSet))
+	for id := range sessionSet {
+		sessionIDs = append(sessionIDs, id)
+	}
+	sessions, err := store.GetSessionsByIDsContext(ctx, sessionIDs)
+	if err != nil {
+		return allowed
+	}
+	gate := a.newActivityDependencyReadGate(ctx)
+	gate.prefetch(sessionIDs)
+	policy, err := gate.readPolicy()
+	if err != nil {
+		return allowed
+	}
+	cache := newPeopleReadGateCache()
+	sessionAllowed := map[string]bool{}
+	for _, id := range sessionIDs {
+		session := sessions[id]
+		if session == nil {
+			continue
+		}
+		source, err := gate.source(id, nil)
+		if err != nil {
+			continue
+		}
+		cache.sources[id] = source
+		ok, err := a.activitySessionAllowsWithPolicyAndInputsAndCache(store, *session, policy, nil, cache)
+		sessionAllowed[id] = err == nil && ok
+	}
+	runAllowed := make(map[string]bool, len(runs))
+	for _, run := range runs {
+		ok := !activitySourceAppIsSensitive(run.AppKey, run.AppName) && len(run.SessionIDs) > 0
+		for _, id := range run.SessionIDs {
+			ok = ok && sessionAllowed[id]
+		}
+		runAllowed[run.ID] = ok
+	}
+	for _, candidate := range candidates {
+		if composerCandidateAllowsModelRead(candidate, func(id string) bool { return runAllowed[id] }) {
 			allowed = append(allowed, candidate)
 		}
 	}

@@ -237,6 +237,9 @@ func mainChatHoldSourceForMoment(m engagement.Moment) *mainChatHoldSource {
 }
 
 func (a *App) proactiveItem(m engagement.Moment, text engagementText) (mainChatProactive, bool) {
+	if mainChatUnspecificPersonMoment(m) {
+		return mainChatProactive{}, false
+	}
 	if m.Kind == engagement.KindWeeklyRecap && strings.TrimSpace(m.Params["source_brief_id"]) == "" {
 		return mainChatProactive{}, false
 	}

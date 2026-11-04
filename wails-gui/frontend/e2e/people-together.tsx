@@ -10,6 +10,7 @@ const params = new URLSearchParams(location.search);
 const theme = params.get('theme') ?? 'paper';
 const chinese = params.get('lang') === 'zh-CN';
 const failure = params.get('failure') === '1';
+const slowStats = params.get('slowStats') === '1';
 const name = chinese ? '王晓雨' : 'Mira Castell';
 const now = Date.now();
 localStorage.setItem('yansu.theme', theme);
@@ -23,11 +24,11 @@ const detail = { id: 'mira', name, relationship: '', notes: '', researchSummary:
 const reads: Record<string, unknown> = {
     GetThemePreference: theme, GetFirstWeekDay: -1, GetAssistantHistory: null, GetCalendarFirstDay: null,
     ListPeopleOverview: { headline: { repliesOwed: 0, thingsOwed: 0, peopleWaitingOnYou: 0 }, knownCount: 1, duplicates: [], open: [], everyone: [card] },
-    ListPrincipalsWithStats: [], GetPersonDetail: failure ? { ...detail, together: [], togetherFailed: true } : detail, ListPrincipalActivitySessions: [], GetContactsAccessStatus: null,
+    ListPrincipalsWithStats: [], GetPersonDetail: failure ? { ...detail, together: [], togetherFailed: true } : detail, ListPrincipalActivitySessions: [{ sessionId: "session-1", appNames: ["Safari Web Content"], startTime: now }], GetContactsAccessStatus: null,
     IsClosedEyesModeEnabled: false, GetPersonResearch: null, GetVoiceStatus: null,
 };
 const host = window as unknown as Record<string, any>;
-host.go = { main: { App: new Proxy({}, { get: (_, method: string) => async () => structuredClone(reads[method] ?? null) }) } };
+host.go = { main: { App: new Proxy({}, { get: (_, method: string) => async () => method === 'ListPrincipalsWithStats' && slowStats ? new Promise(() => {}) : structuredClone(reads[method] ?? null) }) } };
 host.runtime = new Proxy({}, { get: () => () => {} });
 await i18n.changeLanguage(chinese ? 'zh-CN' : 'en');
-createRoot(document.getElementById('root')!).render(<ThemeProvider><main className="h-screen w-screen bg-background"><PeoplePage active initialSelection={{ personId: 'mira' }} /></main></ThemeProvider>);
+createRoot(document.getElementById('root')!).render(<ThemeProvider><main className="h-screen w-screen bg-background"><PeoplePage active initialSelection={slowStats ? undefined : { personId: 'mira' }} /></main></ThemeProvider>);

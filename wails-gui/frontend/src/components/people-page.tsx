@@ -105,7 +105,7 @@ function isUnnamedKind(kind: string): boolean {
     return kind === 'anonymous' || kind === 'content_subject';
 }
 
-export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection, devToolsUnlocked = false, active = true }: PeoplePageProps) {
+export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = false, active = true }: PeoplePageProps) {
     const { t } = useTranslation(['people', 'common']);
     const tr = useCallback<Translate>((key, options) => t(`people:${key}` as never, options as never) as unknown as string, [t]);
     const paused = useObservationPaused() === true;
@@ -164,26 +164,33 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
     // keeps the page on screen and says nothing. A cache- or saved-seeded
     // page already counts as data.
     const hasData = useRef(initial !== null);
+    const overviewRef = useRef<PeopleOverview | null>(initial?.overview ?? null);
+    const entriesRef = useRef<PrincipalWithStatsDTO[]>(initial?.entries ?? []);
     // Reads overlap (Refresh, a Contacts sync, an edit); only the latest
     // one started may change the page.
     const readSeq = useRef(0);
     const reload = useCallback(async () => {
         const seq = ++readSeq.current;
         setRefreshing(true);
-        try {
-            const [nextOverview, rows] = await Promise.all([readWithRetry(() => ListPeopleOverview()), ListPrincipalsWithStats()]);
+        const overviewRead = readWithRetry(() => ListPeopleOverview()).then((nextOverview) => {
             if (seq !== readSeq.current) return;
+            overviewRef.current = nextOverview;
             setOverview(nextOverview);
-            setEntries(rows ?? []);
             setLoad('ready');
             hasData.current = true;
-            savePeopleView(nextOverview, rows ?? []);
+            savePeopleView(nextOverview, entriesRef.current);
             setRevision((n) => n + 1);
-        } catch {
+        }).catch(() => {
             if (seq === readSeq.current && !hasData.current) setLoad('failed');
-        } finally {
-            if (seq === readSeq.current) setRefreshing(false);
-        }
+        });
+        const entriesRead = ListPrincipalsWithStats().then((rows) => {
+            if (seq !== readSeq.current) return;
+            entriesRef.current = rows ?? [];
+            setEntries(entriesRef.current);
+            if (overviewRef.current) savePeopleView(overviewRef.current, entriesRef.current);
+        }).catch(() => {});
+        await Promise.all([overviewRead, entriesRead]);
+        if (seq === readSeq.current) setRefreshing(false);
     }, []);
 
     // A prefetch, revalidation or invalidation of these reads re-reads the
@@ -199,6 +206,8 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
     const withdraw = useCallback(() => {
         readSeq.current++;
         hasData.current = false;
+        overviewRef.current = null;
+        entriesRef.current = [];
         clearSavedPeopleView();
         setOverview(null);
         setEntries([]);
@@ -666,7 +675,6 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
                                 revision={revision}
                                 actions={actions}
                                 notice={failureNotice}
-                                onOpenActivitySession={onOpenActivitySession}
                             />
                         ) : load === 'ready' && knownCount > 0 ? (
                             <div className="flex flex-col gap-2 pt-10 text-center">

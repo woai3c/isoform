@@ -68,7 +68,7 @@ func journeyDeliveryJSON(t *testing.T, app *App) (string, string) {
 }
 
 func TestFirstWeekSavedSourceCardsRevalidateOnBothDevicesAfterRestart(t *testing.T) {
-	for _, reason := range []string{"protected meeting", "deleted meeting", "deleted notes", "closed eyes", "revoked commitment", "deleted person", "missing receipt", "legacy card"} {
+	for _, reason := range []string{"protected meeting", "deleted meeting", "deleted notes", "closed eyes", "revoked commitment", "missing receipt", "legacy card"} {
 		t.Run(reason, func(t *testing.T) {
 			app := newMobileBriefPurposeTestApp(t)
 			ctx := t.Context()
@@ -86,14 +86,6 @@ func TestFirstWeekSavedSourceCardsRevalidateOnBothDevicesAfterRestart(t *testing
 			switch reason {
 			case "revoked commitment":
 				stage, sourceID = "commitment", journeyReminderPurpose(t, app, now)
-			case "deleted person":
-				stage, sourceID = "person", "journey-local-person"
-				if _, err := app.store.CreatePrincipal(ctx, storage.PrincipalRow{ID: sourceID, Kind: storage.PrincipalKindContact, DisplayName: "Dana"}); err != nil {
-					t.Fatal(err)
-				}
-				if err := app.store.BumpPrincipalSighting(ctx, sourceID, "Editor", "", now.Add(-time.Minute).UnixMilli(), "fixture"); err != nil {
-					t.Fatal(err)
-				}
 			}
 			m := engagement.Moment{ID: "journey-source-card", Kind: engagement.KindFirstWeek, SubjectID: sourceID, DedupeKey: "journey-source-card", CreatedAt: now, Params: map[string]string{"stage": stage}}
 			if !app.postEngagementReport(m, engagementText{}) {
@@ -129,10 +121,6 @@ func TestFirstWeekSavedSourceCardsRevalidateOnBothDevicesAfterRestart(t *testing
 				app.closedEyes.enabled.Store(true)
 			case "revoked commitment":
 				if err := app.store.SetUIState(ctx, permissionUIStateKey(remindersPermissionKey), "false"); err != nil {
-					t.Fatal(err)
-				}
-			case "deleted person":
-				if err := app.store.DeletePrincipal(ctx, sourceID); err != nil {
 					t.Fatal(err)
 				}
 			case "missing receipt":

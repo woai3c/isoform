@@ -1,6 +1,6 @@
 // The person detail's folded sections: everything the Who you know page showed
 // before RC 2 that the new layout keeps one click away (recent messages,
-// Activity sessions, the profile, your voice, and, with developer tools on,
+// the profile, your voice, and, with developer tools on,
 // chat accounts and messages by app). Each section renders without its own
 // heading; DetailFold supplies it.
 import { ReactNode, useCallback, useEffect, useState } from 'react';
@@ -15,7 +15,6 @@ import {
     StartPersonResearch,
     TestVoiceMatch,
     type PersonResearchDTO,
-    type PrincipalActivitySessionDTO,
     type PrincipalDTO,
     type PrincipalStatsDTO,
     type VoiceEnrollmentStatusDTO,
@@ -196,59 +195,6 @@ function ByAppBars({ stats }: { stats: PrincipalStatsDTO }) {
                 );
             })}
         </div>
-    );
-}
-
-// ── Activity sessions ──
-
-// Every Activity session this person appeared in (most recent first); a
-// row opens the Activity page at that session. The detail reads them along
-// with the person, so the fold only shows when there is at least one.
-export function ActivitySessionsList({
-    sessions,
-    principalName,
-    onOpenActivitySession,
-}: {
-    sessions: PrincipalActivitySessionDTO[];
-    principalName: string;
-    onOpenActivitySession?: (sessionId: string, anchorTimestamp?: number, principalName?: string) => void;
-}) {
-    const { t, i18n } = useTranslation('people');
-    const tr: Translate = (key, options) => t(key as never, options as never) as unknown as string;
-    return (
-        <ul className="divide-y divide-border-divider overflow-hidden rounded-lg border border-border bg-panel">
-            {sessions.map((sess) => {
-                // Cap the title at three app names — raw joined lists run
-                // to a full line of system noise ("Dock, loginwindow, …").
-                const shown = sess.appNames.slice(0, 3).map((app) => appLabel(tr, app)).join(', ');
-                const extra = sess.appNames.length - 3;
-                const apps = !sess.appNames.length ? '' : extra > 0 ? tr('activitySessionsMoreApps', { apps: shown, count: extra }) : shown;
-                const when = formatAbsolute(i18n.language, sess.startTime);
-                const interactive = !!onOpenActivitySession;
-                const Tag: 'button' | 'div' = interactive ? 'button' : 'div';
-                return (
-                    <li key={sess.sessionId}>
-                        <Tag
-                            type={interactive ? ('button' as const) : undefined}
-                            onClick={interactive ? () => onOpenActivitySession!(sess.sessionId, sess.lastSeenAt > 0 ? sess.lastSeenAt : undefined, principalName) : undefined}
-                            className={cn('flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors', interactive && 'cursor-pointer hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-2/40')}
-                        >
-                            <span className="flex min-w-0 flex-1 flex-col gap-1">
-                                <span className="flex items-center gap-2 text-[12.5px] text-ink">
-                                    {/* A session with no app shows only its time. */}
-                                    <span className="truncate">{apps || when}</span>
-                                    {sess.isMeeting && (
-                                        <span className="rounded-full border border-border bg-panel-warm px-1.5 py-0.5 text-[11px] text-muted">{tr('activitySessionsMeetingBadge')}</span>
-                                    )}
-                                </span>
-                                {apps && <span className="text-[11px] text-muted">{when}</span>}
-                            </span>
-                            {interactive && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden />}
-                        </Tag>
-                    </li>
-                );
-            })}
-        </ul>
     );
 }
 

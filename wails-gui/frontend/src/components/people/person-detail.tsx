@@ -5,8 +5,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitMerge, Link, MoreHorizontal, Pencil, Trash2, Unlink, UserPlus } from 'lucide-react';
-import { type PersonCard, type PersonDetail, type PrincipalActivitySessionDTO, type PrincipalDTO, type PrincipalWithStatsDTO } from '@/lib/wails-shim-app';
-import { GetPersonDetail, ListPrincipalActivitySessions } from '@/lib/page-queries';
+import { type PersonCard, type PersonDetail, type PrincipalDTO, type PrincipalWithStatsDTO } from '@/lib/wails-shim-app';
+import { GetPersonDetail } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { Avatar } from '../ui/avatar';
 import { Button } from '../ui/button';
@@ -20,7 +20,7 @@ import {
 import { appLabel, dayWords, listWords, loopChip, loopLine, readWithRetry, relationshipLabel, togetherWords, type Translate } from './people-format';
 import { PeopleFailureLine, usePeopleDevTools } from './people-failure';
 import { PersonBriefBlock, PersonReplyDraft } from './person-brief';
-import { ActivitySessionsList, DetailFold, PersonDossier, PersonTechnicalDetails, RecentMessagesList, VoiceFingerprint } from './person-sections';
+import { DetailFold, PersonDossier, PersonTechnicalDetails, RecentMessagesList, VoiceFingerprint } from './person-sections';
 
 export interface PersonActions {
     onEdit: (p: PrincipalDTO) => void;
@@ -38,7 +38,6 @@ export function PersonDetailPanel({
     revision,
     actions,
     notice,
-    onOpenActivitySession,
 }: {
     personId: string;
     card?: PersonCard;
@@ -48,7 +47,6 @@ export function PersonDetailPanel({
     actions: PersonActions;
     /** A failed action on this person (delete, unlink), at the top. */
     notice?: ReactNode;
-    onOpenActivitySession?: (sessionId: string, anchorTimestamp?: number, principalName?: string) => void;
 }) {
     const { t, i18n } = useTranslation('people');
     const tr: Translate = (key, options) => t(key as never, options as never) as unknown as string;
@@ -61,31 +59,7 @@ export function PersonDetailPanel({
     const lastRevision = useRef(revision);
     const devTools = usePeopleDevTools();
     const [draftFor, setDraftFor] = useState<string | null>(null);
-    const peekSessions = () => pageQueryCache.peek<PrincipalActivitySessionDTO[]>('ListPrincipalActivitySessions', [personId, 50]) ?? null;
-    const [sessions, setSessions] = useState<PrincipalActivitySessionDTO[] | null>(peekSessions);
-    const [sessionsFailed, setSessionsFailed] = useState(false);
-    const [sessionsAttempt, setSessionsAttempt] = useState(0);
-
-    // Activity sessions are read along with the detail: their fold shows
-    // only when the person has at least one.
-    useEffect(() => {
-        let alive = true;
-        setSessions(peekSessions());
-        setSessionsFailed(false);
-        setDraftFor(null);
-        if (sessionsAttempt > 0) pageQueryCache.invalidate(['ListPrincipalActivitySessions'], true, [personId, 50]);
-        ListPrincipalActivitySessions(personId, 50)
-            .then((rows) => {
-                if (alive) setSessions(rows ?? []);
-            })
-            .catch(() => {
-                if (alive) setSessionsFailed(true);
-            });
-        return () => {
-            alive = false;
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [personId, sessionsAttempt]);
+    useEffect(() => setDraftFor(null), [personId]);
 
     // A new person paints from the cache when warm (a retained selection or a
     // repeated deep link); a re-read keeps what is shown.
@@ -122,7 +96,6 @@ export function PersonDetailPanel({
     const isSelf = kind === 'self';
     const name = principal?.contactName || detail?.name || card?.name || tr('unnamed');
     // The chat finds a person by the name stored on the profile.
-    const storedName = principal?.displayName || detail?.name || name;
     const relationship = detail?.relationship || principal?.relationship || card?.relationship || '';
     const role = relationship
         ? relationshipLabel((key) => t(key as never) as unknown as string, (key) => i18n.exists(key), relationship)
@@ -262,18 +235,6 @@ export function PersonDetailPanel({
                     <DetailFold label={tr('detail.recentMessages')} count={entry.stats.recentMessages.length}>
                         <RecentMessagesList stats={entry.stats} />
                     </DetailFold>
-                )}
-                {sessionsFailed ? (
-                    <DetailFold label={tr('activitySessionsLoadingHeading')}>
-                        <PeopleFailureLine text={tr('detail.sessionsFailed')} onRetry={() => setSessionsAttempt((n) => n + 1)} />
-                    </DetailFold>
-                ) : (
-                    sessions &&
-                    sessions.length > 0 && (
-                        <DetailFold label={tr('activitySessionsLoadingHeading')} count={sessions.length}>
-                            <ActivitySessionsList sessions={sessions} principalName={storedName} onOpenActivitySession={onOpenActivitySession} />
-                        </DetailFold>
-                    )
                 )}
                 {!isSelf && (
                     <DetailFold label={tr('dossierHeading')}>

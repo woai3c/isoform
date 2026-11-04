@@ -9,11 +9,11 @@ import { SheetClose, SheetTitle } from "@/components/ui/sheet";
 import type { TodayChatContextRef, TodayChatPreview } from "@/lib/today-chat-navigation";
 import { TodayContextPreview } from "@/components/today-context-status";
 import { cn } from "@/lib/utils";
-import { useMainChatPanel, waitingCards } from "@/hooks/useMainChatPanel";
-import { useMainChatWaitingCount } from "@/hooks/useMainChatWaitingCount";
+import { useMainChatPanel } from "@/hooks/useMainChatPanel";
+import { useTasksNeedsYouCount } from "@/hooks/useTasksNeedsYou";
 import { useMainChatAnswerChips } from "@/hooks/useMainChatView";
 import { answerChipIds, localDayKey } from "@/lib/main-chat-view";
-import { getMainChatProactive, type MainChatReportTarget } from "@/lib/stream-helpers";
+import { type MainChatReportTarget } from "@/lib/stream-helpers";
 import { MainChatViewContext } from "@/components/main-chat/main-chat-view-context";
 import { GroupedStreamList } from "@/components/grouped-stream-list";
 import { MainChatItemPanel } from "@/components/main-chat-item-panel";
@@ -170,8 +170,8 @@ export function MainChatPanel({
         onStarterConsumed?.(starterRequest.id);
         void (starterRequest.firstChip ? chat.send(starterRequest.text, starterRequest.context, true, true) : chat.send(starterRequest.text, starterRequest.context, true));
     }, [starterRequest, onStarterConsumed, chat.send, itemPanel.close]);
-    // The header and sidebar share the Go-owned waiting state.
-    const waitingCount = useMainChatWaitingCount();
+    // Match the ordered list shown in Tasks and the menu bar.
+    const waitingCount = useTasksNeedsYouCount();
     const chips = useMainChatAnswerChips(chat.status === "ready", answerChipIds(displayedItems));
     const listRef = useRef<HTMLDivElement>(null);
     const navigation = useReplyNavigation(displayedItems, listRef, { streaming: chat.waiting });
@@ -192,7 +192,6 @@ export function MainChatPanel({
 
     // Only one card is open at a time; the full card never shows closed.
     const today = localDayKey(new Date());
-    const waiting = waitingCards(displayedItems);
     const names = useMemo(() => topicNames ?? new Map<string, string>(), [topicNames]);
     // An answer chip is the person's reply: it posts at once, as on the Chat
     // page, and folds to "You answered: … · Change" (chat-review v1.0.3 #3).
@@ -212,16 +211,6 @@ export function MainChatPanel({
             });
         },
     }), [today, names, chips, chatSend, hideRoutine]);
-
-    // "2 waiting on you" scrolls to the oldest card still waiting.
-    const scrollToWaiting = () => {
-        const oldest = waiting[0];
-        if (!oldest) return;
-        const momentId = getMainChatProactive(oldest)?.momentId;
-        const card = Array.from(listRef.current?.querySelectorAll<HTMLElement>('[data-proactive-moment]') ?? [])
-            .find((element) => element.dataset.proactiveMoment === momentId);
-        card?.scrollIntoView({ block: "start", behavior: "smooth" });
-    };
 
     // The same box as the Chat page (chat-review v1.0.3 #4): attach and voice.
     const voice = useContext(ComposerVoiceContext);
@@ -355,7 +344,7 @@ export function MainChatPanel({
                             size="sm"
                             variant="outline"
                             className="ml-auto h-7 rounded-full border-warning-border bg-warning-bg px-2.5 text-[12px] text-warning hover:bg-warning-bg hover:text-warning"
-                            onClick={() => measureToday("T69", "open", "opened", scrollToWaiting)}
+                            onClick={() => measureToday("T69", "open", "opened", () => handlers.onOpenTasks?.())}
                             data-testid="main-chat-panel-waiting"
                         >
                             {tr("mainChatPanel.waiting", { count: waitingCount })}

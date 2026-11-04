@@ -687,3 +687,38 @@ func TestPausedBriefProofGrantDoesNotEscapePolicyCache(t *testing.T) {
 		t.Fatal("paused brief grant escaped its proof context through the policy cache")
 	}
 }
+
+func TestComposerBatchMatchesIndividualPrivacyChecks(t *testing.T) {
+	app := newThreadTestApp(t)
+	day, _ := threadTestDay(t)
+	fixture := threadOutcomeFixtures(t)[0]
+	row := saveFixtureOutcome(t, app, seedThreadFixture(t, app, "batch", fixture, at(day, 12, 0)), fixture)
+	missing := row
+	missing.RunIDs = composeJSON([]string{"missing-run"})
+	candidates := []ActivityRow{row, row, missing}
+	compare := func() {
+		t.Helper()
+		var expected []ActivityRow
+		for _, candidate := range candidates {
+			if composerCandidateAllowsModelRead(candidate, func(id string) bool {
+				run, err := app.activity.store.GetTimelineRunByIDContext(t.Context(), id)
+				return err == nil && run != nil && app.activityTimelineRunAllowsModelReadContext(t.Context(), app.activity.store, *run)
+			}) {
+				expected = append(expected, candidate)
+			}
+		}
+		got := app.filterComposerModelCandidatesContext(t.Context(), app.activity.store, candidates)
+		if len(got) != len(expected) {
+			t.Fatalf("batch returned %d candidates, individual checks returned %d", len(got), len(expected))
+		}
+	}
+	compare()
+	run, err := app.activity.store.GetTimelineRunByID(composeParseStrings(row.RunIDs)[0])
+	if err != nil || run == nil || len(run.SessionIDs) == 0 {
+		t.Fatal("fixture has no source session")
+	}
+	if _, err := app.activity.store.db.Exec(`UPDATE activity_sessions SET triage_status='protected' WHERE id=?`, run.SessionIDs[0]); err != nil {
+		t.Fatal(err)
+	}
+	compare()
+}

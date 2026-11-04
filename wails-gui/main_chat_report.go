@@ -350,10 +350,16 @@ func engagementKindQuotesMail(kind engagement.Kind) bool {
 	}
 }
 
+// These sightings say only that a person appeared; they cannot name what is open.
+func mainChatUnspecificPersonMoment(m engagement.Moment) bool {
+	return m.Kind == engagement.KindPersonReappeared || (m.Kind == engagement.KindFirstWeek && m.Params["stage"] == "person")
+}
+
 // postEngagementReport acknowledges a durable main-chat item independently of
 // the chosen notification channels. Kinds with a dedicated report are skipped.
 func (a *App) postEngagementReport(m engagement.Moment, text engagementText) bool {
-	if engagementKindHasOwnReport(m.Kind) || engagementKindSilent(m.Kind) {
+	if engagementKindHasOwnReport(m.Kind) || engagementKindSilent(m.Kind) ||
+		mainChatUnspecificPersonMoment(m) {
 		return true
 	}
 	if a.engagement != nil {

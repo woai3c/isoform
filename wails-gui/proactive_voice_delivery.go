@@ -176,6 +176,12 @@ func sourceFreeProactiveTarget(kind string) mainChatTarget {
 }
 
 func (a *App) projectProactiveVoiceItem(ctx context.Context, item *mainChatProactive, lang string) bool {
+	// Older person sightings have no supported open question. Hide them on
+	// replay rather than presenting a generic first-week or sighting card.
+	if item.Kind == string(engagement.KindPersonReappeared) || (item.Kind == string(engagement.KindFirstWeek) && item.Target.Kind == "person") {
+		*item = mainChatProactive{MomentID: item.MomentID, Kind: "thread_update_unavailable", Target: mainChatTarget{Kind: mainChatTargetNone}}
+		return true
+	}
 	if item.Kind == "first_read" {
 		a.projectFirstRead(ctx, item, lang)
 		return true

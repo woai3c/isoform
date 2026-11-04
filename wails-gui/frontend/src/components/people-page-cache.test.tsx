@@ -136,6 +136,23 @@ describe("Who you know first open (N40)", () => {
         expect(within(main).queryByRole("alert")).toBeNull();
     });
 
+    it("paints and saves the overview while the directory statistics are still loading", async () => {
+        binding("ListPrincipalsWithStats").mockImplementation(never);
+        const { container } = render(<PeoplePage />);
+        const main = mainOf(container);
+        expect(await within(main).findByText("Fixture person")).toBeInTheDocument();
+        expect(readSavedPeopleView()?.overview.everyone[0].name).toBe("Fixture person");
+        expect(main.querySelector('div[aria-busy="true"]')).toBeNull();
+    });
+
+    it("keeps the overview when the directory statistics fail", async () => {
+        binding("ListPrincipalsWithStats").mockRejectedValue(new Error("busy"));
+        const { container } = render(<PeoplePage />);
+        const main = mainOf(container);
+        expect(await within(main).findByText("Fixture person")).toBeInTheDocument();
+        expect(within(main).queryByRole("alert")).toBeNull();
+    });
+
     it("keeps the saved view and says nothing when the read behind it fails", async () => {
         savePeopleView(OVERVIEW, []);
         binding("ListPeopleOverview").mockRejectedValue(new Error("busy"));

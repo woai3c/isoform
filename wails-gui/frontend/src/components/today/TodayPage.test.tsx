@@ -219,6 +219,7 @@ const handlers = {
     onOpenAutomations: vi.fn(),
     onOpenActivity: vi.fn(),
     onOpenPeople: vi.fn(),
+    onOpenTasks: vi.fn(),
 };
 
 function ClearMainChatItemPanel() {
@@ -1677,42 +1678,28 @@ describe("TodayPage main chat panel: Isoform's cards and status rows (Claude Des
         expect(await screen.findByTestId("main-chat-item-panel")).toHaveAttribute("data-panel-open", "moment-2");
     });
 
-    it("counts the cards waiting in the header and scrolls to the oldest one", async () => {
-        pauseMocks.waiting.mockResolvedValue({ sessionId: "main-1", count: 2, items: [], revision: 1, ready: true });
-        const scrolled = vi.fn();
-        const original = HTMLElement.prototype.scrollIntoView;
-        HTMLElement.prototype.scrollIntoView = function () { scrolled(this); };
-        try {
-            await mount();
-            const button = await within(panel()).findByTestId("main-chat-panel-waiting");
-            expect(button).toHaveTextContent("mainChatPanel.waiting");
-            fireEvent.click(button);
-            expect(scrolled).toHaveBeenCalledTimes(1);
-            expect(scrolled.mock.calls[0][0]).toBe(cards()[0].querySelector('[data-proactive-moment]'));
-        } finally {
-            HTMLElement.prototype.scrollIntoView = original;
-        }
+    it("opens Tasks from the shared Needs you count", async () => {
+        mockUseTodayNeeds.mockReturnValue({ items: [{ id: "a" }, { id: "b" }], loading: false, failed: false });
+        await mount();
+        fireEvent.click(await within(panel()).findByTestId("main-chat-panel-waiting"));
+        expect(handlers.onOpenTasks).toHaveBeenCalled();
     });
 
-    it("reads the header waiting count from the shared state, not the loaded rows", async () => {
+    it("R60: the header counts Tasks needs, even when Chat has a different waiting count", async () => {
         const translations = createInstance();
         await translations.init({ lng: "en", resources: { en: { today: en, chat: enChat } } });
         mockUseTranslation.mockImplementation((namespace: string) => ({
-            t: translations.getFixedT("en", namespace as "today"),
-            i18n: translations,
+            t: translations.getFixedT("en", namespace as "today"), i18n: translations,
         }));
-        pauseMocks.waiting.mockResolvedValue({ sessionId: "main-1", count: 2, items: [], revision: 1, ready: true });
-        pauseMocks.mainPage.mockResolvedValue({ items: [card("c-1", "moment-1")], hasMore: false, nextCursor: -1 });
-        await mount();
-        const button = await within(panel()).findByTestId("main-chat-panel-waiting");
-        expect(button).toHaveTextContent("2 questions for you");
-
-        await act(async () => {
-            pauseMocks.listeners.get("main-chat:waiting-changed")?.({
-                sessionId: "main-1", count: 0, items: [], revision: 2, ready: true,
-            });
-        });
-        await waitFor(() => expect(within(panel()).queryByTestId("main-chat-panel-waiting")).not.toBeInTheDocument());
+        pauseMocks.waiting.mockResolvedValue({ sessionId: "main-1", count: 1, items: [], revision: 1, ready: true });
+        mockUseTodayNeeds.mockReturnValue({ items: [], loading: false, failed: false });
+        width(1200);
+        const view = render(<TodayPage handlers={handlers} />);
+        await act(async () => {});
+        expect(within(panel()).queryByTestId("main-chat-panel-waiting")).not.toBeInTheDocument();
+        mockUseTodayNeeds.mockReturnValue({ items: [{ id: "a" }, { id: "b" }], loading: false, failed: false });
+        view.rerender(<TodayPage handlers={handlers} />);
+        expect(within(panel()).getByTestId("main-chat-panel-waiting")).toHaveTextContent("2 questions for you");
     });
 
     it("draws a thread outcome's card as the Chat page does, without resolving it", async () => {

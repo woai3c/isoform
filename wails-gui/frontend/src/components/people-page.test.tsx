@@ -938,7 +938,7 @@ describe("Everything stays reachable", () => {
         expect(screen.getByTestId("contact-editor")).toHaveTextContent("promote:mei2");
     });
 
-    it("the detail keeps aliases, notes, relationship, previews, handles, sessions and the dossier", async () => {
+    it("the detail keeps aliases, notes, relationship, previews, handles and the dossier", async () => {
         world();
         render(<PeoplePage />);
         const aside = await screen.findByRole("complementary", { name: "Person detail" });
@@ -949,8 +949,6 @@ describe("Everything stays reachable", () => {
 
         fireEvent.click(within(aside).getByRole("button", { name: /Recent messages/ }));
         expect(within(aside).getByText("Can we move the sync to Oct 30?")).toBeInTheDocument();
-
-        await waitFor(() => expect(mocks.sessions).toHaveBeenCalledWith("priya", 50));
 
         fireEvent.click(within(aside).getByRole("button", { name: /Profile/ }));
         await waitFor(() => expect(mocks.research).toHaveBeenCalledWith("priya"));
@@ -969,38 +967,16 @@ describe("Everything stays reachable", () => {
         expect(within(aside).getByText("sam.r")).toBeInTheDocument();
     });
 
-    it("N1: Activity sessions fold shows only for a person with a session, read with the detail", async () => {
+    it("N46: a person never loads or shows the owner's activity sessions", async () => {
         world();
-        mocks.sessions.mockImplementation(async (id: string) =>
-            id === "priya" ? [{ sessionId: "s1", startTime: new Date(new Date().setHours(13, 5, 0, 0)).getTime(), endTime: 0, appNames: [], firstSeenAt: 0, lastSeenAt: 0 }] : [],
-        );
-        render(<PeoplePage />);
+        mocks.sessions.mockResolvedValue([{ sessionId: "s1", startTime: Date.now(), appNames: ["Safari Web Content"] }]);
+        render(<PeoplePage devToolsUnlocked />);
         const aside = await screen.findByRole("complementary", { name: "Person detail" });
-        const fold = await within(aside).findByRole("button", { name: /Activity sessions/ });
-        fireEvent.click(fold);
-        // N11/N23: a session with no app shows only its time, on the computer's clock.
-        expect(await within(aside).findByText("1:05 PM")).toBeInTheDocument();
-        expect(aside).not.toHaveTextContent("(unknown app)");
+        await within(aside).findByRole("heading", { level: 2, name: "Priya Nair" });
+        expect(mocks.sessions).not.toHaveBeenCalled();
+        expect(aside).not.toHaveTextContent(/Activity sessions|Safari Web Content/);
         await openPerson("Marcus Hale");
-        await waitFor(() => expect(mocks.sessions).toHaveBeenCalledWith("marcus", 50));
-        expect(within(aside).queryByRole("button", { name: /Activity sessions/ })).not.toBeInTheDocument();
-        for (const lng of ["en", "zh-CN"]) expect(i18n.exists("people:activitySessionsEmpty", { lng })).toBe(false);
-    });
-
-    it("N44: Activity session app names use the same localized labels as Together", async () => {
-        await i18n.changeLanguage("zh-CN");
-        try {
-            world();
-            mocks.sessions.mockResolvedValue([{ sessionId: "s1", startTime: Date.now(), endTime: 0, appNames: ["WeChat", "Feishu", "Safari"], firstSeenAt: 0, lastSeenAt: 0 }]);
-            render(<PeoplePage />);
-            const aside = await screen.findByRole("complementary");
-            const fold = await within(aside).findByRole("button", { name: /活动会话/ });
-            fireEvent.click(fold);
-            expect(await within(aside).findByText("微信, 飞书, Safari")).toBeInTheDocument();
-            expect(aside).not.toHaveTextContent(/WeChat|Feishu/);
-        } finally {
-            await i18n.changeLanguage("en");
-        }
+        expect(mocks.sessions).not.toHaveBeenCalled();
     });
 
     it("N3/N17: a failed delete says so at the top of the detail with Try again, no toast", async () => {
