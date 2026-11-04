@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -441,9 +443,75 @@ func (a *App) menuBarModels(w map[string]string) string {
 // rebuild through every delivery gate on each status tick.
 func (a *App) menuBarLatestBrief(svc mobileBriefSource) (MobileBriefV1, bool) {
 	if service, isService := svc.(*mobileBriefService); isService && service != nil {
+		key := a.menuBarBriefKey(service)
+		if brief, ok, hit := menuBarBriefMemo.get(key, time.Now()); hit {
+			return brief, ok
+		}
 		if latest, ok, err := service.finishedLatest(); err == nil {
+			menuBarBriefMemo.put(key, latest, ok, time.Now())
 			return latest, ok
 		}
 	}
 	return svc.LatestMobileBrief()
+}
+
+// menuBarBriefMemo keeps the status tick's brief row input while nothing the
+// saved brief's read depends on has changed, so the five-second tick does not
+// stamp every source file (finishedReadKey) each time. It is read again at
+// least once a minute.
+var menuBarBriefMemo menuBarBriefCache
+
+const menuBarBriefMemoMaxAge = time.Minute
+
+type menuBarBriefCache struct {
+	mu    sync.Mutex
+	key   string
+	at    time.Time
+	brief MobileBriefV1
+	ok    bool
+}
+
+func (c *menuBarBriefCache) get(key string, now time.Time) (MobileBriefV1, bool, bool) {
+	if key == "" {
+		return MobileBriefV1{}, false, false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.key != key || now.Sub(c.at) >= menuBarBriefMemoMaxAge {
+		return MobileBriefV1{}, false, false
+	}
+	return c.brief, c.ok, true
+}
+
+func (c *menuBarBriefCache) put(key string, brief MobileBriefV1, ok bool, now time.Time) {
+	if key == "" {
+		return
+	}
+	c.mu.Lock()
+	c.key, c.at, c.brief, c.ok = key, now, brief, ok
+	c.mu.Unlock()
+}
+
+// menuBarBriefKey stamps, without reading any source, what changes the
+// saved brief's read: the brief folder (a stored or patched brief), the
+// privacy epoch, memory writes and the memory snapshot, Closed Eyes and the
+// day.
+func (a *App) menuBarBriefKey(service *mobileBriefService) string {
+	if service.store == nil || service.store.dir == "" {
+		return ""
+	}
+	info, err := os.Stat(service.store.dir)
+	if err != nil {
+		return ""
+	}
+	snapshot, err := a.memorySnapshot()
+	if err != nil {
+		return ""
+	}
+	loc := service.location
+	if loc == nil {
+		loc = time.Local
+	}
+	return fmt.Sprintf("%p|%d|%d|%d|%p|%t|%s", service, info.ModTime().UnixNano(), mobileBriefReadEpoch.Load(),
+		a.memoryExternalReads.revision.Load(), snapshot, a.IsClosedEyesModeEnabled(), service.now().In(loc).Format("2006-01-02"))
 }

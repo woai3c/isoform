@@ -63,7 +63,7 @@ func (a *App) loadCommunicationBeliefs(ctx context.Context) []communicationBelie
 		if entry.Area != "communication" || !validCommunicationCategory(fm.CommunicationCategory) || (memoryConfirmedAt(entry.Content) == 0 && !strings.EqualFold(entry.Source, "user_edit")) || !memoryInUse(entry.Content) || !allowRead(entry.ID, entry.Content) {
 			continue
 		}
-		forgotten, err := isMemoryForgotten(dir, entry.ID, entry.Content, time.Now())
+		forgotten, err := a.memoryForgottenNow(dir, entry.ID, entry.Content, time.Now())
 		if err != nil || forgotten || !a.proactiveVoiceMarkdownDependencies(ctx, "memory", entry.ID, entry.Content) {
 			continue
 		}

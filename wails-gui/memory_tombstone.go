@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -287,7 +288,11 @@ func memoryPreservedRecordKeys(dir, id string, semantics []memoryForgetSemantics
 	return preserved, nil
 }
 
+// memoryTombstoneLoads counts reads of the forget markers, for tests.
+var memoryTombstoneLoads atomic.Uint64
+
 func loadMemoryTombstones(dir string) ([]memoryTombstone, error) {
+	memoryTombstoneLoads.Add(1)
 	data, err := os.ReadFile(filepath.Join(dir, memoryTombstonesFile))
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -325,6 +330,25 @@ func isMemoryForgotten(dir, id, content string, now time.Time) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	return memoryForgottenBy(dir, tombstones, id, content, now)
+}
+
+// memoryTombstoneGeneration counts this process's writes of the forget
+// markers, so a copy loaded before one is read again.
+var memoryTombstoneGeneration atomic.Uint64
+
+// memoryForgottenNow is isMemoryForgotten with the markers loaded once per
+// memory snapshot instead of once per note.
+func (a *App) memoryForgottenNow(dir, id, content string, now time.Time) (bool, error) {
+	if a != nil {
+		if snapshot, err := a.memorySnapshot(); err == nil && snapshot.dir == dir {
+			return snapshot.forgotten(id, content, now)
+		}
+	}
+	return isMemoryForgotten(dir, id, content, now)
+}
+
+func memoryForgottenBy(dir string, tombstones []memoryTombstone, id, content string, now time.Time) (bool, error) {
 	for _, tombstone := range tombstones {
 		if now.UnixMilli() >= tombstone.ExpiresAt {
 			continue
@@ -432,6 +456,7 @@ func persistMemoryTombstones(dir string, tombstones []memoryTombstone) error {
 	if err := file.Close(); err != nil {
 		return err
 	}
+	defer memoryTombstoneGeneration.Add(1)
 	return os.Rename(file.Name(), filepath.Join(dir, memoryTombstonesFile))
 }
 

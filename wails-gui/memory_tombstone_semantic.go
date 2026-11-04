@@ -131,6 +131,8 @@ func cacheMemorySemanticReceipt(dir, content string, receipt memorySemanticRecei
 			os.Remove(temp)
 			return err
 		}
+		// A new receipt can turn a note into a forgotten one.
+		memoryTombstoneGeneration.Add(1)
 		memorySemanticCache.Lock()
 		if _, exists := memorySemanticCache.values[key]; !exists {
 			if len(memorySemanticCache.order) >= memorySemanticCacheLimit {

@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -41,6 +42,16 @@ type memoryExternalSnapshot struct {
 	entries []memoryExternalEntry
 
 	externalOnce sync.Once
+
+	tombstonesMu     sync.Mutex
+	tombstonesLoaded bool
+	tombstonesGen    uint64
+	tombstoneList    []memoryTombstone
+	tombstonesErr    error
+	// forgottenVerdicts holds isMemoryForgotten per current note until the
+	// markers change or the first one expires (forgottenUntil).
+	forgottenVerdicts map[string]bool
+	forgottenUntil    int64
 
 	depsOnce  sync.Once
 	deps      []memoryReadDependencies
@@ -145,6 +156,15 @@ func memoryFolderSignal(dir string) ([sha256.Size]byte, time.Time, error) {
 		write(file.Name(), info)
 	}
 	h.Write([]byte{1})
+	for _, file := range files {
+		if file.Name() != memoryTombstonesFile {
+			continue
+		}
+		if info, err := file.Info(); err == nil {
+			write(file.Name(), info)
+		}
+	}
+	h.Write([]byte{2})
 	history, err := memoryFiles.ReadDir(filepath.Join(dir, memoryHistoryDirName))
 	if err != nil && !os.IsNotExist(err) {
 		return [sha256.Size]byte{}, newest, err
@@ -251,6 +271,60 @@ func (s *memoryExternalSnapshot) readDependenciesOf(content string) (memoryReadD
 		return memoryReadDependencies{}, false
 	}
 	return deps[i], true
+}
+
+// tombstones returns the forget markers, read once per snapshot and again
+// after this process writes them. The file is in the folder fingerprint, so
+// an outside change is caught like a note's.
+func (s *memoryExternalSnapshot) tombstones() ([]memoryTombstone, error) {
+	generation := memoryTombstoneGeneration.Load()
+	s.tombstonesMu.Lock()
+	defer s.tombstonesMu.Unlock()
+	if !s.tombstonesLoaded || s.tombstonesGen != generation {
+		memoryTombstoneMu.Lock()
+		s.tombstoneList, s.tombstonesErr = loadMemoryTombstones(s.dir)
+		memoryTombstoneMu.Unlock()
+		s.tombstonesLoaded, s.tombstonesGen = true, generation
+		s.forgottenVerdicts = nil
+	}
+	return s.tombstoneList, s.tombstonesErr
+}
+
+// forgotten is isMemoryForgotten for a note, worked out once per snapshot
+// while the markers stay the same.
+func (s *memoryExternalSnapshot) forgotten(id, content string, now time.Time) (bool, error) {
+	tombstones, err := s.tombstones()
+	if err != nil {
+		return false, err
+	}
+	s.readDependencies()
+	i, known := s.byID[id]
+	cacheable := known && s.entries[i].raw.Content == content
+	ms := now.UnixMilli()
+	s.tombstonesMu.Lock()
+	generation := s.tombstonesGen
+	if s.forgottenVerdicts == nil || ms >= s.forgottenUntil {
+		s.forgottenVerdicts, s.forgottenUntil = map[string]bool{}, math.MaxInt64
+		for _, tombstone := range tombstones {
+			if tombstone.ExpiresAt > ms && tombstone.ExpiresAt < s.forgottenUntil {
+				s.forgottenUntil = tombstone.ExpiresAt
+			}
+		}
+	}
+	if verdict, ok := s.forgottenVerdicts[id]; ok && cacheable {
+		s.tombstonesMu.Unlock()
+		return verdict, nil
+	}
+	s.tombstonesMu.Unlock()
+	verdict, err := memoryForgottenBy(s.dir, tombstones, id, content, now)
+	if err == nil && cacheable {
+		s.tombstonesMu.Lock()
+		if s.tombstonesGen == generation && s.forgottenVerdicts != nil && memoryTombstoneGeneration.Load() == generation {
+			s.forgottenVerdicts[id] = verdict
+		}
+		s.tombstonesMu.Unlock()
+	}
+	return verdict, err
 }
 
 // entryByID returns a copy of the note with id.

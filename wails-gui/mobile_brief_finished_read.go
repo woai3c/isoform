@@ -94,7 +94,11 @@ func (s *mobileBriefStore) loadFinishedRead(briefID string) (mobileBriefFinished
 
 // finishedReadKey names everything a read of source depends on, or "" when
 // any of it cannot be read (then nothing is saved).
+// mobileBriefFinishedReadKeys counts finishedReadKey computations, for tests.
+var mobileBriefFinishedReadKeys atomic.Uint64
+
 func (s *mobileBriefService) finishedReadKey(ctx context.Context, source MobileBriefV1) string {
+	mobileBriefFinishedReadKeys.Add(1)
 	if s == nil || s.app == nil || s.app.store == nil {
 		return ""
 	}

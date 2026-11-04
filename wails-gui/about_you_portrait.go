@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"wails-gui/internal/pii"
@@ -251,20 +252,26 @@ type AboutYouPortrait struct {
 // AboutYouPortraitService runs one write at a time in the background. Reads
 // only read the saved document; they never wait for a model.
 type AboutYouPortraitService struct {
-	app      *App
-	mu       sync.Mutex
-	stop     context.CancelFunc
-	done     chan struct{}
-	wake     chan struct{}
-	attempt  sync.Mutex
-	fileMu   sync.Mutex
-	stateMu  sync.Mutex
-	force    bool
-	notQuite bool
-	note     string
-	noteID   string
-	running  bool
-	writer   string
+	// readMemo is the last read's result and the stamp of what it read
+	// (portraitReadKey); a read with the same stamp returns a copy of it.
+	readMemoMu  sync.Mutex
+	readMemoKey string
+	readMemoAt  time.Time
+	readMemo    []byte
+	app         *App
+	mu          sync.Mutex
+	stop        context.CancelFunc
+	done        chan struct{}
+	wake        chan struct{}
+	attempt     sync.Mutex
+	fileMu      sync.Mutex
+	stateMu     sync.Mutex
+	force       bool
+	notQuite    bool
+	note        string
+	noteID      string
+	running     bool
+	writer      string
 	// confirmAt is when a confirmation from the card rewrites; each new one
 	// waits portraitConfirmWait again.
 	confirmAt time.Time
@@ -738,6 +745,7 @@ func (a *App) forgetAboutYouPortraitVersions(ids []string, records []*memoryForg
 // stored projection; model inputs always use memorySourceAllowsRead, which
 // denies while paused.
 func (s *AboutYouPortraitService) readableEntries(direct bool) ([]MemoryEntry, error) {
+	portraitSourceReads.Add(1)
 	entries, err := s.app.GetMemoryEntries()
 	if err != nil {
 		return nil, err
@@ -770,7 +778,7 @@ func (s *AboutYouPortraitService) readableEntries(direct bool) ([]MemoryEntry, e
 		if _, blocked := suppressed[entry.ID]; blocked {
 			continue
 		}
-		forgotten, err := isMemoryForgotten(dir, entry.ID, entry.Content, time.Now())
+		forgotten, err := s.app.memoryForgottenNow(dir, entry.ID, entry.Content, time.Now())
 		if err != nil {
 			return nil, err
 		}
@@ -860,14 +868,66 @@ func (a *App) portraitService() *AboutYouPortraitService {
 	return service
 }
 
+// portraitSourceReads counts readableEntries calls, for tests.
+var portraitSourceReads atomic.Uint64
+
+// portraitReadMemoMaxAge bounds how long a read result is reused.
+const portraitReadMemoMaxAge = time.Minute
+
+// portraitReadKey stamps what read() reads without reading it: the portrait
+// file, memory writes, the memory snapshot, the forget markers, the privacy
+// epoch (withdrawals, corrections, Closed Eyes and the other brief-read
+// events) and Closed Eyes.
+func (s *AboutYouPortraitService) portraitReadKey(path string) string {
+	snapshot, err := s.app.memorySnapshot()
+	if err != nil {
+		return ""
+	}
+	var size, modified int64
+	if info, err := os.Stat(path); err == nil {
+		size, modified = info.Size(), info.ModTime().UnixNano()
+	} else if !os.IsNotExist(err) {
+		return ""
+	}
+	return fmt.Sprintf("%d|%d|%d|%p|%d|%d|%t|%s", size, modified, s.app.memoryExternalReads.revision.Load(), snapshot,
+		memoryTombstoneGeneration.Load(), mobileBriefReadEpoch.Load(), s.app.IsClosedEyesModeEnabled(), s.app.currentUILanguage())
+}
+
 func (s *AboutYouPortraitService) read() (AboutYouPortrait, error) {
 	path, err := portraitPath()
 	if err != nil {
 		return emptyPortrait("learning"), errors.New("portrait_storage")
 	}
+	key := s.portraitReadKey(path)
+	if key != "" {
+		s.readMemoMu.Lock()
+		raw := s.readMemo
+		if s.readMemoKey != key || time.Since(s.readMemoAt) >= portraitReadMemoMaxAge {
+			raw = nil
+		}
+		s.readMemoMu.Unlock()
+		var cached AboutYouPortrait
+		if raw != nil && json.Unmarshal(raw, &cached) == nil {
+			return cached, nil
+		}
+	}
+	result, remember, err := s.readNow(path)
+	if err == nil && remember && key != "" && key == s.portraitReadKey(path) {
+		if raw, err := json.Marshal(result); err == nil {
+			s.readMemoMu.Lock()
+			s.readMemoKey, s.readMemoAt, s.readMemo = key, time.Now(), raw
+			s.readMemoMu.Unlock()
+		}
+	}
+	return result, err
+}
+
+// readNow is read without the memo; remember is false when the read wrote
+// the portrait or asked for a rewrite.
+func (s *AboutYouPortraitService) readNow(path string) (AboutYouPortrait, bool, error) {
 	entries, err := s.readableEntries(true)
 	if err != nil {
-		return emptyPortrait("learning"), errors.New("portrait_unavailable")
+		return emptyPortrait("learning"), false, errors.New("portrait_unavailable")
 	}
 	s.fileMu.Lock()
 	doc, err := readPortrait(path)
@@ -878,9 +938,10 @@ func (s *AboutYouPortraitService) read() (AboutYouPortrait, error) {
 		s.requestWrite(false)
 		result := emptyPortrait("writing")
 		result.Writing = true
-		return result, nil
+		return result, false, nil
 	}
 	var live map[string]portraitInput
+	remember := true
 	if doc != nil {
 		live = liveInputs(doc.Inputs, entries)
 		shown, stored := doc.keepSupported(live)
@@ -888,16 +949,17 @@ func (s *AboutYouPortraitService) read() (AboutYouPortrait, error) {
 			stored, live = true, liveInputs(doc.Inputs, entries)
 		}
 		if stored {
+			remember = false
 			doc.Removed = doc.Removed || (shown && doc.GeneratedAt > 0)
 			if err := writePortrait(path, doc); err != nil {
 				s.fileMu.Unlock()
-				return emptyPortrait("learning"), errors.New("portrait_unavailable")
+				return emptyPortrait("learning"), false, errors.New("portrait_unavailable")
 			}
 			s.poke()
 		}
 	}
 	s.fileMu.Unlock()
-	return s.project(doc, live, entries), nil
+	return s.project(doc, live, entries), remember, nil
 }
 
 func emptyPortrait(state string) AboutYouPortrait {
