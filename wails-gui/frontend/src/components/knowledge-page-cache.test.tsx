@@ -71,7 +71,9 @@ const CARD = {
     topicName: '',
     formatVersion: '0.1',
     source: 'activity',
-} as main.KnowHowCard;
+    moments: [],
+    mergedIds: [],
+} as unknown as main.KnowHowCard;
 
 const ENTRY = {
     ...CARD,

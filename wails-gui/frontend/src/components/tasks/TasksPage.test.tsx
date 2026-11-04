@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setComputerClock } from "@/lib/brief-time";
 
 import i18n from "@/i18n";
-import { TasksPage, startOfTaskWeek, taskTitleFrom } from "./TasksPage";
+import { TasksPage, resetPlaybookOfferFailures, startOfTaskWeek, taskTitleFrom } from "./TasksPage";
 import { useTasksNeedsYouCount } from "@/hooks/useTasksNeedsYou";
 import { useTodayNeeds } from "@/hooks/useTodayNeeds";
 import { TodayNeedsSection } from "@/components/today/TodayNeedsSection";
@@ -85,6 +85,7 @@ async function emitWithdrawal(event: string) {
 }
 beforeEach(async () => {
     vi.clearAllMocks();
+    resetPlaybookOfferFailures();
     // Tasks reads through the shared page cache (snappy 1.0, cache first).
     resetPageQueries();
     await i18n.changeLanguage("en");
@@ -874,6 +875,77 @@ describe("Not now on a playbook offer", () => {
         } finally {
             vi.useRealTimers();
         }
+    });
+
+    it("W22: a Not now that didn't save stays after leaving Tasks, with Try again", async () => {
+        offerPlaybook();
+        mocks.snoozePlaybook.mockRejectedValueOnce(new Error("disk full")).mockResolvedValue(undefined);
+        mount();
+        const title = await screen.findByText("Make your Friday invoice run a playbook");
+        vi.useFakeTimers();
+        try {
+            fireEvent.click(within(title.closest("[data-playbook-offer]") as HTMLElement).getByRole("button", { name: "Not now" }));
+            await act(async () => { vi.advanceTimersByTime(5000); });
+        } finally {
+            vi.useRealTimers();
+        }
+        expect(await screen.findByText("Your Not now didn't save, so it's back.")).toBeInTheDocument();
+        cleanup();
+        mount();
+        expect(await screen.findByText("Your Not now didn't save, so it's back.")).toBeInTheDocument();
+        expect(document.body.textContent).not.toContain("disk full");
+        vi.useFakeTimers();
+        try {
+            fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+            await act(async () => { vi.advanceTimersByTime(5000); });
+        } finally {
+            vi.useRealTimers();
+        }
+        expect(mocks.snoozePlaybook).toHaveBeenCalledTimes(2);
+        await waitFor(() => expect(screen.queryByText("Your Not now didn't save, so it's back.")).toBeNull());
+    });
+
+    it("W22: a Do it that didn't save says so in place and outlives Tasks, with Try again", async () => {
+        offerPlaybook();
+        mocks.acceptPlaybook.mockRejectedValueOnce(new Error("offline")).mockResolvedValue({ schedule: { time: "16:00" } });
+        mount();
+        const title = await screen.findByText("Make your Friday invoice run a playbook");
+        vi.useFakeTimers();
+        try {
+            fireEvent.click(within(title.closest("[data-playbook-offer]") as HTMLElement).getByRole("button", { name: "Do it" }));
+            await act(async () => { vi.advanceTimersByTime(5000); });
+        } finally {
+            vi.useRealTimers();
+        }
+        expect(await screen.findByText("Didn’t add it to Scheduled.")).toBeInTheDocument();
+        expect(mocks.toast).not.toHaveBeenCalled();
+        cleanup();
+        mount();
+        expect(await screen.findByText("Didn’t add it to Scheduled.")).toBeInTheDocument();
+        vi.useFakeTimers();
+        try {
+            fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+            await act(async () => { vi.advanceTimersByTime(5000); });
+        } finally {
+            vi.useRealTimers();
+        }
+        expect(mocks.acceptPlaybook).toHaveBeenCalledTimes(2);
+    });
+
+    it("W22: reads in Chinese", async () => {
+        await i18n.changeLanguage("zh-CN");
+        offerPlaybook();
+        mocks.acceptPlaybook.mockRejectedValueOnce(new Error("offline"));
+        mount();
+        const card = (await screen.findAllByRole("article")).find((el) => el.hasAttribute("data-playbook-offer"))!;
+        vi.useFakeTimers();
+        try {
+            fireEvent.click(within(card).getAllByRole("button")[0]);
+            await act(async () => { vi.advanceTimersByTime(5000); });
+        } finally {
+            vi.useRealTimers();
+        }
+        expect(await screen.findByText("没有添加到定时任务。")).toBeInTheDocument();
     });
 
     it("keeps a snoozed offer out of Up next until the snooze ends", async () => {

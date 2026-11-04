@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowUp, Check, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { ActivityInlineNotice, errorNotice, type ActivityNotice } from "@/components/activity-inline-notice";
 import {
     GenerateSOPFromDescription,
     type SopAuthorStatus,
@@ -62,19 +62,22 @@ export function CreateSopDialog({
         !running &&
         authorStatus?.lastEvent === "skipped";
 
+    const [startFailed, setStartFailed] = useState<ActivityNotice | null>(null);
     const submit = () => {
         const text = description.trim();
         if (!text || submittedText !== null) return;
+        setStartFailed(null);
         GenerateSOPFromDescription(text)
             .then(() => {
                 setSubmittedText(text);
                 setDescription("");
             })
-            .catch((err) => {
-                toast.error(t("sopsPage.createFailed", { error: String(err) }), {
-                    duration: 4000,
-                });
-            });
+            .catch(() => setStartFailed(errorNotice(t("sopsPage.createFailed"), submit)));
+    };
+    const retryDraft = () => {
+        const text = submittedText;
+        if (!text) return;
+        GenerateSOPFromDescription(text).catch(() => setStartFailed(errorNotice(t("sopsPage.createFailed"), retryDraft)));
     };
 
     return (
@@ -121,14 +124,14 @@ export function CreateSopDialog({
                         </div>
                     )}
                     {failed && (
-                        <div className="max-w-[85%] self-start rounded-2xl rounded-tl-md bg-error/10 px-3.5 py-2.5 text-[13px] leading-relaxed text-error">
-                            {t("sopsPage.createFailedStatus", {
-                                error: authorStatus?.lastError || "unknown",
-                            })}
-                        </div>
+                        <ActivityInlineNotice
+                            notice={errorNotice(t("sopsPage.createFailedStatus"), retryDraft)}
+                            className="self-start text-[13px]"
+                        />
                     )}
                 </div>
 
+                <ActivityInlineNotice notice={startFailed} className="px-6 text-[13px]" />
                 {/* Composer */}
                 {submittedText === null && (
                     <div className="flex items-end gap-2 px-6 pb-5 pt-3">

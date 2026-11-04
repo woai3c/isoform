@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { PlaybookView, SopEntry } from '@/lib/wails-shim-app';
 import { cn } from '@/lib/utils';
+import { ActivityInlineNotice, type ActivityNotice } from '@/components/activity-inline-notice';
 import type { PlaybookListItem } from './playbook-lists';
 import { formatClock, formatRunDay, playbookRunWhen } from './playbook-format';
 
@@ -12,18 +13,22 @@ export interface PlaybookCardsProps {
     locale: string;
     /** Opens the playbook's detail on this page. */
     onOpen: (id: string) => void;
-    /** Runs the playbook in chat. Omit it and the Run now button is hidden. */
+    /** Runs the playbook in place. Omit it and the Run now button is hidden. */
     onRun?: (entry: SopEntry) => void;
-    /** The playbook whose run is starting, so its button waits. */
-    runningId?: string | null;
+    /** Per playbook: running (the button becomes the line) or a failure. */
+    runState?: Record<string, PlaybookRunState>;
+    /** The schedules didn't load: no when-line rather than an untrue one (W21). */
+    whenUnknown?: boolean;
 }
+
+export type PlaybookRunState = 'running' | ActivityNotice;
 
 /**
  * "Isoform can do these for you": confirmed playbooks as cards, each with its
  * name, one line on what it does, when it runs and when it last ran. Renders
  * nothing when there are none.
  */
-export function PlaybookCards({ items, locale, onOpen, onRun, runningId = null }: PlaybookCardsProps) {
+export function PlaybookCards({ items, locale, onOpen, onRun, runState = {}, whenUnknown = false }: PlaybookCardsProps) {
     const { t } = useTranslation('knowledge');
     const headingId = useId();
     if (items.length === 0) return null;
@@ -44,7 +49,8 @@ export function PlaybookCards({ items, locale, onOpen, onRun, runningId = null }
                             plan={plan}
                             locale={locale}
                             now={now}
-                            running={runningId === entry.id}
+                            run={runState[entry.id]}
+                            whenUnknown={whenUnknown}
                             onOpen={onOpen}
                             onRun={onRun}
                         />
@@ -60,7 +66,8 @@ function PlaybookCard({
     plan,
     locale,
     now,
-    running,
+    run,
+    whenUnknown,
     onOpen,
     onRun,
 }: {
@@ -68,7 +75,8 @@ function PlaybookCard({
     plan: PlaybookView | null;
     locale: string;
     now: number;
-    running: boolean;
+    run?: PlaybookRunState;
+    whenUnknown: boolean;
     onOpen: (id: string) => void;
     onRun?: (entry: SopEntry) => void;
 }) {
@@ -103,19 +111,25 @@ function PlaybookCard({
                 <span className="text-[14.5px] font-semibold leading-[1.35]">{entry.title}</span>
                 {what && <span className="line-clamp-1 text-[13px] text-muted">{what}</span>}
                 <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                    <span>{when}</span>
+                    {!whenUnknown && <span>{when}</span>}
                     {lastRun && (
                         <>
-                            <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-current opacity-60" />
+                            {!whenUnknown && <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-current opacity-60" />}
                             <span>{lastRun}</span>
                         </>
                     )}
                 </span>
             </button>
-            {onRun && (
-                <Button variant="secondary" size="sm" disabled={running} aria-busy={running} onClick={() => onRun(entry)}>
-                    {t('playbooks.runNow')}
-                </Button>
+            {onRun && run === 'running' && (
+                <p role="status" className="m-0 max-w-[220px] text-right text-[12.5px] text-muted">{t('playbooks.runNowStarted')}</p>
+            )}
+            {onRun && run !== 'running' && (
+                <div className="flex flex-col items-end gap-1">
+                    <Button variant="secondary" size="sm" onClick={() => onRun(entry)}>
+                        {t('playbooks.runNow')}
+                    </Button>
+                    <ActivityInlineNotice notice={run ?? null} />
+                </div>
             )}
         </div>
     );

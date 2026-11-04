@@ -104,6 +104,8 @@ import { ProjectThreadStatus } from "@/components/project-thread-status";
 import { LazyActivityPage, LazySettingsPage, useLazyPagesIdleWarm, LazyTerminalPanel } from "@/lib/lazy-pages";
 import type { ActivitySectionId } from "@/components/activity-page";
 import { RetainedDialogContent } from "@/components/retained-dialog-content";
+import { ActivityOpenChatContext } from "@/components/activity-ask-inline";
+import { DevToolsContext } from "@/lib/dev-tools-context";
 import { KnowledgePage } from "@/components/knowledge-page";
 import { MemoryPage } from "@/components/memory-page";
 import { PeoplePage, type PeopleSelection } from "@/components/people-page";
@@ -3743,6 +3745,8 @@ export default function App() {
                     />
                 </RetainedPage>
                 <RetainedPage page="know-how" active={appMode === 'knowledge' && !selectedAutomationJob}>
+                    <DevToolsContext.Provider value={devToolsUnlocked}>
+                    <ActivityOpenChatContext.Provider value={() => { setKnowledgeOpen(false); openMainChatRef.current(); }}>
                     <KnowledgePage
                         active={knowledgeOpen}
                         onOpenActivitySession={(id) =>
@@ -3750,11 +3754,6 @@ export default function App() {
                         }
                         initialSelectedId={pendingInsightKnowledgeId}
                         escapeRef={knowledgeEscapeRef}
-                        // Same unsent fill as Goals: the request waits in the main chat box.
-                        onPrepareChat={(prompt) => {
-                            setKnowledgeOpen(false);
-                            handleCreateGoalInChat(prompt);
-                        }}
                         backSignal={sopBackSignal}
                         onReaderOpenChange={setSopReaderOpen}
                         openPlaybookId={sopOpenRequest.id || null}
@@ -3769,6 +3768,8 @@ export default function App() {
                             projects.markSessionRead(result.sessionId);
                         }}
                     />
+                    </ActivityOpenChatContext.Provider>
+                    </DevToolsContext.Provider>
                 </RetainedPage>
                 <RetainedPage page="people" active={appMode === 'people' && !selectedAutomationJob}>
                     <PeoplePage

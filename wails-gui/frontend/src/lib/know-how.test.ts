@@ -7,7 +7,7 @@ import {
     knowHowKind,
     matchWhen,
     originSentence,
-    preparedRequest,
+    playbookRequest,
     reuseLabel,
     savedThisWeek,
     savedTimestamp,
@@ -33,7 +33,8 @@ describe('know-how helpers', () => {
     });
 
     it('says reuse counts in words', () => {
-        expect(reuseLabel(t, 0)).toBe('Not used yet');
+        // W15: nothing until it has been used.
+        expect(reuseLabel(t, 0)).toBe('');
         expect(reuseLabel(t, 1)).toBe('Used once');
         expect(reuseLabel(t, 2)).toBe('Used twice');
         expect(reuseLabel(t, 4)).toBe('Used 4 times');
@@ -84,16 +85,17 @@ describe('know-how helpers', () => {
     it('writes the proposal dates and duration in words', () => {
         expect(candidateDatesLabel(t, [at(7), at(1), at(0)], 'en', NOW)).toBe('Oct 15, yesterday, and today');
         expect(candidateDatesLabel(t, [at(0)], 'en', NOW)).toBe('today');
-        expect(candidateDurationLabel(t, 40 * 60_000)).toBe('40 minutes');
-        expect(candidateDurationLabel(t, 60_000)).toBe('1 minute');
-        expect(candidateDurationLabel(t, 0)).toBe('1 minute');
+        expect(candidateDurationLabel(t, 40 * 60_000)).toBe('40 min');
+        expect(candidateDurationLabel(t, 60_000)).toBe('1 min');
+        expect(candidateDurationLabel(t, 0)).toBe('1 min');
+        expect(candidateDurationLabel(t, 66 * 60_000)).toBe('1h 6m');
+        expect(candidateDurationLabel(t, 120 * 60_000)).toBe('2h');
     });
 
-    it('prepares a request per kind', () => {
-        const base = { title: 'Pair the phone app', takeaway: 'Scan the code.' };
-        expect(preparedRequest(t, { ...base, kind: 'how_to' }, 'cta')).toBe('Turn “Pair the phone app” into a playbook I can run. What I saved: Scan the code.');
-        expect(preparedRequest(t, { ...base, kind: 'gotcha', takeaway: '' }, 'cta')).toBe('Remind me about “Pair the phone app” when it matters again.');
-        expect(preparedRequest(t, { ...base, kind: 'reference' }, 'cta')).toBe('About my know-how “Pair the phone app”: ');
-        expect(preparedRequest(t, { ...base, kind: 'fix' }, 'ask')).toBe('About my know-how “Pair the phone app”: ');
+    it('W8: Turn into a playbook hands the author the how-to in its own words', () => {
+        expect(
+            playbookRequest({ title: 'Pair the phone app', takeaway: 'Scan the code.', trigger: 'A new phone', points: ['Open Settings', 'Scan'] }),
+        ).toBe('Pair the phone app\nScan the code.\nA new phone\n1. Open Settings\n2. Scan');
+        expect(playbookRequest({ title: 'Pair', takeaway: '', trigger: '', points: null } as never)).toBe('Pair');
     });
 });

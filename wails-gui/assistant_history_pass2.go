@@ -394,6 +394,9 @@ func (a *App) storeAssistantHistoryKnowHow(project HistoryProject, items []assis
 		if _, err := os.Stat(path); err == nil {
 			continue
 		}
+		if _, ok := relearnKnowHow(dir, item.Title, id, KnowHowMoment{At: item.At.UnixMilli(), Assistant: item.Assistant}); ok {
+			continue
+		}
 		content := buildOKFKnowledgeMarkdown(id, item.Title, item.Takeaway, now, item.Source, []string{project.Name}, nil, []string{item.Takeaway}, item.Kind)
 		if doc, ok := parseOKFDocument(content); ok {
 			doc.Frontmatter["scope"] = "mine"

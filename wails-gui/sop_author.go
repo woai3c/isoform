@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,6 +143,9 @@ func (a *App) authorSOP(ctx context.Context, spec sopAuthorSpec) (sop.Entry, err
 		return sop.Entry{}, fmt.Errorf("persist sop: %w", err)
 	}
 
+	if !isUpdate {
+		a.offerDraftedPlaybook(spec, saved)
+	}
 	a.emitBrowserEvent("sop:updated", map[string]any{"id": saved.ID, "status": string(saved.Status)})
 	a.finishSOPAuthorStatus("saved", fmt.Sprintf("Saved SOP %s (v%d)", saved.ID, saved.Version), "")
 
@@ -668,4 +672,48 @@ func sopAuthorPreview(value any) string {
 		return s[:2000] + "\n...[truncated]"
 	}
 	return s
+}
+
+// offerDraftedPlaybook makes a playbook drafted on request (Create, Generate,
+// Turn into a playbook) an Up next offer in Tasks, the only place a draft
+// shows (how-you-do-things v1.0.0 W1). Triage drafts keep their own path.
+func (a *App) offerDraftedPlaybook(spec sopAuthorSpec, saved sop.Entry) {
+	if spec.Source != sop.SourceManual || saved.Status == sop.StatusConfirmed || a.playbookPlans == nil {
+		return
+	}
+	host := draftedPlaybookHost(saved.Sites)
+	if _, err := a.playbookPlans.Update(saved.ID, func(p *sop.Plan) {
+		if p.Proposal == nil {
+			p.Proposal = &sop.Proposal{
+				Host:       host,
+				SiteName:   host,
+				Time:       draftedPlaybookTime,
+				ProposedAt: time.Now().UnixMilli(),
+			}
+		}
+	}); err != nil {
+		log.Printf("[sop-author] offer failed: %v", err)
+	}
+}
+
+// draftedPlaybookTime is when Do it schedules a drafted playbook; the user
+// changes it in the playbook's run panel.
+const draftedPlaybookTime = "9:00"
+
+// draftedPlaybookHost is the one site a drafted playbook opens, or "" when it
+// opens none or several, so Do it doesn't hold it to a single site.
+func draftedPlaybookHost(sites []string) string {
+	host := ""
+	for _, origin := range playbookOrigins(sites) {
+		u, err := url.Parse(origin)
+		if err != nil {
+			return ""
+		}
+		h := strings.ToLower(strings.TrimPrefix(u.Hostname(), "www."))
+		if host != "" && h != host {
+			return ""
+		}
+		host = h
+	}
+	return host
 }

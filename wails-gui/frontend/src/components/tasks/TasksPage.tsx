@@ -586,6 +586,15 @@ function TaskComposer({ onCreated }: { onStartInPlace?: (result: HandoffAcceptRe
     );
 }
 
+type OfferFailure = "notNow" | "doIt" | "sitesChanged";
+/** A failed Not now or Do it outlives Tasks: the next time Tasks opens, that
+ *  card still says so, with Try again (W22). Cleared by a later success. */
+const offerFailures = new Map<string, OfferFailure>();
+/** Test seam: the failures outlive Tasks, so tests start from none. */
+export function resetPlaybookOfferFailures() {
+    offerFailures.clear();
+}
+
 /** A playbook Isoform drafted from what it saw, offered in Up next: Do it
  *  confirms and schedules it, Not now puts the offer away. */
 function usePlaybookOfferCards(onOpenPlaybook?: (id: string) => void): ReactNode[] {
@@ -599,13 +608,18 @@ function usePlaybookOfferCards(onOpenPlaybook?: (id: string) => void): ReactNode
     // (T13, T14); a failed save puts the card back with a line (T09).
     const [away, setAway] = useState<ReadonlySet<string>>(new Set());
     const [added, setAdded] = useState<ReadonlySet<string>>(new Set());
-    const [failedLine, setFailedLine] = useState<{ id: string; line: string } | null>(null);
+    const [failures, setFailures] = useState<ReadonlyMap<string, OfferFailure>>(() => new Map(offerFailures));
+    const setFailure = (id: string, kind: OfferFailure | null) => {
+        if (kind) offerFailures.set(id, kind);
+        else offerFailures.delete(id);
+        setFailures(new Map(offerFailures));
+    };
     const snoozeTimers = useRef(new Map<string, number>());
     const addTimers = useRef(new Map<string, number>());
     useEffect(() => () => {
         for (const [id, timer] of addTimers.current) {
             window.clearTimeout(timer);
-            void AcceptPlaybookSuggestion(id).catch(() => {});
+            void AcceptPlaybookSuggestion(id).then(() => offerFailures.delete(id), () => offerFailures.set(id, "doIt"));
         }
         addTimers.current.clear();
     }, []);
@@ -613,7 +627,7 @@ function usePlaybookOfferCards(onOpenPlaybook?: (id: string) => void): ReactNode
         // Leaving Tasks inside the Undo window still snoozes.
         for (const [id, timer] of snoozeTimers.current) {
             window.clearTimeout(timer);
-            void SnoozePlaybookSuggestion(id).catch(() => {});
+            void SnoozePlaybookSuggestion(id).then(() => offerFailures.delete(id), () => offerFailures.set(id, "notNow"));
         }
         snoozeTimers.current.clear();
     }, []);
@@ -628,17 +642,17 @@ function usePlaybookOfferCards(onOpenPlaybook?: (id: string) => void): ReactNode
         addTimers.current.delete(entry.id);
         setAnswering(entry.id);
         return measureTasks("T13", "do", "done", () => AcceptPlaybookSuggestion(entry.id))
-            .then(() => { library.reload(); })
+            .then(() => { setFailure(entry.id, null); library.reload(); })
             .catch((err) => {
                 setAdded(without(entry.id));
-                setFailedLine({ id: entry.id, line: isSitesChanged(err) ? t("sopsPage.delivery.sitesChanged") : t("sopsPage.suggestion.acceptFailed", { error: String(err) }) });
+                setFailure(entry.id, isSitesChanged(err) ? "sitesChanged" : "doIt");
                 throw err;
             })
             .finally(() => setAnswering(null));
     };
     const accept = (entry: SopEntry) => {
         if (answering || added.has(entry.id)) return;
-        setFailedLine(null);
+        setFailure(entry.id, null);
         setAdded((old) => new Set(old).add(entry.id));
         addTimers.current.set(entry.id, window.setTimeout(() => void commitAccept(entry).catch(() => {}), NOT_NOW_UNDO_MS));
     };
@@ -650,15 +664,15 @@ function usePlaybookOfferCards(onOpenPlaybook?: (id: string) => void): ReactNode
     };
     const edit = (entry: SopEntry) => void commitAccept(entry).then(() => onOpenPlaybook?.(entry.id)).catch(() => {});
     const notNow = (entry: SopEntry) => {
-        setFailedLine(null);
+        setFailure(entry.id, null);
         setHidden((old) => new Set(old).add(entry.id));
         setAway((old) => new Set(old).add(entry.id));
         const timer = window.setTimeout(() => {
             snoozeTimers.current.delete(entry.id);
             setAway(without(entry.id));
             measureTasks("T14", "do", "done", () => SnoozePlaybookSuggestion(entry.id))
-                .then(() => library.reload())
-                .catch(() => { setHidden(without(entry.id)); setFailedLine({ id: entry.id, line: t("tasks.notNowNotSaved") }); });
+                .then(() => { setFailure(entry.id, null); library.reload(); })
+                .catch(() => { setHidden(without(entry.id)); setFailure(entry.id, "notNow"); });
         }, NOT_NOW_UNDO_MS);
         snoozeTimers.current.set(entry.id, timer);
     };
@@ -686,7 +700,15 @@ function usePlaybookOfferCards(onOpenPlaybook?: (id: string) => void): ReactNode
                 {proposal.siteName?.trim() && proposal.proposedAt > 0 && (
                     <p className="mt-2 text-xs text-muted">{t("tasks.evidenceCard.source", { source: proposal.siteName, when: new Date(proposal.proposedAt).toLocaleString(i18n.language, { weekday: "short", hour: "numeric", minute: "2-digit", ...computerHourOptions() }) })}</p>
                 )}
-                {failedLine?.id === entry.id && <FailureLine tone="copper" className="mt-2" text={failedLine.line} />}
+                {failures.has(entry.id) && (
+                    <FailureLine
+                        tone="copper"
+                        className="mt-2"
+                        testId="playbook-offer-failed"
+                        text={failures.get(entry.id) === "notNow" ? t("tasks.notNowNotSaved") : failures.get(entry.id) === "sitesChanged" ? t("sopsPage.delivery.sitesChanged") : t("tasks.addFailed")}
+                        onRetry={() => (failures.get(entry.id) === "notNow" ? notNow(entry) : accept(entry))}
+                    />
+                )}
                 {added.has(entry.id) ? <p data-testid="playbook-added" role="status" className="mt-auto flex items-center gap-1 pt-4 text-[13px] text-muted">{t("tasks.addedToScheduled")} ·<Button variant="quiet" size="sm" disabled={answering !== null} onClick={() => undoAccept(entry.id)}>{t("tasks.undo")}</Button>·<Button variant="quiet" size="sm" disabled={answering !== null} onClick={() => edit(entry)}>{t("tasks.edit")}</Button></p>
                 : <div className="mt-auto flex gap-2 pt-4">
                     <Button size="sm" disabled={answering !== null} onClick={() => accept(entry)}>{t("tasks.doIt")}</Button>

@@ -223,7 +223,10 @@
             "runHistory": "运行记录没有加载出来。",
             "runNow": "没有运行。"
         },
-        "allDoneLink": "全部已完成 ›"
+        "allDoneLink": "全部已完成 ›",
+        "doItNotSaved": "没有添加到定时任务。",
+        "tryAgain": "重试",
+        "addFailed": "没有添加到定时任务。"
     },
     "sidebar": {
         "pinned": "置顶",
@@ -757,11 +760,11 @@
         "createIntro": "描述你想重复使用的流程：什么情况下开始、主要有哪些步骤、完成后是什么样子。Isoform 会对照你最近的活动，基于你实际做过的事起草操作手册。",
         "createPlaceholder": "比如：每周一我会拉取上周的指标数据，在表格里清洗整理，写一份摘要，然后发到团队群里……",
         "createSend": "创建",
-        "createSearching": "正在把你的描述与最近的活动记录匹配并起草操作手册。可以关闭这个窗口，完成后它会出现在列表里。",
-        "createDone": "新的操作手册已准备好。",
-        "createSkipped": "已有一个相同流程的操作手册，因此没有重复创建。你可以在列表中找到并编辑它。",
-        "createFailedStatus": "起草失败:{{error}}",
-        "createFailed": "无法开始创建操作手册：{{error}}",
+        "createSearching": "正在根据你的描述和最近的工作起草操作手册。可以关掉这个窗口，起草好后会出现在「任务」的「接下来」里。",
+        "createDone": "起草好了，在「任务」的「接下来」里。",
+        "createSkipped": "这和你已有的一个操作手册相同，所以没有新建。",
+        "createFailedStatus": "没有起草成功。",
+        "createFailed": "没能开始起草操作手册。",
         "authoring": "正在创建操作手册……",
         "trajectoryTitle": "创建进度",
         "trajectoryEmpty": "暂无事件。",
@@ -809,10 +812,11 @@
             "sitesNote": "保存定时或运行即表示允许打开这些页面。它只读取，不点击，也不输入。",
             "save": "保存",
             "saved": "已保存。",
-            "saveFailed": "无法保存：{{error}}",
+            "saveFailed": "没有保存成功。",
             "needChannel": "请至少选择一个接收结果的地方。",
             "sitesChanged": "这个操作手册要打开的页面有变化。请先在下方查看，然后再试一次。",
-            "textNamesOff": "在「手机」页面允许短信中包含名称之前，短信只会说一个操作手册运行完了。"
+            "textNamesOff": "在「手机」页面允许短信中包含名称之前，短信只会说一个操作手册运行完了。",
+            "scheduleFailed": "没能加载它的运行时间。"
         }
     },
     "handoffToast": {

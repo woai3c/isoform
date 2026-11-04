@@ -223,7 +223,10 @@
             "runHistory": "Couldn't load the run history.",
             "runNow": "Didn't run."
         },
-        "allDoneLink": "All done ›"
+        "allDoneLink": "All done ›",
+        "doItNotSaved": "Didn’t add it to Scheduled.",
+        "tryAgain": "Try again",
+        "addFailed": "Didn’t add it to Scheduled."
     },
     "sidebar": {
         "today": "Today",
@@ -757,11 +760,11 @@
         "createIntro": "Describe the process you want to make reusable: what starts it, the main steps, and what a finished result looks like. Isoform will match it against your recent activity and draft a playbook from what you actually did.",
         "createPlaceholder": "For example: every Monday I pull last week's metrics, clean them up in a spreadsheet, write a summary, and post it to the team channel...",
         "createSend": "Create",
-        "createSearching": "Matching your description against recent activity and drafting the playbook. You can close this window; it will appear in the list when ready.",
-        "createDone": "The new playbook is ready.",
-        "createSkipped": "This process already exists as a playbook, so nothing new was created. You can find and edit it in the list.",
-        "createFailedStatus": "Drafting failed: {{error}}",
-        "createFailed": "Couldn't start playbook creation: {{error}}",
+        "createSearching": "Drafting a playbook from your description and your recent work. You can close this. It shows in Tasks, under Up next.",
+        "createDone": "Drafted. It’s in Tasks, under Up next.",
+        "createSkipped": "This matches a playbook you already have, so nothing new was made.",
+        "createFailedStatus": "Didn’t draft the playbook.",
+        "createFailed": "Didn’t start the playbook.",
         "authoring": "Creating playbook...",
         "trajectoryTitle": "Creation progress",
         "trajectoryEmpty": "No events yet.",
@@ -809,10 +812,11 @@
             "sitesNote": "Saving a schedule or running it allows these pages. It only reads them: no clicks, no typing.",
             "save": "Save",
             "saved": "Saved.",
-            "saveFailed": "Could not save: {{error}}",
+            "saveFailed": "Didn’t save.",
             "needChannel": "Choose at least one place for the result.",
             "sitesChanged": "The pages this playbook opens changed. Review them below, then try again.",
-            "textNamesOff": "Texts say only that a playbook finished until you allow names in texts on the Phone page."
+            "textNamesOff": "Texts say only that a playbook finished until you allow names in texts on the Phone page.",
+            "scheduleFailed": "Couldn’t load when this runs."
         }
     },
     "handoffToast": {

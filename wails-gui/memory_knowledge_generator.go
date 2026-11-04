@@ -305,6 +305,10 @@ func (mc *MemoryGenerator) saveKnowledgeFile(source memorySource, sourceID strin
 	filename := entryID + ".md"
 
 	filePath := filepath.Join(dir, filename)
+	if existing, ok := relearnKnowHow(dir, knowledge.Title, entryID, KnowHowMoment{At: time.Now().UnixMilli()}); ok {
+		log.Printf("[memory] same lesson as %s; added the moment", existing)
+		return existing
+	}
 	unlock := memoryFileLocks.Acquire("knowledge:" + entryID)
 	defer unlock()
 	if err := snapshotKnowledgeFile(dir, entryID); err != nil {

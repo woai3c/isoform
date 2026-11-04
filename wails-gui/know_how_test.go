@@ -148,6 +148,8 @@ func TestKnowHowGeneratorsAndUpdateKind(t *testing.T) {
 	}
 	check(id, "gotcha")
 	for _, source := range []memorySource{memorySourceConversation, memorySourceSlack} {
+		// A new lesson each time; the same lesson would fold into the first (W40).
+		response.Title, response.UpdateID = "Socket fix from "+string(source), ""
 		response.Kind = "decision"
 		id := generator.saveKnowledgeFile(source, "source-id", response)
 		check(id, "decision")

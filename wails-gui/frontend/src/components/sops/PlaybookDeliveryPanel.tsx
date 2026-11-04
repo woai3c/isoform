@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { ActivityInlineNotice, errorNotice, type ActivityNotice } from "@/components/activity-inline-notice";
 import {
     SetPlaybookSchedule,
     type PlaybookChannels,
@@ -46,6 +46,9 @@ interface PlaybookDeliveryPanelProps {
     channels: PlaybookChannels | null;
     defaultChannels: string[];
     onSaved: (view: PlaybookView) => void;
+    /** The plans didn't load: say so with Try again, and keep Save off (W21). */
+    schedulesFailed?: boolean;
+    onRetrySchedules?: () => void;
 }
 
 function formatWhen(ms: number, language: string): string {
@@ -62,7 +65,15 @@ function formatWhen(ms: number, language: string): string {
  * the pages the playbook names: they are listed here, and a run may open only
  * those (playbook_run.go).
  */
-export function PlaybookDeliveryPanel({ entry, plan, channels, defaultChannels, onSaved }: PlaybookDeliveryPanelProps) {
+export function PlaybookDeliveryPanel({
+    entry,
+    plan,
+    channels,
+    defaultChannels,
+    onSaved,
+    schedulesFailed = false,
+    onRetrySchedules,
+}: PlaybookDeliveryPanelProps) {
     const { t, i18n } = useTranslation("app");
     // The saved values, taken from the plan when another playbook opens and
     // after a save. A background reload of the same playbook leaves both
@@ -121,11 +132,14 @@ export function PlaybookDeliveryPanel({ entry, plan, channels, defaultChannels, 
         });
     };
 
+    // In place (W10): a muted line when no place is chosen, copper with Try again on failure.
+    const [notice, setNotice] = useState<ActivityNotice | null>(null);
     const save = () => {
         if (chosen.size === 0) {
-            toast.error(t("sopsPage.delivery.needChannel"), { duration: 4000 });
+            setNotice({ tone: "done", text: t("sopsPage.delivery.needChannel") });
             return;
         }
+        setNotice(null);
         setSaving(true);
         SetPlaybookSchedule({
             id: entry.id,
@@ -136,17 +150,14 @@ export function PlaybookDeliveryPanel({ entry, plan, channels, defaultChannels, 
             sites,
         })
             .then((view) => {
-                toast.success(t("sopsPage.delivery.saved"), { duration: 3000 });
                 reset(fromPlan(view));
                 onSaved(view);
             })
             .catch((err) => {
-                toast.error(
-                    isSitesChanged(err)
-                        ? t("sopsPage.delivery.sitesChanged")
-                        : t("sopsPage.delivery.saveFailed", { error: String(err) }),
-                    { duration: 5000 },
-                );
+                setNotice(errorNotice(
+                    isSitesChanged(err) ? t("sopsPage.delivery.sitesChanged") : t("sopsPage.delivery.saveFailed"),
+                    save,
+                ));
             })
             .finally(() => setSaving(false));
     };
@@ -157,6 +168,9 @@ export function PlaybookDeliveryPanel({ entry, plan, channels, defaultChannels, 
             className="mb-8 rounded-2xl border border-border-input bg-panel px-5 py-4"
         >
             <h2 className="mb-3 text-[15px] font-medium text-ink">{t("sopsPage.delivery.title")}</h2>
+            {schedulesFailed && (
+                <ActivityInlineNotice notice={errorNotice(t("sopsPage.delivery.scheduleFailed"), onRetrySchedules)} className="mb-3" />
+            )}
 
             <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
                 <label className="flex items-center gap-2.5 text-[13px] text-ink">
@@ -251,7 +265,7 @@ export function PlaybookDeliveryPanel({ entry, plan, channels, defaultChannels, 
             <div className="mt-4 flex justify-end">
                 <button
                     type="button"
-                    disabled={saving || (!dirty && !held)}
+                    disabled={saving || schedulesFailed || (!dirty && !held)}
                     onClick={save}
                     className="inline-flex h-8 items-center gap-1.5 rounded-lg patina-verdigris bg-solid-btn-bg px-3.5 text-[13px] font-semibold text-solid-btn-fg shadow-[var(--shadow-solid-btn)] transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer disabled:cursor-default"
                 >
@@ -259,6 +273,7 @@ export function PlaybookDeliveryPanel({ entry, plan, channels, defaultChannels, 
                     {t("sopsPage.delivery.save")}
                 </button>
             </div>
+            <ActivityInlineNotice notice={notice} className="mt-2" />
         </section>
     );
 }

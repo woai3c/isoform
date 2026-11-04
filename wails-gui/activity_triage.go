@@ -1601,10 +1601,17 @@ func (c *ActivityTriager) saveKnowledge(session ActivitySessionRow, group sessio
 	// Generate deterministic filename from session ID to avoid duplicates
 	entryID := activityKnowledgeEntryID(group.entryKey(session))
 	filename := entryID + ".md"
+	appNames := group.allAppNames()
+	moment := KnowHowMoment{At: session.StartTime, SessionID: session.ID}
+	if len(appNames) > 0 {
+		moment.App = appNames[0]
+	}
+	if existing, ok := relearnKnowHow(knowledgeDir, knowledge.Title, entryID, moment); ok {
+		log.Printf("[triager] same lesson as an existing entry; added the moment: %s", activityPrivateLogField("entry", existing))
+		return existing, nil
+	}
 	unlock := memoryFileLocks.Acquire("knowledge:" + entryID)
 	defer unlock()
-
-	appNames := group.allAppNames()
 
 	ts := time.UnixMilli(session.StartTime)
 	filePath := filepath.Join(knowledgeDir, filename)

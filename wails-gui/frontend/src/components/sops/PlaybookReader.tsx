@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Download, FileCode2, ListChecks, Loader2, MoreHorizontal, Trash2, Upload } from "lucide-react";
-import { toast } from "sonner";
+import { ActivityInlineNotice, errorNotice, type ActivityNotice } from "@/components/activity-inline-notice";
 import {
     AcceptPlaybookSuggestion,
     DeclinePlaybookSuggestion,
@@ -47,6 +47,10 @@ export interface PlaybookReaderProps {
     onChanged: () => void;
     /** Starts a run in chat. Omit it and the Run in chat action is hidden. */
     onStartSop?: (result: SopRunResult) => Promise<void>;
+    /** Opens another playbook here, as Import does with the one it brought in. */
+    onOpenPlaybook?: (id: string) => void;
+    /** The schedules didn't load: the run panel says so instead of showing the switch off (W21). */
+    schedulesFailed?: boolean;
 }
 
 const STATUS_DOT: Record<string, string> = {
@@ -82,9 +86,14 @@ export function PlaybookReader({
     onClose,
     onChanged,
     onStartSop,
+    onOpenPlaybook,
+    schedulesFailed = false,
 }: PlaybookReaderProps) {
     const { t } = useTranslation("knowledge");
-    const { exportPlaybook, importPlaybook } = usePlaybookTransfer();
+    // Every outcome here is in place, never a toast (W10).
+    const [notice, setNotice] = useState<ActivityNotice | null>(null);
+    const [runStarted, setRunStarted] = useState(false);
+    const { exportPlaybook, importPlaybook } = usePlaybookTransfer(setNotice, onOpenPlaybook);
     const [editing, setEditing] = useState(false);
     const [editTitle, setEditTitle] = useState("");
     const [editDescription, setEditDescription] = useState("");
@@ -98,6 +107,10 @@ export function PlaybookReader({
     // Load the helper scripts' contents when the playbook bundles some: they are
     // shown in full so the user can see exactly what a run would execute.
     const scriptsKey = entry.scripts?.join("\n") ?? "";
+    useEffect(() => {
+        setNotice(null);
+        setRunStarted(false);
+    }, [entry.id]);
     useEffect(() => {
         setScriptContents({});
         if (!scriptsKey) return;
@@ -127,18 +140,18 @@ export function PlaybookReader({
 
     const saveEdit = () => {
         SaveSOP(entry.id, editTitle, editDescription, editTrigger, editBody)
-            .then(() => setEditing(false))
-            .catch((err) => {
-                toast.error(t("playbooks.saveFailed", { error: String(err) }), { duration: 4000 });
-            });
+            .then(() => {
+                setNotice(null);
+                setEditing(false);
+            })
+            .catch(() => setNotice(errorNotice(t("playbooks.saveFailed"), saveEdit)));
     };
 
     const deleteEntry = () => {
         setConfirmDelete(false);
-        onClose();
-        DeleteSOP(entry.id).catch((err) => {
-            toast.error(t("playbooks.deleteFailed", { error: String(err) }), { duration: 4000 });
-        });
+        DeleteSOP(entry.id)
+            .then(() => onClose())
+            .catch(() => setNotice(errorNotice(t("playbooks.deleteFailed"), deleteEntry)));
     };
 
     const runInChat = () => {
@@ -149,9 +162,7 @@ export function PlaybookReader({
                 onClose();
                 await onStartSop(result);
             })
-            .catch((err) => {
-                toast.error(t("playbooks.runFailed", { error: String(err) }), { duration: 4000 });
-            })
+            .catch(() => setNotice(errorNotice(t("playbooks.runFailed"), runInChat)))
             .finally(() => setRunning(false));
     };
 
@@ -160,18 +171,19 @@ export function PlaybookReader({
         setRunning(true);
         RunPlaybookNow(entry.id, entry.sites ?? [])
             .then(() => {
-                toast.success(t("playbooks.runNowStarted"), { duration: 4000 });
+                setNotice(null);
+                setRunStarted(true);
                 onChanged();
             })
             .catch((err) => {
-                toast.error(
+                setNotice(errorNotice(
                     isSitesChanged(err)
                         ? t("playbooks.sitesChanged")
                         : isStepsUnapproved(err)
                           ? t("playbooks.heldUnapproved")
-                          : t("playbooks.runNowFailed", { error: String(err) }),
-                    { duration: 5000 },
-                );
+                          : t("playbooks.runNowFailed"),
+                    runNow,
+                ));
             })
             .finally(() => setRunning(false));
     };
@@ -181,22 +193,20 @@ export function PlaybookReader({
         setAnswering(true);
         AcceptPlaybookSuggestion(entry.id)
             .then((result) => {
-                toast.success(
-                    t("playbooks.suggestion.accepted", {
+                setNotice({
+                    tone: "done",
+                    text: t("playbooks.suggestion.accepted", {
                         site: view.proposal?.siteName ?? entry.title,
                         runTime: result.schedule?.time ?? view.suggestedTime,
                     }),
-                    { duration: 5000 },
-                );
+                });
                 onChanged();
             })
             .catch((err) => {
-                toast.error(
-                    isSitesChanged(err)
-                        ? t("playbooks.sitesChanged")
-                        : t("playbooks.suggestion.acceptFailed", { error: String(err) }),
-                    { duration: 5000 },
-                );
+                setNotice(errorNotice(
+                    isSitesChanged(err) ? t("playbooks.sitesChanged") : t("playbooks.saveFailed"),
+                    () => acceptSuggestion(view),
+                ));
             })
             .finally(() => setAnswering(false));
     };
@@ -206,14 +216,10 @@ export function PlaybookReader({
         setAnswering(true);
         DeclinePlaybookSuggestion(entry.id)
             .then(() => {
-                toast.success(t("playbooks.suggestion.declined", { site: view.proposal?.siteName ?? entry.title }), {
-                    duration: 4000,
-                });
+                setNotice({ tone: "done", text: t("playbooks.suggestion.declined", { site: view.proposal?.siteName ?? entry.title }) });
                 onChanged();
             })
-            .catch((err) => {
-                toast.error(t("playbooks.suggestion.declineFailed", { error: String(err) }), { duration: 4000 });
-            })
+            .catch(() => setNotice(errorNotice(t("playbooks.saveFailed"), () => declineSuggestion(view))))
             .finally(() => setAnswering(false));
     };
 
@@ -314,6 +320,8 @@ export function PlaybookReader({
                                 <PlaybookDeliveryPanel
                                     entry={entry}
                                     plan={plan}
+                                    schedulesFailed={schedulesFailed}
+                                    onRetrySchedules={onChanged}
                                     channels={channels}
                                     defaultChannels={defaultChannels}
                                     onSaved={() => onChanged()}
@@ -370,10 +378,14 @@ export function PlaybookReader({
                                 {t("playbooks.runInChat")}
                             </Button>
                         )}
-                        <Button disabled={running} aria-busy={running} onClick={runNow}>
-                            {running && <Loader2 className="animate-spin" />}
-                            {t("playbooks.runNow")}
-                        </Button>
+                        {runStarted ? (
+                            <p role="status" className="m-0 text-[12.5px] text-muted">{t("playbooks.runNowStarted")}</p>
+                        ) : (
+                            <Button disabled={running} aria-busy={running} onClick={runNow}>
+                                {running && <Loader2 className="animate-spin" />}
+                                {t("playbooks.runNow")}
+                            </Button>
+                        )}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="icon" aria-label={t("playbooks.more")}>
@@ -399,6 +411,7 @@ export function PlaybookReader({
                     </>
                 )}
             </div>
+            <ActivityInlineNotice notice={notice} className="mt-2" />
 
             <ConfirmDialog
                 open={confirmDelete}

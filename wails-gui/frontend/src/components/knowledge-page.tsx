@@ -10,7 +10,6 @@ import {
     Copy,
     History,
     Languages,
-    LayoutGrid,
     MoreHorizontal,
     PenLine,
     RotateCcw,
@@ -35,18 +34,21 @@ import { MarkdownContent } from '@/components/markdown-content';
 import { onAccountIdentityWithdrawal } from '@/lib/privacy-reset';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { KnowledgeTranslateDialog, type GlobalTranslateTarget } from '@/components/knowledge-translate-dialog';
-import { notifyToast } from '@/lib/notify';
+import { ActivityInlineNotice, errorNotice, type ActivityNotice } from '@/components/activity-inline-notice';
+import { useDevTools } from '@/lib/dev-tools-context';
+import { ActivityAskInline } from '@/components/activity-ask-inline';
+
+const NO_FIELDS: KnowHowFields = { title: '', trigger: '', steps: [] };
 import { GetKnowledgeEntries, GetKnowHowMatch, ListKnowHow, usePagePrivacyWithdrawal, usePageQueryRefresh } from '@/lib/page-queries';
 import { markPageContent } from '@/lib/page-switch-timing';
 import { pageQueryCache } from '@/lib/query-cache';
 import { cn } from '@/lib/utils';
 import { PlaybookReader } from '@/components/sops/PlaybookReader';
-import { PlaybookCards } from '@/components/playbooks/PlaybookCards';
+import { PlaybookCards, type PlaybookRunState } from '@/components/playbooks/PlaybookCards';
 import { PlaybookPageActions } from '@/components/playbooks/PlaybookPageActions';
 import { listConfirmedPlaybooks } from '@/components/playbooks/playbook-lists';
 import { usePlaybookLibrary } from '@/components/playbooks/usePlaybookLibrary';
-import { RunSOP, type SopEntry, type SopRunResult } from '@/lib/wails-shim-app';
-import { toast } from 'sonner';
+import { GenerateSOPFromDescription, RunPlaybookNow, type SopEntry, type SopRunResult } from '@/lib/wails-shim-app';
 import {
     KNOW_HOW_KINDS,
     candidateDatesLabel,
@@ -58,12 +60,13 @@ import {
     matchWhen,
     matchesKeyword,
     originSentence,
-    preparedRequest,
     reuseLabel,
+    applyKnowHowFields,
+    knowHowFields,
+    playbookRequest,
+    type KnowHowFields,
     savedThisWeek,
     savedTimestamp,
-    scopeLabel,
-    topSources,
     type KnowHowFilter,
     type TimeGroupKey,
 } from '@/lib/know-how';
@@ -91,7 +94,6 @@ interface KnowledgePageProps {
     /** When set, the page selects this entry on mount. Cleared by parent after consumption. */
     initialSelectedId?: string | null;
     /** Puts a prepared request in the main chat box. Nothing is sent. */
-    onPrepareChat?: (prompt: string) => void;
     /** The dialog's Escape asks the page first: true when the page stepped
      *  back (history, edit, the open entry), false to let the dialog close. */
     escapeRef?: MutableRefObject<(() => boolean) | null>;
@@ -113,7 +115,6 @@ interface KnowledgePageProps {
     onReaderOpenChange?: (open: boolean) => void;
 }
 
-const MAX_TOP_SOURCES = 8;
 const MAX_CARD_APPS = 3;
 /** The proposal's answer: its line keeps Undo until the person leaves the page. */
 type CandidateResult = {
@@ -155,7 +156,6 @@ type LoadState = 'loading' | 'ready' | 'failed';
 export function KnowledgePage({
     onOpenActivitySession,
     initialSelectedId,
-    onPrepareChat,
     escapeRef,
     active = true,
     onRunPlaybook,
@@ -176,7 +176,7 @@ export function KnowledgePage({
     const [loadState, setLoadState] = useState<LoadState>(() => (pageQueryCache.peek('ListKnowHow') === undefined ? 'loading' : 'ready'));
     const [match, setMatch] = useState<main.KnowHowMatch | null>(() => pageQueryCache.peek<main.KnowHowMatch>('GetKnowHowMatch') ?? null);
     const [dismissing, setDismissing] = useState(false);
-    const [dismissFailed, setDismissFailed] = useState(false);
+    const [dismissFailed, setDismissFailed] = useState<ActivityNotice | null>(null);
     const [kind, setKind] = useState<KnowHowFilter>('all');
     const [keyword, setKeyword] = useState('');
     const [timeGrouped, setTimeGrouped] = useState(false);
@@ -187,7 +187,7 @@ export function KnowledgePage({
     const [selectedPlaybookId, setSelectedPlaybookId] = useState<string | null>(null);
     const [handledPlaybookSignal, setHandledPlaybookSignal] = useState(0);
     const [handledBackSignal, setHandledBackSignal] = useState(backSignal);
-    const [runningPlaybookId, setRunningPlaybookId] = useState<string | null>(null);
+    const [runState, setRunState] = useState<Record<string, PlaybookRunState>>({});
     const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
     const [historyMode, setHistoryMode] = useState(false);
     const [historyVersions, setHistoryVersions] = useState<KnowledgeVersionListItem[]>([]);
@@ -196,10 +196,13 @@ export function KnowledgePage({
     const [historyLoadingList, setHistoryLoadingList] = useState(false);
     const [historyLoadingContent, setHistoryLoadingContent] = useState(false);
     const [historyError, setHistoryError] = useState<string | null>(null);
+    const [historyRetry, setHistoryRetry] = useState(0);
     const [actionError, setActionError] = useState<string | null>(null);
     const [translating, setTranslating] = useState(false);
     const [editing, setEditing] = useState(false);
-    const [editContent, setEditContent] = useState('');
+    const [editFields, setEditFields] = useState<KnowHowFields>(NO_FIELDS);
+    const [detailNotice, setDetailNotice] = useState<ActivityNotice | null>(null);
+    const [translateAllNotice, setTranslateAllNotice] = useState<ActivityNotice | null>(null);
     const [saving, setSaving] = useState(false);
     const [globalTranslateOpen, setGlobalTranslateOpen] = useState(false);
     const [globalTranslateTarget, setGlobalTranslateTarget] = useState<GlobalTranslateTarget>('follow-ui');
@@ -211,7 +214,10 @@ export function KnowledgePage({
     const [candidate, setCandidate] = useState<main.KnowHowCandidate | null>(null);
     const [candidateResult, setCandidateResult] = useState<CandidateResult | null>(null);
     const [candidateBusy, setCandidateBusy] = useState(false);
-    const [candidateFailed, setCandidateFailed] = useState(false);
+    const [candidateFailed, setCandidateFailed] = useState<ActivityNotice | null>(null);
+    // Try again repeats the action that failed (W6), through the latest handlers.
+    const candidateActions = useRef<{ decline: () => void; confirm: () => void; undo: () => void; save: () => void; load: (opts?: { afterUndo?: boolean }) => void }>({ decline() {}, confirm() {}, undo() {}, save() {}, load() {} });
+    const candidateView = useRef({ reviewing: false, editing: false });
     const [reviewingCandidate, setReviewingCandidate] = useState(false);
     const [candidateEditing, setCandidateEditing] = useState(false);
     const [candidateEditTitle, setCandidateEditTitle] = useState('');
@@ -252,6 +258,7 @@ export function KnowledgePage({
     }, []);
 
     const matchSeq = useRef(0);
+    const dismissRef = useRef<() => void>(() => {});
     const loadMatch = useCallback(() => {
         const seq = ++matchSeq.current;
         GetKnowHowMatch()
@@ -259,27 +266,34 @@ export function KnowledgePage({
                 if (seq !== matchSeq.current) return;
                 setMatch(result ?? null);
             })
-            .catch(() => {
-                if (seq === matchSeq.current) setMatch(null);
-            });
+            // A failed re-read keeps the banner on screen (W20).
+            .catch(() => {});
     }, []);
 
-    const loadCandidate = useCallback(() => {
+    const loadCandidate = useCallback((opts?: { afterUndo?: boolean }) => {
         const epoch = candidateEpoch.current;
         GetKnowHowCandidate()
             .then((result) => {
                 if (candidateEpoch.current !== epoch) return;
                 setCandidate(result ?? null);
+                if (opts?.afterUndo) {
+                    setCandidateFailed(null);
+                    setReviewingCandidate(!!result);
+                }
                 if (!result) {
                     setReviewingCandidate(false);
                     setCandidateEditing(false);
                 }
             })
             .catch(() => {
+                // A failed re-read keeps what's on screen (W19); while it's open, say so.
                 if (candidateEpoch.current !== epoch) return;
-                setCandidate(null);
+                const view = candidateView.current;
+                if (opts?.afterUndo || view.reviewing || view.editing) {
+                    setCandidateFailed(errorNotice(t('candidate.loadFailed'), () => candidateActions.current.load(opts)));
+                }
             });
-    }, []);
+    }, [t]);
 
     // The proposal projects observed sessions, so a privacy transition (Closed
     // Eyes, a Forget, a newly protected app, sign-out) withdraws every rendered
@@ -291,7 +305,7 @@ export function KnowledgePage({
         setCandidateResult(null);
         setLandedId(null);
         setCandidateBusy(false);
-        setCandidateFailed(false);
+        setCandidateFailed(null);
         setReviewingCandidate(false);
         setCandidateEditing(false);
         setCandidateEditTitle('');
@@ -391,23 +405,14 @@ export function KnowledgePage({
             invalidateKnowledgeReads();
             void loadEntries();
 
-            if (event.error) {
-                notifyToast(t('translate.failedTitle'), event.error, 'error');
-                return;
-            }
-
-            const summary = event.summary;
-            if (!summary) return;
-            notifyToast(
-                summary.failed > 0 ? t('translate.failedTitle') : t('translate.global.doneTitle'),
-                t('translate.global.doneBody', {
-                    translated: summary.translated,
-                    failed: summary.failed,
-                    total: summary.total,
-                    target: summary.targetLanguage,
-                }),
-                summary.failed > 0 ? 'error' : 'success',
-            );
+            // Nothing on success; a line only when some fail (W9).
+            const failed = event.error ? event.summary?.total || event.summary?.failed || 0 : event.summary?.failed ?? 0;
+            if (!event.error && failed <= 0) return;
+            setTranslateAllNotice(errorNotice(t('translate.global.someFailed', { failed: failed || '' }).trim(), () => {
+                setTranslateAllNotice(null);
+                setGlobalTranslateError(null);
+                setGlobalTranslateOpen(true);
+            }));
         });
         return cleanup;
     }, [loadEntries, t]);
@@ -429,7 +434,10 @@ export function KnowledgePage({
         const landed = shown.findIndex((card) => card.id === landedId);
         return landed > 0 ? [shown[landed], ...shown.slice(0, landed), ...shown.slice(landed + 1)] : shown;
     }, [cards, entries, keyword, kind, landedId]);
-    const selected = useMemo(() => cards.find((card) => card.id === selectedId) ?? null, [cards, selectedId]);
+    const selected = useMemo(
+        () => cards.find((card) => card.id === selectedId || (!!selectedId && card.mergedIds?.includes(selectedId))) ?? null,
+        [cards, selectedId],
+    );
     const selectedEntry = selectedId ? entries.get(selectedId) ?? null : null;
     const playbookItems = useMemo(
         () => listConfirmedPlaybooks(library.sops, library.playbooks),
@@ -461,7 +469,7 @@ export function KnowledgePage({
 
     const handleCancelEdit = useCallback(() => {
         setEditing(false);
-        setEditContent('');
+        setEditFields(NO_FIELDS);
     }, []);
 
     // A privacy transition (Forget, a protection change, Closed Eyes,
@@ -517,17 +525,17 @@ export function KnowledgePage({
         onReaderOpenChange?.(playbookOpen);
     }, [onReaderOpenChange, playbookOpen]);
 
-    // Card's Run now: the same run the detail's Run in chat starts, through onRunPlaybook.
+    // Card's Run now runs in place, like the playbook's own (W11): the button
+    // becomes the running line, a failure stays on the card with Try again.
     const runPlaybook = useCallback((entry: SopEntry) => {
-        if (!onRunPlaybook || runningPlaybookId) return;
-        setRunningPlaybookId(entry.id);
-        RunSOP(entry.id)
-            .then((result) => onRunPlaybook(result))
-            .catch((err: unknown) => {
-                toast.error(t('playbooks.runFailed', { error: String(err) }), { duration: 4000 });
-            })
-            .finally(() => setRunningPlaybookId(null));
-    }, [onRunPlaybook, runningPlaybookId, t]);
+        if (runState[entry.id] === 'running') return;
+        setRunState((old) => ({ ...old, [entry.id]: 'running' }));
+        Promise.resolve().then(() => RunPlaybookNow(entry.id, entry.sites ?? [])).catch(() => {
+            setRunState((old) => ({ ...old, [entry.id]: errorNotice(t('playbooks.runFailed'), () => runPlaybookRef.current(entry)) }));
+        });
+    }, [runState, t]);
+    const runPlaybookRef = useRef(runPlaybook);
+    runPlaybookRef.current = runPlaybook;
 
     const handleShowFix = useCallback(() => {
         if (!match) return;
@@ -544,18 +552,18 @@ export function KnowledgePage({
     const handleDismissMatch = useCallback(() => {
         if (!match || dismissing) return;
         setDismissing(true);
-        setDismissFailed(false);
+        setDismissFailed(null);
         DismissKnowHowMatch(match.entryId, match.signature)
             .then(() => {
                 pageQueryCache.invalidate(['GetKnowHowMatch']);
                 setMatch(null);
             })
-            .catch(() => setDismissFailed(true))
+            .catch(() => setDismissFailed(errorNotice(t('match.dismissFailed'), () => dismissRef.current())))
             .finally(() => setDismissing(false));
-    }, [dismissing, match]);
+    }, [dismissing, match, t]);
 
     const handleReviewCandidate = useCallback(() => {
-        setCandidateFailed(false);
+        setCandidateFailed(null);
         setSelectedId(null);
         handleExitHistory();
         handleCancelEdit();
@@ -565,7 +573,7 @@ export function KnowledgePage({
     const handleDeclineCandidate = useCallback(() => {
         if (!candidate || candidateBusy) return;
         setCandidateBusy(true);
-        setCandidateFailed(false);
+        setCandidateFailed(null);
         const epoch = candidateEpoch.current;
         const id = candidate.id;
         DeclineKnowHowCandidate(id)
@@ -578,18 +586,18 @@ export function KnowledgePage({
             })
             .catch(() => {
                 if (candidateEpoch.current !== epoch) return;
-                setCandidateFailed(true);
+                setCandidateFailed(errorNotice(t('candidate.actionFailed'), () => candidateActions.current.decline()));
             })
             .finally(() => {
                 if (candidateEpoch.current !== epoch) return;
                 setCandidateBusy(false);
             });
-    }, [candidate, candidateBusy]);
+    }, [candidate, candidateBusy, t]);
 
     const handleConfirmCandidate = useCallback(() => {
         if (!candidate || candidateBusy) return;
         setCandidateBusy(true);
-        setCandidateFailed(false);
+        setCandidateFailed(null);
         const id = candidate.id;
         const epoch = candidateEpoch.current;
         ConfirmKnowHowCandidate(id)
@@ -611,19 +619,19 @@ export function KnowledgePage({
             })
             .catch(() => {
                 if (candidateEpoch.current !== epoch) return;
-                setCandidateFailed(true);
+                setCandidateFailed(errorNotice(t('candidate.actionFailed'), () => candidateActions.current.confirm()));
             })
             .finally(() => {
                 if (candidateEpoch.current !== epoch) return;
                 setCandidateBusy(false);
             });
-    }, [candidate, candidateBusy, loadEntries]);
+    }, [candidate, candidateBusy, loadEntries, t]);
 
     // Undo returns to the open proposal in its review state, for either outcome.
     const handleUndoCandidateResult = useCallback(() => {
         if (!candidateResult || candidateBusy) return;
         setCandidateBusy(true);
-        setCandidateFailed(false);
+        setCandidateFailed(null);
         const epoch = candidateEpoch.current;
         const undo = candidateResult.kind === 'confirmed' ? UndoConfirmKnowHowCandidate : UndoDeclineKnowHowCandidate;
         undo(candidateResult.id)
@@ -634,30 +642,21 @@ export function KnowledgePage({
                 setSelectedId(null);
                 if (candidateResult.kind === 'confirmed') invalidateKnowledgeReads();
                 void loadEntries();
-                GetKnowHowCandidate()
-                    .then((back) => {
-                        if (candidateEpoch.current !== epoch) return;
-                        setCandidate(back ?? null);
-                        setReviewingCandidate(!!back);
-                    })
-                    .catch(() => {
-                        if (candidateEpoch.current !== epoch) return;
-                        setCandidate(null);
-                    });
+                loadCandidate({ afterUndo: true });
             })
             .catch(() => {
                 if (candidateEpoch.current !== epoch) return;
-                setCandidateFailed(true);
+                setCandidateFailed(errorNotice(t('candidate.undoFailed'), () => candidateActions.current.undo()));
             })
             .finally(() => {
                 if (candidateEpoch.current !== epoch) return;
                 setCandidateBusy(false);
             });
-    }, [candidateBusy, candidateResult, loadEntries]);
+    }, [candidateBusy, candidateResult, loadCandidate, loadEntries, t]);
 
     const handleEditCandidate = useCallback(() => {
         if (!candidate) return;
-        setCandidateFailed(false);
+        setCandidateFailed(null);
         setCandidateEditTitle(candidate.title);
         setCandidateEditTrigger(candidate.trigger ?? '');
         setCandidateEditSteps((candidate.steps ?? []).join('\n'));
@@ -667,7 +666,7 @@ export function KnowledgePage({
     const handleSaveCandidateEdit = useCallback(() => {
         if (!candidate || candidateBusy) return;
         setCandidateBusy(true);
-        setCandidateFailed(false);
+        setCandidateFailed(null);
         const epoch = candidateEpoch.current;
         SaveKnowHowCandidate(candidate.id, candidateEditTitle, candidateEditTrigger, candidateEditSteps.split('\n'))
             .then((saved) => {
@@ -677,24 +676,36 @@ export function KnowledgePage({
             })
             .catch(() => {
                 if (candidateEpoch.current !== epoch) return;
-                setCandidateFailed(true);
+                setCandidateFailed(errorNotice(t('candidate.actionFailed'), () => candidateActions.current.save()));
             })
             .finally(() => {
                 if (candidateEpoch.current !== epoch) return;
                 setCandidateBusy(false);
             });
-    }, [candidate, candidateBusy, candidateEditSteps, candidateEditTitle, candidateEditTrigger]);
+    }, [candidate, candidateBusy, candidateEditSteps, candidateEditTitle, candidateEditTrigger, t]);
 
-    const handlePrepare = useCallback(
-        (card: main.KnowHowCard, action: 'cta' | 'ask') => {
-            onPrepareChat?.(preparedRequest(t, card, action));
-        },
-        [onPrepareChat, t],
-    );
+    candidateActions.current = {
+        decline: handleDeclineCandidate,
+        confirm: handleConfirmCandidate,
+        undo: handleUndoCandidateResult,
+        save: handleSaveCandidateEdit,
+        load: loadCandidate,
+    };
+    candidateView.current = { reviewing: reviewingCandidate, editing: candidateEditing };
+    dismissRef.current = handleDismissMatch;
+
+    // The saved line and its Undo clear when you leave the page (W17).
+    useEffect(() => {
+        if (active) return;
+        setCandidateResult(null);
+        setLandedId(null);
+    }, [active]);
 
     const handleDelete = useCallback(
         (id: string) => {
-            DeleteKnowledgeEntry(id)
+            // A card folded from near-duplicates deletes every copy (W40).
+            const ids = [id, ...(cards.find((card) => card.id === id)?.mergedIds ?? [])];
+            Promise.all(ids.map((entryId) => DeleteKnowledgeEntry(entryId)))
                 .then(() => {
                     invalidateKnowledgeReads();
                     if (selectedId === id) {
@@ -707,46 +718,45 @@ export function KnowledgePage({
                     if (match?.entryId === id) setMatch(null);
                     void loadEntries();
                 })
-                .catch(() => notifyToast(t('detail.deleteFailed'), '', 'error'));
+                .catch(() => setDetailNotice(errorNotice(t('detail.deleteFailed'), () => handleDelete(id))));
         },
-        [handleCancelEdit, handleExitHistory, loadEntries, match?.entryId, selectedId, t],
+        [cards, handleCancelEdit, handleExitHistory, loadEntries, match?.entryId, selectedId, t],
     );
 
     const handleCopyMarkdown = useCallback(() => {
         if (!selectedEntry) return;
         navigator.clipboard
             .writeText(selectedEntry.content)
-            .then(() => notifyToast(t('more.copied'), '', 'success'))
-            .catch(() => notifyToast(t('more.copyFailed'), '', 'error'));
+            .then(() => setDetailNotice(null))
+            .catch(() => setDetailNotice(errorNotice(t('more.copyFailed'), handleCopyMarkdown)));
     }, [selectedEntry, t]);
 
     const handleEdit = useCallback(() => {
         if (!selectedEntry) return;
         setActionError(null);
-        setEditContent(selectedEntry.content);
+        setEditFields(knowHowFields(selectedEntry.content, {
+            title: selected?.title ?? '',
+            trigger: selected?.trigger ?? '',
+            steps: selected?.points ?? [],
+        }));
         setEditing(true);
-    }, [selectedEntry]);
+    }, [selected, selectedEntry]);
 
     const handleSave = useCallback(() => {
         if (!selected || saving) return;
         setActionError(null);
         setSaving(true);
-        SaveKnowledgeEntry(selected.id, editContent)
+        SaveKnowledgeEntry(selected.id, applyKnowHowFields(selectedEntry?.content ?? '', editFields))
             .then((saved) => {
                 invalidateKnowledgeReads();
                 setEditing(false);
-                setEditContent('');
+                setEditFields(NO_FIELDS);
                 setSelectedId(saved.id);
                 void loadEntries();
-                notifyToast(t('edit.savedTitle'), t('edit.savedBody'), 'success');
             })
-            .catch((err: unknown) => {
-                const message = err instanceof Error ? err.message : String(err);
-                setActionError(message);
-                notifyToast(t('edit.saveFailedTitle'), message, 'error');
-            })
+            .catch(() => setActionError(t('edit.saveFailed')))
             .finally(() => setSaving(false));
-    }, [editContent, loadEntries, saving, selected, t]);
+    }, [editFields, loadEntries, saving, selected, selectedEntry, t]);
 
     // Radix asks the dialog only while the page is the top layer, so an open
     // menu, the delete confirmation or a stacked Activity dialog keeps Escape.
@@ -836,12 +846,9 @@ export function KnowledgePage({
                 target: globalTranslateTarget,
                 language: globalTranslateCustomLanguage.trim(),
             });
+            void start;
             setGlobalTranslateOpen(false);
-            notifyToast(
-                t('translate.global.startedTitle'),
-                t('translate.global.startedBody', { total: start.total, target: start.targetLanguage }),
-                'info',
-            );
+            setTranslateAllNotice(null);
         } catch (err: unknown) {
             setGlobalTranslating(false);
             setGlobalTranslateError(t('translate.global.startFailed', { error: err instanceof Error ? err.message : String(err) }));
@@ -860,8 +867,8 @@ export function KnowledgePage({
                 setHistoryVersions(list);
                 setHistorySelectedTs(list.length > 0 ? list[0].timestampMs : 'current');
             })
-            .catch((err: unknown) => {
-                if (!cancelled) setHistoryError(err instanceof Error ? err.message : String(err));
+            .catch(() => {
+                if (!cancelled) setHistoryError(t('history.loadFailed'));
             })
             .finally(() => {
                 if (!cancelled) setHistoryLoadingList(false);
@@ -869,7 +876,7 @@ export function KnowledgePage({
         return () => {
             cancelled = true;
         };
-    }, [historyMode, selected?.id]);
+    }, [historyMode, historyRetry, selected?.id, t]);
 
     useEffect(() => {
         if (!historyMode || !selectedEntry || historySelectedTs === null) {
@@ -890,10 +897,10 @@ export function KnowledgePage({
             .then((content: string) => {
                 if (!cancelled) setHistoryVersionContent(content);
             })
-            .catch((err: unknown) => {
+            .catch(() => {
                 if (cancelled) return;
                 setHistoryVersionContent('');
-                setHistoryError(err instanceof Error ? err.message : String(err));
+                setHistoryError(t('history.snapshotFailed'));
             })
             .finally(() => {
                 if (!cancelled) setHistoryLoadingContent(false);
@@ -901,11 +908,12 @@ export function KnowledgePage({
         return () => {
             cancelled = true;
         };
-    }, [historyMode, selectedEntry?.id, selectedEntry?.content, historySelectedTs]);
+    }, [historyMode, historyRetry, selectedEntry?.id, selectedEntry?.content, historySelectedTs, t]);
 
     useEffect(() => {
         if (historyMode) handleExitHistory();
         if (editing) handleCancelEdit();
+        setDetailNotice(null);
         // Only exit on entry switch; including historyMode/editing would close
         // them on open.
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -947,10 +955,10 @@ export function KnowledgePage({
         if (editing && selected) {
             aside = (
                 <KnowHowEditPanel
-                    content={editContent}
+                    fields={editFields}
                     saving={saving}
                     error={actionError}
-                    onChange={setEditContent}
+                    onChange={setEditFields}
                     onSave={handleSave}
                     onCancel={handleCancelEdit}
                 />
@@ -965,7 +973,9 @@ export function KnowledgePage({
                     content={historyVersionContent}
                     loadingList={historyLoadingList}
                     loadingContent={historyLoadingContent}
-                    error={historyError ?? actionError}
+                    notice={historyError
+                        ? errorNotice(historyError, () => setHistoryRetry((n) => n + 1))
+                        : actionError ? errorNotice(actionError, handleTranslateHistorySelection) : null}
                     translating={translating}
                     onSelect={setHistorySelectedTs}
                     onTranslate={handleTranslateHistorySelection}
@@ -980,9 +990,7 @@ export function KnowledgePage({
                     entry={selectedEntry}
                     locale={locale}
                     translating={translating}
-                    error={actionError}
-                    canPrepare={!!onPrepareChat}
-                    onPrepare={handlePrepare}
+                    notice={detailNotice ?? (actionError ? errorNotice(actionError, handleTranslateCurrent) : null)}
                     onEdit={handleEdit}
                     onCopyMarkdown={handleCopyMarkdown}
                     onTranslate={handleTranslateCurrent}
@@ -991,9 +999,8 @@ export function KnowledgePage({
                     onOpenActivitySession={onOpenActivitySession}
                 />
             );
-        } else {
-            aside = <KnowHowOverview cards={cards} />;
         }
+        // No At a glance: until a card is picked the list takes the full width (W39).
     }
 
     if (openPlaybook) {
@@ -1011,6 +1018,8 @@ export function KnowledgePage({
                         onClose={() => setSelectedPlaybookId(null)}
                         onChanged={library.reload}
                         onStartSop={onRunPlaybook}
+                        onOpenPlaybook={setSelectedPlaybookId}
+                        schedulesFailed={library.schedulesFailed}
                     />
                 </div>
             </div>
@@ -1023,15 +1032,23 @@ export function KnowledgePage({
                 <div className="flex flex-col gap-[26px] px-10 pt-9 pb-14">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                         <KnowHowHeader cards={ready ? cards : null} />
-                        <PlaybookPageActions authorStatus={library.authorStatus} />
+                        <PlaybookPageActions authorStatus={library.authorStatus} onOpenPlaybook={setSelectedPlaybookId} />
                     </div>
+                    {/* A failed read keeps what is on screen; only a first read that fails says so (W21). */}
+                    {library.loadFailed && selectedPlaybookId && (
+                        <ActivityInlineNotice notice={errorNotice(t('playbooks.openFailed'), library.reload)} className="-mt-3 text-[13px]" />
+                    )}
+                    {library.loadFailed && !library.loaded && !selectedPlaybookId && (
+                        <ActivityInlineNotice notice={errorNotice(t('playbooks.loadFailed'), library.reload)} className="-mt-3 text-[13px]" />
+                    )}
                     {visiblePlaybooks.length > 0 && (
                         <PlaybookCards
                             items={visiblePlaybooks}
                             locale={locale}
                             onOpen={openPlaybookDetail}
-                            onRun={onRunPlaybook ? runPlaybook : undefined}
-                            runningId={runningPlaybookId}
+                            onRun={runPlaybook}
+                            runState={runState}
+                            whenUnknown={library.schedulesFailed}
                         />
                     )}
                     {globalTranslating && (
@@ -1039,16 +1056,19 @@ export function KnowledgePage({
                             {t('translate.global.inProgress')}
                         </p>
                     )}
+                    {!globalTranslating && <ActivityInlineNotice notice={translateAllNotice} className="-mt-4 text-[12.5px]" />}
                     {candidate && (
                         <KnowHowCandidateBanner
                             candidate={candidate}
                             locale={locale}
                             busy={candidateBusy}
-                            failed={candidateFailed && !reviewingCandidate && !candidateEditing}
+                            failed={!reviewingCandidate && !candidateEditing ? candidateFailed : null}
+                            onConfirm={handleConfirmCandidate}
                             onReview={handleReviewCandidate}
                             onDecline={handleDeclineCandidate}
                         />
                     )}
+                    {!candidate && <ActivityInlineNotice notice={candidateFailed} className="px-1" />}
                     {candidateResult && (
                         <div
                             role="status"
@@ -1102,7 +1122,6 @@ export function KnowledgePage({
                                     grouped={timeGrouped}
                                     canTranslateAll={!globalTranslating}
                                     onToggleGrouped={() => setTimeGrouped((value) => !value)}
-                                    onOverview={() => handleSelect(null)}
                                     onTranslateAll={() => {
                                         setGlobalTranslateError(null);
                                         setGlobalTranslateOpen(true);
@@ -1254,7 +1273,7 @@ function KnowHowMatchBanner({
     match: main.KnowHowMatch;
     locale: string;
     dismissing: boolean;
-    dismissFailed: boolean;
+    dismissFailed: ActivityNotice | null;
     onShow: () => void;
     onDismiss: () => void;
 }) {
@@ -1273,11 +1292,7 @@ function KnowHowMatchBanner({
                         ? t('match.bodyApp', { app: match.currentApp, when })
                         : t('match.body', { when })}
                 </span>
-                {dismissFailed && (
-                    <span role="alert" className="text-[12.5px] text-error">
-                        {t('match.dismissFailed')}
-                    </span>
-                )}
+                <ActivityInlineNotice notice={dismissFailed} className="text-[12.5px]" />
             </div>
             <Button size="sm" onClick={onShow}>
                 {t('match.show')}
@@ -1297,13 +1312,15 @@ function KnowHowCandidateBanner({
     locale,
     busy,
     failed,
+    onConfirm,
     onReview,
     onDecline,
 }: {
     candidate: main.KnowHowCandidate;
     locale: string;
     busy: boolean;
-    failed: boolean;
+    failed: ActivityNotice | null;
+    onConfirm: () => void;
     onReview: () => void;
     onDecline: () => void;
 }) {
@@ -1322,13 +1339,12 @@ function KnowHowCandidateBanner({
                 <span className="text-[13px] text-muted">
                     {t('candidate.body', { title: candidate.title, count: (candidate.steps ?? []).length, dates, each })}
                 </span>
-                {failed && (
-                    <span role="alert" className="text-[12.5px] text-error">
-                        {t('candidate.actionFailed')}
-                    </span>
-                )}
+                <ActivityInlineNotice notice={failed} className="text-[12.5px]" />
             </div>
-            <Button size="sm" onClick={onReview}>
+            <Button size="sm" onClick={onConfirm} disabled={busy} aria-busy={busy}>
+                {t('candidate.confirm')}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={onReview}>
                 {t('candidate.review')}
             </Button>
             <Button variant="outline" size="sm" onClick={onDecline} disabled={busy} aria-busy={busy}>
@@ -1352,7 +1368,7 @@ function KnowHowCandidateDetail({
     candidate: main.KnowHowCandidate;
     locale: string;
     busy: boolean;
-    failed: boolean;
+    failed: ActivityNotice | null;
     onConfirm: () => void;
     onEditSteps: () => void;
     onNotHowTo: () => void;
@@ -1377,20 +1393,12 @@ function KnowHowCandidateDetail({
                         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
                             {t('candidate.draftLabel')}
                         </span>
-                        <span className="inline-flex h-[22px] items-center rounded-md border border-border bg-panel-warm px-2 text-[11.5px] font-medium text-muted">
-                            {scopeLabel(t, candidate.scope)}
-                        </span>
-                        <span className="ml-auto text-xs text-muted">{t('candidate.proposedToday')}</span>
                     </div>
                     <h2 className="m-0 text-[19px] font-semibold leading-[1.35] select-text">{candidate.title}</h2>
                     {candidate.description && <p className="m-0 text-sm text-muted select-text">{candidate.description}</p>}
                 </div>
 
-                {failed && (
-                    <p role="alert" className="m-0 rounded-lg border border-error-border bg-error-bg px-3 py-2 text-[12.5px] text-error">
-                        {t('candidate.actionFailed')}
-                    </p>
-                )}
+                <ActivityInlineNotice notice={failed} className="m-0 text-[12.5px]" />
 
                 {candidate.trigger && (
                     <section className="flex flex-col gap-2">
@@ -1401,15 +1409,11 @@ function KnowHowCandidateDetail({
 
                 <section className="flex flex-col gap-2">
                     <h3 className="m-0 text-[13px] font-semibold">{t('detail.points.how_to')}</h3>
-                    {steps.length > 0 ? (
-                        <ol className="m-0 flex list-decimal flex-col gap-2 pl-5 select-text">
-                            {steps.map((step, index) => (
-                                <li key={index} className="text-[13.5px] leading-normal">{step}</li>
-                            ))}
-                        </ol>
-                    ) : (
-                        <p className="m-0 text-[13px] text-muted">{t('detail.noPoints')}</p>
-                    )}
+                    <ol className="m-0 flex list-decimal flex-col gap-2 pl-5 select-text">
+                        {steps.map((step, index) => (
+                            <li key={index} className="text-[13.5px] leading-normal">{step}</li>
+                        ))}
+                    </ol>
                 </section>
 
                 <section className="flex flex-col gap-2">
@@ -1476,7 +1480,7 @@ function KnowHowCandidateEditPanel({
     trigger: string;
     steps: string;
     saving: boolean;
-    failed: boolean;
+    failed: ActivityNotice | null;
     onTitleChange: (value: string) => void;
     onTriggerChange: (value: string) => void;
     onStepsChange: (value: string) => void;
@@ -1503,11 +1507,7 @@ function KnowHowCandidateEditPanel({
                     </Button>
                 </div>
             </div>
-            {failed && (
-                <p role="alert" className="mx-6 mb-3 rounded-lg border border-error-border bg-error-bg px-3 py-2 text-[12.5px] text-error">
-                    {t('candidate.actionFailed')}
-                </p>
-            )}
+            <ActivityInlineNotice notice={failed} className="mx-6 mb-3 text-[12.5px]" />
             <div className="flex min-h-0 flex-1 flex-col gap-3 px-6 pb-6">
                 <label className="flex flex-col gap-1.5 text-[12px] font-medium text-muted">
                     {t('candidate.editTitleField')}
@@ -1569,13 +1569,11 @@ function PageMoreMenu({
     grouped,
     canTranslateAll,
     onToggleGrouped,
-    onOverview,
     onTranslateAll,
 }: {
     grouped: boolean;
     canTranslateAll: boolean;
     onToggleGrouped: () => void;
-    onOverview: () => void;
     onTranslateAll: () => void;
 }) {
     const { t } = useTranslation('knowledge');
@@ -1590,10 +1588,6 @@ function PageMoreMenu({
                 <DropdownMenuItem onSelect={onToggleGrouped}>
                     <CalendarDays />
                     {grouped ? t('more.ungroup') : t('more.groupByTime')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={onOverview}>
-                    <LayoutGrid />
-                    {t('overview.title')}
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled={!canTranslateAll} onSelect={onTranslateAll}>
                     <Languages />
@@ -1673,10 +1667,7 @@ function KnowHowCardButton({
                 <span className="inline-flex h-[22px] items-center rounded-md border border-border bg-panel-warm px-2 text-[11.5px] font-medium text-muted">
                     {t(`kinds.${knowHowKind(card.kind)}`)}
                 </span>
-                <span className="inline-flex h-[22px] items-center rounded-md border border-border bg-panel-warm px-2 text-[11.5px] font-medium text-muted">
-                    {scopeLabel(t, card.scope)}
-                </span>
-                {card.reuseCount >= 0 && <span className="ml-auto text-xs text-muted">{reuseLabel(t, card.reuseCount)}</span>}
+                {card.reuseCount >= 1 && <span className="ml-auto text-xs text-muted">{reuseLabel(t, card.reuseCount)}</span>}
             </span>
             <span className="text-[14.5px] font-semibold leading-[1.35]">{card.title}</span>
             {card.takeaway && <span className="line-clamp-3 text-[13px]">{card.takeaway}</span>}
@@ -1690,9 +1681,7 @@ function KnowHowDetail({
     entry,
     locale,
     translating,
-    error,
-    canPrepare,
-    onPrepare,
+    notice,
     onEdit,
     onCopyMarkdown,
     onTranslate,
@@ -1704,9 +1693,7 @@ function KnowHowDetail({
     entry: main.KnowledgeEntry | null;
     locale: string;
     translating: boolean;
-    error: string | null;
-    canPrepare: boolean;
-    onPrepare: (card: main.KnowHowCard, action: 'cta' | 'ask') => void;
+    notice: ActivityNotice | null;
     onEdit: () => void;
     onCopyMarkdown: () => void;
     onTranslate: () => void;
@@ -1720,6 +1707,18 @@ function KnowHowDetail({
     const apps = (card.apps ?? []).join(', ');
     const when = card.savedAt > 0 ? dateTimeInWords(card.savedAt, locale) : '';
     const whenLine = [when, apps].filter(Boolean).join(' · ');
+    const [asking, setAsking] = useState(false);
+    const [draft, setDraft] = useState<'idle' | 'drafting' | 'failed'>('idle');
+    useEffect(() => {
+        setAsking(false);
+        setDraft('idle');
+    }, [card.id]);
+    // Turn into a playbook drafts in place, through the same author as Create (W8).
+    const turnIntoPlaybook = () => {
+        setDraft('drafting');
+        GenerateSOPFromDescription(playbookRequest(card)).catch(() => setDraft('failed'));
+    };
+    const source = historySourceLabel(t, card, locale) || originSentence(t, card.source ?? '', card.sessionCount);
     const meta = [
         card.formatVersion ? t('technical.formatVersion', { version: card.formatVersion }) : '',
         card.source ? t('technical.source', { source: card.source }) : '',
@@ -1736,10 +1735,7 @@ function KnowHowDetail({
                         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
                             {t(`kinds.${kind}`)}
                         </span>
-                        <span className="inline-flex h-[22px] items-center rounded-md border border-border bg-panel-warm px-2 text-[11.5px] font-medium normal-case tracking-normal text-muted">
-                            {scopeLabel(t, card.scope)}
-                        </span>
-                        {card.reuseCount >= 0 && (
+                        {card.reuseCount >= 1 && (
                             <span className="ml-auto text-xs text-muted">{reuseLabel(t, card.reuseCount)}</span>
                         )}
                     </div>
@@ -1750,11 +1746,7 @@ function KnowHowDetail({
                 {translating && (
                     <p role="status" className="m-0 text-[12.5px] text-muted">{t('detail.translating')}</p>
                 )}
-                {error && (
-                    <p role="alert" className="m-0 rounded-lg border border-error-border bg-error-bg px-3 py-2 text-[12.5px] text-error">
-                        {error}
-                    </p>
-                )}
+                <ActivityInlineNotice notice={notice} className="m-0 text-[12.5px]" />
 
                 {card.trigger && (
                     <section className="flex flex-col gap-2">
@@ -1772,7 +1764,8 @@ function KnowHowDetail({
                             ))}
                         </ol>
                     ) : (
-                        <p className="m-0 text-[13px] text-muted">{t('detail.noPoints')}</p>
+                        // No points: the know-how's own words show under the heading (W12).
+                        entry && <EntryBody content={entry.content} omit={[card.title, card.takeaway]} />
                     )}
                 </section>
 
@@ -1780,28 +1773,32 @@ function KnowHowDetail({
                     <h3 className="m-0 text-[13px] font-semibold">{t('detail.origin')}</h3>
                     <div className="flex flex-col gap-1 rounded-lg border border-border bg-panel px-3 py-2.5">
                         {whenLine && <span className="text-xs text-muted">{whenLine}</span>}
-                        <span className="text-[13.5px]">{originSentence(t, card.source ?? '', card.sessionCount)}</span>
+                        <span className="text-[13.5px]">{source}</span>
                     </div>
+                    {(card.moments?.length ?? 0) > 1 ? (
+                        <LessonMoments moments={card.moments} locale={locale} onOpenActivitySession={onOpenActivitySession} />
+                    ) : (
+                        entry && <EntryMoments content={entry.content} locale={locale} onOpenActivitySession={onOpenActivitySession} />
+                    )}
                     {card.topicName && (
                         <span className="text-[12.5px] text-muted">{t('detail.topic', { name: card.topicName })}</span>
                     )}
                 </section>
 
                 <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle pt-3.5">
-                    {canPrepare && kind !== 'reference' && (
-                        <Button size="sm" onClick={() => onPrepare(card, 'cta')}>
-                            {t(`detail.cta.${kind}`)}
+                    {kind === 'how_to' && draft === 'idle' && (
+                        <Button size="sm" onClick={turnIntoPlaybook}>
+                            {t('detail.cta.how_to')}
                         </Button>
                     )}
-                    {canPrepare && (
-                        <Button
-                            variant={kind === 'reference' ? 'default' : 'secondary'}
-                            size="sm"
-                            onClick={() => onPrepare(card, 'ask')}
-                        >
-                            {t('detail.ask')}
-                        </Button>
-                    )}
+                    <Button
+                        variant={kind === 'how_to' && draft === 'idle' ? 'secondary' : 'default'}
+                        size="sm"
+                        aria-expanded={asking}
+                        onClick={() => setAsking((open) => !open)}
+                    >
+                        {t('detail.ask')}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={onEdit} disabled={!entry}>
                         {t('detail.edit')}
                     </Button>
@@ -1816,6 +1813,16 @@ function KnowHowDetail({
                         onDelete={onDelete}
                     />
                 </div>
+
+                {draft === 'drafting' && (
+                    <p role="status" className="m-0 text-[12.5px] text-muted">{t('detail.drafting')}</p>
+                )}
+                {draft === 'failed' && (
+                    <ActivityInlineNotice notice={errorNotice(t('detail.draftFailed'), turnIntoPlaybook)} className="m-0 text-[12.5px]" />
+                )}
+                {asking && (
+                    <ActivityAskInline context={{ sourceKind: 'knowledge', sourceId: card.id }} onClose={() => setAsking(false)} />
+                )}
 
                 <TechnicalDetails>
                     {meta && <p className="m-0 select-text">{meta}</p>}
@@ -1891,56 +1898,56 @@ function EntryMoreMenu({
 }
 
 function KnowHowEditPanel({
-    content,
+    fields,
     saving,
     error,
     onChange,
     onSave,
     onCancel,
 }: {
-    content: string;
+    fields: KnowHowFields;
     saving: boolean;
     error: string | null;
-    onChange: (value: string) => void;
+    onChange: (value: KnowHowFields) => void;
     onSave: () => void;
     onCancel: () => void;
 }) {
     const { t } = useTranslation('knowledge');
+    // Title, When to use it and Steps; the file's header is kept, never shown (W14).
     return (
-        <div className="flex h-full min-h-0 flex-col">
-            <div className="flex items-center gap-2 pl-6 pr-14 pt-6 pb-3">
-                <h2 className="m-0 text-sm font-medium">{t('edit.editing')}</h2>
-                <div className="ml-auto flex items-center gap-2">
-                    <Button
-                        size="sm"
-                        onClick={onSave}
-                        disabled={saving || content.trim().length === 0}
-                        aria-busy={saving}
-                    >
-                        <Save className="size-3.5" />
-                        {saving ? t('edit.saving') : t('edit.save')}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={onCancel}>
-                        {t('edit.cancel')}
-                    </Button>
+        <ScrollArea className="h-full">
+            <div className="flex flex-col gap-4 px-6 pt-6 pb-6">
+                <div className="flex items-center gap-2 pr-8">
+                    <h2 className="m-0 text-sm font-medium">{t('edit.title')}</h2>
+                    <div className="ml-auto flex items-center gap-2">
+                        <Button size="sm" onClick={onSave} disabled={saving || fields.title.trim().length === 0} aria-busy={saving}>
+                            <Save className="size-3.5" />
+                            {saving ? t('edit.saving') : t('edit.save')}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={onCancel}>
+                            {t('edit.cancel')}
+                        </Button>
+                    </div>
                 </div>
+                <ActivityInlineNotice notice={error ? errorNotice(error, onSave) : null} className="m-0 text-[12.5px]" />
+                <label className="flex flex-col gap-1.5 text-[12.5px] font-medium">
+                    {t('edit.titleField')}
+                    <input className="h-8 rounded-lg border border-border bg-panel px-2.5 text-[13px] font-normal text-ink focus:border-border-focus focus:outline-none" value={fields.title} autoFocus onChange={(e) => onChange({ ...fields, title: e.target.value })} />
+                </label>
+                <label className="flex flex-col gap-1.5 text-[12.5px] font-medium">
+                    {t('detail.whenToUse')}
+                    <Textarea rows={2} value={fields.trigger} onChange={(e) => onChange({ ...fields, trigger: e.target.value })} />
+                </label>
+                <label className="flex flex-col gap-1.5 text-[12.5px] font-medium">
+                    {t('edit.stepsField')}
+                    <Textarea
+                        rows={8}
+                        value={fields.steps.join('\n')}
+                        onChange={(e) => onChange({ ...fields, steps: e.target.value.split('\n') })}
+                    />
+                </label>
             </div>
-            {error && (
-                <p role="alert" className="mx-6 mb-3 rounded-lg border border-error-border bg-error-bg px-3 py-2 text-[12.5px] text-error">
-                    {error}
-                </p>
-            )}
-            <div className="min-h-0 flex-1 px-6 pb-6">
-                <Textarea
-                    aria-label={t('edit.label')}
-                    className="h-full resize-none font-mono text-xs leading-relaxed"
-                    value={content}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={t('edit.writePlaceholder')}
-                    autoFocus
-                />
-            </div>
-        </div>
+        </ScrollArea>
     );
 }
 
@@ -1952,7 +1959,7 @@ function KnowHowHistoryPanel({
     content,
     loadingList,
     loadingContent,
-    error,
+    notice,
     translating,
     onSelect,
     onTranslate,
@@ -1966,7 +1973,7 @@ function KnowHowHistoryPanel({
     content: string;
     loadingList: boolean;
     loadingContent: boolean;
-    error: string | null;
+    notice: ActivityNotice | null;
     translating: boolean;
     onSelect: (ts: SelectedKnowledgeVersion) => void;
     onTranslate: () => void;
@@ -2005,11 +2012,7 @@ function KnowHowHistoryPanel({
                     {t('history.exit')}
                 </Button>
             </div>
-            {error && (
-                <p role="alert" className="mx-6 mb-3 rounded-lg border border-error-border bg-error-bg px-3 py-2 text-[12.5px] text-error">
-                    {error}
-                </p>
-            )}
+            <ActivityInlineNotice notice={notice} className="mx-6 mb-3 text-[12.5px]" />
             <div className="flex min-h-0 flex-1 border-t border-border-subtle">
                 <ScrollArea className="w-44 shrink-0 border-r border-border-subtle">
                     <div className="space-y-0.5 p-2">
@@ -2019,7 +2022,7 @@ function KnowHowHistoryPanel({
                         {loadingList && versions.length === 0 ? (
                             <div className="py-4 text-center text-xs text-muted" aria-busy="true">{t('history.loading')}</div>
                         ) : versions.length === 0 ? (
-                            <div className="px-3 py-6 text-center text-xs leading-relaxed text-muted">{t('history.noHistoryYet')}</div>
+                            notice?.tone !== 'error' && <div className="px-3 py-6 text-center text-xs leading-relaxed text-muted">{t('history.noHistoryYet')}</div>
                         ) : (
                             versions.map((version) => (
                                 <button
@@ -2056,6 +2059,8 @@ function KnowHowHistoryPanel({
 
 function TechnicalDetails({ children }: { children: React.ReactNode }) {
     const { t } = useTranslation('knowledge');
+    // Developer tools only (W12).
+    if (!useDevTools()) return null;
     return (
         <Collapsible>
             <CollapsibleTrigger className="group inline-flex items-center gap-1 rounded-md text-[12.5px] text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-2/40">
@@ -2068,12 +2073,18 @@ function TechnicalDetails({ children }: { children: React.ReactNode }) {
 }
 
 /** The entry's words without its metadata block. */
-function EntryBody({ content }: { content: string }) {
+/** The entry's own words, without the paragraphs the detail already shows. */
+function EntryBody({ content, omit = [] }: { content: string; omit?: Array<string | undefined> }) {
     const { body } = splitHeaderAndBody(content);
-    if (!body.trim()) return null;
+    const shown = new Set(omit.map((o) => o?.trim()).filter(Boolean));
+    const kept = body
+        .split(/\n{2,}/)
+        .filter((block) => !shown.has(block.replace(/^#+\s+/, '').trim()))
+        .join('\n\n');
+    if (!kept.trim()) return null;
     return (
         <div className="rounded-lg border border-border bg-panel px-4 py-3 text-ink select-text">
-            <MarkdownContent content={body} />
+            <MarkdownContent content={kept} />
         </div>
     );
 }
@@ -2108,6 +2119,77 @@ function EntryFields({ content }: { content: string }) {
                 );
             })}
         </dl>
+    );
+}
+
+/** Where it came from: one link per moment, each opening it in Activity (W12). */
+/** Each time the lesson was learned, oldest first (W40). */
+function LessonMoments({
+    moments,
+    locale,
+    onOpenActivitySession,
+}: {
+    moments: main.KnowHowMoment[];
+    locale: string;
+    onOpenActivitySession?: (sessionId: string) => void;
+}) {
+    const { t } = useTranslation('knowledge');
+    return (
+        <ul className="m-0 flex list-none flex-col items-start p-0" aria-label={t('detail.origin')}>
+            {moments.map((moment, index) => {
+                const when = moment.at > 0 ? dateTimeInWords(moment.at, locale) : '';
+                const who = moment.assistant === 'codex' ? 'Codex' : moment.assistant ? 'Claude Code' : moment.app;
+                const label = when && who ? t('detail.moment', { when, apps: who }) : when || who;
+                if (!label) return null;
+                return (
+                    <li key={`${moment.at}-${index}`}>
+                        {onOpenActivitySession && moment.sessionId ? (
+                            <Button variant="link" size="sm" className="h-auto px-0" onClick={() => onOpenActivitySession(moment.sessionId)}>
+                                {label}
+                            </Button>
+                        ) : (
+                            <span className="text-[12.5px] text-muted">{label}</span>
+                        )}
+                    </li>
+                );
+            })}
+        </ul>
+    );
+}
+
+function EntryMoments({
+    content,
+    locale,
+    onOpenActivitySession,
+}: {
+    content: string;
+    locale: string;
+    onOpenActivitySession?: (sessionId: string) => void;
+}) {
+    const { t } = useTranslation('knowledge');
+    const item = parseFrontmatter(content).find((field) => field.sessions || field.groups);
+    const sessions = item ? flattenSessions(item) : [];
+    if (sessions.length === 0) return null;
+    return (
+        <ul className="m-0 flex list-none flex-col items-start p-0" aria-label={t('detail.origin')}>
+            {sessions.map((session) => {
+                const at = Date.parse(session.time ?? '');
+                const when = Number.isFinite(at) ? dateTimeInWords(at, locale) : session.time ?? '';
+                const label = when && session.apps ? t('detail.moment', { when, apps: session.apps }) : when || session.apps || '';
+                if (!label) return null;
+                return (
+                    <li key={session.id}>
+                        {onOpenActivitySession ? (
+                            <Button variant="link" size="sm" className="h-auto px-0" onClick={() => onOpenActivitySession(session.id)}>
+                                {label}
+                            </Button>
+                        ) : (
+                            <span className="text-[12.5px] text-muted">{label}</span>
+                        )}
+                    </li>
+                );
+            })}
+        </ul>
     );
 }
 
@@ -2148,48 +2230,6 @@ function EntrySessions({
 
 /** Shown beside the cards while no entry is open: the time buckets and the
  *  top sources the How you do things page's summary had. */
-function KnowHowOverview({ cards }: { cards: main.KnowHowCard[] }) {
-    const { t } = useTranslation('knowledge');
-    const buckets = useMemo(() => groupByTime(cards), [cards]);
-    const sources = useMemo(() => topSources(cards, MAX_TOP_SOURCES), [cards]);
-    return (
-        <ScrollArea className="h-full">
-            <div className="flex flex-col gap-6 px-6 pt-7 pb-7">
-                <div className="flex flex-col gap-2 pr-10">
-                    <h2 className="m-0 text-[11px] font-medium uppercase tracking-[0.08em] text-muted">{t('overview.title')}</h2>
-                    <p className="m-0 text-[13px] text-muted">{t('overview.hint')}</p>
-                </div>
-                <section className="flex flex-col gap-2" aria-label={t('overview.byWhen')}>
-                    <h3 className="m-0 text-[13px] font-semibold">{t('overview.byWhen')}</h3>
-                    <ul className="m-0 flex list-none flex-col gap-1 p-0">
-                        {buckets.map(([group, items]) => (
-                            <li key={group} className="flex items-center justify-between rounded-md px-2 py-1.5 text-[13px]">
-                                <span>{t(`groups.${group}`)}</span>
-                                <span className="tabular-nums text-muted">{items.length}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </section>
-                {sources.length > 0 && (
-                    <section className="flex flex-col gap-2" aria-label={t('overview.topSources')}>
-                        <h3 className="m-0 text-[13px] font-semibold">{t('overview.topSources')}</h3>
-                        <div className="flex flex-wrap gap-1.5">
-                            {sources.map(([app, count]) => (
-                                <span
-                                    key={app}
-                                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-panel px-2.5 py-1 text-xs text-muted"
-                                >
-                                    {app}
-                                    <span className="tabular-nums text-muted">{count}</span>
-                                </span>
-                            ))}
-                        </div>
-                    </section>
-                )}
-            </div>
-        </ScrollArea>
-    );
-}
 
 function KnowHowSkeleton() {
     const { t } = useTranslation('knowledge');

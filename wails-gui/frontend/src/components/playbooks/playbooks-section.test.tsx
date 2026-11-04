@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import { pageQueryCache } from '@/lib/query-cache';
-import type { PlaybookView, PlaybooksState, SopEntry, SopRunResult } from '@/lib/wails-shim-app';
+import type { PlaybookView, PlaybooksState, SopEntry } from '@/lib/wails-shim-app';
 import { KnowledgePage } from '@/components/knowledge-page';
 import { PlaybookCards } from './PlaybookCards';
 import { listConfirmedPlaybooks, listDraftPlaybooks } from './playbook-lists';
@@ -122,15 +122,6 @@ const STATE: PlaybooksState = {
     plans: [SCHEDULED_PLAN, RELEASE_PLAN, OFFER_PLAN],
     channels: { desktop: true, push: false, text: false, email: false, textNames: false },
     defaultChannels: ['desktop'],
-};
-
-const RUN_RESULT: SopRunResult = {
-    sopId: 'pb-weekly',
-    sessionId: 'session-1',
-    title: 'Weekly update',
-    prompt: 'Run the weekly update',
-    workdir: '',
-    model: '',
 };
 
 function setLibrary(sops: SopEntry[], state: PlaybooksState = STATE) {
@@ -308,19 +299,33 @@ describe('How you do things: Isoform can do these for you', () => {
         expect(await screen.findByRole('heading', { level: 2, name: 'Isoform can do these for you' })).toBeInTheDocument();
     });
 
-    it('Run now on a card starts the run in chat and hands the result to onRunPlaybook', async () => {
-        mocks.runSop.mockResolvedValue(RUN_RESULT);
+    it('W11: Run now on a card runs in place and never opens Chat', async () => {
+        mocks.runNow.mockResolvedValue({});
         const { onRunPlaybook } = await renderPage();
-        fireEvent.click(within(cardFor('Weekly update')).getByRole('button', { name: 'Run now' }));
-
-        await vi.waitFor(() => expect(onRunPlaybook).toHaveBeenCalledWith(RUN_RESULT));
-        expect(mocks.runSop).toHaveBeenCalledWith('pb-weekly');
+        await act(async () => {
+            fireEvent.click(within(cardFor('Weekly update')).getByRole('button', { name: 'Run now' }));
+        });
+        expect(mocks.runNow).toHaveBeenCalledWith('pb-weekly', []);
+        expect(within(cardFor('Weekly update')).getByRole('status')).toHaveTextContent('Running. Isoform will send you the result.');
+        expect(within(cardFor('Weekly update')).queryByRole('button', { name: 'Run now' })).toBeNull();
+        expect(onRunPlaybook).not.toHaveBeenCalled();
+        expect(mocks.runSop).not.toHaveBeenCalled();
     });
 
-    it('hides Run now on the cards when the page has no run handler', async () => {
-        await renderPage({ onRunPlaybook: undefined });
-        await screen.findByRole('button', { name: /^Weekly update/ });
-        expect(screen.queryByRole('button', { name: 'Run now' })).toBeNull();
+    it('W11: a failed card run stays on the card in copper, and Try again runs it again', async () => {
+        mocks.runNow.mockRejectedValueOnce(new Error('agent offline')).mockResolvedValue({});
+        await renderPage();
+        await act(async () => {
+            fireEvent.click(within(cardFor('Weekly update')).getByRole('button', { name: 'Run now' }));
+        });
+        const card = cardFor('Weekly update');
+        expect(await within(card).findByText('Didn’t run.')).toBeInTheDocument();
+        expect(card.textContent).not.toContain('agent offline');
+        await act(async () => {
+            fireEvent.click(within(card).getByRole('button', { name: 'Try again' }));
+        });
+        expect(mocks.runNow).toHaveBeenCalledTimes(2);
+        expect(within(cardFor('Weekly update')).getByRole('status')).toHaveTextContent('Running. Isoform will send you the result.');
     });
 
     it('opens a playbook requested by a notification or Search, and reports it handled', async () => {

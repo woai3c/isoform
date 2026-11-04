@@ -584,21 +584,12 @@ describe('App Activity/Library navigation', () => {
 
     });
 
-    it('puts a know-how request in the main chat box without sending it', async () => {
+    it('gives How you do things no way to fill the main chat box (design review v1.0.0 W7, W8)', async () => {
         await mountApp();
         await emit('notification:clicked', 'knowledge:entry-2');
         expect(screen.getByTestId('KnowledgePage')).toBeInTheDocument();
-        fixture.prefill.mockClear();
-        const before = new Map([...fixture.bindings.entries()].map(([name, mock]) => [name, mock.mock.calls.length]));
-        const prompt = 'Turn “Pair the phone app” into a playbook I can run.';
-        await act(async () => { fixture.pages.KnowledgePage.onPrepareChat(prompt); });
-        expect(screen.getByTestId('KnowledgePage')).not.toBeVisible();
-        expect(fixture.openMainChat).toHaveBeenCalledTimes(1);
-        expect(fixture.prefill).toHaveBeenCalledWith('main-1', prompt, undefined);
-        const acted = [...fixture.bindings.entries()]
-            .filter(([name, mock]) => /^(Send|Create|Add|Run|Start)/.test(name) && mock.mock.calls.length > (before.get(name) ?? 0))
-            .map(([name]) => name);
-        expect(acted).toEqual([]);
+        expect(fixture.pages.KnowledgePage.onPrepareChat).toBeUndefined();
+        expect(fixture.prefill).not.toHaveBeenCalled();
     });
 
 });

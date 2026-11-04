@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import { pageQueryCache } from '@/lib/query-cache';
 import type { main } from '../../wailsjs/go/models';
+import { DevToolsContext } from '@/lib/dev-tools-context';
 import { KnowledgePage } from './knowledge-page';
 import { resetRenderTierStores } from '@/lib/privacy-reset';
 import { Dialog, DialogTitle } from '@/components/ui/dialog';
@@ -32,7 +33,18 @@ const mocks = vi.hoisted(() => ({
     getPlaybooks: vi.fn(),
     getSopAuthor: vi.fn(),
     runSop: vi.fn(),
+    generate: vi.fn(),
+    generateRange: vi.fn(),
+    runNow: vi.fn(),
 }));
+const chat = vi.hoisted(() => ({
+    send: vi.fn(),
+    items: [] as { id: string; kind: string; content?: string }[],
+    lastUserItemId: '',
+    pending: null as null | { state: string },
+    waiting: false,
+}));
+vi.mock('@/hooks/useMainChatPanel', () => ({ useMainChatPanel: () => chat }));
 
 vi.mock('@/lib/wails-shim-app', () => ({
     ListKnowHow: mocks.listKnowHow,
@@ -57,6 +69,9 @@ vi.mock('@/lib/wails-shim-app', () => ({
     GetPlaybooksState: mocks.getPlaybooks,
     GetSOPAuthorStatus: mocks.getSopAuthor,
     RunSOP: mocks.runSop,
+    GenerateSOPFromDescription: mocks.generate,
+    GenerateSOPFromRange: mocks.generateRange,
+    RunPlaybookNow: mocks.runNow,
 }));
 const events = vi.hoisted(() => new Map<string, Set<(...args: any[]) => unknown>>());
 vi.mock('../../wailsjs/runtime/runtime', () => ({
@@ -165,11 +180,17 @@ const CANDIDATE = {
     scope: 'mine',
 } as main.KnowHowCandidate;
 
-async function renderPage(props: Partial<React.ComponentProps<typeof KnowledgePage>> = {}) {
-    const onPrepareChat = vi.fn();
+async function renderPage(
+    props: Partial<React.ComponentProps<typeof KnowledgePage>> = {},
+    { devTools = false }: { devTools?: boolean } = {},
+) {
     const escapeRef: { current: (() => boolean) | null } = { current: null };
     await act(async () => {
-        render(<KnowledgePage onPrepareChat={onPrepareChat} escapeRef={escapeRef} {...props} />);
+        render(
+            <DevToolsContext.Provider value={devTools}>
+                <KnowledgePage escapeRef={escapeRef} {...props} />
+            </DevToolsContext.Provider>,
+        );
     });
     const escape = async () => {
         let handled = false;
@@ -178,7 +199,7 @@ async function renderPage(props: Partial<React.ComponentProps<typeof KnowledgePa
         });
         return handled;
     };
-    return { onPrepareChat, escape };
+    return { escape };
 }
 
 function cardButton(title: string) {
@@ -241,7 +262,8 @@ describe('How you do things page', () => {
         expect(within(fix).getByText('Used twice')).toBeInTheDocument();
         expect(within(cardButton('Isoform keeps')).getByText('Used 4 times')).toBeInTheDocument();
         expect(within(cardButton('Isoform keeps')).getByText('Today · Claude, Isoform')).toBeInTheDocument();
-        expect(within(cardButton('Agent picker')).getByText('Not used yet')).toBeInTheDocument();
+        // W15: the reuse line shows only from 1.
+        expect(within(cardButton('Agent picker')).queryByText(/Used|Not used yet/)).toBeNull();
 
         await selectCard('Docker cleanup');
         const detail = screen.getByRole('complementary', { name: 'Know-how detail' });
@@ -255,7 +277,7 @@ describe('How you do things page', () => {
     });
 
     it('keeps the format version, source, sessions and saved time in Technical details', async () => {
-        await renderPage();
+        await renderPage({}, { devTools: true });
         await selectCard('Docker cleanup');
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Technical details' }));
@@ -334,7 +356,7 @@ describe('How you do things page', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Not the same' }));
         });
         expect(mocks.dismiss).toHaveBeenCalledWith('k-fix', 'sig-1');
-        expect(screen.getByRole('alert')).toHaveTextContent('Could not save that. Try again.');
+        expect(screen.getByRole('alert')).toHaveTextContent('Didn’t save.');
         expect(screen.getByTestId('know-how-match')).toBeInTheDocument();
 
         // The dismissal is now recorded; the re-read after a successful
@@ -347,34 +369,17 @@ describe('How you do things page', () => {
         expect(screen.queryByTestId('know-how-match')).toBeNull();
     });
 
-    it('the card button and Ask about this prepare a request; nothing is sent', async () => {
-        const { onPrepareChat } = await renderPage();
-        await selectCard('Docker cleanup');
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Make it a one-click fix' }));
-        });
-        expect(onPrepareChat).toHaveBeenLastCalledWith(
-            'Make “Docker cleanup fails while OrbStack is running” a one-click fix I can run next time. What I saved: Stop OrbStack, prune, then restart it.',
-        );
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Ask about this' }));
-        });
-        expect(onPrepareChat).toHaveBeenLastCalledWith('About my know-how “Docker cleanup fails while OrbStack is running”: ');
-
-        await selectCard('Isoform keeps');
-        expect(screen.getByRole('button', { name: 'Add to agent rules' })).toBeInTheDocument();
-
-        // A reference has no create-style button, only the question.
-        await selectCard('Agent picker');
+    it('W2: no Add to agent rules, one-click fix or Remind me; a reference has only Ask', async () => {
+        await renderPage();
+        for (const title of ['Docker cleanup', 'Isoform keeps', 'Agent picker']) {
+            await selectCard(title);
+            const detail = screen.getByRole('complementary', { name: 'Know-how detail' });
+            expect(within(detail).queryByRole('button', { name: /one-click|agent rules|Remind me/ })).toBeNull();
+        }
         const detail = screen.getByRole('complementary', { name: 'Know-how detail' });
         expect(within(detail).getAllByRole('button', { name: 'Ask about this' })).toHaveLength(1);
         expect(within(detail).getByText('Learned from your Slack messages.')).toBeInTheDocument();
-        expect(within(detail).queryByRole('button', { name: /playbook|one-click|agent rules|Remind me/ })).toBeNull();
-
-        // Preparing a request writes nothing.
-        for (const writer of [mocks.save, mocks.remove, mocks.dismiss, mocks.translate, mocks.translateAll]) {
-            expect(writer).not.toHaveBeenCalled();
-        }
+        expect(within(detail).queryByRole('button', { name: /playbook/ })).toBeNull();
     });
 
     it('shows a busy state, then a failure with Try again', async () => {
@@ -426,7 +431,7 @@ describe('How you do things page', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
         });
         expect(await escape()).toBe(true);
-        expect(screen.queryByRole('textbox', { name: 'Know-how markdown' })).toBeNull();
+        expect(screen.queryByRole('textbox', { name: 'Steps, one per line' })).toBeNull();
         expect(screen.getByRole('heading', { level: 2, name: CARDS[0].title })).toBeInTheDocument();
 
         await openMenu(`More for ${CARDS[0].title}`);
@@ -454,7 +459,7 @@ describe('How you do things page', () => {
                         }}
                     >
                         <DialogTitle>Know-how</DialogTitle>
-                        <KnowledgePage escapeRef={escapeRef} onPrepareChat={vi.fn()} />
+                        <KnowledgePage escapeRef={escapeRef} />
                     </RetainedDialogContent>
                 </Dialog>,
             );
@@ -542,7 +547,7 @@ describe('How you do things keeps every Knowledge action', () => {
         });
         expect(mocks.remove).toHaveBeenCalledWith('k-fix');
         expect(document.querySelector('[data-know-how-id="k-fix"]')).toBeNull();
-        expect(screen.getByRole('region', { name: 'When it was saved' })).toBeInTheDocument();
+        expect(screen.queryByRole('complementary', { name: 'Know-how detail' })).toBeNull();
     });
 
     it('copy raw markdown: the entry More menu copies the file as written', async () => {
@@ -555,50 +560,111 @@ describe('How you do things keeps every Knowledge action', () => {
         expect(writeText).toHaveBeenCalledWith(ENTRIES[0].content);
     });
 
-    it('raw edit: Edit opens the markdown and Save writes it', async () => {
+    it('W14: Edit opens Title, When to use it and Steps; the header is kept and never shown', async () => {
         mocks.save.mockImplementation(async (id: string, content: string) => ({ ...entry(id), content }));
         await renderPage();
         await selectCard('Docker cleanup');
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
         });
-        const box = screen.getByRole('textbox', { name: 'Know-how markdown' });
-        expect(box).toHaveValue(ENTRIES[0].content);
-        fireEvent.change(box, { target: { value: '## Description\n\nEdited\n' } });
+        expect(screen.getByRole('heading', { level: 2, name: 'Edit this know-how' })).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('k-fix');
+        expect(screen.getByRole('textbox', { name: 'When to use it' })).toBeInTheDocument();
+        const steps = screen.getByRole('textbox', { name: 'Steps, one per line' });
+        expect(document.body.textContent).not.toContain('okf_version');
+        expect(screen.queryByDisplayValue(/type: Isoform Knowledge/)).toBeNull();
+        fireEvent.change(steps, { target: { value: 'Quit OrbStack\nRun the cleanup again' } });
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Save' }));
         });
-        expect(mocks.save).toHaveBeenCalledWith('k-fix', '## Description\n\nEdited\n');
+        const written = mocks.save.mock.calls.at(-1)![1] as string;
+        expect(mocks.save.mock.calls.at(-1)![0]).toBe('k-fix');
+        expect(written).toContain('type: Isoform Knowledge');
+        expect(written).toContain('okf_version: "0.1"');
+        expect(written).toMatch(/- Quit OrbStack\n- Run the cleanup again/);
+        expect(screen.queryByRole('textbox', { name: 'Steps, one per line' })).toBeNull();
+        expect(mocks.toast).not.toHaveBeenCalled();
     });
 
-    it('time buckets: the overview counts them and the page More menu groups the cards', async () => {
-        await renderPage();
-        const overview = screen.getByRole('complementary', { name: 'Know-how detail' });
-        const byWhen = within(overview).getByRole('region', { name: 'When it was saved' });
-        expect(within(byWhen).getByText('Today')).toBeInTheDocument();
-        expect(within(byWhen).getByText('This week')).toBeInTheDocument();
-
-        await openMenu('More for know-how');
-        await chooseMenuItem('Group by when it was saved');
-        expect(screen.getByRole('region', { name: 'Today' })).toBeInTheDocument();
-        expect(screen.getByRole('region', { name: 'This week' })).toBeInTheDocument();
-        expect(within(screen.getByRole('region', { name: 'This week' })).getByText(CARDS[0].title)).toBeInTheDocument();
-
-        await openMenu('More for know-how');
-        await chooseMenuItem('Show all in one grid');
-        expect(screen.queryByRole('region', { name: 'This week' })).toBeNull();
-    });
-
-    it('top sources: the overview lists them, and the page More menu returns to it from an entry', async () => {
+    it('W9: a failed edit save stays in the panel, copper, and Try again saves again', async () => {
+        mocks.save.mockRejectedValueOnce(new Error('disk full')).mockImplementation(async (id: string, content: string) => ({ ...entry(id), content }));
         await renderPage();
         await selectCard('Docker cleanup');
-        expect(screen.queryByRole('region', { name: 'Top sources' })).toBeNull();
-        await openMenu('More for know-how');
-        await chooseMenuItem('At a glance');
-        const sources = screen.getByRole('region', { name: 'Top sources' });
-        for (const app of ['Terminal', 'Claude', 'Isoform', 'GitHub']) {
-            expect(within(sources).getByText(app)).toBeInTheDocument();
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+        });
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+        });
+        expect(screen.getByText('Didn’t save.')).toBeInTheDocument();
+        expect(document.body.textContent).not.toContain('disk full');
+        expect(mocks.toast).not.toHaveBeenCalled();
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        });
+        expect(mocks.save).toHaveBeenCalledTimes(2);
+        expect(screen.queryByRole('textbox', { name: 'Steps, one per line' })).toBeNull();
+    });
+
+    it('no At a glance: the list takes the full width until a card is picked (design review v1.0.1 W39)', async () => {
+        mocks.listKnowHow.mockResolvedValue([
+            ...CARDS,
+            card({ id: 'k-prompt', title: 'Hub notes', apps: ['you-are-the-isoform-hub-for'], savedAt: now }),
+        ]);
+        await renderPage();
+        expect(screen.queryByRole('complementary', { name: 'Know-how detail' })).toBeNull();
+        for (const gone of ['At a glance', 'When it was saved', 'Top sources']) {
+            expect(screen.queryByText(gone)).toBeNull();
         }
+        await openMenu('More for know-how');
+        expect(screen.queryByRole('menuitem', { name: 'At a glance' })).toBeNull();
+        await chooseMenuItem('Group by when it was saved');
+        expect(screen.getByRole('region', { name: 'Today' })).toBeInTheDocument();
+        expect(within(screen.getByRole('region', { name: 'This week' })).getByText(CARDS[0].title)).toBeInTheDocument();
+        expect(screen.queryByRole('complementary', { name: 'Know-how detail' })).toBeNull();
+
+        await selectCard('Docker cleanup');
+        const detail = screen.getByRole('complementary', { name: 'Know-how detail' });
+        expect(within(detail).getByText(CARDS[0].title)).toBeInTheDocument();
+        expect(within(detail).queryByText('Top sources')).toBeNull();
+    });
+
+    it('one lesson, once: a folded card lists every moment under Where it came from (design review v1.0.1 W40)', async () => {
+        const at = (day: number, hour: number) => new Date(2026, 10, day, hour, 10).getTime();
+        const lesson = card({
+            id: 'k-rename',
+            kind: 'fix',
+            title: 'Juniper Bakery deploys broke after repo rename',
+            takeaway: 'Point the site at the new repo.',
+            savedAt: at(3, 14),
+            mergedIds: ['k-rename-2', 'k-rename-3'],
+            moments: [
+                { at: at(1, 9), assistant: '', app: 'Terminal', sessionId: 's-1' },
+                { at: at(2, 11), assistant: 'codex', app: '', sessionId: '' },
+                { at: at(3, 14), assistant: 'claude', app: '', sessionId: '' },
+            ] as main.KnowHowMoment[],
+        });
+        mocks.listKnowHow.mockResolvedValue([lesson, ...CARDS]);
+        const onOpenActivitySession = vi.fn();
+        await renderPage({ onOpenActivitySession });
+        expect(screen.getAllByText('Juniper Bakery deploys broke after repo rename')).toHaveLength(1);
+        await selectCard('Juniper Bakery');
+        const moments = screen.getByRole('list', { name: 'Where it came from' });
+        const items = within(moments).getAllByRole('listitem');
+        expect(items).toHaveLength(3);
+        expect(items[0]).toHaveTextContent(/Nov 1.*Terminal/);
+        expect(items[1]).toHaveTextContent(/Nov 2.*Codex/);
+        expect(items[2]).toHaveTextContent(/Nov 3, 2:10\s?PM · Claude Code/);
+        fireEvent.click(within(items[0]).getByRole('button'));
+        expect(onOpenActivitySession).toHaveBeenCalledWith('s-1');
+
+        await openMenu('More for Juniper Bakery deploys broke after repo rename');
+        await chooseMenuItem('Delete');
+        const dialog = await screen.findByRole('dialog');
+        await act(async () => {
+            fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+        });
+        expect(mocks.remove.mock.calls.map(([id]) => id)).toEqual(['k-rename', 'k-rename-2', 'k-rename-3']);
     });
 
     it('translate: one entry from its More menu, all from the page More menu', async () => {
@@ -615,7 +681,7 @@ describe('How you do things keeps every Knowledge action', () => {
             fireEvent.click(within(dialog).getByRole('button', { name: 'Translate' }));
         });
         expect(mocks.translateAll).toHaveBeenCalledWith({ target: 'follow-ui', language: '' });
-        expect(screen.getByRole('status')).toHaveTextContent('Translating all know-how in the background...');
+        expect(screen.getByRole('status')).toHaveTextContent('Translating all know-how…');
         expect(screen.getByRole('status')).not.toHaveTextContent('0 /');
     });
 
@@ -643,12 +709,31 @@ describe('How you do things keeps every Knowledge action', () => {
         expect(screen.getByRole('button', { name: 'Current version' })).toBeInTheDocument();
     });
 
+    it('history: a failed load is copper with a working Try again, never the raw error', async () => {
+        mocks.listVersions.mockRejectedValueOnce(new Error('open /Users/fictional/.isoform/knowledge: EACCES'));
+        await renderPage();
+        await selectCard('Docker cleanup');
+        await openMenu(`More for ${CARDS[0].title}`);
+        await chooseMenuItem('Version history');
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent('Couldn’t load the versions.');
+        expect(alert.className).toContain('text-copper');
+        expect(alert.className).not.toMatch(/text-error|bg-error/);
+        expect(screen.queryByText(/EACCES/)).toBeNull();
+        expect(screen.queryByText(/No history yet/)).toBeNull();
+        await act(async () => {
+            fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+        });
+        expect(await screen.findByText('An older version')).toBeInTheDocument();
+        expect(screen.queryByRole('alert')).toBeNull();
+    });
+
     it('history shows a version in words; its raw metadata stays in Technical details', async () => {
         const onOpenActivitySession = vi.fn();
         mocks.getVersion.mockResolvedValue(
             '---\ntype: Isoform Knowledge\ntimestamp: 2026-10-18T10:00:00Z\nsource: activity\nactivity_sessions: ["s-9"]\n---\n## Description\n\nAn older version\n',
         );
-        await renderPage({ onOpenActivitySession });
+        await renderPage({ onOpenActivitySession }, { devTools: true });
         await selectCard('Docker cleanup');
         await openMenu(`More for ${CARDS[0].title}`);
         await chooseMenuItem('Version history');
@@ -671,7 +756,7 @@ describe('How you do things keeps every Knowledge action', () => {
     });
 
     it('search: finds know-how by its words', async () => {
-        await renderPage();
+        await renderPage({}, { devTools: true });
         fireEvent.change(screen.getByRole('searchbox', { name: 'Search know-how' }), { target: { value: 'orbstack' } });
         expect(cardButton('Docker cleanup')).toBeInTheDocument();
         expect(document.querySelector('[data-know-how-id="k-decision"]')).toBeNull();
@@ -688,7 +773,7 @@ describe('How you do things keeps every Knowledge action', () => {
             },
             ...ENTRIES.slice(1),
         ]);
-        await renderPage({ onOpenActivitySession });
+        await renderPage({ onOpenActivitySession }, { devTools: true });
         await selectCard('Docker cleanup');
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Technical details' }));
@@ -737,14 +822,14 @@ describe('the confirm moment', () => {
         vi.setSystemTime(now);
         mocks.getCandidate.mockResolvedValue({ ...CANDIDATE, occurredAtMs: [...CANDIDATE.occurredAtMs.slice(0, -1), now] });
         mocks.getMatch.mockResolvedValue(MATCH);
-        await renderPage();
+        await renderPage({}, { devTools: true });
         const banner = screen.getByTestId('know-how-candidate');
         expect(within(banner).getByText('You’ve done this the same way 4 times. Make it a how-to?')).toBeInTheDocument();
         expect(
-            within(banner).getByText(/Fresh-install QA before a release: the same 4 steps on .*, and today, about 40 minutes each\./),
+            within(banner).getByText(/Fresh-install QA before a release: the same 4 steps on .*, and today, about 40 min each\./),
         ).toBeInTheDocument();
-        expect(within(banner).getByRole('button', { name: 'Review the how-to' })).toBeInTheDocument();
-        expect(within(banner).getByRole('button', { name: 'Not a how-to' })).toBeInTheDocument();
+        expect(within(banner).getByRole('button', { name: 'See the steps' })).toBeInTheDocument();
+        expect(within(banner).getByRole('button', { name: 'Not how' })).toBeInTheDocument();
         // Above "You've hit this before" when both exist.
         const matchBanner = screen.getByTestId('know-how-match');
         expect(banner.compareDocumentPosition(matchBanner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -752,57 +837,56 @@ describe('the confirm moment', () => {
         expect(mocks.confirmCandidate).not.toHaveBeenCalled();
     });
 
-    it('every card and detail shows the scope chip', async () => {
+    it('W16: no scope chip while there is one scope', async () => {
         await renderPage();
-        expect(within(cardButton('Docker cleanup')).getByText('Mine')).toBeInTheDocument();
-        expect(within(cardButton('Isoform keeps')).getByText('Mine')).toBeInTheDocument();
+        expect(within(cardButton('Docker cleanup')).queryByText('Mine')).toBeNull();
+        expect(within(screen.getByTestId('know-how-candidate')).queryByText('Mine')).toBeNull();
         await selectCard('Docker cleanup');
         const detail = screen.getByRole('complementary', { name: 'Know-how detail' });
-        expect(within(detail).getByText('Mine')).toBeInTheDocument();
+        expect(within(detail).queryByText('Mine')).toBeNull();
     });
 
     it('review opens the draft: label, scope, when to use it, the steps, and what gets written down', async () => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         const detail = screen.getByRole('complementary', { name: 'Know-how detail' });
         expect(within(detail).getByText('Draft how-to')).toBeInTheDocument();
-        expect(within(detail).getByText('Mine')).toBeInTheDocument();
-        expect(within(detail).getByText('Proposed today')).toBeInTheDocument();
+        // W3, W16: no "Proposed today", no scope chip.
+        expect(within(detail).queryByText('Mine')).toBeNull();
+        expect(detail.textContent).not.toContain('Proposed today');
+        expect(detail.textContent).not.toContain('Nothing leaves this computer');
         expect(within(detail).getByRole('heading', { level: 2, name: CANDIDATE.title })).toBeInTheDocument();
         expect(within(detail).getByText('When to use it')).toBeInTheDocument();
         expect(within(detail).getByText(CANDIDATE.trigger)).toBeInTheDocument();
         expect(within(detail).getAllByRole('listitem')).toHaveLength(4);
         expect(within(detail).getByText('Where it came from')).toBeInTheDocument();
         expect(within(detail).getByText('The same steps, in the same order, in 4 sessions.')).toBeInTheDocument();
-        expect(within(detail).getByText(/Terminal, Isoform · about 40 minutes each/)).toBeInTheDocument();
+        expect(within(detail).getByText(/Terminal, Isoform · about 40 min each/)).toBeInTheDocument();
         expect(within(detail).getByText('What gets written down')).toBeInTheDocument();
         expect(
-            within(detail).getByText('The title, when to use it, and the 4 steps above. Nothing leaves this computer.'),
+            within(detail).getByText('The title, when to use it, and the 4 steps above, saved on this computer.'),
         ).toBeInTheDocument();
         expect(within(detail).getByText('What stays where it was')).toBeInTheDocument();
-        expect(within(detail).getByRole('button', { name: 'Confirm this how-to' })).toBeInTheDocument();
+        expect(within(detail).getByRole('button', { name: 'That’s how' })).toBeInTheDocument();
         expect(within(detail).getByRole('button', { name: 'Edit steps' })).toBeInTheDocument();
-        expect(within(detail).getByRole('button', { name: 'Not a how-to' })).toBeInTheDocument();
-        // The raw session ids and source enum stay in Technical details.
+        expect(within(detail).getByRole('button', { name: 'Not how' })).toBeInTheDocument();
+        // W12: the raw session ids and source enum are developer tools only.
         expect(detail.textContent).not.toContain('source: observed');
-        await act(async () => {
-            fireEvent.click(within(detail).getByRole('button', { name: 'Technical details' }));
-        });
-        expect(within(detail).getByText('source: observed · 4 sessions · scope: mine')).toBeInTheDocument();
-        expect(within(detail).getByText(`ID ${CANDIDATE.id}`)).toBeInTheDocument();
+        expect(within(detail).queryByRole('button', { name: 'Technical details' })).toBeNull();
+        expect(detail.textContent).not.toContain(CANDIDATE.id);
     });
 
     it('confirm saves the how-to, says where it went, and lands the card at the top', async () => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         // The saved how-to comes back at the end of the list; it lands first.
         mocks.listKnowHow.mockResolvedValue([...CARDS, { ...CARDS[0], id: CANDIDATE.id, title: 'Friday invoices' }]);
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Confirm this how-to' }));
+            fireEvent.click(screen.getAllByRole('button', { name: 'That’s how' }).at(-1)!);
         });
         expect(mocks.confirmCandidate).toHaveBeenCalledWith(CANDIDATE.id);
         expect(screen.queryByTestId('know-how-candidate')).toBeNull();
@@ -822,10 +906,10 @@ describe('the confirm moment', () => {
     it('undo after confirm restores the draft review', async () => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Confirm this how-to' }));
+            fireEvent.click(screen.getAllByRole('button', { name: 'That’s how' }).at(-1)!);
         });
         mocks.getCandidate.mockResolvedValue(CANDIDATE);
         await act(async () => {
@@ -839,12 +923,12 @@ describe('the confirm moment', () => {
     it('not a how-to declines for good, says so, and Undo brings the proposal back', async () => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Not a how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'Not how' }));
         });
         expect(mocks.declineCandidate).toHaveBeenCalledWith(CANDIDATE.id);
         expect(screen.queryByTestId('know-how-candidate')).toBeNull();
         const result = screen.getByRole('status');
-        expect(result).toHaveTextContent('Not a how-to. Isoform won’t propose this one again.');
+        expect(result).toHaveTextContent('Not how. Isoform won’t offer this one again.');
 
         await act(async () => {
             fireEvent.click(within(result).getByRole('button', { name: 'Undo' }));
@@ -858,7 +942,7 @@ describe('the confirm moment', () => {
         try {
             await renderPage();
             await act(async () => {
-                fireEvent.click(screen.getByRole('button', { name: 'Not a how-to' }));
+                fireEvent.click(screen.getByRole('button', { name: 'Not how' }));
             });
             const result = screen.getByRole('status');
             expect(within(result).getByRole('button', { name: 'Undo' })).toBeInTheDocument();
@@ -866,7 +950,7 @@ describe('the confirm moment', () => {
                 vi.advanceTimersByTime(60_000);
             });
             expect(within(result).getByRole('button', { name: 'Undo' })).toBeInTheDocument();
-            expect(result).toHaveTextContent('Not a how-to. Isoform won’t propose this one again.');
+            expect(result).toHaveTextContent('Not how. Isoform won’t offer this one again.');
         } finally {
             vi.useRealTimers();
         }
@@ -881,7 +965,7 @@ describe('the confirm moment', () => {
         }));
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Edit steps' }));
@@ -906,7 +990,7 @@ describe('the confirm moment', () => {
     it('escape leaves the edit, then the review, before the dialog', async () => {
         const { escape } = await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Edit steps' }));
@@ -924,9 +1008,9 @@ describe('the confirm moment', () => {
         mocks.declineCandidate.mockRejectedValueOnce(new Error('disk full'));
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Not a how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'Not how' }));
         });
-        expect(screen.getByRole('alert')).toHaveTextContent('Could not do that. Try again.');
+        expect(screen.getByRole('alert')).toHaveTextContent('Didn’t save.');
         expect(screen.getByTestId('know-how-candidate')).toBeInTheDocument();
         expect(screen.queryByText(/won’t propose this one again/)).toBeNull();
     });
@@ -936,18 +1020,20 @@ describe('the confirm moment', () => {
         await renderPage();
         const banner = screen.getByTestId('know-how-candidate');
         expect(within(banner).getByText('这套同样的做法你已经做了 4 次。要记成做法吗？')).toBeInTheDocument();
-        expect(within(banner).getByRole('button', { name: '查看做法' })).toBeInTheDocument();
-        expect(within(banner).getByRole('button', { name: '不是做法' })).toBeInTheDocument();
+        expect(within(banner).getByRole('button', { name: '就是这么做' })).toBeInTheDocument();
+        expect(within(banner).getByRole('button', { name: '查看步骤' })).toBeInTheDocument();
+        expect(within(banner).getByRole('button', { name: '不是这么做' })).toBeInTheDocument();
         await act(async () => {
-            fireEvent.click(within(banner).getByRole('button', { name: '查看做法' }));
+            fireEvent.click(within(banner).getByRole('button', { name: '查看步骤' }));
         });
         const detail = screen.getByRole('complementary', { name: '经验详情' });
         expect(within(detail).getByText('做法草稿')).toBeInTheDocument();
-        expect(within(detail).getByText('我的')).toBeInTheDocument();
+        expect(within(detail).queryByText('我的')).toBeNull();
+        expect(within(detail).getByText('标题、什么时候用它，以及上面的 4 个步骤，保存在这台电脑上。')).toBeInTheDocument();
         expect(within(detail).getByText('会记下什么')).toBeInTheDocument();
-        expect(within(detail).getByRole('button', { name: '记为做法' })).toBeInTheDocument();
+        expect(within(detail).getByRole('button', { name: '就是这么做' })).toBeInTheDocument();
         await act(async () => {
-            fireEvent.click(within(detail).getByRole('button', { name: '记为做法' }));
+            fireEvent.click(within(detail).getByRole('button', { name: '就是这么做' }));
         });
         expect(screen.getByRole('status')).toHaveTextContent('已存进「你的方法」。');
     });
@@ -1005,7 +1091,7 @@ describe('candidate privacy transitions', () => {
     it.each(PRIVACY_EVENTS)('withdraws the open review on %s while re-reads are held', async (event, payload) => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         expect(screen.getByText(CANDIDATE.steps[0])).toBeInTheDocument();
         mocks.getCandidate.mockImplementation(() => new Promise(() => {}));
@@ -1018,7 +1104,7 @@ describe('candidate privacy transitions', () => {
     it.each(PRIVACY_EVENTS)('withdraws the edit panel and its fields on %s', async (event, payload) => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Edit steps' }));
@@ -1034,9 +1120,9 @@ describe('candidate privacy transitions', () => {
     it.each(PRIVACY_EVENTS)('withdraws the Undo line on %s', async (event, payload) => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Not a how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'Not how' }));
         });
-        expect(screen.getByRole('status')).toHaveTextContent('Not a how-to.');
+        expect(screen.getByRole('status')).toHaveTextContent('Not how.');
         mocks.getCandidate.mockImplementation(() => new Promise(() => {}));
         await emit(event, payload);
         expect(screen.queryByRole('status')).toBeNull();
@@ -1074,7 +1160,7 @@ describe('candidate privacy transitions', () => {
     it.each(PRIVACY_EVENTS)('a late Save result after %s cannot repopulate the edit', async (event, payload) => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Edit steps' }));
@@ -1095,10 +1181,10 @@ describe('candidate privacy transitions', () => {
     it.each(PRIVACY_EVENTS)('a late Undo result after %s cannot restore the proposal', async (event, payload) => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Confirm this how-to' }));
+            fireEvent.click(screen.getAllByRole('button', { name: 'That’s how' }).at(-1)!);
         });
         expect(screen.getByRole('status')).toHaveTextContent('Saved in How you do things.');
         let finishUndo!: () => void;
@@ -1117,12 +1203,12 @@ describe('candidate privacy transitions', () => {
     it.each(PRIVACY_EVENTS)('a late Confirm result after %s cannot restore the result or selection', async (event, payload) => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         let finishConfirm!: (value: { knowledgeId: string }) => void;
         mocks.confirmCandidate.mockImplementation(() => new Promise((resolve) => { finishConfirm = resolve; }));
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Confirm this how-to' }));
+            fireEvent.click(screen.getAllByRole('button', { name: 'That’s how' }).at(-1)!);
         });
         mocks.getCandidate.mockImplementation(() => new Promise(() => {}));
         await emit(event, payload);
@@ -1136,12 +1222,12 @@ describe('candidate privacy transitions', () => {
     it('keeps confirm and Undo through its own write and the subsequent index notification', async () => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         let finishConfirm!: (value: { knowledgeId: string }) => void;
         mocks.confirmCandidate.mockImplementation(() => new Promise((resolve) => { finishConfirm = resolve; }));
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Confirm this how-to' }));
+            fireEvent.click(screen.getAllByRole('button', { name: 'That’s how' }).at(-1)!);
         });
         mocks.getCandidate.mockResolvedValue(null);
         await emit('memory:updated', { reason: 'knowhow-confirm' });
@@ -1157,7 +1243,7 @@ describe('candidate privacy transitions', () => {
     it('immediately withdraws a revoked draft while its replacement read is pending', async () => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         mocks.getCandidate.mockImplementation(() => new Promise(() => {}));
         await emit('knowhow:candidate-updated', { action: 'withdrawn', id: CANDIDATE.id });
@@ -1197,7 +1283,7 @@ describe('candidate privacy transitions', () => {
     it('withdraws the open review when every remaining account is switched off, with reads held', async () => {
         await renderPage();
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Review the how-to' }));
+            fireEvent.click(screen.getByRole('button', { name: 'See the steps' }));
         });
         expect(screen.getByText(CANDIDATE.steps[0])).toBeInTheDocument();
         mocks.getCandidate.mockImplementation(() => new Promise(() => {}));
@@ -1279,12 +1365,330 @@ describe('candidate privacy transitions', () => {
         await act(async () => {
             fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
         });
-        const editor = screen.getByRole('textbox', { name: 'Know-how markdown' });
+        const editor = screen.getByRole('textbox', { name: 'Steps, one per line' });
         fireEvent.change(editor, { target: { value: 'unsaved owner words' } });
         mocks.getCandidate.mockImplementation(() => new Promise(() => {}));
         await emit('sensitive-apps:updated');
         expect(screen.queryByTestId('know-how-candidate')).toBeNull();
-        expect(screen.queryByRole('textbox', { name: 'Know-how markdown' })).toBeNull();
+        expect(screen.queryByRole('textbox', { name: 'Steps, one per line' })).toBeNull();
         expect(screen.queryByDisplayValue('unsaved owner words')).toBeNull();
+    });
+});
+
+describe('design review v1.0.0 (Thursday)', () => {
+    const emit = async (name: string, payload?: unknown) => {
+        await act(async () => {
+            for (const handler of events.get(name) ?? []) handler(payload);
+        });
+    };
+    const HOW_TO = card({
+        id: 'k-howto',
+        kind: 'how_to',
+        title: 'Ship the weekly report',
+        takeaway: 'Pull the numbers, write it up, send it.',
+        trigger: 'Friday afternoon',
+        points: ['Pull the numbers', 'Write the summary', 'Send it to the team'],
+        savedAt: now - DAY,
+    });
+
+    beforeEach(async () => {
+        vi.resetAllMocks();
+        pageQueryCache.clear();
+        await i18n.changeLanguage('en');
+        chat.items = [];
+        chat.lastUserItemId = '';
+        chat.pending = null;
+        mocks.listKnowHow.mockResolvedValue([...CARDS, HOW_TO]);
+        mocks.getEntries.mockResolvedValue([...ENTRIES, entry('k-howto')]);
+        mocks.listSops.mockResolvedValue([]);
+        mocks.getPlaybooks.mockResolvedValue({ plans: [], channels: null, defaultChannels: [] });
+        mocks.getSopAuthor.mockResolvedValue(null);
+        mocks.getMatch.mockResolvedValue(null);
+        mocks.getCandidate.mockResolvedValue(CANDIDATE);
+        mocks.confirmCandidate.mockResolvedValue({ knowledgeId: CANDIDATE.id });
+        mocks.declineCandidate.mockResolvedValue(undefined);
+        mocks.undoConfirmCandidate.mockResolvedValue(undefined);
+        mocks.listVersions.mockResolvedValue([]);
+        mocks.generate.mockResolvedValue(undefined);
+        mocks.generateRange.mockResolvedValue(undefined);
+        chat.send.mockResolvedValue('sent');
+    });
+
+    afterEach(() => {
+        cleanup();
+    });
+
+    it('W5: the banner says That’s how, See the steps, Not how; That’s how saves at once', async () => {
+        await renderPage();
+        const banner = screen.getByTestId('know-how-candidate');
+        expect(within(banner).getAllByRole('button').map((b) => b.textContent)).toEqual(
+            expect.arrayContaining(['That’s how', 'See the steps', 'Not how']),
+        );
+        await act(async () => {
+            fireEvent.click(within(banner).getByRole('button', { name: 'That’s how' }));
+        });
+        expect(mocks.confirmCandidate).toHaveBeenCalledWith(CANDIDATE.id);
+        expect(screen.getByRole('status')).toHaveTextContent('Saved in How you do things.');
+        expect(mocks.toast).not.toHaveBeenCalled();
+    });
+
+    it('W5: Not how answers in place with the decided words', async () => {
+        await renderPage();
+        await act(async () => {
+            fireEvent.click(within(screen.getByTestId('know-how-candidate')).getByRole('button', { name: 'Not how' }));
+        });
+        expect(mocks.declineCandidate).toHaveBeenCalledWith(CANDIDATE.id);
+        expect(screen.getByRole('status')).toHaveTextContent('Not how. Isoform won’t offer this one again.');
+    });
+
+    it('W6: a failed save is copper and in place, and Try again saves', async () => {
+        mocks.confirmCandidate.mockRejectedValueOnce(new Error('disk full'));
+        await renderPage();
+        await act(async () => {
+            fireEvent.click(within(screen.getByTestId('know-how-candidate')).getByRole('button', { name: 'That’s how' }));
+        });
+        expect(screen.getByText('Didn’t save.')).toBeInTheDocument();
+        expect(document.body.textContent).not.toContain('disk full');
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        });
+        expect(mocks.confirmCandidate).toHaveBeenCalledTimes(2);
+        expect(screen.getByRole('status')).toHaveTextContent('Saved in How you do things.');
+    });
+
+    it('W6, W19: Undo that fails says so; a failed re-read after Undo says Couldn’t load this how-to, with Try again', async () => {
+        await renderPage();
+        await act(async () => {
+            fireEvent.click(within(screen.getByTestId('know-how-candidate')).getByRole('button', { name: 'That’s how' }));
+        });
+        mocks.undoConfirmCandidate.mockRejectedValueOnce(new Error('locked'));
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+        });
+        expect(screen.getByText('Didn’t undo.')).toBeInTheDocument();
+
+        mocks.getCandidate.mockRejectedValueOnce(new Error('read failed'));
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        });
+        expect(mocks.undoConfirmCandidate).toHaveBeenCalledTimes(2);
+        expect(await screen.findByText('Couldn’t load this how-to.')).toBeInTheDocument();
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        });
+        expect(await screen.findByTestId('know-how-candidate')).toBeInTheDocument();
+        expect(screen.queryByText('Couldn’t load this how-to.')).toBeNull();
+    });
+
+    it('W19: a failed re-read keeps the proposal on screen', async () => {
+        await renderPage();
+        mocks.getCandidate.mockRejectedValue(new Error('read failed'));
+        await emit('knowhow:candidate-updated');
+        expect(screen.getByTestId('know-how-candidate')).toBeInTheDocument();
+        expect(screen.getByText(CANDIDATE.title, { exact: false })).toBeInTheDocument();
+    });
+
+    it('W20: a failed re-read keeps the match banner', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        mocks.getMatch.mockResolvedValue(MATCH);
+        await renderPage();
+        expect(screen.getByTestId('know-how-match')).toBeInTheDocument();
+        mocks.getMatch.mockRejectedValue(new Error('read failed'));
+        await emit('knowledge:updated');
+        await waitFor(() => expect(mocks.getMatch.mock.calls.length).toBeGreaterThanOrEqual(2), { timeout: 3000 });
+        expect(screen.getByTestId('know-how-match')).toBeInTheDocument();
+    });
+
+    it('W17: the saved line and its Undo clear when you leave the page', async () => {
+        const escapeRef = { current: null as (() => boolean) | null };
+        let view!: ReturnType<typeof render>;
+        await act(async () => {
+            view = render(<KnowledgePage escapeRef={escapeRef} active />);
+        });
+        await act(async () => {
+            fireEvent.click(within(screen.getByTestId('know-how-candidate')).getByRole('button', { name: 'That’s how' }));
+        });
+        expect(screen.getByText('Saved in How you do things.')).toBeInTheDocument();
+        await act(async () => {
+            view.rerender(<KnowledgePage escapeRef={escapeRef} active={false} />);
+        });
+        await act(async () => {
+            view.rerender(<KnowledgePage escapeRef={escapeRef} active />);
+        });
+        expect(screen.queryByText('Saved in How you do things.')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
+    });
+
+    it('W7: Ask about this asks in place under the detail and never opens Chat', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        await renderPage();
+        await selectCard('Docker cleanup');
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Ask about this' }));
+        });
+        const detail = screen.getByRole('complementary', { name: 'Know-how detail' });
+        const field = within(detail).getByRole('textbox', { name: 'Ask anything about this' });
+        fireEvent.change(field, { target: { value: 'Does this work on Linux?' } });
+        await act(async () => {
+            fireEvent.keyDown(field, { key: 'Enter' });
+        });
+        expect(chat.send).toHaveBeenCalledWith('Does this work on Linux?', { sourceKind: 'knowledge', sourceId: 'k-fix' }, true);
+    });
+
+    it('W8: Turn into a playbook drafts in place, through the author, and says where it shows', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        mocks.generate.mockRejectedValueOnce(new Error('no model'));
+        await renderPage();
+        await selectCard('Ship the weekly report');
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Turn into a playbook' }));
+        });
+        expect(mocks.generate).toHaveBeenCalledWith(expect.stringContaining('Ship the weekly report'));
+        expect(screen.getByText('Didn’t start the playbook.')).toBeInTheDocument();
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        });
+        expect(mocks.generate).toHaveBeenCalledTimes(2);
+        expect(screen.getByText('Drafting a playbook. It shows in Tasks, under Up next.')).toBeInTheDocument();
+        expect(chat.send).not.toHaveBeenCalled();
+    });
+
+    it('W9: copy and delete failures are copper in place with Try again; nothing toasts', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        const writeText = vi.fn().mockRejectedValueOnce(new Error('denied')).mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+        await renderPage();
+        await selectCard('Docker cleanup');
+        await openMenu(`More for ${CARDS[0].title}`);
+        await chooseMenuItem('Copy markdown');
+        expect(await screen.findByText('Didn’t copy.')).toBeInTheDocument();
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        });
+        expect(writeText).toHaveBeenCalledTimes(2);
+        await waitFor(() => expect(screen.queryByText('Didn’t copy.')).toBeNull());
+
+        mocks.remove.mockRejectedValueOnce(new Error('locked'));
+        await openMenu(`More for ${CARDS[0].title}`);
+        await chooseMenuItem('Delete');
+        const dialog = await screen.findByRole('dialog');
+        await act(async () => {
+            fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+        });
+        expect(await screen.findByText('Didn’t delete.')).toBeInTheDocument();
+        expect(mocks.toast).not.toHaveBeenCalled();
+    });
+
+    it('W1: Generate says it drafts into Tasks › Up next; a failure has Try again', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        mocks.generateRange.mockRejectedValueOnce(new Error('busy'));
+        await renderPage();
+        await openMenu('Generate from recent work');
+        await chooseMenuItem('Last 3 days');
+        expect(await screen.findByText('Didn’t start the playbook.')).toBeInTheDocument();
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        });
+        expect(mocks.generateRange).toHaveBeenCalledTimes(2);
+        expect(await screen.findByText('Drafting a playbook from your recent work. It shows in Tasks, under Up next.')).toBeInTheDocument();
+        expect(mocks.toast).not.toHaveBeenCalled();
+    });
+
+    it('W1: the Generate line reads in Chinese', async () => {
+        await i18n.changeLanguage('zh-CN');
+        mocks.getCandidate.mockResolvedValue(null);
+        await renderPage();
+        await openMenu('从最近的工作生成');
+        await chooseMenuItem('最近 3 天');
+        expect(await screen.findByText('正在根据你最近的工作起草操作手册。起草好后会出现在「任务」的「接下来」里。')).toBeInTheDocument();
+    });
+
+    const authorStatus = async (status: Record<string, unknown>) => {
+        await act(async () => {
+            for (const handler of events.get('sop:author-status') ?? []) handler(status);
+        });
+    };
+
+    it('W01: a draft says where it goes under the actions, then that it is in Tasks › Up next', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        mocks.getSopAuthor.mockResolvedValue(null);
+        mocks.generateRange.mockResolvedValue(undefined);
+        await renderPage();
+        await openMenu('Generate from recent work');
+        await chooseMenuItem('Last 3 days');
+        const drafting = await screen.findByText('Drafting a playbook from your recent work. It shows in Tasks, under Up next.');
+        expect(drafting).toHaveAttribute('role', 'status');
+        expect(screen.queryByText('Drafting a playbook…')).toBeNull();
+        await authorStatus({ running: true, updatedAt: Date.now(), lastEvent: 'agent_log' });
+        expect(screen.getByText('Drafting a playbook from your recent work. It shows in Tasks, under Up next.')).toBeInTheDocument();
+        await authorStatus({ running: false, updatedAt: Date.now(), lastEvent: 'saved' });
+        expect(screen.getByText('Drafted. It’s in Tasks, under Up next.')).toBeInTheDocument();
+        expect(screen.queryByText(/Drafting a playbook/)).toBeNull();
+        expect(mocks.toast).not.toHaveBeenCalled();
+    });
+
+    it('W01: a draft that matches a playbook you have says nothing new was made', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        mocks.getSopAuthor.mockResolvedValue({ running: true, updatedAt: Date.now(), lastEvent: 'started' });
+        await renderPage();
+        expect(await screen.findByText('Drafting a playbook from your recent work. It shows in Tasks, under Up next.')).toBeInTheDocument();
+        await authorStatus({ running: false, updatedAt: Date.now(), lastEvent: 'skipped' });
+        expect(screen.getByText('This matches a playbook you already have, so nothing new was made.')).toBeInTheDocument();
+    });
+
+    it('W01: a draft that fails is copper with a working Try again', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        mocks.getSopAuthor.mockResolvedValue(null);
+        mocks.generateRange.mockResolvedValue(undefined);
+        await renderPage();
+        await openMenu('Generate from recent work');
+        await chooseMenuItem('Last 7 days');
+        await authorStatus({ running: true, updatedAt: Date.now(), lastEvent: 'agent_log' });
+        await authorStatus({ running: false, updatedAt: Date.now(), lastEvent: 'failed', lastError: 'runner exploded' });
+        const alert = screen.getByRole('alert');
+        expect(alert).toHaveTextContent('Didn’t draft the playbook.');
+        expect(alert.className).toContain('text-copper');
+        expect(screen.queryByText(/runner exploded/)).toBeNull();
+        await act(async () => {
+            fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+        });
+        expect(mocks.generateRange).toHaveBeenCalledTimes(2);
+        expect(screen.getByText('Drafting a playbook from your recent work. It shows in Tasks, under Up next.')).toBeInTheDocument();
+    });
+
+    it('W01: the drafted and matched lines read in Chinese', async () => {
+        await i18n.changeLanguage('zh-CN');
+        mocks.getCandidate.mockResolvedValue(null);
+        mocks.getSopAuthor.mockResolvedValue({ running: true, updatedAt: Date.now(), lastEvent: 'started' });
+        await renderPage();
+        await screen.findByText('正在根据你最近的工作起草操作手册。起草好后会出现在「任务」的「接下来」里。');
+        await authorStatus({ running: false, updatedAt: Date.now(), lastEvent: 'saved' });
+        expect(screen.getByText('起草好了，在「任务」的「接下来」里。')).toBeInTheDocument();
+        await authorStatus({ running: true, updatedAt: Date.now(), lastEvent: 'started' });
+        await authorStatus({ running: false, updatedAt: Date.now(), lastEvent: 'skipped' });
+        expect(screen.getByText('这和你已有的一个操作手册相同，所以没有新建。')).toBeInTheDocument();
+    });
+
+    it('W18: a drafting playbook shows a plain line; the agent log is developer tools only', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        mocks.getSopAuthor.mockResolvedValue({ running: true });
+        await renderPage();
+        expect(await screen.findByText('Drafting a playbook from your recent work. It shows in Tasks, under Up next.')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Drafting a playbook/ })).toBeNull();
+        cleanup();
+        await renderPage({}, { devTools: true });
+        expect(await screen.findByRole('button', { name: /Drafting a playbook/ })).toBeInTheDocument();
+    });
+
+    it('W12: Technical details are developer tools only', async () => {
+        mocks.getCandidate.mockResolvedValue(null);
+        await renderPage();
+        await selectCard('Docker cleanup');
+        expect(screen.queryByRole('button', { name: 'Technical details' })).toBeNull();
+        expect(document.body.textContent).not.toContain('k-fix');
+        cleanup();
+        await renderPage({}, { devTools: true });
+        await selectCard('Docker cleanup');
+        expect(screen.getByRole('button', { name: 'Technical details' })).toBeInTheDocument();
     });
 });

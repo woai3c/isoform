@@ -176,6 +176,47 @@ describe("PlaybookDeliveryPanel", () => {
         await waitFor(() => expect(mocks.setSchedule).toHaveBeenCalled());
     });
 
+    it("W10: a failed save is copper in place, never a toast, and Try again saves", async () => {
+        mocks.setSchedule.mockRejectedValueOnce(new Error("disk full")).mockResolvedValue(scheduled);
+        const onSaved = vi.fn();
+        render(
+            <PlaybookDeliveryPanel
+                entry={entry}
+                plan={scheduled}
+                channels={{ desktop: true, push: false, text: true, email: true, textNames: true }}
+                defaultChannels={["desktop", "text"]}
+                onSaved={onSaved}
+            />,
+        );
+        fireEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        expect(await screen.findByText("Didn’t save.")).toBeInTheDocument();
+        expect(document.body.textContent).not.toContain("disk full");
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.setSchedule).toHaveBeenCalledTimes(2));
+        await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    });
+
+    it("W21: when the schedule didn't load it says so, never 'when you ask', and Try again re-reads", () => {
+        const onRetry = vi.fn();
+        render(
+            <PlaybookDeliveryPanel
+                entry={entry}
+                plan={scheduled}
+                channels={{ desktop: true, push: false, text: true, email: true, textNames: true }}
+                defaultChannels={["desktop", "text"]}
+                onSaved={vi.fn()}
+                schedulesFailed
+                onRetrySchedules={onRetry}
+            />,
+        );
+        expect(screen.getByText("Couldn’t load when this runs.")).toBeInTheDocument();
+        expect(screen.queryByText(/when you ask/i)).toBeNull();
+        expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
     it("has every key in both languages", () => {
         const keys = (value: unknown, prefix = ""): string[] =>
             value && typeof value === "object"

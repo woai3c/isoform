@@ -1,36 +1,33 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
+import { errorNotice, type ActivityNotice } from '@/components/activity-inline-notice';
 import { ExportSOP, ImportSOP } from '@/lib/wails-shim-app';
 
-/** Export and import of a playbook bundle, with the same toasts everywhere they are offered. */
-export function usePlaybookTransfer() {
+/** Export and import of a playbook bundle, in place everywhere they are offered (W10):
+ *  nothing on a finished export, the imported playbook opens, failures come back
+ *  as a copper line with Try again. */
+export function usePlaybookTransfer(onNotice?: (notice: ActivityNotice | null) => void, onImported?: (id: string) => void) {
     const { t } = useTranslation('knowledge');
 
     const exportPlaybook = useCallback(
         (id: string) => {
             ExportSOP(id)
-                .then((path) => {
-                    if (!path) return; // dialog canceled
-                    toast.success(t('playbooks.exportDone', { path }), { duration: 5000 });
-                })
-                .catch((err) => {
-                    toast.error(t('playbooks.exportFailed', { error: String(err) }), { duration: 4000 });
-                });
+                .then(() => onNotice?.(null))
+                .catch(() => onNotice?.(errorNotice(t('playbooks.exportFailed'), () => exportPlaybook(id))));
         },
-        [t],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [onNotice, t],
     );
 
     const importPlaybook = useCallback(() => {
         ImportSOP()
             .then((entry) => {
-                if (!entry?.id) return; // dialog canceled
-                toast.success(t('playbooks.importDone', { title: entry.title }), { duration: 5000 });
+                onNotice?.(null);
+                if (entry?.id) onImported?.(entry.id);
             })
-            .catch((err) => {
-                toast.error(t('playbooks.importFailed', { error: String(err) }), { duration: 4000 });
-            });
-    }, [t]);
+            .catch(() => onNotice?.(errorNotice(t('playbooks.importFailed'), () => importPlaybook())));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [onImported, onNotice, t]);
 
     return { exportPlaybook, importPlaybook };
 }

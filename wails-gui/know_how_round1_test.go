@@ -57,7 +57,8 @@ func TestKnowHowRound1CardsReadPersistedUseCounts(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	app := newTranslationTestApp(t, &memoryTranslationFakeRunner{})
 	for _, id := range []string{"reused", "unused"} {
-		writeKnowHowFixture(t, id, buildOKFKnowledgeMarkdown(id, "Socket workaround", "Restart the daemon", time.Now(), "conversation", nil, nil, nil, "fix"))
+		// Distinct lessons: near-duplicates fold into one card (design review v1.0.1 W40).
+		writeKnowHowFixture(t, id, buildOKFKnowledgeMarkdown(id, "Socket workaround "+id, "Restart the daemon", time.Now(), "conversation", nil, nil, nil, "fix"))
 	}
 	// Exercise the real C5 queue and database. One batch avoids making an
 	// assumption that separate best-effort admissions cannot be dropped.

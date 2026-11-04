@@ -28,7 +28,6 @@
         "reference": "Reference"
     },
     "reuse": {
-        "none": "Not used yet",
         "once": "Used once",
         "twice": "Used twice",
         "many": "Used {{count}} times"
@@ -64,7 +63,7 @@
         },
         "show": "Show the fix",
         "dismiss": "Not the same",
-        "dismissFailed": "Could not save that. Try again."
+        "dismissFailed": "Didn’t save."
     },
     "candidate": {
         "title_one": "You’ve done this the same way {{count}} time. Make it a how-to?",
@@ -73,28 +72,31 @@
         "body_other": "{{title}}: the same {{count}} steps on {{dates}}, {{each}}.",
         "today": "today",
         "yesterday": "yesterday",
-        "durationMin_one": "{{count}} minute",
-        "durationMin_other": "{{count}} minutes",
+        "durationMin_one": "{{count}} min",
+        "durationMin_other": "{{count}} min",
+        "durationH": "{{hours}}h",
+        "durationHm": "{{hours}}h {{minutes}}m",
         "aboutEach": "about {{duration}} each",
         "bannerLabel": "Proposed how-to",
-        "review": "Review the how-to",
-        "notHowTo": "Not a how-to",
-        "confirm": "Confirm this how-to",
+        "review": "See the steps",
+        "notHowTo": "Not how",
+        "confirm": "That’s how",
         "editSteps": "Edit steps",
         "undo": "Undo",
         "confirmed": "Saved in How you do things.",
-        "declined": "Not a how-to. Isoform won’t propose this one again.",
-        "actionFailed": "Could not do that. Try again.",
-        "proposedToday": "Proposed today",
+        "declined": "Not how. Isoform won’t offer this one again.",
+        "actionFailed": "Didn’t save.",
         "draftLabel": "Draft how-to",
         "editTitle": "Edit the draft how-to",
         "editTitleField": "Title",
         "editStepsField": "Steps, one per line",
         "writtenDownTitle": "What gets written down",
-        "writtenDownBody_one": "The title, when to use it, and the step above. Nothing leaves this computer.",
-        "writtenDownBody_other": "The title, when to use it, and the {{count}} steps above. Nothing leaves this computer.",
+        "writtenDownBody_one": "The title, when to use it, and the step above, saved on this computer.",
+        "writtenDownBody_other": "The title, when to use it, and the {{count}} steps above, saved on this computer.",
         "staysTitle": "What stays where it was",
-        "staysBody": "The screens, terminal output and timings these steps came from. They stay in Activity."
+        "staysBody": "The screens, terminal output and timings these steps came from. They stay in Activity.",
+        "undoFailed": "Didn’t undo.",
+        "loadFailed": "Couldn’t load this how-to."
     },
     "more": {
         "page": "More for know-how",
@@ -102,8 +104,7 @@
         "groupByTime": "Group by when it was saved",
         "translateAll": "Translate all know-how",
         "copyMarkdown": "Copy markdown",
-        "copied": "Markdown copied",
-        "copyFailed": "Could not copy the markdown.",
+        "copyFailed": "Didn’t copy.",
         "translate": "Translate to the app’s language",
         "history": "Version history",
         "delete": "Delete",
@@ -118,7 +119,6 @@
             "gotcha": "What to do",
             "reference": "Key points"
         },
-        "noPoints": "No points were saved with this entry. The full entry is under Technical details.",
         "origin": "Where it came from",
         "sources": {
             "activity": "Learned from your work on this computer.",
@@ -133,24 +133,21 @@
         "whenToUse": "When to use it",
         "topic": "Topic: {{name}}",
         "cta": {
-            "decision": "Add to agent rules",
-            "how_to": "Turn into a playbook",
-            "fix": "Make it a one-click fix",
-            "gotcha": "Remind me when it matters"
+            "how_to": "Turn into a playbook"
         },
         "ask": "Ask about this",
         "edit": "Edit",
         "translating": "Translating this entry...",
-        "translateFailed": "Could not translate this entry. {{error}}",
-        "deleteFailed": "Could not delete this entry."
-    },
-    "prepare": {
-        "decision": "Add this to the rules my agents follow: “{{title}}”.",
-        "how_to": "Turn “{{title}}” into a playbook I can run.",
-        "fix": "Make “{{title}}” a one-click fix I can run next time.",
-        "gotcha": "Remind me about “{{title}}” when it matters again.",
-        "takeaway": "What I saved: {{takeaway}}",
-        "ask": "About my know-how “{{title}}”: "
+        "translateFailed": "Didn’t translate.",
+        "deleteFailed": "Didn’t delete.",
+        "askPlaceholder": "Ask anything about this",
+        "askSend": "Ask",
+        "askAnswering": "Isoform is answering…",
+        "askFailed": "Couldn’t send your question.",
+        "openInChat": "Open in Chat",
+        "drafting": "Drafting a playbook. It shows in Tasks, under Up next.",
+        "draftFailed": "Didn’t start the playbook.",
+        "moment": "{{when}} · {{apps}}"
     },
     "technical": {
         "title": "Technical details",
@@ -175,12 +172,6 @@
             "trigger": "When to use it"
         }
     },
-    "overview": {
-        "title": "At a glance",
-        "hint": "Pick a card to see its points and where it came from.",
-        "byWhen": "When it was saved",
-        "topSources": "Top sources"
-    },
     "translate": {
         "action": "Translate",
         "translating": "Translating...",
@@ -195,15 +186,11 @@
             "translating": "Translating...",
             "cancel": "Cancel",
             "entriesCount": "{{count}} entries",
-            "inProgress": "Translating all know-how in the background...",
+            "inProgress": "Translating all know-how…",
             "startFailed": "Could not start the translation. {{error}}",
             "customPlaceholder": "Language name",
             "customHint": "Use any language name the model can understand.",
             "customRequired": "Enter a target language first.",
-            "startedTitle": "Know-how translation started",
-            "startedBody": "Translating {{total}} entries to {{target}} in the background.",
-            "doneTitle": "Know-how translated",
-            "doneBody": "{{translated}} / {{total}} entries translated to {{target}}. Failed: {{failed}}.",
             "languageNames": {
                 "en": "English",
                 "zh-CN": "Chinese"
@@ -225,7 +212,8 @@
             },
             "scopeDescriptions": {
                 "entries": "Translate {{count}} live know-how entries."
-            }
+            },
+            "someFailed": "{{failed}} didn’t translate."
         }
     },
     "history": {
@@ -235,6 +223,8 @@
         "current": "Current version",
         "noHistoryYet": "No history yet. Snapshots are saved before translations and updates.",
         "selectSnapshot": "Select a version to preview.",
+        "loadFailed": "Couldn’t load the versions.",
+        "snapshotFailed": "Couldn’t load this version.",
         "exit": "Exit"
     },
     "emptyState": {
@@ -266,38 +256,34 @@
         "confirm": "Delete"
     },
     "edit": {
-        "editing": "Editing markdown",
         "save": "Save",
         "saving": "Saving...",
         "cancel": "Cancel",
-        "label": "Know-how markdown",
-        "writePlaceholder": "Edit the markdown for this entry. A snapshot of the current content is saved before your changes are written.",
-        "savedTitle": "Know-how updated",
-        "savedBody": "Your edits were saved and the previous version is in history.",
-        "saveFailedTitle": "Save failed"
+        "title": "Edit this know-how",
+        "titleField": "Title",
+        "stepsField": "Steps, one per line",
+        "saveFailed": "Didn’t save."
     },
     "playbooks": {
         "export": "Export",
-        "exportDone": "Exported to {{path}}",
-        "exportFailed": "Export failed: {{error}}",
+        "exportFailed": "Didn’t export.",
         "import": "Import",
-        "importDone": "Imported \"{{title}}\"",
-        "importFailed": "Import failed: {{error}}",
+        "importFailed": "Didn’t import.",
         "version": "v{{version}}",
         "trigger": "When to run",
         "scripts": "Scripts",
         "scriptsHint": "Helper scripts bundled with this playbook. Steps reference them by name; this is exactly what a run executes.",
-        "runFailed": "Couldn't run playbook: {{error}}",
+        "runFailed": "Didn’t run.",
         "edit": "Edit",
         "editTitleLabel": "Title",
         "editDescriptionLabel": "Description",
         "editTriggerLabel": "When to run",
         "editBodyLabel": "Content",
         "save": "Save",
-        "saveFailed": "Save failed: {{error}}",
+        "saveFailed": "Didn’t save.",
         "cancel": "Cancel",
         "delete": "Delete",
-        "deleteFailed": "Delete failed: {{error}}",
+        "deleteFailed": "Didn’t delete.",
         "deleteConfirmTitle": "Delete playbook",
         "deleteConfirmStart": "Are you sure you want to delete",
         "deleteConfirmEnd": "?",
@@ -307,7 +293,6 @@
         "generateLast3": "Last 3 days",
         "generateLast7": "Last 7 days",
         "create": "Create playbook",
-        "authoring": "Creating playbook...",
         "trajectoryTitle": "Creation progress",
         "readerEmpty": "This playbook has no content yet.",
         "sourceTriage": "From activity",
@@ -318,7 +303,7 @@
         "statusConfirmed": "Confirmed",
         "runNow": "Run now",
         "runNowStarted": "Running. Isoform will send you the result.",
-        "runNowFailed": "Could not run: {{error}}",
+        "runNowFailed": "Didn’t run.",
         "runInChat": "Run in chat",
         "sitesChanged": "The pages this playbook opens changed. Review them below, then try again.",
         "heldUnapproved": "Steps changed before approval was added. Open and save to approve.",
@@ -343,8 +328,16 @@
         },
         "back": "Back to How you do things",
         "more": "More for this playbook",
-        "generateStarted": "Creating a playbook from your recent work. It will appear here when ready.",
-        "generateFailed": "Couldn't start playbook creation: {{error}}"
+        "generateStarted": "Drafting a playbook from your recent work. It shows in Tasks, under Up next.",
+        "generateFailed": "Didn’t start the playbook.",
+        "drafted": "Drafted. It’s in Tasks, under Up next.",
+        "matchesExisting": "This matches a playbook you already have, so nothing new was made.",
+        "drafting": "Drafting a playbook…",
+        "draftFailed": "Didn’t draft the playbook.",
+        "loadFailed": "Couldn’t load your playbooks.",
+        "scheduleFailed": "Couldn’t load when this runs.",
+        "openFailed": "Couldn’t open this playbook.",
+        "retry": "Try again"
     },
     "firstDay": {
         "line_one": "{{count}} piece of know-how from your {{history}}. More come as Isoform sees you work.",

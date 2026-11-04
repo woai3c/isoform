@@ -315,7 +315,11 @@ func (a *App) AcceptPlaybookSuggestion(id string) (PlaybookView, error) {
 		return PlaybookView{}, err
 	}
 	// The card names the proposal's site; the playbook must open nothing else.
+	// A drafted playbook's offer names no site, so it isn't held to one.
 	for _, origin := range playbookOrigins(entry.Sites) {
+		if plan.Proposal.Host == "" {
+			break
+		}
 		u, _ := url.Parse(origin)
 		if !strings.EqualFold(strings.TrimPrefix(u.Hostname(), "www."), plan.Proposal.Host) {
 			return PlaybookView{}, errPlaybookSitesChanged

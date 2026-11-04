@@ -31,6 +31,10 @@ type KnowHowCard struct {
 	SourceAt        int64  `json:"sourceAt"`
 	SourceAssistant string `json:"sourceAssistant"`
 	Scope           string `json:"scope"` // mine by default; metadata, never authority to share
+	// Moments are each time this lesson was learned, oldest first; MergedIDs
+	// are the near-duplicate entries folded into this card.
+	Moments   []KnowHowMoment `json:"moments"`
+	MergedIDs []string        `json:"mergedIds"`
 }
 
 // KnowHowMatch identifies a local error's earlier fix without retaining the error.
@@ -118,9 +122,10 @@ func (a *App) ListKnowHow() (perfValue []KnowHowCard, perfErr error) {
 		if err != nil {
 			card.ReuseCount = -1
 		}
+		card.Moments = knowHowEntryMoments(entry, card)
 		cards = append(cards, card)
 	}
-	return cards, nil
+	return mergeKnowHowLessons(cards), nil
 }
 
 func knowHowCard(entry KnowledgeEntry) KnowHowCard {
