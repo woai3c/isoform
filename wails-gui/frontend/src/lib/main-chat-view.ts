@@ -179,7 +179,10 @@ export function mainChatStreamRows(items: readonly StreamItem[]): StreamItem[] {
     // give it the end any projection recorded (chat-review v1.0.9 #2); do not
     // merge unrelated pauses.
     type PauseValue = { momentId?: string; captureStartAt?: number; captureEndAt?: number; captureSource?: string };
-    const pauseKeys = (value: PauseValue) => [value.momentId, value.captureSource && value.captureStartAt ? `${value.captureSource}:${value.captureStartAt}` : undefined]
+    // Sources that read the same ("Capture paused at 1:37 PM.") are one line
+    // per event (today-review v1.1.19 R43).
+    const pauseKeys = (value: PauseValue) => [value.momentId, value.captureSource && value.captureStartAt ? `${value.captureSource}:${value.captureStartAt}` : undefined,
+        value.captureStartAt ? `line:${value.captureSource === 'screen' ? 'screen' : 'capture'}:${Math.floor(value.captureStartAt / 60_000)}` : undefined]
         .filter((key): key is string => !!key);
     const statusMoments = new Set<string>();
     const pauseEnds = new Map<string, number>();

@@ -496,6 +496,23 @@ describe('main chat proactive messages', () => {
         expect(screen.getByRole('button', { name: en.mainChat.card.button.openPrep })).toBeEnabled();
     });
 
+    it.each(['en', 'zh-CN'])('titles the first brief\'s card with its slot and time, not the first-week title, in %s (today-review v1.1.16 D16)', async (lang) => {
+        await i18n.changeLanguage(lang);
+        render(<MainChatProactiveCard item={proactive({
+            kind: 'first_week', headline: 'Your first week with Isoform.', briefId: '2026-11-03-request',
+            briefDisplay: { slot: 'on_request', asOf: '2026-11-04T01:28:00Z', timezone: 'America/Los_Angeles' },
+            actionIds: ['open'], actionLabels: { open: 'Open' },
+        })} />);
+        expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(lang === 'en' ? 'Evening brief · 5:28 PM' : '晚间简报 · 下午5:28');
+        expect(screen.queryByText('Your first week with Isoform.')).not.toBeInTheDocument();
+    });
+
+    it('keeps the first-week title on the first-week card itself', async () => {
+        await i18n.changeLanguage('en');
+        render(<MainChatProactiveCard item={proactive({ kind: 'first_week', headline: 'Your first week with Isoform.', actionIds: ['open'], actionLabels: { open: 'Open' } })} />);
+        expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Your first week with Isoform.');
+    });
+
     it.each(['en', 'zh-CN'])('mutes a first-week check-in through Not for me in %s', async (lang) => {
         await i18n.changeLanguage(lang);
         resolveAction.mockResolvedValue('pending');

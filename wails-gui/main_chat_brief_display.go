@@ -76,7 +76,7 @@ func (a *App) mainChatBriefDisplayProjector() func(string, string) string {
 			// A withdrawn ordinary card loses its evidence. A weekly recap's
 			// sanitized Today target may retain only its own brief locator.
 			allowed := len(evidence) > 0 || (kind == "weekly_recap" && target.Kind == "today" && target.ID == briefID)
-			if briefID != "" && allowed && (kind == "brief_ready" || kind == "weekly_recap") {
+			if briefID != "" && allowed && (kind == "brief_ready" || kind == "weekly_recap" || kind == "first_week") {
 				if !serviceChecked {
 					service, _ = a.ensureMobileBriefService().(*mobileBriefService)
 					serviceChecked = true

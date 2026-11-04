@@ -111,7 +111,8 @@ export function BriefDetailPane({ slot, onClose, onOpenToday, onChangeTimes }: {
                     {make.kind === "failed" && <span role="alert" className="text-error">{tToday("todayBrief.failed")}</span>}
                     {make.kind === "cooldown" && <span role="status" className="text-muted">{tToday("todayBrief.cooldown", { when: describeBriefTime(make.until, now, tr, language) ?? "" })}</span>}
                 </div>
-                <section aria-label={t("briefDetail.lastThree")}>
+                {/* The heading appears with its rows (tasks-review v1.0.14 K3). */}
+                {(failed || (detail && detail.runs.length > 0)) && <section aria-label={t("briefDetail.lastThree")}>
                     <h3 className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">{t("briefDetail.lastThree")}</h3>
                     {failed ? (
                         <p role="alert" className="text-[13px] text-muted">{t("briefDetail.loadFailed")} <Button variant="link" size="sm" className="h-auto p-0 text-[13px]" onClick={() => void load()}>{t("tasks.retry")}</Button></p>
@@ -120,7 +121,7 @@ export function BriefDetailPane({ slot, onClose, onOpenToday, onChangeTimes }: {
                             {detail.runs.map((run) => <BriefRunRow key={`${run.briefId}:${run.status}`} run={run} dayName={dayName} clock={clock} onOpenToday={onOpenToday} />)}
                         </div>
                     ) : null}
-                </section>
+                </section>}
                 <p className="text-[13px] text-muted" data-testid="brief-detail-foot">
                     <Button variant="link" size="sm" className="h-auto p-0 text-[13px] font-medium hover:no-underline" onClick={() => onChangeTimes?.()}>{t("briefDetail.changeTimes")}</Button>
                     {" · "}{t("briefDetail.inSettings")}
@@ -170,7 +171,7 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
     const attempts = run.attempts ?? 0;
     const nextTry = run.status === "failed" && run.nextTryAt ? new Date(run.nextTryAt) : null;
     const next = nextTry && !Number.isNaN(nextTry.getTime()) ? clock(nextTry) : "";
-    const recordedFailure = attempts > 0 && run.failureCause === "timeout" ? t("briefDetail.triedTimeout", { count: attempts }) : "";
+    const recordedFailure = attempts > 0 && run.failureCause === "timeout" ? t(next ? "briefDetail.triedTimeoutNext" : "briefDetail.triedTimeout", { count: attempts, time: next }) : "";
     const line = recordedFailure || (run.status === "failed"
         ? attempts > 0 ? t(next ? "briefDetail.triedNext" : "briefDetail.tried", { count: attempts, time: next }) : t(next ? "briefDetail.didntFinishNext" : "briefDetail.didntFinish", { time: next })
         : run.reason === "asleep" ? t("briefDetail.missedAsleep", { time })
@@ -181,7 +182,7 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
         <div data-brief-run={run.briefId} data-brief-run-kind={run.status === "failed" ? "failed" : "missed"} className="flex items-start gap-3 px-4 py-3">
             <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full bg-muted" />
             <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-medium text-ink">{run.status === "failed" ? t("briefDetail.ran", { day: dayName(scheduled), time }) : dayName(scheduled)}</span>
+                <span className="block text-[14px] font-medium text-ink">{t("briefDetail.ran", { day: dayName(scheduled), time })}</span>
                 <span className="mt-0.5 block text-[13px] text-muted">{line}</span>
             </span>
         </div>

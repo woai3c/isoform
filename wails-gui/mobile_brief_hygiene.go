@@ -174,6 +174,7 @@ func mobileBriefHygiene(brief MobileBriefV1) MobileBriefV1 {
 			brief.NarrativeStatus = "quiet"
 		}
 	}
+	brief = mobileBriefWithMatchingGreeting(brief)
 	if brief.NarrativeStatus == "quiet" {
 		brief.Narrative, brief.WeeklyRecap, brief.Cards, brief.Offers, brief.Audio = []MobileBriefPara{}, nil, nil, nil, nil
 		brief.YourWeek = nil
@@ -181,28 +182,24 @@ func mobileBriefHygiene(brief MobileBriefV1) MobileBriefV1 {
 	return brief
 }
 
-// Display names use the existing configured slot clock. On-request identity
-// remains independent, including requests before the first slot of the day.
+// A brief asked for is named by its time: before noon the morning brief,
+// from noon the evening brief (today-review v1.1.16 D14). Scheduled slots keep
+// their own name.
 func mobileBriefDisplaySlot(brief MobileBriefV1, settings mobileBriefSettings) string {
 	switch brief.Slot {
 	case mobileBriefSlotMorning, mobileBriefSlotEvening:
 		return brief.Slot
 	}
-	if brief.DisplaySlot == mobileBriefSlotMorning || brief.DisplaySlot == mobileBriefSlotEvening {
-		return brief.DisplaySlot
-	}
-	at := mobileBriefAsOfTime(brief).In(mobileBriefNarrativeLocation(brief))
-	entries := mobileBriefSlotClock(settings)
-	if len(entries) == 0 {
+	if _, err := time.Parse(time.RFC3339Nano, brief.AsOf); err != nil {
+		if brief.DisplaySlot == mobileBriefSlotMorning || brief.DisplaySlot == mobileBriefSlotEvening {
+			return brief.DisplaySlot
+		}
 		return mobileBriefSlotMorning
 	}
-	slot := entries[0].slot
-	for _, entry := range entries {
-		if at.Hour()*60+at.Minute() >= entry.hour*60+entry.minute {
-			slot = entry.slot
-		}
+	if mobileBriefAsOfTime(brief).In(mobileBriefNarrativeLocation(brief)).Hour() < 12 {
+		return mobileBriefSlotMorning
 	}
-	return slot
+	return mobileBriefSlotEvening
 }
 
 // Quiet scheduled slots are completed local observations, never a posted brief.

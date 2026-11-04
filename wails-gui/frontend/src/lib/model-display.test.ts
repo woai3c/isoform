@@ -15,7 +15,7 @@ describe("model presentation boundary", () => {
             const text = displayModelText(raw);
             expect(text).not.toMatch(/\[redacted|number\]sed|numbersed|账号sed/i);
             expect(displayModelText(text)).toBe(text);
-            expect(text).toContain(language === "en" ? "a" : "一");
+            expect(text).toContain(language === "en" || /[a-z]{2}/i.test(raw.replace(/\[redacted[^\]]*\]?/gi, "")) ? "a" : "一");
         }
     });
     it("separates adjacent masks and punctuation", async () => {
@@ -33,5 +33,23 @@ describe("model presentation boundary", () => {
         expect(shown.nested.label).toBe("一个 API 密钥");
         expect(source.nested.label).toBe("[REDACTED:api_key]");
         expect(displayModelText("the contract lapsed out")).toBe("the contract lapsed out");
+    });
+    it("rewrites the sentence around a private item (today-review v1.1.16 D15)", async () => {
+        await i18n.changeLanguage("en");
+        expect(displayModelText("The [REDACTED:code] release is stalled.")).toBe("A private release is stalled.");
+        expect(displayModelText("Ask about the [REDACTED:code] release today.")).toBe("Ask about a private release today.");
+        expect(displayModelText("Your verification code is [REDACTED:code].")).toBe("Your verification code is a private code.");
+        expect(displayModelText("Check the [REDACTED:account_number].")).toBe("Check an account number.");
+        expect(displayModelText(displayModelText("The [REDACTED:code] release is stalled."))).toBe("A private release is stalled.");
+        await i18n.changeLanguage("zh-CN");
+        expect(displayModelText("这个[REDACTED:code]发布卡住了。")).toBe("一个私密代码发布卡住了。");
+    });
+    it("rewrites around a private item in the brief's own language (today-review v1.1.20 R46)", async () => {
+        await i18n.changeLanguage("zh-CN");
+        expect(displayModelText("The [REDACTED:code] release is stalled, and Maya is waiting on it before Thursday.")).toBe("A private release is stalled, and Maya is waiting on it before Thursday.");
+        expect(displayModelText("[REDACTED:api_key]")).toBe("一个 API 密钥");
+        await i18n.changeLanguage("en");
+        expect(displayModelText("这个[REDACTED:code]发布卡住了。")).toBe("一个私密代码发布卡住了。");
+        expect(displayModelText("[REDACTED:api_key]")).toBe("an API key");
     });
 });

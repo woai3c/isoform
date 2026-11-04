@@ -300,7 +300,7 @@ func mobileBriefPendingOccurrence(now time.Time, loc *time.Location, settings mo
 		if now.Before(occurrence.ScheduledAt) || !now.Before(mobileBriefSlotCloses(occurrence, loc, settings)) || (allowed != nil && !allowed(occurrence.ScheduledAt)) {
 			continue
 		}
-		if hasLatest && (latest.BriefID == occurrence.BriefID || !latestAt.Before(occurrence.ScheduledAt)) {
+		if hasLatest && (latest.BriefID == occurrence.BriefID || !latestAt.Before(occurrence.ScheduledAt) || mobileBriefMadeJustBefore(latestAt, occurrence.ScheduledAt)) {
 			continue
 		}
 		return occurrence, true
@@ -339,6 +339,19 @@ type mobileBriefScheduleFacts struct {
 	StandsIn       func(scheduledAt time.Time) bool
 	CatchUpAllowed func(scheduledAt time.Time) bool
 	RetryAt        func(briefID string) time.Time
+	// MadeJustBefore says a brief was made in the two hours before a slot's
+	// time, so that slot is skipped (today-review v1.1.16 D17).
+	MadeJustBefore func(scheduledAt time.Time) bool
+}
+
+// mobileBriefSkipAfterMade is how recently a brief may have been made for the
+// next scheduled one to be skipped.
+const mobileBriefSkipAfterMade = 2 * time.Hour
+
+// mobileBriefMadeJustBefore reports a brief made at madeAt in the two hours
+// before scheduledAt.
+func mobileBriefMadeJustBefore(madeAt, scheduledAt time.Time) bool {
+	return !madeAt.IsZero() && madeAt.Before(scheduledAt) && scheduledAt.Sub(madeAt) <= mobileBriefSkipAfterMade
 }
 
 // mobileBriefSlotNextRun is when the scheduler next makes slot, the one next
@@ -356,6 +369,9 @@ func mobileBriefSlotNextRun(now time.Time, loc *time.Location, settings mobileBr
 	for day := 0; day < 2; day++ {
 		for _, occurrence := range mobileBriefTodaySlots(now.In(loc).AddDate(0, 0, day), loc, settings) {
 			if occurrence.Slot != slot || (facts.Exists != nil && facts.Exists(occurrence.BriefID)) {
+				continue
+			}
+			if facts.MadeJustBefore != nil && facts.MadeJustBefore(occurrence.ScheduledAt) {
 				continue
 			}
 			if occurrence.ScheduledAt.After(now) {
@@ -442,6 +458,8 @@ type MobileBriefHealth struct {
 	// PendingAttempts is how many times the pending slot's build has failed,
 	// from its run record; 0 when the record has no count.
 	PendingAttempts int `json:"pendingAttempts,omitempty"`
+	// PendingCause is why the last try failed, when Isoform knows (e.g. "timeout").
+	PendingCause string `json:"pendingCause,omitempty"`
 	// LatestBriefID names the newest stored brief and Audio its spoken
 	// version, when one was stored, so Today can offer to play it.
 	LatestBriefID string            `json:"latestBriefId"`

@@ -80,10 +80,12 @@
         "tried_other": "试了 {{count}} 次都没完成。",
         "triedTimeout_one": "试了 1 次。超时了。",
         "triedTimeout_other": "试了 {{count}} 次。超时了。",
-        "triedNext_one": "试了 {{count}} 次都没完成。下次在{{time}}。",
-        "triedNext_other": "试了 {{count}} 次都没完成。下次在{{time}}。",
+        "triedNext_one": "试了 {{count}} 次都没完成。Isoform 会在{{time}}再试。",
+        "triedNext_other": "试了 {{count}} 次都没完成。Isoform 会在{{time}}再试。",
+        "triedTimeoutNext_one": "试了 1 次。超时了。Isoform 会在{{time}}再试。",
+        "triedTimeoutNext_other": "试了 {{count}} 次。超时了。Isoform 会在{{time}}再试。",
         "didntFinish": "没有完成。",
-        "didntFinishNext": "没有完成。下次在{{time}}。",
+        "didntFinishNext": "没有完成。Isoform 会在{{time}}再试。",
         "lateReason": {
             "asleep": "电脑在睡眠",
             "closed": "Isoform 没有打开"

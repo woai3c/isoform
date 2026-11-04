@@ -263,9 +263,10 @@ func TestMobileBriefOffersAreDistinctConcreteAndActionable(t *testing.T) {
 			if lang == "en" && (!strings.Contains(discoveryOffer.Prompt, "open since last Wednesday") || discoveryOffer.Label != "Plan: Discovery") {
 				t.Fatalf("prompt lacks what the brief knows: %+v", discoveryOffer)
 			}
-			// Said aloud: no quotation marks or parentheses, two plans share a verb.
-			if lang == "en" && closing.Text != "Want me to plan the next steps for the Halcyon Arc lamp follow-up or Discovery?" {
-				t.Fatalf("two plans should share one verb: %q", closing.Text)
+			// Said aloud, with no quotation marks or parentheses, and one
+			// question about one thing (today-review v1.1.17 D18).
+			if lang == "en" && closing.Text != "Want me to plan the next steps for the Halcyon Arc lamp follow-up?" {
+				t.Fatalf("closing should ask about one thing: %q", closing.Text)
 			}
 			// The desired outcome is an item detail: main chat may get it, the
 			// narrative model and the spoken closing never do.
@@ -273,8 +274,8 @@ func TestMobileBriefOffersAreDistinctConcreteAndActionable(t *testing.T) {
 			if strings.Contains(closing.Text, "ustomer interview notes") || strings.Contains(prompt, "ustomer interview notes") {
 				t.Fatalf("desired outcome reached the closing or the model prompt: %q", closing.Text)
 			}
-			if !strings.HasSuffix(closing.Text, pick(lang, "?", "？")) || !strings.Contains(closing.Text, "Discovery") || !strings.Contains(closing.Text, "Halcyon Arc lamp follow-up") {
-				t.Fatalf("closing must name both subjects and ask: %q", closing.Text)
+			if !strings.HasSuffix(closing.Text, pick(lang, "?", "？")) || strings.Contains(closing.Text, "Discovery") || !strings.Contains(closing.Text, "Halcyon Arc lamp follow-up") {
+				t.Fatalf("closing must ask about its first subject only: %q", closing.Text)
 			}
 			if strings.Count(closing.Text, pick(lang, "?", "？")) != 1 {
 				t.Fatalf("closing asks more than one question: %q", closing.Text)

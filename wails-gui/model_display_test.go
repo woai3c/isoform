@@ -166,12 +166,12 @@ func TestLegacyBriefAudioIsWithheldBeforeHygieneDropsMaskedLines(t *testing.T) {
 }
 
 func TestPhoneChatDisplayUsesPreparedLocaleAndKeepsIdentity(t *testing.T) {
-	rows := []storage.StreamItemRow{{ID: "message", Kind: "assistant", Content: "Review [REDACTED:account_number]sed.", SortOrder: 1}}
+	rows := []storage.StreamItemRow{{ID: "message", Kind: "assistant", Content: "请核对[REDACTED:account_number]sed。", SortOrder: 1}}
 	page := mobileChatPageWithView(rows, false, false, 0, nil, "zh-CN")
 	if len(page.Items) != 1 || page.Items[0].ID != "message" || strings.Contains(page.Items[0].Text, "[REDACTED") || strings.Contains(page.Items[0].Text, "sed") || !strings.Contains(page.Items[0].Text, "一个账号") {
 		t.Fatalf("phone copy: %+v", page.Items)
 	}
-	if rows[0].Content != "Review [REDACTED:account_number]sed." {
+	if rows[0].Content != "请核对[REDACTED:account_number]sed。" {
 		t.Fatal("phone projection changed stored row")
 	}
 }

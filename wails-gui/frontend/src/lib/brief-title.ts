@@ -1,15 +1,17 @@
-import { briefClockTime } from "@/lib/brief-time";
+import { briefClockTime, briefSlotKey } from "@/lib/brief-time";
 import type { BriefScheduleRun, MobileBriefDocument } from "@/lib/wails-shim-app";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-/** The kind a brief's title names (design section 1). A brief asked for
- *  takes the slot the computer recorded it standing in for (displaySlot), so
- *  the player names the brief it plays (today-review v1.1.4 #7); without one
- *  it is "Brief". */
-export function briefKind(brief: Pick<MobileBriefDocument, "slot" | "yourWeek"> & { displaySlot?: MobileBriefDocument["displaySlot"] }): "week" | "morning" | "evening" | "on_request" {
+/** The kind a brief's title names (design section 1). A brief asked for is
+ *  named by the time it was made, before noon morning and from noon evening
+ *  (today-review v1.1.16 D14); without a time it takes the slot the computer
+ *  recorded (displaySlot), else it is "Brief". */
+export function briefKind(brief: Pick<MobileBriefDocument, "slot" | "yourWeek"> & { asOf?: string; timezone?: string; displaySlot?: MobileBriefDocument["displaySlot"] }): "week" | "morning" | "evening" | "on_request" {
     if (brief.yourWeek) return "week";
-    const slot = brief.slot === "morning" || brief.slot === "evening" ? brief.slot : brief.displaySlot ?? brief.slot;
+    if (brief.slot === "morning" || brief.slot === "evening") return brief.slot;
+    if (brief.asOf && !Number.isNaN(new Date(brief.asOf).getTime())) return briefSlotKey(undefined, brief.asOf, brief.timezone || undefined);
+    const slot = brief.displaySlot ?? brief.slot;
     return slot === "morning" || slot === "evening" ? slot : "on_request";
 }
 

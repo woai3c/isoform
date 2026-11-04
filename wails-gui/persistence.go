@@ -395,6 +395,7 @@ func (a *App) projectStreamItemsContext(ctx context.Context, items []StreamItemD
 	language := a.modelDisplayLanguage()
 	briefDisplay := a.mainChatBriefDisplayProjector()
 	captureDisplay := a.mainChatCaptureProjector(ctx)
+	briefMissed := a.mainChatBriefMissedProjector(ctx)
 	for i := range items {
 		item := &items[i]
 		item.Content, item.ToolInput = a.projectProactiveVoiceDelivery(ctx, item.ToolName, item.Content, item.ToolInput)
@@ -404,6 +405,7 @@ func (a *App) projectStreamItemsContext(ctx context.Context, items []StreamItemD
 		item.ToolInput = displayModelToolInput(item.ToolName, item.ToolInput, language)
 		item.ToolInput = briefDisplay(item.ToolName, item.ToolInput)
 		item.ToolInput = captureDisplay(item.ToolName, item.ToolInput)
+		item.ToolInput = briefMissed(item.ToolName, item.ToolInput)
 		if item.ToolName == mainChatObservationPauseTool {
 			item.ToolInput = a.projectObservationPause(item.ToolInput)
 		}

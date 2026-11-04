@@ -311,13 +311,51 @@ it('shows the backend short name for a weekly meeting', () => {
     render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, events: [weekly], hold: null }} />);
     expect(screen.getByTestId('today-day-event-label')).toHaveTextContent('NMG Check In');
 });
-it('shortens the Chinese duration before dropping it', async () => {
+it('never cuts a free label down to its bare duration (today-review v1.1.13 D7)', async () => {
     await i18n.changeLanguage('zh-CN');
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 450 } as DOMRect);
     render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, now: '2026-10-23T09:00:00-07:00' }} />);
-    expect(screen.getByText('1小时15分')).toBeInTheDocument();
+    expect(screen.queryByText('1小时15分')).toBeNull();
+    expect(screen.queryByText('1小时15分钟')).toBeNull();
 });
 
+it('names a block by its title when it has no short name and the name fits (today-review v1.1.13 D7)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 2000 } as DOMRect);
+    const dinner = { ...dayShapeFixture.events[0], kind: 'personal' as const, title: 'Dinner with Sam', shortName: '' };
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, events: [dinner], hold: null }} />);
+    expect(screen.getByTestId('today-day-event-label')).toHaveTextContent('Dinner with Sam');
+});
+
+
+it('names a narrow block by its shortest name when its short name does not fit (today-review v1.1.13 D7)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1200 } as DOMRect);
+    const dinner = { ...dayShapeFixture.events[0], id: 'dinner', kind: 'personal' as const, title: 'Dinner with Sam', shortName: 'Dinner with Sam', shortestName: 'Dinner' };
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, events: [dinner], hold: null }} />);
+    expect(screen.getByTestId('today-day-event-label')).toHaveTextContent(/^Dinner$/);
+});
+
+it.each(['en', 'zh-CN'])('says only Private on a private item, in %s (today-review v1.1.13 D7)', async (lang) => {
+    await i18n.changeLanguage(lang);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 2000 } as DOMRect);
+    const hidden = { ...dayShapeFixture.events[0], id: 'hidden', title: '', shortName: '', shortestName: '', initial: '', private: true };
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, events: [hidden], hold: null }} onOpenMeeting={vi.fn()} />);
+    const block = screen.getByTestId('today-day-event');
+    const word = lang === 'en' ? 'Private' : '私人';
+    expect(block.getAttribute('title')).toBe(word);
+    expect(screen.getByTestId('today-day-event-label').textContent).toBe('');
+    expect(block.tagName).toBe('SPAN');
+    expect(screen.queryByRole('button')).toBeNull();
+});
+
+it('says Tomorrow on a strip for tomorrow, with no now line (today-review v1.1.17 R21)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1200 } as DOMRect);
+    const { rerender } = render(<TodayDayStrip requestedDate="2026-10-24" shape={dayShapeFixture} />);
+    expect(screen.getByTestId('today-day-strip-day')).toHaveTextContent('Tomorrow');
+    expect(screen.queryByTestId('today-day-now')).toBeNull();
+    rerender(<TodayDayStrip requestedDate="2026-10-23" shape={dayShapeFixture} />);
+    expect(screen.queryByTestId('today-day-strip-day')).toBeNull();
+    expect(screen.getByTestId('today-day-now')).toBeInTheDocument();
+});
 
 it('labels only the part of a free stretch still ahead and updates as time passes', async () => {
     vi.useFakeTimers();

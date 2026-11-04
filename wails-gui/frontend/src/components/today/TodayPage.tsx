@@ -122,8 +122,10 @@ export function TodayPage({
     // "Last brief: … · Read it" opens an earlier brief in the panel, with its
     // day, never on Today as the brief (today-review v1.1.5 #1).
     const [lastBriefPanel, setLastBriefPanel] = useState<string | null>(null);
-    const openBrief = (briefId?: string) => {
+    const [lastBriefTitle, setLastBriefTitle] = useState("");
+    const openBrief = (briefId?: string, title?: string) => {
         if (!briefId) return;
+        setLastBriefTitle(title ?? "");
         setLastBriefPanel(briefId);
         setPanel({ topicId: null, sheetOpen: !wide });
     };
@@ -134,7 +136,7 @@ export function TodayPage({
         if (briefRequest?.briefId && latest.view?.pendingSlot && brief?.briefId === briefRequest.briefId) setLastBriefPanel(brief.briefId);
     }, [briefRequest?.nonce, briefRequest?.briefId, latest.view?.pendingSlot, latest.view?.brief?.briefId]);
     const { shape: dayShape, dateISO: dayShapeDate, failed: dayShapeFailed, lastUpdatedAt: dayShapeUpdatedAt, retry: retryDayShape } = useTodayDayShape(active, latest.view?.brief?.localDate,
-        !!latest.view?.brief && briefSlotKey(latest.view.brief.displaySlot ?? latest.view.brief.slot, latest.view.brief.asOf, latest.view.brief.timezone) === "evening");
+        !!latest.view?.brief && briefSlotKey(latest.view.brief.slot, latest.view.brief.asOf, latest.view.brief.timezone) === "evening");
     useEffect(() => {
         if (latest.loading) return;
         markPageContent('today');
@@ -676,7 +678,7 @@ export function TodayPage({
     };
 
     const briefShown = latest.view?.brief;
-    const eveningReady = firstDay.day === 0 && !!briefShown && briefSlotKey(briefShown.displaySlot ?? briefShown.slot, briefShown.asOf, briefShown.timezone) === "evening";
+    const eveningReady = firstDay.day === 0 && !!briefShown && briefSlotKey(briefShown.slot, briefShown.asOf, briefShown.timezone) === "evening";
     const nextBrief = status.brief?.enabled && status.brief.nextRunAt ? new Date(status.brief.nextRunAt) : null;
     const eveningAt = nextBrief && nextBrief.toDateString() === new Date().toDateString() && nextBrief.getHours() >= 12 ? status.brief!.nextRunAt : null;
     const scrollTo = (testId: string) => document.querySelector(`[data-testid="${testId}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -744,7 +746,7 @@ export function TodayPage({
                 </div>
                 <div
                     data-testid="today-column"
-                    className={cn("animate-rise-in mx-auto w-full px-6 pb-14 motion-reduce:animate-none", knowAside ? "max-w-[1080px]" : "max-w-[760px]")}
+                    className={cn("mx-auto w-full px-6 pb-14", knowAside ? "max-w-[1080px]" : "max-w-[760px]")}
                 >
                     <header className="window-drag mb-[18px] flex flex-col items-start gap-1.5 text-left" data-testid="today-header">
                         <h1 className="display text-ink">
@@ -752,7 +754,7 @@ export function TodayPage({
                                 older brief shown below it. */}
                             {tr(`todayBrief.slot.${latest.view?.pendingSlot === "morning" || latest.view?.pendingSlot === "evening"
                                 ? latest.view.pendingSlot
-                                : briefSlotKey(latest.view?.brief?.displaySlot ?? latest.view?.brief?.slot, latest.view?.brief?.asOf, latest.view?.brief?.timezone)}`)}
+                                : briefSlotKey(latest.view?.brief?.slot, latest.view?.brief?.asOf, latest.view?.brief?.timezone)}`)}
                         </h1>
                         <TodayStatus
                             date={todayLabel(i18n.language)}
@@ -852,7 +854,7 @@ export function TodayPage({
                     ) : replyDraft ? (
                         <TodayReplyDraftPanel request={replyDraft} onClose={() => setReplyDraft(null)} />
                     ) : lastBriefPanel ? (
-                        <TodayLastBriefPanel key={lastBriefPanel} briefId={lastBriefPanel} onClose={() => setLastBriefPanel(null)} />
+                        <TodayLastBriefPanel key={lastBriefPanel} briefId={lastBriefPanel} title={lastBriefTitle} onClose={() => setLastBriefPanel(null)} />
                     ) : (
                         <MainChatPanel {...mainChatPanelProps} variant="pinned" />
                     )}
@@ -875,7 +877,7 @@ export function TodayPage({
                         : needTaskId ? <TaskThreadPane id={needTaskId} telemetryAction={doneTaskId ? "T80" : "D01"} onClose={() => { setNeedTaskId(null); setDoneTaskId(null); }} onOpened={doneTaskId ? () => markDoneOpened(doneTaskId) : undefined} />
                         : meetingNote ? <TodayMeetingNotePanel key={meetingNote.id} request={meetingNote} sheet onClose={() => setMeetingNote(null)} />
                         : replyDraft ? <TodayReplyDraftPanel request={replyDraft} sheet onClose={() => { setReplyDraft(null); setMeetingNote(null); }} />
-                        : lastBriefPanel ? <TodayLastBriefPanel key={lastBriefPanel} briefId={lastBriefPanel} onClose={() => setLastBriefPanel(null)} />
+                        : lastBriefPanel ? <TodayLastBriefPanel key={lastBriefPanel} briefId={lastBriefPanel} title={lastBriefTitle} onClose={() => setLastBriefPanel(null)} />
                         : <MainChatPanel {...mainChatPanelProps} variant="sheet" />)}
                     {needOpenRetry && <button type="button" role="alert" className="px-4 py-2 text-xs text-error" onClick={() => measureToday("D01", "open", "opened", () => { setNeedOpenRetry(null); needOpenRetry(); })}>{tr("actions.chatOpenFailed")}</button>}
                     {reportRetry && <button type="button" role="alert" className="px-4 py-2 text-xs text-error" onClick={() => measureToday("T70", "open", "opened", () => { setReportRetry(null); reportRetry(); })}>{tr("actions.reportOpenFailed")}</button>}

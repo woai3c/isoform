@@ -79,7 +79,7 @@ describe("BriefDetailPane (K3)", () => {
         expect(ok).toHaveTextContent("Today, 7:30 AM");
         fireEvent.click(within(ok).getByRole("button", { name: "Open on Today" }));
         expect(onOpenToday).toHaveBeenCalledWith("b-today");
-        expect(list.querySelector('[data-brief-run="b-yesterday"]')).toHaveTextContent("YesterdayDidn't run: your computer was asleep at 7:30 AM.");
+        expect(list.querySelector('[data-brief-run="b-yesterday"]')).toHaveTextContent("Yesterday, 7:30 AMDidn't run: your computer was asleep at 7:30 AM.");
         expect(list.querySelector('[data-brief-run="b-closed"]')).toHaveTextContent("Didn't run: Isoform was closed at 7:30 AM.");
     });
 
@@ -105,6 +105,34 @@ describe("BriefDetailPane (K3)", () => {
         mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "failed", status: "failed", scheduledAt: at(0, 7).toISOString(), at: "", attempts: 3, failureCause: "timeout" }] }));
         render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
         expect(await screen.findByText(line)).toBeInTheDocument();
+    });
+
+    it("says the cause and the next try in one sentence (today-review v1.1.13 D3)", async () => {
+        mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "failed", status: "failed", scheduledAt: at(0, 7).toISOString(), at: "", attempts: 9, failureCause: "timeout", nextTryAt: at(0, 13, 34).toISOString() }] }));
+        render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
+        expect(await screen.findByText("Tried 9 times. It timed out. Isoform tries again at 1:34 PM.")).toBeInTheDocument();
+    });
+
+    it("says one next time everywhere: the try's own, even a minute after it (today-review v1.1.13 D5)", async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        vi.setSystemTime(at(0, 13, 30));
+        try {
+            const tryAt = at(0, 13, 29);
+            mocks.detail.mockResolvedValue(detail({ nextRunAt: tryAt.getTime(), runs: [{ briefId: "failed", status: "failed", scheduledAt: at(0, 7).toISOString(), at: "", attempts: 9, failureCause: "timeout", nextTryAt: tryAt.toISOString() }] }));
+            render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
+            expect(await screen.findByText("Tried 9 times. It timed out. Isoform tries again at 1:29 PM.")).toBeInTheDocument();
+            expect(document.body).toHaveTextContent("Next today, 1:29 PM");
+            expect(document.body).not.toHaveTextContent("1:30 PM");
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("shows The last three only with its rows (tasks-review v1.0.14 K3)", async () => {
+        mocks.detail.mockImplementation(() => new Promise(() => undefined));
+        render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(screen.queryByRole("region", { name: "The last three" })).toBeNull();
     });
 
     it("makes it now, then says Made at {time} · Open on Today", async () => {
@@ -215,7 +243,7 @@ describe("BriefDetailPane (v1.0.3)", () => {
         expect(made.querySelector("[data-brief-run-line]")).toHaveTextContent("Made with Make it now at 9:16 AM.");
         fireEvent.click(within(made).getByRole("button", { name: "Open on Today" }));
         expect(onOpenToday).toHaveBeenCalledWith("b-now");
-        expect(document.querySelector('[data-brief-run="b-slot"]')).toHaveTextContent("TodayDidn't run: Isoform was closed at 7:00 AM.");
+        expect(document.querySelector('[data-brief-run="b-slot"]')).toHaveTextContent("Today, 7:00 AMDidn't run: Isoform was closed at 7:00 AM.");
         expect(Array.from(document.querySelectorAll("[data-brief-run]")).map((el) => el.getAttribute("data-brief-run"))).toEqual(["b-now", "b-slot", "b-yesterday"]);
     });
 
@@ -236,9 +264,9 @@ describe("BriefDetailPane (v1.0.3)", () => {
     });
 
     it.each([
-        ["en", 6, "Today, 7:30 AM", "Tried 6 times without finishing. Next try 8:37 AM."],
-        ["en", 0, "Today, 7:30 AM", "Didn't finish. Next try 8:37 AM."],
-        ["zh-CN", 6, "今天上午7:30", "试了 6 次都没完成。下次在上午8:37。"],
+        ["en", 6, "Today, 7:30 AM", "Tried 6 times without finishing. Isoform tries again at 8:37 AM."],
+        ["en", 0, "Today, 7:30 AM", "Didn't finish. Isoform tries again at 8:37 AM."],
+        ["zh-CN", 6, "今天上午7:30", "试了 6 次都没完成。Isoform 会在上午8:37再试。"],
     ])("puts today's failed run first with what the record proves in %s (tasks-review v1.0.8 #2)", async (language, attempts, title, line) => {
         await i18n.changeLanguage(language);
         mocks.detail.mockResolvedValue(detail({ runs: [

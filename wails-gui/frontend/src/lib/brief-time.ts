@@ -4,7 +4,9 @@ export function clockContextKey(now = new Date()): string {
     return `${now.toDateString()}:${new Intl.DateTimeFormat().resolvedOptions().timeZone}`;
 }
 
-/** Names share Today's clock and slot translations, including older requests. */
+/** Names share Today's clock and slot translations. A brief asked for is
+ *  named by its time: before noon morning, from noon evening (today-review
+ *  v1.1.16 D14). */
 export function briefSlotKey(slot: string | undefined, asOf?: string, timeZone?: string): "morning" | "evening" {
     if (slot === "morning" || slot === "evening") return slot;
     const at = asOf ? new Date(asOf) : null;
@@ -15,7 +17,7 @@ export function briefSlotKey(slot: string | undefined, asOf?: string, timeZone?:
     } catch {
         hour = at.getHours();
     }
-    return hour < 7 || hour >= 18 ? "evening" : "morning";
+    return hour < 12 ? "morning" : "evening";
 }
 
 type ClockKey = "todayBrief.clock.time" | "todayBrief.clock.dateAtTime"

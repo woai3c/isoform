@@ -93,6 +93,10 @@ type UpcomingItem struct {
 	// when that run made no brief (missed, or failed and waiting for its
 	// retry) and none was made on request after it; 0 otherwise. Only then does its row say it didn't run.
 	DidntRunAt int64 `json:"didntRunAt,omitempty"`
+	// TriedAttempts and TriedCause describe that run when it failed and Isoform
+	// is still trying: its failed tries and why, when known (e.g. "timeout").
+	TriedAttempts int    `json:"triedAttempts,omitempty"`
+	TriedCause    string `json:"triedCause,omitempty"`
 }
 
 // upcomingBriefState is what the brief service tells Upcoming: whether the
@@ -426,6 +430,9 @@ func upcomingBriefItem(now time.Time, loc *time.Location, brief upcomingBriefSta
 		(brief.Exists == nil || !brief.Exists(latest.BriefID)) &&
 		!upcomingBriefStoodIn(loc, brief, mobileBriefSlotOccurrence{BriefID: latest.BriefID, Slot: slot, ScheduledAt: latestAt}) {
 		item.DidntRunAt = latestAt.UnixMilli()
+		if latest.Status == mobileBriefRunFailed && latest.Attempts > 0 && item.NextRunAt > now.UnixMilli() {
+			item.TriedAttempts, item.TriedCause = latest.Attempts, latest.FailureCause
+		}
 	}
 	item.LastRunAt = latestAt.UnixMilli()
 	if at, err := time.Parse(time.RFC3339Nano, latest.At); err == nil && latest.Status == mobileBriefRunOK {

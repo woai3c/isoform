@@ -123,3 +123,20 @@ func TestBriefNamesMeetingsByTheirCleanedNames(t *testing.T) {
 		t.Fatalf("zh = %q", zh)
 	}
 }
+
+// today-review v1.1.13 D3: while Isoform is still trying, the row has the
+// tries and the cause, for the same sentence as Today and the panel.
+func TestBriefRowCarriesTheTriesAndCauseWhileIsoformKeepsTrying(t *testing.T) {
+	settings := mobileBriefSettings{Enabled: true, Morning: "07:00", Evening: "18:00"}
+	failed := mobileBriefRun{BriefID: "2026-10-09-morning", Slot: "morning", ScheduledAt: "2026-10-09T07:00:00Z", Status: mobileBriefRunFailed, At: "2026-10-09T13:20:00Z", Attempts: 9, FailureCause: "timeout"}
+	retry := mobileBriefTestDay(13, 34)
+	state := upcomingBriefState{Available: true, Settings: settings, Runs: []mobileBriefRun{failed}, NextRun: func(time.Time, string) time.Time { return retry }}
+	item := upcomingBriefItem(mobileBriefTestDay(13, 25), time.UTC, state, "morning")
+	if item.TriedAttempts != 9 || item.TriedCause != "timeout" || item.NextRunAt != retry.UnixMilli() {
+		t.Fatalf("tries = %d cause = %q next = %d", item.TriedAttempts, item.TriedCause, item.NextRunAt)
+	}
+	state.NextRun = func(time.Time, string) time.Time { return time.Time{} }
+	if item := upcomingBriefItem(mobileBriefTestDay(13, 25), time.UTC, state, "morning"); item.TriedAttempts != 0 {
+		t.Fatalf("no retry still says tries: %d", item.TriedAttempts)
+	}
+}

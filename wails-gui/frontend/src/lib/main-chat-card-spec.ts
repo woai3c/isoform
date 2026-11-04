@@ -83,7 +83,8 @@ export function cardButtons(message: MainChatProactivePayload): MainChatCardButt
             // brief, so the button opens it on Today rather than expanding.
             return message.briefId ? {} : { main: label("read_week", "target", "readWeek") };
         case "first_week":
-            return { main: has("open") ? label("read_it", "expand", "readIt") : undefined };
+            // The first brief's card renders the brief card's own Read it.
+            return message.briefId ? {} : { main: has("open") ? label("read_it", "expand", "readIt") : undefined };
         case "brief_missed":
             return { main: answer("make_it_now", "makeItNow") };
         case "schedule_missed":

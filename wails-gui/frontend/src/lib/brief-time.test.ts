@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import i18n from "@/i18n";
-import { briefClockTime, briefDateTime, clockTime, shortBriefClockLabel, shortBriefTimes } from "./brief-time";
+import { briefClockTime, briefDateTime, briefSlotKey, clockTime, shortBriefClockLabel, shortBriefTimes } from "./brief-time";
 
 describe.each(["en", "zh-CN"])("brief clocks in %s", (language) => {
     const tr = (key: string, options?: Record<string, unknown>) => String(i18n.t(key as never, { ...options, ns: "today", lng: language }));
@@ -52,5 +52,15 @@ describe.each(["en", "zh-CN"])("brief clocks in %s", (language) => {
         expect(clockTime(new Date(2026, 9, 22, 12, 30), language, tr)).toBe(language === "en" ? "12:30 PM" : "中午12:30");
         expect(clockTime(new Date(2026, 9, 22, 14, 47), language, tr)).toBe(language === "en" ? "2:47 PM" : "下午2:47");
         expect(clockTime(new Date(2026, 9, 22, 0, 5), language, tr)).toBe(language === "en" ? "12:05 AM" : "凌晨12:05");
+    });
+});
+
+describe("briefSlotKey (today-review v1.1.16 D14)", () => {
+    it("names a brief asked for by its time: before noon morning, from noon evening", () => {
+        expect(briefSlotKey("on_request", "2026-11-03T11:59:00Z", "UTC")).toBe("morning");
+        expect(briefSlotKey("on_request", "2026-11-03T12:00:00Z", "UTC")).toBe("evening");
+        expect(briefSlotKey("on_request", "2026-11-04T01:24:00Z", "America/Los_Angeles")).toBe("evening");
+        expect(briefSlotKey("on_request", "2026-11-03T05:00:00Z", "UTC")).toBe("morning");
+        expect(briefSlotKey("morning", "2026-11-04T01:24:00Z", "America/Los_Angeles")).toBe("morning");
     });
 });

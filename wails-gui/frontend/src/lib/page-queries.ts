@@ -280,7 +280,7 @@ export async function prefetchToday() {
     const brief = GetLatestBrief();
     const shape = brief.then((view) => {
         const document = view.brief;
-        const evening = !!document && briefSlotKey(document.displaySlot ?? document.slot, document.asOf, document.timezone) === 'evening';
+        const evening = !!document && briefSlotKey(document.slot, document.asOf, document.timezone) === 'evening';
         return GetTodayDayShape(todayDayShapeDate(document?.localDate, evening));
     }, () => GetTodayDayShape(todayDayShapeDate()));
     await Promise.all([GetEngagementWeekSummary(), GetMobileBriefHealth(), GetTodayQuietLines(), GetTodayTopics(), brief, shape, GetTopicFinds(), GetGoalCheckIn()]);

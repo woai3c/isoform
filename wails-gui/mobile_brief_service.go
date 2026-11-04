@@ -347,7 +347,7 @@ func (s *mobileBriefService) checkDue(ctx context.Context) {
 		// A slot that passed before the schedule was turned on or first
 		// watched is not made late, nor one a brief made on request after its
 		// time stands in for.
-		if occurrence, found := s.slotOccurrence(now, settings, slot); due && found && (!s.catchUpAllowed(occurrence.ScheduledAt, now, settings) || s.briefSince(occurrence.ScheduledAt)) {
+		if occurrence, found := s.slotOccurrence(now, settings, slot); due && found && (!s.catchUpAllowed(occurrence.ScheduledAt, now, settings) || s.briefSince(occurrence.ScheduledAt) || s.briefJustBefore(occurrence.ScheduledAt)) {
 			due = false
 		}
 	}
@@ -701,6 +701,7 @@ func (s *mobileBriefService) scheduleFacts(now time.Time, settings mobileBriefSe
 	return mobileBriefScheduleFacts{
 		Exists:         s.store.exists,
 		StandsIn:       s.briefSince,
+		MadeJustBefore: s.briefJustBefore,
 		CatchUpAllowed: func(at time.Time) bool { return s.catchUpAllowed(at, now, settings) },
 		RetryAt: func(briefID string) time.Time {
 			s.mu.Lock()
@@ -755,6 +756,13 @@ func (s *mobileBriefService) briefSince(at time.Time) bool {
 	}
 	asOf, err := time.Parse(time.RFC3339Nano, latest.AsOf)
 	return err == nil && !asOf.Before(at)
+}
+
+// briefJustBefore reports the newest stored brief was made in the two hours
+// before at (mobileBriefMadeJustBefore).
+func (s *mobileBriefService) briefJustBefore(at time.Time) bool {
+	latest, found := s.store.latest()
+	return found && mobileBriefMadeJustBefore(mobileBriefAsOfTime(latest), at)
 }
 
 // noteAwake records the slots whose window is open now, while the computer
@@ -848,6 +856,7 @@ func (s *mobileBriefService) withPending(view MobileBriefHealth, now time.Time, 
 	for _, run := range s.runs.list() {
 		if run.BriefID == pending.BriefID && run.Status == mobileBriefRunFailed {
 			view.PendingAttempts = run.Attempts
+			view.PendingCause = run.FailureCause
 		}
 	}
 	s.mu.Lock()

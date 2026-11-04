@@ -467,24 +467,14 @@ func mobileBriefClosingFrom(brief MobileBriefV1, drafts []mobileBriefOfferDraft,
 	if len(drafts) == 0 {
 		return MobileBriefPara{Text: "", Refs: uniqueSortedStrings(nil)}, nil
 	}
-	lang := mobileBriefVoiceLang(language)
+	// One question about one thing, with its one button and Not now
+	// (today-review v1.1.17 D18). Any other offer stays a line in the brief.
 	var offers []MobileBriefOffer
-	var refs []string
 	for _, draft := range drafts {
 		offers = append(offers, draft.offer)
-		refs = append(refs, draft.offer.Refs...)
 	}
 	text := drafts[0].offer.Text
-	if len(drafts) == 2 {
-		first, second := drafts[0].phrase, drafts[1].phrase
-		text = pick(lang, "Want me to "+first+", or "+second+"?", "要我"+first+"，还是"+second+"？")
-		// Two plain plans share one verb.
-		if a, b := drafts[0].planSubject, drafts[1].planSubject; a != "" && b != "" {
-			reference := mobileBriefTextReference(brief)
-			text = normalizeBriefText(pick(lang, "Want me to plan the next steps for "+a+" or "+b+"?", "要我规划"+a+"还是"+b+"的下一步？"), language, reference, false)
-		}
-	}
-	return MobileBriefPara{Text: text, Refs: uniqueSortedStrings(refs)}, offers
+	return MobileBriefPara{Text: text, Refs: uniqueSortedStrings(append([]string(nil), drafts[0].offer.Refs...))}, offers
 }
 
 // mobileBriefDeliveredClosing is the question a delivered brief ends on: for

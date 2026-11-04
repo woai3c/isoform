@@ -71,7 +71,9 @@ export function MainChatItemPanel({
     }
 
     const selectedItem = panel.item;
-    const briefHeader = (message.kind === 'brief_ready' || message.kind === 'weekly_recap') && retiredBriefCopy(message.headline)
+    const briefHeader = message.kind === 'first_week' && message.briefId && message.briefDisplay
+        ? briefTitle(message.briefDisplay as Parameters<typeof briefTitle>[0], i18n.resolvedLanguage ?? i18n.language, (key, options) => String(tToday(key as never, options as never)))
+        : (message.kind === 'brief_ready' || message.kind === 'weekly_recap') && retiredBriefCopy(message.headline)
         ? message.briefDisplay
             ? briefTitle(message.briefDisplay as Parameters<typeof briefTitle>[0], i18n.resolvedLanguage ?? i18n.language, (key, options) => tToday(key as never, options as never) as string)
             : tToday(message.kind === 'brief_ready' ? 'todayBrief.slot.on_request' : 'todayBrief.kind.week')

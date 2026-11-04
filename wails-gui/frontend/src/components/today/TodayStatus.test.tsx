@@ -15,6 +15,15 @@ const at = (dayOffset: number, hour: number) =>
     new Date(2026, 9, 14 + dayOffset, hour, 2, 0).toISOString();
 
 describe("TodayStatus", () => {
+    it("keeps the date, not the tries line or the missed line, while Isoform is still trying (today-review v1.1.20 R45)", () => {
+        const pendingAt = new Date(Date.now() - 6 * 3600_000).toISOString();
+        const retryAt = new Date(Date.now() + 3600_000).toISOString();
+        render(<TodayStatus brief={{ enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: "", nextSlot: "", missedRuns: 0, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt, retryAt, pendingAttempts: 9, pendingCause: "timeout" }} date="Tuesday, November 3" />);
+        expect(screen.getByTestId("today-status-date").textContent).toBe("Tuesday, November 3");
+        expect(screen.getByTestId("today-status")).not.toHaveTextContent(/Tried|tries again/);
+        expect(screen.queryByText(/didn't come/)).toBeNull();
+    });
+
     it("has no Make it now while the brief is missed: the card has the one button (v1.1.5 #2)", async () => {
         await i18n.changeLanguage("en");
         render(<TodayStatus brief={{ enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: "", nextSlot: "", missedRuns: 1, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt: at(0, 7) }} now={now} onMissedWhy={vi.fn()} />);
@@ -60,7 +69,7 @@ describe("TodayStatus", () => {
                 now={now}
             />,
         );
-        expect(screen.getByTestId("today-status")).toHaveTextContent("next brief at 7:02 AM");
+        expect(screen.getByTestId("today-status")).toHaveTextContent("next brief tomorrow at 7:02 AM");
         rerender(
             <TodayStatus
                 brief={{ latestBriefId: "", currentBriefId: "", enabled: false, lastRunAt: "", lastSlot: "", nextRunAt: at(1, 7), nextSlot: "morning", missedRuns: 0, failingSlot: "", failedAttempts: 0 }}

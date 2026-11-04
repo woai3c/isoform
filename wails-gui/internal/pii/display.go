@@ -45,7 +45,7 @@ func DisplayModelText(text, language string) string {
 		return text
 	}
 	copy := modelRedactionCopy["en"]
-	lower := strings.ToLower(language)
+	lower := strings.ToLower(modelTextLanguage(text, language))
 	if strings.HasPrefix(lower, "zh") || strings.Contains(lower, "chinese") {
 		copy = modelRedactionCopy["zh-CN"]
 	}
@@ -78,6 +78,24 @@ func DisplayModelText(text, language string) string {
 		if start < last {
 			start = last
 		}
+		// The phrase brings its own article: "The [REDACTED:code] release" reads
+		// "A private release", never "The a private code release" (D15).
+		capital := false
+		if m := modelRedactionDeterminer.FindStringSubmatchIndex(text[last:start]); m != nil {
+			cut := m[2]
+			if cut < 0 {
+				cut = m[4]
+			}
+			determiner, _ := utf8.DecodeRuneInString(text[last+cut:])
+			capital = unicode.IsUpper(determiner)
+			start = last + cut
+		}
+		if strings.HasPrefix(phrase, "a private ") && modelRedactionNounFollows(text[end:]) {
+			phrase = "a private"
+		}
+		if capital && phrase[0] < utf8.RuneSelf {
+			phrase = strings.ToUpper(phrase[:1]) + phrase[1:]
+		}
 		out.WriteString(text[last:start])
 		if out.Len() > 0 && (start == last || start > 0 && strings.ContainsRune(",;:.!?", rune(text[start-1]))) && phrase[0] < utf8.RuneSelf {
 			out.WriteByte(' ')
@@ -87,6 +105,46 @@ func DisplayModelText(text, language string) string {
 	}
 	out.WriteString(text[last:])
 	return out.String()
+}
+
+var (
+	modelRedactionDeterminer = regexp.MustCompile(`(?i)(?:^|[\s(“"'])(the|a|an|this|that|these|those|your|my|our|his|her|their|its)\s+$|(这个|那个|该)$`)
+	modelRedactionNextWord   = regexp.MustCompile(`^\s+([a-z][a-z'’-]*)`)
+	// Words after a mask that start the rest of the sentence rather than
+	// name the thing the mask describes.
+	modelRedactionFunctionWords = map[string]bool{
+		"is": true, "was": true, "are": true, "were": true, "has": true, "have": true, "had": true,
+		"will": true, "would": true, "can": true, "could": true, "should": true, "may": true, "might": true,
+		"and": true, "or": true, "but": true, "to": true, "in": true, "on": true, "at": true, "for": true,
+		"with": true, "from": true, "by": true, "of": true, "that": true, "which": true, "who": true,
+		"not": true, "still": true, "now": true, "today": true, "tomorrow": true, "again": true,
+	}
+)
+
+// modelRedactionNounFollows reports a noun right after a mask, as in
+// "[REDACTED:code] release", so the phrase becomes the adjective "a private".
+func modelRedactionNounFollows(rest string) bool {
+	m := modelRedactionNextWord.FindStringSubmatch(rest)
+	return m != nil && !modelRedactionFunctionWords[m[1]]
+}
+
+// modelTextLanguage is the language the text itself is written in, so the
+// phrase for a mask never mixes zh and en in one sentence (today-review
+// v1.1.20 R46). Text with only masks and punctuation uses the fallback.
+func modelTextLanguage(text, fallback string) string {
+	latin := false
+	for _, r := range modelRedactionPlaceholder.ReplaceAllString(text, "") {
+		if unicode.Is(unicode.Han, r) {
+			return "zh-CN"
+		}
+		if unicode.Is(unicode.Latin, r) {
+			latin = true
+		}
+	}
+	if latin {
+		return "en"
+	}
+	return fallback
 }
 
 func displayFragmentRune(r rune) bool {

@@ -30,6 +30,7 @@ import { communicationDraftDetails } from '@/lib/communication';
 import { cardButtons } from '@/lib/main-chat-card-spec';
 import { useMainChatItemPanel, type MainChatItemPanelSurface } from '@/hooks/useMainChatItemPanel';
 import { MainChatBriefCard } from '@/components/main-chat-brief-card';
+import { briefTitle } from '@/lib/brief-title';
 import { computerClock, computerDayClock } from '@/lib/brief-time';
 import { toggleBriefPlayback } from '@/lib/brief-audio';
 import { mainChatTargetOpens, statusEntryPlace, TODAY_BRIEF_STATUS_TARGET } from '@/lib/main-chat-navigation';
@@ -180,7 +181,9 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
     const verificationLine = isWork ? handoffVerificationLine(message.work?.verification ?? null) : null;
     // A brief card names its brief and renders its own Play and Read it, so a
     // recording is offered only with its words. The week's card is one too.
-    const briefCard = (message.kind === 'brief_ready' || message.kind === 'weekly_recap') && Boolean(message.briefId);
+    // The first brief's card is a brief card too, so Read it opens the saved
+    // brief in place (today-review v1.1.19 R27).
+    const briefCard = (message.kind === 'brief_ready' || message.kind === 'weekly_recap' || message.kind === 'first_week') && Boolean(message.briefId);
     const slots = cardButtons(message);
     // A left-off card folded after the next morning brief no longer offers to go back.
     const leftOff = message.kind === 'decision_due' && message.target.kind === 'thread';
@@ -433,6 +436,11 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
     );
     const draftTime = draftSentAt ? computerClock(new Date(draftSentAt), i18n.resolvedLanguage ?? 'en') : '';
 
+    const briefDisplay = message.briefDisplay ?? (message.briefId && item.createdAt && Number.isFinite(new Date(item.createdAt).getTime()) ? {
+        slot: /-morning$/.test(message.briefId) ? 'morning' : /-evening$/.test(message.briefId) ? 'evening' : 'on_request',
+        asOf: new Date(item.createdAt).toISOString(), timezone: '',
+    } : undefined);
+
     // RC 2 order: the real summary as the headline, the specific sentence,
     // the draft (To, Subject, text), the source line, the buttons, then the
     // card's topic tags.
@@ -443,10 +451,7 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
                 <MainChatBriefCard
                     briefId={message.briefId}
                     weeklyRecap={message.kind === 'weekly_recap'}
-                    display={message.briefDisplay ?? (item.createdAt && Number.isFinite(new Date(item.createdAt).getTime()) ? {
-                        slot: /-morning$/.test(message.briefId) ? 'morning' : /-evening$/.test(message.briefId) ? 'evening' : 'on_request',
-                        asOf: new Date(item.createdAt).toISOString(), timezone: '',
-                    } : undefined)}
+                    display={briefDisplay}
                     onOpenBrief={onOpenTarget ? () => onOpenTarget({ kind: 'today', id: message.briefId }) : undefined}
                     trailing={moreMenu}
                     meta={() => <>
@@ -467,7 +472,9 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
                     </>}
                 />
             ) : (
-                <h3 className="break-words text-[15px] font-semibold leading-snug text-ink">{retiredBriefCopy(copy.headline) && message.kind === 'brief_ready' ? tToday('todayBrief.slot.on_request') : retiredBriefCopy(copy.headline) && message.kind === 'weekly_recap' ? tToday('todayBrief.kind.week') : copy.headline}</h3>
+                <h3 className="break-words text-[15px] font-semibold leading-snug text-ink">{message.kind === 'first_week' && message.briefId && briefDisplay
+                    ? briefTitle({ ...briefDisplay, yourWeek: undefined, briefId: message.briefId } as Parameters<typeof briefTitle>[0], i18n.resolvedLanguage ?? i18n.language, (key, options) => String(tToday(key as never, options as never)))
+                    : retiredBriefCopy(copy.headline) && message.kind === 'brief_ready' ? tToday('todayBrief.slot.on_request') : retiredBriefCopy(copy.headline) && message.kind === 'weekly_recap' ? tToday('todayBrief.kind.week') : copy.headline}</h3>
             )}
             {blockedReasonKey && <p className="text-[12px] leading-relaxed text-muted">{tApp(blockedReasonKey)}</p>}
             {verificationLine && <p className="text-[12px] leading-relaxed text-muted">{verificationLine.kind === 'checks' ? tApp(verificationLine.key, { met: verificationLine.met, total: verificationLine.total }) : tApp(verificationLine.key)}</p>}

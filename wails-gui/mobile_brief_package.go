@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -186,6 +187,58 @@ var (
 	mobileBriefGreetingEN = regexp.MustCompile(`(?i)^(?:good\s+(?:morning|afternoon|evening|night)|morning|evening|hi|hello|hey)(?:\s+there)?(?:\s*[,，]\s*[\pL][\pL.'’-]*(?:\s+[\pL][\pL.'’-]*){0,2}|\s+[\pL][\pL'’-]*)?\s*[.!。！]?$`)
 	mobileBriefGreetingZH = regexp.MustCompile(`^(?:早上好|早安|上午好|中午好|下午好|晚上好|晚安|你好|您好|嗨)(?:[,，、]?\s*[\pL]{0,12})?\s*[。！!.]?$`)
 )
+
+var (
+	mobileBriefLeadGreetingEN = regexp.MustCompile(`^\s*(?i:good)\s+(?i:(morning|afternoon|evening))(?:\s*,\s*\p{Lu}[\pL'’-]*(?:\s+\p{Lu}[\pL'’-]*)?)?\s*[.!,]\s*`)
+	mobileBriefLeadGreetingZH = regexp.MustCompile(`^\s*(早上好|早安|上午好|下午好|晚上好)(?:[,，、]\s*\p{Latin}[\p{Latin}'’-]*)?\s*[。！!，,.]\s*`)
+)
+
+// mobileBriefWithMatchingGreeting removes an opening greeting that does not
+// match the time the brief was made: before noon morning, until 5 PM
+// afternoon, then evening. The greeting matches the time, or there is none
+// (today-review v1.1.16 D14).
+func mobileBriefWithMatchingGreeting(brief MobileBriefV1) MobileBriefV1 {
+	at := mobileBriefAsOfTime(brief)
+	if len(brief.Narrative) == 0 || at.IsZero() {
+		return brief
+	}
+	period := "evening"
+	switch hour := at.In(mobileBriefNarrativeLocation(brief)).Hour(); {
+	case hour < 12:
+		period = "morning"
+	case hour < 17:
+		period = "afternoon"
+	}
+	text := brief.Narrative[0].Text
+	greeting := ""
+	match := mobileBriefLeadGreetingEN.FindStringSubmatch(text)
+	if match != nil {
+		greeting = strings.ToLower(match[1])
+	} else if match = mobileBriefLeadGreetingZH.FindStringSubmatch(text); match != nil {
+		switch match[1] {
+		case "早上好", "早安", "上午好":
+			greeting = "morning"
+		case "下午好":
+			greeting = "afternoon"
+		default:
+			greeting = "evening"
+		}
+	}
+	if match == nil || greeting == period {
+		return brief
+	}
+	rest := strings.TrimSpace(text[len(match[0]):])
+	if rest == "" {
+		return brief
+	}
+	if first, size := utf8.DecodeRuneInString(rest); unicode.IsLower(first) {
+		rest = string(unicode.ToUpper(first)) + rest[size:]
+	}
+	narrative := append([]MobileBriefPara{}, brief.Narrative...)
+	narrative[0].Text = rest
+	brief.Narrative = narrative
+	return brief
+}
 
 // mobileBriefIsGreeting reports a paragraph that only greets: one short
 // sentence such as "Good morning." or "Good morning, Bo." or "早上好。".

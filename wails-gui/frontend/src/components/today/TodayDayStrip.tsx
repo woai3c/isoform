@@ -102,7 +102,7 @@ function NowLine({ initialNow, start, end, layer, clock, label }: {
     return <span data-testid="today-day-now" className="absolute -bottom-1 -top-1 z-10 w-0.5 rounded-sm bg-accent" style={{ zIndex: layer, left: now <= start ? '0px' : now >= end ? 'calc(100% - 2px)' : `clamp(0px, ${percent}%, calc(100% - 2px))` }} title={label(clock(now))}><span aria-hidden className="absolute -left-[3px] -top-[3px] size-2 rounded-full bg-accent" /></span>;
 }
 
-function FreeLabels({ spans, start, end, initialNow, isToday, width, language, tr }: {
+function FreeLabels({ spans, start, end, initialNow, isToday, width, tr }: {
     spans: Span[]; start: number; end: number; initialNow: number; isToday: boolean; width: number; language: string;
     tr: (key: string, options?: Record<string, unknown>) => string;
 }) {
@@ -120,9 +120,9 @@ function FreeLabels({ spans, start, end, initialNow, isToday, width, language, t
         const hours = Math.floor(minutes / 60), remainder = minutes % 60;
         const duration = tr(hours && remainder ? 'dayStrip.hoursMinutes' : hours ? 'dayStrip.hours' : 'dayStrip.minutes', { hours, minutes: remainder });
         const full = tr('dayStrip.freeDuration', { duration });
-        const short = language.startsWith('zh') ? duration.replace('分钟', '分') : duration;
         const available = width * (ahead.end - ahead.start) / (end - start) - 8;
-        const label = measureDayStripChip(full) <= available ? full : measureDayStripChip(short) <= available ? short : '';
+        // Every free label reads "free {duration}" (today-review v1.1.13 D7).
+        const label = measureDayStripChip(full) <= available ? full : '';
         return <span key={span.start} data-testid="today-day-free" className="pointer-events-none absolute top-[6px] z-[2] flex h-7 items-center justify-center whitespace-nowrap text-[11px] text-muted" style={{ left: `${(ahead.start - start) / (end - start) * 100}%`, width: `calc(${(ahead.end - ahead.start) / (end - start) * 100}% - 2px)` }}>{label && <span className="bg-background">{label}</span>}</span>;
     })}</>;
 }
@@ -214,6 +214,9 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
                     <span className="text-[12px] text-muted">{heading.source}</span>
                 </div>
             )}
+            {/* A strip for another day says which day, so its free time is
+                never read as today's (today-review v1.1.17 R21). */}
+            {dayLabel && <span className="text-[12px] font-medium text-muted" data-testid="today-day-strip-day">{dayLabel}</span>}
             <div className="relative h-3.5 text-[11px] leading-[14px] text-muted" data-testid="today-day-hours">
                 {hours.filter((_, i) => i % 2 === 0).map((at, i) => <span key={at} className={cn('today-day-hour absolute whitespace-nowrap', i % 2 === 1 && 'today-day-hour-secondary')} style={{ left: `${percent(at)}%`, transform: percent(at) > 90 ? 'translateX(-100%)' : percent(at) === 0 ? undefined : 'translateX(-50%)' }}>{clock(at)}</span>)}
             </div>
@@ -227,19 +230,21 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
                     const labelSpan = freeDaySpans(entry.start, entry.end, covers).sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
                     const { event } = entry;
                     const labelWidth = labelSpan ? width * (labelSpan.end - labelSpan.start) / (end - start) - 2 : 0;
-                    const rawLabel = event ? event.holdId ? t('dayStrip.held') : event.kind === 'meeting' ? meetingLabel(event.shortName, event.title) : event.shortName
+                    const rawLabel = event?.private ? '' : event ? event.holdId ? t('dayStrip.held') : event.kind === 'meeting' ? meetingLabel(event.shortName, event.title) : event.shortName || event.title
                         : holdPreview === 'held' ? t('dayStrip.held') : t('dayStrip.proposed');
-                    const label = fitChipLabel(rawLabel, labelWidth - 12, measureDayStripChip, event?.initial);
+                    // A block shows the first of its names that fits (today-review v1.1.13 D7).
+                    const names = event && !event.holdId && !event.private ? [rawLabel, event.shortestName, event.title] : [rawLabel];
+                    const label = names.map((name) => fitChipLabel(name ?? '', labelWidth - 12, measureDayStripChip, event?.initial)).find(Boolean) ?? '';
                     return <span key={event?.id ?? 'hold'} data-testid={event ? 'today-day-event-group' : 'today-day-hold-group'}
                         className="pointer-events-none absolute inset-0" style={{ zIndex: pieces[0].layer + 1, opacity: entry.originalEnd <= now ? 0.45 : 1 }}>
                         {pieces.map((block, pieceIndex) => {
-                            const eventTitle = (item: DayBlock) => t('dayStrip.eventTime', {
+                            const eventTitle = (item: DayBlock) => item.event?.private ? t('dayStrip.private') : t('dayStrip.eventTime', {
                                 title: item.event?.title ?? shape.hold!.label, start: clock(item.originalStart), end: clock(item.originalEnd),
                             });
                             const title = [eventTitle(block), ...(block.hidden.length ? [t('dayStrip.more', { count: block.hidden.length }), ...block.hidden.map(eventTitle)] : [])].join('\n');
                             const className = cn('pointer-events-auto absolute flex items-center justify-center overflow-hidden whitespace-nowrap rounded-md text-[11.5px] font-medium', event ? event.holdId ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : event.kind === 'personal' ? 'border-[1.5px] border-ink bg-background text-ink' : 'bg-ink text-background' : holdPreview === 'held' ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : 'border-[1.5px] border-dashed border-accent bg-accent-light text-accent');
                             const style = { ...placement(block, block.end === Math.min(end, block.originalEnd) ? 2 : 0), zIndex: 1, top: block.inset ? 10 : 6, height: block.inset ? 20 : 28 };
-                            return event?.kind === 'meeting' && !event.holdId && onOpenMeeting
+                            return event?.kind === 'meeting' && !event.holdId && !event.private && onOpenMeeting
                                 ? <button key={block.start} type="button" data-testid="today-day-event" data-inset={block.inset} data-kind={event.kind} title={title} aria-label={t('dayStrip.openPrep', { event: eventTitle(block) })} tabIndex={pieceIndex === 0 ? 0 : -1} className={cn(className, 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent')} style={style} onClick={() => onOpenMeeting(event.id)} />
                                 : <span key={block.start} data-testid={event ? 'today-day-event' : 'today-day-hold'} data-inset={block.inset} data-kind={event?.kind} data-state={event ? undefined : holdPreview} title={title} aria-label={title} className={className} style={style} />;
                         })}

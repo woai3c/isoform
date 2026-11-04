@@ -673,3 +673,41 @@ describe('sidebar Chat row New chat (chat-review v1.0.2 #9)', () => {
         expect(onNewChat).toHaveBeenCalledTimes(1);
     });
 });
+
+describe("The selected row is the page on screen (today-review v1.1.14 D9)", () => {
+    const filled = /(^|\s)(bg-background|bg-surface-active)(\s|$)/;
+    const pages = [
+        ["today", { todayOpen: true }, en.sidebar.today],
+        ["tasks", { tasksOpen: true }, en.sidebar.tasks],
+        ["activity", { activityOpen: true }, en.sidebar.activity],
+        ["memory", {}, en.userMenu.memory],
+        ["knowledge", {}, en.userMenu.knowledge],
+        ["people", {}, en.userMenu.people],
+    ] as const;
+    const labels = [en.sidebar.today, en.sidebar.mainChat, ...pages.slice(1).map(([, , label]) => label)];
+    const rows = () => labels.map((label) => screen.getAllByRole("button", { name: label })[0]);
+    const expectSelected = (label: string) => {
+        const current = rows().filter((row) => row.getAttribute("aria-current") === "page");
+        expect(current).toHaveLength(1);
+        expect(current[0]).toHaveTextContent(label);
+        expect(rows().filter((row) => filled.test(row.className))).toEqual(current);
+    };
+
+    it("marks only the page on screen from the first render and on every switch, with no color transition to wait on", () => {
+        const props = renderSidebar([], null, { appMode: "today", todayOpen: true });
+        expectSelected(en.sidebar.today);
+        cleanup();
+        const { rerender } = render(<Sidebar {...props} />);
+        for (const [appMode, open, label] of [...pages, pages[0]]) {
+            rerender(<Sidebar {...props} todayOpen={false} tasksOpen={false} activityOpen={false} {...open} appMode={appMode} />);
+            expectSelected(label);
+        }
+        for (const row of rows()) expect(row.className).not.toMatch(/\btransition-(colors|all)\b/);
+    });
+
+    it.each(pages)("opens on %s with that row selected in the first frame, never Chat", (appMode, open, label) => {
+        renderSidebar([], null, { appMode, ...open });
+        expectSelected(label);
+        expect(screen.getAllByRole("button", { name: en.sidebar.mainChat })[0]).not.toHaveAttribute("aria-current");
+    });
+});

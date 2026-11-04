@@ -1398,6 +1398,13 @@ describe("tasks-review v1.0.3", () => {
         expect(screen.getByTestId("all-done-link")).toHaveTextContent("All done ›");
     });
 
+    it("says the tries and the cause while Isoform is still trying, as Today does (today-review v1.1.13 D3)", async () => {
+        mount({ upcoming: { loading: false, items: [brief("morning", "07:00", { nextRunAt: tomorrowAt(7), didntRunAt: todayAt(7), triedAttempts: 9, triedCause: "timeout" })] } });
+        const row = (await screen.findByRole("region", { name: "Scheduled" })).querySelector('[data-scheduled-row="brief:morning"]') as HTMLElement;
+        expect(row.querySelector("[data-brief-tries]")).toHaveTextContent("Tried 9 times. It timed out. Isoform tries again at 7:00 AM.");
+        expect(row).not.toHaveTextContent("See why");
+    });
+
     it("says it in zh-CN", async () => {
         await i18n.changeLanguage("zh-CN");
         mount({ upcoming: { loading: false, items: [brief("morning", "07:00", { nextRunAt: tomorrowAt(7), didntRunAt: todayAt(7) })] } });
@@ -1407,5 +1414,20 @@ describe("tasks-review v1.0.3", () => {
         expect(row).toHaveTextContent("没有在上午7:00运行 · 查看原因");
         expect(i18n.t("app:tasks.didntRun")).toBe("没有运行 · 查看原因");
         expect(i18n.t("app:tasks.allDoneLink")).toBe("全部已完成 ›");
+    });
+});
+
+
+describe("Up next on a refresh (tasks-review v1.0.14 K2)", () => {
+    it("keeps what's on screen while it refreshes: placeholders only on the first load", async () => {
+        mocks.offers.mockResolvedValue([offer("Draft the launch note")]);
+        mount();
+        expect(await screen.findByText("Draft the launch note")).toBeInTheDocument();
+        mocks.offers.mockImplementation(() => new Promise(() => undefined));
+        act(() => { mocks.events.get("app:ready")?.forEach((handler: (payload?: unknown) => unknown) => handler()); });
+        await new Promise((resolve) => setTimeout(resolve, 650));
+        expect(mocks.offers.mock.calls.length).toBeGreaterThan(1);
+        expect(screen.queryByTestId("task-deck-placeholder")).toBeNull();
+        expect(screen.getByText("Draft the launch note")).toBeInTheDocument();
     });
 });

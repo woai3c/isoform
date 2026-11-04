@@ -158,6 +158,15 @@ describe('main chat view helpers', () => {
         expect(mainChatStreamRows([card('one', 'screen'), card('retry', 'screen'), card('mic', 'microphone')]).map((item) => item.id)).toEqual(['one', 'mic']);
     });
 
+    it('lists one Capture paused line per event when two capture sources paused together (today-review v1.1.19 R43)', () => {
+        const start = new Date(2026, 10, 3, 13, 37).getTime();
+        const status = (id: string, source: string, at: number): StreamItem => ({ id, kind: 'system', toolName: 'main_chat_status', rowClass: 'routine', localDay: '2026-11-03', toolInput: { period: id, entries: [
+            { id, momentId: id, kind: 'capture_paused', text: 'Capture paused', captureSource: source, captureStartAt: at, target: { kind: 'settings' } },
+        ] } });
+        const rows = mainChatStreamRows([status('mic', 'microphone', start), status('audio', 'system_audio', start + 20_000), status('later', 'microphone', start + 3_600_000)]);
+        expect(rows.map((item) => item.id)).toEqual(['mic', 'later']);
+    });
+
     it('names today, yesterday and older days', () => {
         expect(dayName('2026-10-22', '2026-10-22', 'en')).toEqual({ kind: 'today' });
         expect(dayName('2026-10-21', '2026-10-22', 'en')).toEqual({ kind: 'yesterday' });

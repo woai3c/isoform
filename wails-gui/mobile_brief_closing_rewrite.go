@@ -52,8 +52,8 @@ func mobileBriefRewrittenClosing(brief MobileBriefV1, before MobileBriefPara, la
 }
 
 // mobileBriefClosingChips are Isoform's answers to a closing question that
-// has none: one chip per offer it asks about, in two to four words, then
-// "Not now" (today-review v1.1.7, v1.1.8 #3). Without a bound question or an
+// has none: one chip for the one offer it asks about, in two to four words,
+// then "Not now" (today-review v1.1.7, v1.1.8 #3, v1.1.17 D18). Without a bound question or an
 // offer it asks about there are none, and Today then shows no question.
 func mobileBriefClosingChips(brief MobileBriefV1, language string) []MobileBriefCard {
 	closing := mobileBriefClosingParagraph(brief)
@@ -84,7 +84,7 @@ func mobileBriefClosingChips(brief MobileBriefV1, language string) []MobileBrief
 		offer := current[stored.Refs[0]]
 		offer.ID = stored.ID
 		prompt := strings.TrimSpace(offer.Prompt)
-		if len(chips) == 2 || len(offer.Refs) == 0 || !slices.Contains(refs, offer.Refs[0]) || prompt == "" ||
+		if len(chips) == 1 || len(offer.Refs) == 0 || !slices.Contains(refs, offer.Refs[0]) || prompt == "" ||
 			offer.Action == mobileBriefCardOpenActivity || len(prompt) > mobileBriefCardMessageBytes {
 			continue
 		}

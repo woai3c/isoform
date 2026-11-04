@@ -58,6 +58,8 @@ type TodayBriefView struct {
 	// PendingAttempts is how many tries of the pending slot failed, only
 	// when its run record counts them.
 	PendingAttempts int `json:"pendingAttempts,omitempty"`
+	// PendingCause is why the last try failed, when Isoform knows (e.g. "timeout").
+	PendingCause string `json:"pendingCause,omitempty"`
 	// LastBriefID names the newest stored brief when it is not the one shown,
 	// so Today can open it; LastSlot and LastAt describe it.
 	LastBriefID string `json:"lastBriefId,omitempty"`
@@ -122,6 +124,7 @@ func todayBriefView(now time.Time, loc *time.Location, latest MobileBriefV1, has
 	}
 	if health.PendingSlot != "" {
 		view.PendingAttempts = health.PendingAttempts
+		view.PendingCause = health.PendingCause
 	}
 	if view.Missing == nil {
 		view.Missing = []string{}
@@ -290,7 +293,7 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 				// The slot ran and had nothing to say: Today shows its quiet
 				// state, as it always has, not a pending one.
 				latest, ok, snapshot, latestReady = quiet, true, false, quietAt
-				health.PendingSlot, health.PendingAt, health.RetryAt, health.PendingAttempts = "", "", "", 0
+				health.PendingSlot, health.PendingAt, health.RetryAt, health.PendingAttempts, health.PendingCause = "", "", "", 0, ""
 			} else if !due.ScheduledAt.IsZero() && (!ok || snapshot || latestReady.Before(due.ScheduledAt)) {
 				health.PendingSlot, health.PendingAt = due.Slot, formatMobileBriefTime(due.ScheduledAt)
 				if ok && !snapshot {
@@ -301,7 +304,7 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 				firstBrief = !everMade
 				ok = ok && snapshot && firstBrief
 			} else if ok && !due.ScheduledAt.IsZero() && !latestReady.Before(due.ScheduledAt) {
-				health.PendingSlot, health.PendingAt, health.RetryAt, health.PendingAttempts = "", "", "", 0
+				health.PendingSlot, health.PendingAt, health.RetryAt, health.PendingAttempts, health.PendingCause = "", "", "", 0, ""
 			}
 		}
 	}
@@ -310,6 +313,9 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 		if brief, readable := a.todayDesktopPausedBrief(context.Background(), shown.BriefID); readable {
 			shown = brief
 		}
+	}
+	if ok {
+		shown = mobileBriefWithoutStartedEventQuestion(shown, now)
 	}
 	view := todayBriefView(now, loc, shown, ok, health, building, missing)
 	view.FirstBrief = firstBrief
@@ -389,12 +395,13 @@ func (a *App) GetTodayBriefByID(briefID string) (TodayBriefView, error) {
 	if current, isBuilding := svc.(mobileBriefBuilding); isBuilding {
 		building = current.Building()
 	}
-	view := todayBriefView(selectedAt, loc, brief, true, svc.Health(), building, missing)
-	view.BriefRun = todayBriefRecordedRun(svc, brief.BriefID)
 	now := time.Now()
 	if service, isService := svc.(*mobileBriefService); isService {
 		now = service.now()
 	}
+	brief = mobileBriefWithoutStartedEventQuestion(brief, now)
+	view := todayBriefView(selectedAt, loc, brief, true, svc.Health(), building, missing)
+	view.BriefRun = todayBriefRecordedRun(svc, brief.BriefID)
 	view.WeekAnswer = a.todayWeekAnswer(brief, now)
 	view.ClosingAnswer = a.todayClosingAnswer(brief)
 	return view, nil

@@ -1661,7 +1661,7 @@ describe("TodayPage main chat panel: Isoform's cards and status rows (Claude Des
         pauseMocks.mainPage.mockResolvedValue({ items: [card("c-1", "moment-1")], hasMore: false, nextCursor: -1 });
         await mount();
         const button = await within(panel()).findByTestId("main-chat-panel-waiting");
-        expect(button).toHaveTextContent("2 waiting on you");
+        expect(button).toHaveTextContent("2 questions for you");
 
         await act(async () => {
             pauseMocks.listeners.get("main-chat:waiting-changed")?.({
@@ -2022,4 +2022,32 @@ it("keeps a failed waiting-source check in its row and retries without opening t
     fireEvent.click(screen.getByRole("button", { name: "needsYou.tryAgain" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("needsYou.stillFailed"));
     expect(pauseMocks.loadProactive).not.toHaveBeenCalled();
+});
+
+describe("Today is never blank (today-review v1.1.14 D8)", () => {
+    const hanging = { view: null, loading: true, loadFailed: false, make: "idle", nextAllowedAt: "", makeNow: vi.fn(), refresh: vi.fn() };
+
+    it("paints the header, status line and placeholders while the brief read hangs", () => {
+        mockUseLatestBrief.mockReturnValue(hanging);
+        mockUseTodayStatus.mockReturnValue({ week: null, brief: null, loading: true, refresh: vi.fn() });
+        renderToday();
+        const header = screen.getByTestId("today-header");
+        expect(within(header).getByRole("heading", { level: 1 })).toHaveTextContent(/^todayBrief\.slot\./);
+        expect(within(header).getByTestId("today-status")).not.toBeEmptyDOMElement();
+        expect(screen.getByTestId("brief-card-loading")).toHaveAttribute("aria-busy", "true");
+        // Nothing on the page waits on an entrance animation to become visible.
+        expect(screen.getByTestId("today-column").className).not.toMatch(/\banimate-/);
+    });
+
+    it("says a failed brief read in copper with Try again", () => {
+        const refresh = vi.fn();
+        mockUseLatestBrief.mockReturnValue({ ...hanging, loading: false, loadFailed: true, refresh });
+        renderToday();
+        expect(within(screen.getByTestId("today-header")).getByRole("heading", { level: 1 })).toBeInTheDocument();
+        const failed = screen.getByTestId("brief-load-failed");
+        expect(failed).toHaveClass("text-copper");
+        expect(failed).toHaveTextContent("todayBrief.loadFailed");
+        fireEvent.click(within(failed).getByRole("button", { name: "todayBrief.retry" }));
+        expect(refresh).toHaveBeenCalledTimes(1);
+    });
 });

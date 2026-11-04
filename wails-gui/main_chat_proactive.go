@@ -312,6 +312,12 @@ func (a *App) proactiveItem(m engagement.Moment, text engagementText) (mainChatP
 	case engagement.KindWeeklyRecap:
 		// The recap's subject is the week's last day; Play needs the brief.
 		item.BriefID = m.Params["source_brief_id"]
+	case engagement.KindFirstWeek:
+		// The first brief's card is titled with its slot and time, not the
+		// first-week title the welcome card already shows (today-review D16).
+		if m.Params["stage"] == "brief" {
+			item.BriefID = m.SubjectID
+		}
 	}
 	if m.Params["_activity_thread"] != "" && copyParams["app"] != "" {
 		item.Place = &mainChatProactivePlace{

@@ -42,7 +42,6 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
         const timeout = window.setTimeout(() => { if (live) setFailed(true); }, 10000);
         setBrief(null);
         setFailed(false);
-        setReading(false);
         Promise.resolve()
             .then(() => GetTodayBriefByID(briefId))
             .then((view) => {
@@ -55,6 +54,7 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
             .catch(() => { if (live) { window.clearTimeout(timeout); setFailed(true); } });
         return () => { live = false; window.clearTimeout(timeout); };
     }, [briefId, attempt]);
+    useEffect(() => setReading(false), [briefId]);
 
     const language = i18n.resolvedLanguage ?? i18n.language;
     const tr: Translate = (key, options) => tToday(key as never, options as never) as unknown as string;
@@ -70,6 +70,10 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
     // Read it opens the brief in the card (§5), not on Today.
     // The week's brief has its own sections beyond the words; it opens on Today.
     const week = current ? briefKind(current) === 'week' : false;
+    // A press made while the week's brief loaded still opens it on Today.
+    useEffect(() => {
+        if (reading && week && onOpenBrief) { setReading(false); onOpenBrief(); }
+    }, [reading, week, onOpenBrief]);
     // A recording never plays without its words.
     const playable = !changedWords && briefHasWords(current) && !!current?.audio && current.audio.bytes > 0;
 
@@ -80,9 +84,15 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
                 ? paragraphs.map((text, index) => <p key={index} className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{text}</p>)
                 : lead && <p className="line-clamp-3 whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{lead}</p>}
             {(current || failed) && meta?.(current)}
-            {failed && <p role="alert" className="text-[13px] text-muted">{t('mainChat.view.briefLoadFailed')}</p>}
-            {(current || failed) && <div className="flex flex-wrap items-center gap-2">
-                {failed && <Button size="sm" variant="quiet" onClick={() => setAttempt((value) => value + 1)}>{t('mainChat.view.retry')}</Button>}
+            {/* A brief that can't be opened says so in copper and stays put
+                (today-review v1.1.13 D4, v1.1.19 R27). */}
+            {failed && (
+                <p role="alert" data-testid="main-chat-brief-open-failed" className="text-[13px] text-copper">
+                    {tr('todayBrief.pending.openFailed')}{' '}
+                    <button type="button" className="font-medium text-accent hover:underline" onClick={() => setAttempt((value) => value + 1)}>{tr('todayBrief.pending.tryAgain')}</button>
+                </p>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
                 {playable && (
                     <Button
                         size="sm"
@@ -95,20 +105,25 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
                         {t('mainChat.card.button.play')}
                     </Button>
                 )}
-                {!reading && (paragraphs.length > 0 || onOpenBrief) && (
+                {/* Read it opens the whole brief at once, even while it loads
+                    (today-review v1.1.19 R27). */}
+                {!reading && (!current || paragraphs.length > 0 || onOpenBrief) && (
                     <Button
                         size="sm"
                         variant={playable ? 'quiet' : 'default'}
                         className="text-[12.5px]"
                         data-proactive-action="read_it"
                         aria-expanded={reading}
-                        onClick={() => (paragraphs.length > 0 && !(week && onOpenBrief) ? setReading(true) : onOpenBrief?.())}
+                        onClick={() => {
+                            if (current) return paragraphs.length > 0 && !(week && onOpenBrief) ? setReading(true) : onOpenBrief?.();
+                            return failed && onOpenBrief ? onOpenBrief() : setReading(true);
+                        }}
                     >
                         {t('mainChat.card.button.readIt')}
                     </Button>
                 )}
                 {trailing && <span className="ml-auto">{trailing}</span>}
-            </div>}
+            </div>
         </div>
     );
 }

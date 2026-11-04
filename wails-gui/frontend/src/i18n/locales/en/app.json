@@ -80,10 +80,12 @@
         "tried_other": "Tried {{count}} times without finishing.",
         "triedTimeout_one": "Tried once. It timed out.",
         "triedTimeout_other": "Tried {{count}} times. It timed out.",
-        "triedNext_one": "Tried once without finishing. Next try {{time}}.",
-        "triedNext_other": "Tried {{count}} times without finishing. Next try {{time}}.",
+        "triedNext_one": "Tried once without finishing. Isoform tries again at {{time}}.",
+        "triedNext_other": "Tried {{count}} times without finishing. Isoform tries again at {{time}}.",
+        "triedTimeoutNext_one": "Tried once. It timed out. Isoform tries again at {{time}}.",
+        "triedTimeoutNext_other": "Tried {{count}} times. It timed out. Isoform tries again at {{time}}.",
         "didntFinish": "Didn't finish.",
-        "didntFinishNext": "Didn't finish. Next try {{time}}.",
+        "didntFinishNext": "Didn't finish. Isoform tries again at {{time}}.",
         "lateReason": {
             "asleep": "your computer was asleep",
             "closed": "Isoform wasn't open"

@@ -28,7 +28,8 @@ export function briefNext(nextRunAt: number, now: Date, language: string, t: App
     if (!(nextRunAt > 0)) return "";
     const at = new Date(nextRunAt);
     const days = Math.round((startOfDay(at) - startOfDay(now)) / 86_400_000);
-    if (days <= 0) return t("briefDetail.nextTodayAt", { time: clockTime(at.getTime() < now.getTime() ? now : at, language, tr) });
+    // One next time everywhere: the try's own time, never now (today-review v1.1.13 D5).
+    if (days <= 0) return t("briefDetail.nextTodayAt", { time: clockTime(at, language, tr) });
     if (days === 1) return t("briefDetail.nextTomorrow");
     return t("briefDetail.nextDay", { day: at.toLocaleDateString(language, { weekday: "long" }) });
 }

@@ -524,7 +524,7 @@ export function TodayBriefSection({
     nextAllowedAt: string;
     onMakeNow: () => void;
     /** Opens a stored brief in place of today's view; no id is today again. */
-    onOpenBrief?: (briefId?: string) => void;
+    onOpenBrief?: (briefId?: string, title?: string) => void;
     /** A new value rings the brief's card once (a missed brief's Show). */
     locateNonce?: number;
     handlers: TodayActionHandlers;
@@ -687,7 +687,7 @@ export function TodayBriefSection({
             card: (
                 <div className={cn(BRIEF_CARD, "gap-2.5")}>
                     {!brief && !view?.lastBriefId && <p className="text-[14px] font-medium text-ink">{tr("todayBrief.firstTitle")}</p>}
-                    <p role="alert" className="text-[13.5px] text-muted">{tr("todayBrief.loadFailed")}{onRetry && <> <button type="button" className="text-accent" onClick={() => measureToday("T03", "do", "done", onRetry)}>{tr("todayBrief.retry")}</button></>}</p>
+                    <p role="alert" data-testid="brief-load-failed" className="text-[13.5px] text-copper">{tr("todayBrief.loadFailed")}{onRetry && <> <button type="button" className="text-accent" onClick={() => measureToday("T03", "do", "done", onRetry)}>{tr("todayBrief.retry")}</button></>}</p>
                 </div>
             ),
             checkIn: null,
@@ -793,6 +793,7 @@ export function TodayBriefSection({
             building={building}
             retryAt={view?.retryAt ?? ""}
             attempts={view?.pendingAttempts ?? 0}
+            cause={view?.pendingCause}
             firstBrief={!!view?.firstBrief}
             lastBriefId={view?.firstBrief ? "" : view?.lastBriefId || (brief?.briefId ?? "")}
             lastSlot={view?.lastBriefId ? view.lastSlot ?? "" : brief?.displaySlot ?? brief?.slot ?? ""}
@@ -850,7 +851,15 @@ function CalendarReadFailed({ retry, tr }: { retry: () => void; tr: Translate })
  *  the run record proves about its tries and the next one, today's strip,
  *  the one Make my brief now, and the last brief, which opens in the panel
  *  with its day. */
-function PendingBrief({ slot, firstBrief = false, building, retryAt, attempts, lastBriefId, lastSlot, lastAt, strip, make, nextAllowedAt, onMakeNow, onOpenBrief, now, tr, blind }: {
+function lastBriefDay(at: Date, now: Date, language: string, tr: Translate): string {
+    const day = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    const ago = Math.round((day(now) - day(at)) / 86_400_000);
+    if (ago === 0) return tr("todayBrief.pending.dayToday");
+    if (ago === 1) return tr("todayBrief.pending.dayYesterday");
+    return at.toLocaleDateString(language, { weekday: "long" });
+}
+
+function PendingBrief({ slot, firstBrief = false, building, retryAt, attempts, cause, lastBriefId, lastSlot, lastAt, strip, make, nextAllowedAt, onMakeNow, onOpenBrief, now, tr, blind }: {
     blind?: ReactNode;
     slot: "morning" | "evening";
     /** No brief has ever been made (today-review v1.1.11 #1). */
@@ -858,6 +867,8 @@ function PendingBrief({ slot, firstBrief = false, building, retryAt, attempts, l
     building: boolean;
     retryAt: string;
     attempts: number;
+    /** Why the last try failed, when Isoform knows (e.g. "timeout"). */
+    cause?: string;
     lastBriefId: string;
     lastSlot: string;
     lastAt: string;
@@ -865,7 +876,7 @@ function PendingBrief({ slot, firstBrief = false, building, retryAt, attempts, l
     make: MakeBriefState;
     nextAllowedAt: string;
     onMakeNow: () => void;
-    onOpenBrief?: (briefId?: string) => void;
+    onOpenBrief?: (briefId?: string, title?: string) => void;
     now: Date;
     tr: Translate;
 }) {
@@ -876,7 +887,8 @@ function PendingBrief({ slot, firstBrief = false, building, retryAt, attempts, l
     const lastDate = lastAt ? new Date(lastAt) : null;
     const last = lastBriefId && lastDate && !Number.isNaN(lastDate.getTime()) ? {
         brief: tr(`todayBrief.slot.${lastSlot === "morning" || lastSlot === "evening" ? lastSlot : "on_request"}`),
-        day: lastDate.toLocaleDateString(language, { weekday: "short" }),
+        // Day words as everywhere else: today, yesterday, then the weekday (today-review v1.1.13 D6).
+        day: lastBriefDay(lastDate, now, language, tr),
         time: clockTime(lastDate, language, tr),
     } : null;
     return (
@@ -889,14 +901,14 @@ function PendingBrief({ slot, firstBrief = false, building, retryAt, attempts, l
                 </p>
             ) : retry ? (
                 <p className="text-[14px] text-ink" role="status" data-testid="brief-pending-line">
-                    {attempts > 0 ? tr("todayBrief.pending.tried", { count: attempts, time: retry }) : tr("todayBrief.pending.retry", { time: retry })}
+                    {attempts > 0 ? tr(cause === "timeout" ? "todayBrief.pending.triedTimeout" : "todayBrief.pending.tried", { count: attempts, time: retry }) : tr("todayBrief.pending.retry", { time: retry })}
                 </p>
             ) : null}
             {strip}
             {!building && <div className="mt-1.5"><MakeNow make={make} building={building} nextAllowedAt={nextAllowedAt} onMakeNow={onMakeNow} now={now} tr={tr} /></div>}
             {onOpenBrief && last && (
                 <p className="text-[12.5px] text-muted" data-testid="brief-pending-last">
-                    {tr("todayBrief.pending.lastBrief", last)} · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium text-accent hover:no-underline" onClick={() => measureToday("T05", "open", "opened", () => onOpenBrief(lastBriefId))}>{tr("todayBrief.pending.readIt")}</Button>
+                    {tr("todayBrief.pending.lastBrief", last)} · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium text-accent hover:no-underline" onClick={() => measureToday("T05", "open", "opened", () => onOpenBrief(lastBriefId, tr("todayBrief.pending.lastBriefTitle", last)))}>{tr("todayBrief.pending.readIt")}</Button>
                 </p>
             )}
             {blind}

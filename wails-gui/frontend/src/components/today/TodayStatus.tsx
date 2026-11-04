@@ -46,6 +46,7 @@ export function describeBriefTime(
  */
 export function TodayStatus({
     brief,
+    now = new Date(),
     capture,
     quiet = [],
     date,
@@ -73,8 +74,17 @@ export function TodayStatus({
     };
     const pendingDate = brief?.pendingAt ? new Date(brief.pendingAt) : null;
     const pending = brief?.enabled && (brief.pendingSlot === "morning" || brief.pendingSlot === "evening") && pendingDate && !Number.isNaN(pendingDate.getTime()) ? { slot: brief.pendingSlot, time: clockTime(pendingDate, i18n.language, tr) } : null;
+    // While Isoform is still trying, the tries line is in the brief card only
+    // and the subline stays the date (today-review v1.1.20 R45).
+    const retryDate = pending && brief?.retryAt ? new Date(brief.retryAt) : null;
+    const tries = retryDate && !Number.isNaN(retryDate.getTime()) && retryDate.getTime() > Date.now() && (brief?.pendingAttempts ?? 0) > 0
+        ? t(brief?.pendingCause === "timeout" ? "todayBrief.pending.triedTimeout" : "todayBrief.pending.tried", { count: brief?.pendingAttempts ?? 0, time: clockTime(retryDate, i18n.language, tr) })
+        : "";
     const nextDate = brief?.enabled && brief.nextRunAt ? new Date(brief.nextRunAt) : null;
     const next = nextDate && !Number.isNaN(nextDate.getTime()) ? clockTime(nextDate, i18n.language, tr) : null;
+    // A brief made in the last two hours skips the next slot, so the next
+    // one can be tomorrow's (today-review v1.1.16 D17).
+    const nextTomorrow = !!next && !!nextDate && new Date(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() === 86_400_000;
 
     const quietLines = quiet.filter((line) => line.text.trim());
     if (!date && !next && !pending && !capture && quietLines.length === 0) return null;
@@ -84,7 +94,7 @@ export function TodayStatus({
             data-testid="today-status"
             className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1 text-[12.5px] leading-snug text-muted"
         >
-            {pending ? <span>{t(pending.slot === "morning" ? "status.missedMorning" : "status.missedEvening", { time: pending.time })}{onMissedWhy && <> · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium hover:no-underline" onClick={() => openWhy(pending.slot as "morning" | "evening")}>{t("status.why")}</Button></>}</span> : <span>{date}{date && next && " · "}{next && t("status.nextBriefAt", { time: next })}</span>}
+            {tries ? date && <span data-testid="today-status-date">{date}</span> : pending ? <span>{t(pending.slot === "morning" ? "status.missedMorning" : "status.missedEvening", { time: pending.time })}{onMissedWhy && <> · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium hover:no-underline" onClick={() => openWhy(pending.slot as "morning" | "evening")}>{t("status.why")}</Button></>}</span> : <span>{date}{date && next && " · "}{next && t(nextTomorrow ? "status.nextBriefTomorrowAt" : "status.nextBriefAt", { time: next })}</span>}
             {capture && <TodayCaptureLine text={capture.text} onOpen={capture.onOpen} />}
             {quietLines.map((line) => (
                 <p key={line.id} data-testid="today-quiet-line">{line.text}</p>

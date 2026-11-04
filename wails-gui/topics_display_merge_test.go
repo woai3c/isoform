@@ -60,10 +60,9 @@ func TestTopicMergeCadenceKeepsDisplaySourceAndWithdrawal(t *testing.T) {
 					svc.startRegistryWorker(t.Context())
 					t.Cleanup(svc.stopRegistryWorker)
 				}
+				// The topic's text is English, so its mask reads in English in
+				// either app language (today-review v1.1.20 R46).
 				want := "an account number"
-				if language == "zh-CN" {
-					want = "一个账号"
-				}
 				check := func(views []TopicView, err error) {
 					t.Helper()
 					if err != nil || len(views) != 1 || views[0].ID != id || views[0].Latest == nil {

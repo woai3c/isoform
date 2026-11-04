@@ -822,7 +822,10 @@ function ScheduledSection({ sectionRef, upcoming, listScheduled, onOpenListTask,
                                     <span className="min-w-0 flex-1">
                                         <span className={`block truncate text-[14px] font-medium ${item.enabled ? "text-ink" : "text-muted"}`}>{name}</span>
                                         {!isBrief && <span className="mt-0.5 block truncate text-[12px] text-muted">{upcomingSummary(item, t)}</span>}
-                                        {didntRunAt && <span data-brief-didnt-run className="mt-1 block text-[12px] text-muted">{t("tasks.didntRunAt", { time: clockTime(didntRunAt, i18n.language, timeT) })}</span>}
+                                        {didntRunAt && (item.triedAttempts ?? 0) > 0 && item.nextRunAt > 0
+                                            // While Isoform is still trying: the same sentence as Today and the panel (today-review v1.1.13 D3).
+                                            ? <span data-brief-didnt-run data-brief-tries className="mt-1 block text-[12px] text-muted">{t(item.triedCause === "timeout" ? "briefDetail.triedTimeoutNext" : "briefDetail.triedNext", { count: item.triedAttempts, time: clockTime(new Date(item.nextRunAt), i18n.language, timeT) })}</span>
+                                            : didntRunAt && <span data-brief-didnt-run className="mt-1 block text-[12px] text-muted">{t("tasks.didntRunAt", { time: clockTime(didntRunAt, i18n.language, timeT) })}</span>}
                                         {failing && <span data-schedule-failing className="mt-1 block text-[12px] text-copper">{t("tasks.didntRun")}</span>}
                                     </span>
                                     <span className="shrink-0 text-right text-[12px] leading-[18px] text-muted">

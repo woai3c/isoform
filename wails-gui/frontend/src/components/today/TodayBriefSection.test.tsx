@@ -507,9 +507,9 @@ describe("TodayBriefSection while today's brief is on its way", () => {
         expect(screen.queryByTestId("brief-closing")).not.toBeInTheDocument();
         expect(within(card).getByLabelText("Your day")).toBeInTheDocument();
         expect(card).not.toHaveTextContent(/on its way|Back to today/);
-        expect(within(card).getByTestId("brief-pending-last")).toHaveTextContent("Last brief: Evening brief, Wed 7:30 PM · Read it");
+        expect(within(card).getByTestId("brief-pending-last")).toHaveTextContent("Last brief: yesterday, 7:30 PM · Read it");
         fireEvent.click(within(card).getByRole("button", { name: "Read it" }));
-        expect(onOpenBrief).toHaveBeenCalledWith("2026-10-14-evening");
+        expect(onOpenBrief).toHaveBeenCalledWith("2026-10-14-evening", expect.any(String));
     });
 
     it.each([
@@ -531,7 +531,7 @@ describe("TodayBriefSection while today's brief is on its way", () => {
         expect(buttons).toHaveLength(1);
         fireEvent.click(buttons[0]);
         expect(onMakeNow).toHaveBeenCalledTimes(1);
-        if (language === "zh-CN") expect(within(card).getByTestId("brief-pending-last")).toHaveTextContent("上一份：晚间简报，周三晚上7:30 · 阅读");
+        if (language === "zh-CN") expect(within(card).getByTestId("brief-pending-last")).toHaveTextContent("上一份：昨天晚上7:30 · 阅读");
         await i18n.changeLanguage("en");
     });
 
@@ -540,6 +540,11 @@ describe("TodayBriefSection while today's brief is on its way", () => {
         const card = screen.getByTestId("brief-pending");
         expect(within(card).queryByTestId("brief-pending-line")).not.toBeInTheDocument();
         expect(within(card).getByRole("button", { name: "Make my brief now" })).toBeInTheDocument();
+    });
+
+    it("says the cause when Isoform knows it (today-review v1.1.13 D3)", () => {
+        renderSection({ view: view({ pendingSlot: "morning", pendingAt: new Date(2026, 9, 15, 7, 0).toISOString(), pendingAttempts: 9, pendingCause: "timeout", retryAt: new Date(2026, 9, 15, 9, 40).toISOString() }) });
+        expect(within(screen.getByTestId("brief-pending")).getByTestId("brief-pending-line").textContent).toBe("Tried 9 times. It timed out. Isoform tries again at 9:40 AM.");
     });
 
     it("puts the calendar read failure in place of the pending card's strip", () => {
@@ -1581,7 +1586,7 @@ describe("the brief card's states (RC1-States)", () => {
         const onRetry = vi.fn();
         renderSection({ view: null, loadFailed: true, onRetry });
         const alert = screen.getByRole("alert");
-        expect(alert).toHaveClass("text-muted");
+        expect(alert).toHaveClass("text-copper");
         expect(alert.querySelector("svg")).toBeNull();
         expect(alert).toContainElement(screen.getByRole("button", { name: "Try again" }));
         fireEvent.click(screen.getByRole("button", { name: "Try again" }));

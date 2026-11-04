@@ -281,13 +281,15 @@ func TestBriefHygieneReadGuardDropsPlaceholderAndItsQuestions(t *testing.T) {
 	}
 }
 
+// The configured slot times no longer name a brief asked for: before noon
+// it is the morning brief, from noon the evening brief (today-review v1.1.16 D14).
 func TestBriefHygieneConfiguredSlotClock(t *testing.T) {
 	settings := defaultMobileBriefSettings()
 	settings.Morning, settings.Evening = "09:30", "20:15"
 	for _, tc := range []struct {
 		hour, minute int
 		want         string
-	}{{2, 4, "morning"}, {9, 29, "morning"}, {9, 30, "morning"}, {20, 14, "morning"}, {20, 15, "evening"}} {
+	}{{2, 4, "morning"}, {9, 29, "morning"}, {9, 30, "morning"}, {12, 0, "evening"}, {20, 14, "evening"}, {20, 15, "evening"}} {
 		brief := MobileBriefV1{Slot: "on_request", AsOf: formatMobileBriefTime(mobileBriefTestDay(tc.hour, tc.minute)), Timezone: "UTC"}
 		if got := mobileBriefDisplaySlot(brief, settings); got != tc.want {
 			t.Errorf("%d:%d: %s", tc.hour, tc.minute, got)

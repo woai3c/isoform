@@ -18,15 +18,18 @@ describe.each(["en", "zh-CN"])("brief titles in %s", (language) => {
         expect(briefTitle(brief({ slot: "evening", asOf: "2026-10-28T18:00:00Z" }), language, tr))
             .toBe(en ? "Evening brief · 6:00 PM" : "晚间简报 · 下午6:00");
         expect(briefTitle(brief({ slot: "on_request", asOf: "2026-10-28T15:41:00Z" }), language, tr))
-            .toBe(en ? "Brief · 3:41 PM" : "简报 · 下午3:41");
+            .toBe(en ? "Evening brief · 3:41 PM" : "晚间简报 · 下午3:41");
         expect(briefTitle(brief({ slot: "evening", asOf: "2026-10-28T18:00:00Z", yourWeek: {} as never }), language, tr))
             .toBe(en ? "Your week · 6:00 PM" : "你的一周 · 下午6:00");
     });
 
-    it("names a brief asked for by the slot it stands in for, so the player names it (today-review v1.1.4 #7)", () => {
+    it("names a brief asked for by its time: before noon morning, from noon evening (today-review v1.1.16 D14)", () => {
         const en = language === "en";
-        expect(briefTitle(brief({ slot: "on_request", displaySlot: "morning", asOf: "2026-10-28T16:16:00Z" } as never), language, tr))
-            .toBe(en ? "Morning brief · 4:16 PM" : "早间简报 · 下午4:16");
+        expect(briefTitle(brief({ slot: "on_request", displaySlot: "morning", asOf: "2026-10-28T17:24:00Z" } as never), language, tr))
+            .toBe(en ? "Evening brief · 5:24 PM" : "晚间简报 · 下午5:24");
+        expect(briefTitle(brief({ slot: "on_request", displaySlot: "evening", asOf: "2026-10-28T11:59:00Z" } as never), language, tr))
+            .toBe(en ? "Morning brief · 11:59 AM" : "早间简报 · 上午11:59");
+        expect(briefKind({ slot: "on_request", asOf: "2026-10-28T12:00:00Z", timezone: "UTC" } as never)).toBe("evening");
         expect(briefKind({ slot: "on_request", displaySlot: "evening" } as never)).toBe("evening");
         expect(briefKind({ slot: "on_request" } as never)).toBe("on_request");
     });
@@ -66,7 +69,8 @@ describe("brief kind and words", () => {
     it("treats only morning and evening as scheduled kinds", () => {
         expect(briefKind(brief({ slot: "morning" }))).toBe("morning");
         expect(briefKind(brief({ slot: "evening" }))).toBe("evening");
-        expect(briefKind(brief({ slot: "on_request" }))).toBe("on_request");
+        expect(briefKind(brief({ slot: "on_request" }))).toBe("evening");
+        expect(briefKind(brief({ slot: "on_request", asOf: "" }))).toBe("on_request");
         expect(briefKind(brief({ slot: "morning", yourWeek: {} as never }))).toBe("week");
     });
 

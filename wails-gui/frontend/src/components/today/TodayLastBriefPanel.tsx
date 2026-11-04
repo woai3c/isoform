@@ -13,7 +13,8 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 /** An earlier brief, read in the panel beside Today while this slot's brief
  *  is missing (today-review v1.1.5 #1). Its title carries its day, and it
  *  has no question to answer: answering it today would act on stale facts. */
-export function TodayLastBriefPanel({ briefId, onClose }: { briefId: string; onClose: () => void }) {
+/** Opens at once with the title and time it was opened from (today-review v1.1.13 D4). */
+export function TodayLastBriefPanel({ briefId, title: openedTitle = "", onClose }: { briefId: string; title?: string; onClose: () => void }) {
     const { t, i18n } = useTranslation("today");
     const { t: common } = useTranslation("common");
     const tr: Translate = (key, options) => t(key as never, options as never) as unknown as string;
@@ -21,6 +22,7 @@ export function TodayLastBriefPanel({ briefId, onClose }: { briefId: string; onC
     const [failed, setFailed] = useState(false);
     const closeRef = useRef(onClose);
     closeRef.current = onClose;
+    const [attempt, setAttempt] = useState(0);
     useEffect(() => {
         let live = true;
         setBrief(null); setFailed(false);
@@ -32,7 +34,7 @@ export function TodayLastBriefPanel({ briefId, onClose }: { briefId: string; onC
         }).catch(() => { if (live) setFailed(true); });
         const withdraw = onPagePrivacyWithdrawal(() => { live = false; setBrief(null); closeRef.current(); });
         return () => { live = false; withdraw(); };
-    }, [briefId]);
+    }, [briefId, attempt]);
     const language = i18n.language;
     const at = brief ? new Date(brief.asOf) : null;
     const kind = brief ? briefKind(brief) : null;
@@ -43,12 +45,12 @@ export function TodayLastBriefPanel({ briefId, onClose }: { briefId: string; onC
     return (
         <aside data-testid="today-last-brief-panel" className="flex h-full min-h-0 flex-col bg-background-accent">
             <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-                <h2 className="min-w-0 truncate text-sm font-semibold text-ink">{title}</h2>
+                <h2 className="min-w-0 truncate text-sm font-semibold text-ink">{title || openedTitle}</h2>
                 <Button size="icon" variant="quiet" aria-label={common("close")} onClick={() => measureToday("T05", "open", "opened", onClose)}><X className="size-4" /></Button>
             </header>
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
                 {paragraphs.map((text, index) => <p key={index} className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{text}</p>)}
-                {failed && <p role="alert" className="text-[13px] text-muted">{tr("todayBrief.loadFailed")}</p>}
+                {failed && <p role="alert" data-testid="last-brief-open-failed" className="text-[13px] text-copper">{tr("todayBrief.pending.openFailed")}{" "}<button type="button" className="font-medium text-accent hover:underline" onClick={() => setAttempt((n) => n + 1)}>{tr("todayBrief.pending.tryAgain")}</button></p>}
             </div>
         </aside>
     );

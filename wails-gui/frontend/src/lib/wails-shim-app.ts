@@ -920,6 +920,8 @@ export interface MobileBriefHealth {
     retryAt?: string;
     /** Failed tries of the pending slot, from its run record. */
     pendingAttempts?: number;
+    /** Why the last try failed, when Isoform knows (e.g. "timeout"). */
+    pendingCause?: string;
     latestBriefId: string;
     /** The current brief (the one Today, the menu bar and Chat show). */
     currentBriefId: string;
@@ -1174,6 +1176,8 @@ export interface TodayBriefView {
     retryAt?: string;
     /** Failed tries of the pending slot, only when its run record counts them. */
     pendingAttempts?: number;
+    /** Why the last try failed, when Isoform knows (e.g. "timeout"). */
+    pendingCause?: string;
     /** The newest stored brief when it is not the one shown, to open it. */
     lastBriefId?: string;
     lastSlot?: string;
@@ -1199,6 +1203,8 @@ export interface TodayDayShapeEvent {
     kind: "meeting" | "personal";
     /** Present only for a privacy-filtered event created by Isoform. */
     holdId?: string;
+    /** A private event: no names, and the strip says only "Private". */
+    private?: boolean;
 }
 
 export interface TodayDayShape {
@@ -1375,6 +1381,9 @@ export interface UpcomingItem {
     /** A brief's latest scheduled time (Unix ms) when that run made no brief
      *  and none was made on request after it. */
     didntRunAt?: number;
+    /** While Isoform is still trying that run: its failed tries and the cause, when known. */
+    triedAttempts?: number;
+    triedCause?: string;
 }
 
 export const GetUpcoming = appBinding<[], UpcomingItem[]>("GetUpcoming");

@@ -32,6 +32,9 @@ type TodayDayShapeEvent struct {
 	Initial      string `json:"initial,omitempty"`
 	Kind         string `json:"kind"` // meeting | personal
 	HoldID       string `json:"holdId,omitempty"`
+	// Private is an event whose title must not be shown; its names are empty
+	// and the strip says only "Private" (today-review v1.1.13 D7).
+	Private bool `json:"private,omitempty"`
 }
 
 type TodayDayShapeHold struct {
@@ -251,10 +254,15 @@ func shapeTodayCalendar(events []calendar.Event, day, now time.Time) TodayDaySha
 			end = after
 		}
 		short, shortest, initial := todayEventNames(ev)
-		out.Events = append(out.Events, TodayDayShapeEvent{
+		item := TodayDayShapeEvent{
 			ID: ev.ID, Start: ev.Start.In(loc).Format(time.RFC3339), End: ev.End.In(loc).Format(time.RFC3339),
 			Title: ev.Title, ShortName: short, ShortestName: shortest, Initial: initial, Kind: todayEventKind(ev),
-		})
+		}
+		// The same rule as a private event in a calendar conflict.
+		if strings.TrimSpace(ev.Title) == "" || proactiveVoiceRestrictedText(ev.Title) {
+			item.Title, item.ShortName, item.ShortestName, item.Initial, item.Private = "", "", "", "", true
+		}
+		out.Events = append(out.Events, item)
 	}
 	out.RangeStart, out.RangeEnd = start.Format(time.RFC3339), end.Format(time.RFC3339)
 	return out

@@ -236,11 +236,14 @@ export function Sidebar({
         () => standaloneSessions.find(isMainChatSession) ?? null,
         [standaloneSessions],
     );
-    const isOnMainChat =
-        appMode === "chat" &&
-        activeProjectId === standaloneProject?.id &&
-        mainChat !== null &&
-        mainChat.localId === activeStandaloneSessionId;
+    // On the Chat page the Chat row is selected unless another known chat is
+    // on screen, so it holds from the first frame, before the main chat loads.
+    const otherChatOnScreen =
+        activeProjectId !== (standaloneProject?.id ?? STANDALONE_CHAT_PROJECT_ID) ||
+        (activeStandaloneSessionId !== null &&
+            activeStandaloneSessionId !== mainChat?.localId &&
+            standaloneSessions.some((s) => s.localId === activeStandaloneSessionId));
+    const isOnMainChat = appMode === "chat" && !otherChatOnScreen;
 
     // Only pinned chats are listed; every other chat is reached from Search.
     const { pinnedSessions } = useMemo(
@@ -290,7 +293,7 @@ export function Sidebar({
 
     // Every list row uses the board's inset 32px pitch and selection token.
     const rowClass = (active: boolean, _dense = false) =>
-        `flex items-center gap-2 w-full px-2 h-8 text-[13px] rounded-lg transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] cursor-pointer ${
+        `flex items-center gap-2 w-full px-2 h-8 text-[13px] rounded-lg transition-none cursor-pointer ${
             active
                 ? "bg-surface-active text-ink"
                 : "text-muted hover:bg-surface-hover"
@@ -528,7 +531,7 @@ export function Sidebar({
         return (
             <Button key={key} variant="quiet" size="sm"
                 {...attrs}
-                className={`sidebar-row-in flex items-center justify-start font-normal gap-2 w-full px-2 h-8 text-[13px] rounded-lg transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] cursor-pointer ${
+                className={`sidebar-row-in flex items-center justify-start font-normal gap-2 w-full px-2 h-8 text-[13px] rounded-lg transition-none cursor-pointer ${
                     active
                         ? "bg-background dark:bg-panel text-accent"
                         : "text-muted hover:bg-surface-hover"
@@ -588,7 +591,7 @@ export function Sidebar({
                             {railRows.map((row, index) => row === "divider" ? (
                                 <div key="divider" data-sidebar-divider className="my-1 h-px w-5 shrink-0 bg-border-subtle" />
                             ) : (
-                                <Button key={row.label} variant="quiet" size="icon" className={`relative shrink-0 ${row.active ? "bg-surface-active" : ""}`} aria-label={row.label} aria-current={row.active ? "page" : undefined} title={row.badge ? t("sidebar.waiting", { count: row.badge }) : (row.tooltip ?? row.label)} onClick={row.onClick} onMouseEnter={row.warmLazy ? warmLazyPages : undefined} {...warm(row.page)} data-rail-index={index}>
+                                <Button key={row.label} variant="quiet" size="icon" className={`relative shrink-0 transition-none ${row.active ? "bg-surface-active" : ""}`} aria-label={row.label} aria-current={row.active ? "page" : undefined} title={row.badge ? t("sidebar.waiting", { count: row.badge }) : (row.tooltip ?? row.label)} onClick={row.onClick} onMouseEnter={row.warmLazy ? warmLazyPages : undefined} {...warm(row.page)} data-rail-index={index}>
                                     <span className="relative inline-flex size-[15px]">
                                         <row.Icon className="size-[15px]" />
                                         {row.badge ? <span className="absolute -right-2 -top-2 inline-flex items-center justify-center h-4 min-w-4 rounded-full bg-waiting-badge text-waiting-badge-fg px-0.5 text-[9px] leading-none font-medium" aria-label={t("sidebar.waiting", { count: row.badge })}>{row.badge > 9 ? t("sidebar.waitingOverflow") : row.badge}</span> : null}
