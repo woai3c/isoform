@@ -355,7 +355,7 @@ func (a *App) noticedCheck(dateStr string, items []NoticedSuggestion) ([]Noticed
 	if len(items) == 0 {
 		return nil, nil
 	}
-	moments, apps, err := a.noticedMoments(dateStr)
+	moments, apps, err := a.noticedCandidateMoments(dateStr, items)
 	if err != nil {
 		return nil, err
 	}
@@ -407,6 +407,64 @@ func (a *App) noticedCheck(dateStr string, items []NoticedSuggestion) ([]Noticed
 		}
 	}
 	return out, nil
+}
+
+// noticedCandidateMoments reads only the moments named by the suggestions.
+// The summary prompt still uses noticedMoments to consider the whole day.
+// Recheck the current rows and privacy policy on every read, so a withdrawal
+// or an edit is visible without waiting for a cache to expire.
+func (a *App) noticedCandidateMoments(dateStr string, items []NoticedSuggestion) ([]ActivityRow, map[string][]ActivityAppUsage, error) {
+	if a.activity == nil || a.activity.store == nil {
+		return nil, nil, errors.New("activity store not initialized")
+	}
+	day, err := time.ParseInLocation("2006-01-02", dateStr, time.Local)
+	if err != nil {
+		return nil, nil, err
+	}
+	ids := make([]string, 0, len(items))
+	seen := make(map[string]bool, len(items))
+	for _, item := range items {
+		if item.MomentID != "" && !seen[item.MomentID] {
+			ids = append(ids, item.MomentID)
+			seen[item.MomentID] = true
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil, nil
+	}
+	store := a.activity.store
+	cursor, err := store.reader().Query(`SELECT `+activityColumns+` FROM activities
+		WHERE id IN (SELECT value FROM json_each(?)) AND end_ms >= ? AND start_ms <= ?`,
+		composeJSON(ids), day.UnixMilli(), day.AddDate(0, 0, 1).UnixMilli()-1)
+	if err != nil {
+		return nil, nil, err
+	}
+	rows, err := scanActivityRows(cursor)
+	closeErr := cursor.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+	if closeErr != nil {
+		return nil, nil, closeErr
+	}
+	pauses, err := a.observationPauses()
+	if err != nil {
+		return nil, nil, err
+	}
+	rows = a.filterComposerModelCandidates(store, rows)
+	kept := rows[:0]
+	ids = ids[:0]
+	for _, row := range rows {
+		if activityActionsWithheld(row, pauses) == "" {
+			kept = append(kept, row)
+			ids = append(ids, row.ID)
+		}
+	}
+	apps, err := store.GetActivityAppUsage(ids)
+	if err != nil {
+		return nil, nil, err
+	}
+	return kept, apps, nil
 }
 
 // noticedOpenCommitmentTitles are the open commitments' titles, normalized,

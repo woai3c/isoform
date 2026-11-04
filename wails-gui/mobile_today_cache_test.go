@@ -126,6 +126,35 @@ func TestMobileTodayFirstSnapshotIsBuiltAtStart(t *testing.T) {
 	}
 }
 
+func TestMobileTodayCoalescesRepeatedUpdates(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	bridge := &mobileBridge{ctx: ctx}
+	bridge.today.buildInterval = 250 * time.Millisecond
+	var builds atomic.Int32
+	bridge.today.build = func() (MobileTodayV1, error) {
+		builds.Add(1)
+		return MobileTodayV1{}, nil
+	}
+	bridge.startTodayCache()
+	waitForMobileTodaySnapshot(t, bridge)
+	for i := 0; i < 30; i++ {
+		bridge.noteTodayChanged()
+	}
+	time.Sleep(100 * time.Millisecond)
+	if got := builds.Load(); got != 1 {
+		t.Fatalf("built %d times before the minimum interval", got)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for builds.Load() < 2 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got := builds.Load(); got != 2 {
+		t.Fatalf("built %d times after a burst, want 2", got)
+	}
+	cancel()
+	bridge.background.Wait()
+}
+
 // The Today loop builds the first snapshot in the background. A test that
 // reads GET /today waits for it instead of relying on a request-path build.
 func waitForMobileTodaySnapshot(t *testing.T, bridge *mobileBridge) {

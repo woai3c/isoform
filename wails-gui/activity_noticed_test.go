@@ -147,6 +147,29 @@ func TestNoticedKeepsOnlyAnchoredSuggestionsAndAtMostThree(t *testing.T) {
 	}
 }
 
+func TestNoticedReadsOnlyNamedMomentsAndRechecksChanges(t *testing.T) {
+	app := newMobileBriefPurposeTestApp(t)
+	saveNoticedMoment(t, app, "chosen", "Plan a trip with Priya", "Safari", `[{"type":"person","name":"Priya"}]`, noticedTestAt(10, 0))
+	saveNoticedMoment(t, app, "unrelated", "Review a document with Dana", "Safari", `[{"type":"person","name":"Dana"}]`, noticedTestAt(11, 0))
+	items := []NoticedSuggestion{{ID: "suggestion", Kind: noticedKindFollowUp, MomentID: "chosen", Text: "Follow up with Priya"}}
+	moments, _, err := app.noticedCandidateMoments(noticedTestDay, items)
+	if err != nil || len(moments) != 1 || moments[0].ID != "chosen" {
+		t.Fatalf("candidate moments = %+v, %v", moments, err)
+	}
+	if otherDay, _, err := app.noticedCandidateMoments("2026-10-20", items); err != nil || len(otherDay) != 0 {
+		t.Fatalf("moment outside day = %+v, %v", otherDay, err)
+	}
+	if got, err := app.noticedCheck(noticedTestDay, items); err != nil || len(got) != 1 {
+		t.Fatalf("initial suggestions = %+v, %v", got, err)
+	}
+	if err := app.activity.store.DeleteActivity("chosen"); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := app.noticedCheck(noticedTestDay, items); err != nil || len(got) != 0 {
+		t.Fatalf("deleted moment still visible = %+v, %v", got, err)
+	}
+}
+
 func TestNoticedNeverRepeatsNotNowOrAnOpenFollowUpAndDropsADeletedMoment(t *testing.T) {
 	app := newMobileBriefPurposeTestApp(t)
 	saveNoticedMoment(t, app, "m-lamp", "Comparing Halcyon Arc desk lamps for Priya", "Safari", `[{"type":"person","name":"Priya"}]`, noticedTestAt(10, 0))

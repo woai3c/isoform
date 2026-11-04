@@ -219,7 +219,8 @@ type mobileTodayCache struct {
 	loopMu       sync.Mutex
 	loopsStarted bool
 	// Optional observer for the coalescer's unit tests.
-	onEvent func(uint64)
+	onEvent       func(uint64)
+	buildInterval time.Duration // zero uses the production minimum
 }
 
 // mobileTodayFreeRanges ports TodayDayStrip's interval union and 45-minute
@@ -671,7 +672,7 @@ func (bridge *mobileBridge) warmToday() bool {
 		if _, err := bridge.rebuildToday(); err == nil {
 			return true
 		}
-		timer := time.NewTimer(5 * time.Second)
+		timer := time.NewTimer(10 * time.Second)
 		select {
 		case <-bridge.ctx.Done():
 			timer.Stop()
@@ -859,6 +860,11 @@ func (bridge *mobileBridge) todayLoop() {
 	if !bridge.warmToday() {
 		return
 	}
+	lastBuild := time.Now()
+	interval := bridge.today.buildInterval
+	if interval <= 0 {
+		interval = 10 * time.Second
+	}
 	ticker := time.NewTicker(15 * time.Minute)
 	defer ticker.Stop()
 	var expiry *time.Timer
@@ -906,9 +912,15 @@ func (bridge *mobileBridge) todayLoop() {
 			expiryC = nil
 			bridge.noteTodayChanged()
 		case <-ticker.C:
-			_, _ = bridge.rebuildToday()
+			bridge.noteTodayChanged()
 		case <-bridge.today.updates:
-			timer := time.NewTimer(2 * time.Second)
+			// Bursts of normal writes share a rebuild, with a minimum gap
+			// even when updates continue arriving during a slow build.
+			delay := time.Until(lastBuild.Add(interval))
+			if delay < 0 {
+				delay = 0
+			}
+			timer := time.NewTimer(delay)
 			select {
 			case <-bridge.ctx.Done():
 				timer.Stop()
@@ -919,6 +931,7 @@ func (bridge *mobileBridge) todayLoop() {
 				<-bridge.today.updates
 			}
 			_, _ = bridge.rebuildToday()
+			lastBuild = time.Now()
 		}
 	}
 }
