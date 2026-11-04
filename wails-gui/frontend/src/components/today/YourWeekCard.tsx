@@ -303,7 +303,7 @@ export function YourWeekCard({ week, cards, timeZone, handlers, onCard, onAskCar
                 </DropdownMenu>}
             </div>
 
-            <p className="text-[16px] font-medium leading-[1.6] text-ink" data-testid="your-week-lead">{week.lead}</p>
+            <p className="whitespace-pre-line text-[16px] font-medium leading-[1.6] text-ink" data-testid="your-week-lead">{week.lead.replace(/([^\n])\n(?!\n)/g, '$1\n\n')}</p>
 
             {time.length > 0 && totalHours > 0 && (
                 <section className="flex flex-col gap-2.5" data-testid="your-week-time">

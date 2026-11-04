@@ -91,9 +91,9 @@
         "tomorrowAt": "tomorrow at {{time}}"
     },
     "captured": {
-        "screensAndAudio": "Today Isoform saw {{screens}} and heard speech during {{minutes}}.",
+        "screensAndAudio": "Today Isoform saw {{screens}} and heard speech for {{minutes}}.",
         "screensOnly": "Today Isoform saw {{screens}}.",
-        "audioOnly": "Today Isoform heard speech during {{minutes}}.",
+        "audioOnly": "Today Isoform heard speech for {{minutes}}.",
         "nothing": "Isoform has not captured anything yet today.",
         "paused": "Paused. Isoform is not capturing anything right now.",
         "pausedSince": "Paused since {{time}}",
@@ -104,6 +104,9 @@
         "screens_other": "{{n}} screens",
         "minutes_one": "{{n}} minute",
         "minutes_other": "{{n}} minutes",
+        "hours_one": "{{n}} hour",
+        "hours_other": "{{n}} hours",
+        "hoursMinutes": "{{hours}} {{minutes}}",
         "open": "See what Isoform captured"
     },
     "when": {

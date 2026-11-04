@@ -1,4 +1,4 @@
-import { memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { ChevronLeft, ChevronRight, Undo2 } from 'lucide-react';
@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ThreadRenameField, useThreadRename } from './activity-thread-row';
 import { cn } from '../lib/utils';
-import { formatDurationMs } from './timeline/useCalendarData';
+import { formatDurationMs, formatTimeFromMs, formatTimeRangeFromMs } from './timeline/useCalendarData';
 import { clockTime } from '@/lib/brief-time';
 import i18n from '@/i18n';
 
@@ -215,6 +215,8 @@ export function threadDetailRemainder(original: string, displayed: string): stri
 /** Short hour ticks have their own translated format; detailed spans keep the Today clock. */
 export function stitchedAxisClock(ms: number, language: string, t: TFunction<'activity'>, withPeriod = true): string {
     const hour = new Date(ms).getHours();
+    // Chinese reads 24-hour on every page: "10:00 · 11:00 · 12:00" (activity review v1.0.6 AR42).
+    if (language.startsWith('zh')) return t('stitched.axisHour', { hour });
     const period = language.startsWith('zh')
         ? hour < 6 ? 'early' : hour < 12 ? 'morning' : hour === 12 ? 'noon' : hour <= 18 ? 'afternoon' : 'evening'
         : hour < 12 ? 'morning' : 'afternoon';
@@ -224,6 +226,7 @@ export function stitchedAxisClock(ms: number, language: string, t: TFunction<'ac
 
 /** The shared Today clock owns both formatting and translation keys. */
 export function stitchedClock(ms: number, language = 'en'): string {
+    if (language.startsWith('zh')) return formatTimeFromMs(ms, language);
     return clockTime(new Date(ms), language, (key, options) =>
         String(i18n.t(key as never, { ...options, ns: 'today', lng: language })),
     );
@@ -518,6 +521,8 @@ export const ActivityStitchedView = memo(function ActivityStitchedView({
 });
 
 const STATE_CARD = 'flex min-h-[96px] flex-col rounded-xl border border-border bg-panel p-[18px]';
+// A failure card hugs its one line (activity review v1.0.6 AR47).
+const FAILURE_CARD = 'rounded-xl border border-border bg-panel px-[18px] py-3';
 
 function StitchedLoading() {
     const { t } = useTranslation('activity');
@@ -537,7 +542,7 @@ function StitchedLoading() {
 export function StitchedFailure({ onRetry }: { onRetry: () => void }) {
     const { t } = useTranslation('activity');
     return (
-        <div className={STATE_CARD}>
+        <div className={FAILURE_CARD}>
             <p role="alert" className="text-[13.5px] text-copper">
                 {t('stitched.loadFailed')}{' '}
                 <button type="button" className={ACTION_LINK} onClick={onRetry}>
@@ -601,8 +606,7 @@ function gapDuration(t: TFunction<'activity'>, ms: number): string {
 export function rowGapLabel(t: TFunction<'activity'>, item: StitchedThread, items: StitchedThread[]): string {
     const gaps = item.gaps.filter(isInterruption);
     if (gaps.length === 0) return '';
-    if (gaps.length > 1) return t('stitched.gapResumed', {
-        count: gaps.length,
+    if (gaps.length > 1) return t('stitched.gapAwayInAll', {
         duration: gapDuration(t, gaps.reduce((sum, gap) => sum + gap.end - gap.start, 0)),
     });
     const gap = gaps[0];
@@ -645,7 +649,6 @@ function StitchedTimeline({
     onSelectThread: (threadId: string | null) => void;
 }) {
     const { t, i18n } = useTranslation('activity');
-    const clock = (ms: number) => stitchedClock(ms, i18n.language);
     const headingId = useId();
     const trackRef = useRef<HTMLDivElement>(null);
     const [trackWidth, setTrackWidth] = useState(0);
@@ -698,7 +701,7 @@ function StitchedTimeline({
         const meta = detail
             ? t('stitched.laneDetailMeta', { detail, active: formatDurationMs(activeTime(item)) })
             : t('stitched.laneMeta', { active: formatDurationMs(activeTime(item)) });
-        const threadSpan = t('threads.span', { start: clock(item.stretches[0].start), end: clock(item.stretches[item.stretches.length - 1].end) });
+        const threadSpan = formatTimeRangeFromMs(item.stretches[0].start, item.stretches[item.stretches.length - 1].end, i18n.language);
         const laneTip = t('stitched.segmentTip', { title: item.thread.title, span: threadSpan });
         const activeSuffix = detail ? t('stitched.laneActiveSuffix', { active: formatDurationMs(activeTime(item)) }) : meta;
         // Idle inside the same work splits the bar but is no resume: no link.
@@ -706,13 +709,13 @@ function StitchedTimeline({
             const label = interrupter(gap, threadViews, id);
             const tip = t(label ? 'stitched.gapTip' : 'stitched.gapTipPlain', {
                 duration: formatDurationMs(gap.end - gap.start),
-                span: t('threads.span', { start: clock(gap.start), end: clock(gap.end) }), label,
+                span: formatTimeRangeFromMs(gap.start, gap.end, i18n.language), label,
             });
             return { gap, tip };
         });
         const stretches = item.stretches.map((stretch) => ({
             stretch,
-            tip: t('stitched.segmentTip', { title: item.thread.title, span: t('threads.span', { start: clock(stretch.start), end: clock(stretch.end) }) }),
+            tip: t('stitched.segmentTip', { title: item.thread.title, span: formatTimeRangeFromMs(stretch.start, stretch.end, i18n.language) }),
         }));
         const gapSummary = rowGapLabel(t, item, items);
         return { item, id, title, detail, meta, threadSpan, laneTip, activeSuffix, gaps, stretches, gapSummary };
@@ -738,7 +741,7 @@ function StitchedTimeline({
         <section aria-labelledby={headingId} className="flex flex-col gap-2.5 rounded-xl border border-border bg-panel px-5 pt-[18px] pb-4">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
                 <h4 id={headingId} className="text-[16px] font-semibold text-ink tabular-nums">
-                    {t('threads.span', { start: clock(range.start), end: clock(range.end) })}
+                    {formatTimeRangeFromMs(range.start, range.end, i18n.language)}
                 </h4>
                 <span className="text-[12.5px] text-muted">{t('stitched.timelineNote')}</span>
                 <div className="ml-auto flex flex-wrap gap-3.5 text-[12px] text-muted" data-testid="stitched-legend">
@@ -810,7 +813,7 @@ function StitchedTimeline({
                                     <ul aria-label={label} className="space-y-2 rounded-lg bg-panel-warm p-3">
                                         {entries.map((entry) => (
                                             <li key={entry.id} className="flex gap-3 text-[13px] text-ink">
-                                                <span className="shrink-0 text-muted tabular-nums">{t('threads.span', { start: clock(entry.start), end: clock(entry.end) })}</span>
+                                                <span className="shrink-0 text-muted tabular-nums">{formatTimeRangeFromMs(entry.start, entry.end, i18n.language)}</span>
                                                 <span>{entry.title}</span>
                                             </li>
                                         ))}
@@ -852,25 +855,72 @@ export function pointWhat(text: string | undefined, kind?: string): string {
     if (/^(?:(?:\d+(?:[.,]\d+)?)\s*(?:ms|s|sec|secs|seconds?|m|min|mins|minutes?|h|hr|hrs|hours?)\s*)+$/i.test(value)) return '';
     if (/^[\d\s:.,·-]+$/.test(value)) return '';
     const pathLike = (kind === 'path' && /[\\/]/.test(value)) || /^(?:~|\.{0,2})?\/\S*$/.test(value) || /^[a-z]:\\\S*$/i.test(value);
-    if (!pathLike) return value;
+    if (!pathLike) return readableName(value) ? value : '';
     const name = value.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? '';
-    return /\.[a-z0-9]{1,8}$/i.test(name) ? name : '';
+    return /\.[a-z0-9]{1,8}$/i.test(name) && readableName(name) ? name : '';
+}
+
+const KNOWN_FILE_EXTENSIONS = new Set(('pdf doc docx xls xlsx csv tsv ppt pptx key pages numbers txt md markdown rtf json jsonl yaml yml toml ini cfg '
+    + 'xml html htm css scss less js mjs cjs jsx ts tsx go py rb rs java kt kts swift c h cc cpp hpp m mm sh bash zsh fish sql '
+    + 'png jpg jpeg gif svg webp heic tiff bmp ico mov mp4 m4v mkv webm mp3 wav m4a aac flac zip tar gz tgz bz2 xz 7z rar dmg pkg app '
+    + 'sketch fig psd ai xd ipynb log lock mod sum proto graphql gql vue svelte php cs fs scala r dart lua pl ex exs erl hs ml clj '
+    + 'tex bib epub mobi eml ics vcf plist strings xib storyboard xcodeproj gradle tf hcl dockerfile env').split(' '));
+
+/** A name a person can read (activity review v1.0.7 AR50): text read off the
+ *  screen can come back scrambled ("wnocishiscaeronaariva...niod",
+ *  "apostla-ple-1-201g.par"). A file name needs an extension people use, and
+ *  no word runs past 20 letters. */
+export function readableName(value: string): boolean {
+    const ext = /^\S+\.([a-z]{1,8})$/i.exec(value)?.[1];
+    if (ext && !KNOWN_FILE_EXTENSIONS.has(ext.toLowerCase())) return false;
+    return value.split(/[^\p{L}]+|(?<=\p{Ll})(?=\p{Lu})/u).every((word) => [...word].length <= 20);
 }
 
 /** Where a stretch ended or began: the thing you were in, never a summary
- *  of what you did (activity review v1.0.4). */
-function stretchPoint(item: StitchedThread, stretch: ActivityThreadStretch, at: 'end' | 'start'): string {
+ *  of what you did (activity review v1.0.4), and never a string a person
+ *  can't read; without a readable name, the app (activity review v1.0.7 AR50). */
+export function stretchPoint(item: StitchedThread, stretch: ActivityThreadStretch, at: 'end' | 'start'): string {
     const id = at === 'end' ? stretch.activityIds[stretch.activityIds.length - 1] : stretch.activityIds[0];
     const moment = item.moments.find((m) => m.id === id);
+    const app = moment?.apps[0]?.appName ?? '';
     if (at === 'end') {
-        // Left off at is its resume point, else the time alone.
-        return pointWhat(stretch.resumePoint?.label, stretch.resumePoint?.kind);
+        // Left off at is its resume point, else the app, else the time alone.
+        return pointWhat(stretch.resumePoint?.label, stretch.resumePoint?.kind) || app;
     }
     // Picked back up names the thing you were in, never what you did there
     // (activity review v1.0.1 #3): the stretch's resume point, else a moment
-    // title that differs from the thread's, else the time alone.
+    // title that differs from the thread's, else the app.
     return pointWhat(stretch.resumePoint?.label, stretch.resumePoint?.kind)
-        || (moment && moment.title !== item.thread.title ? pointWhat(moment.title) : '');
+        || (moment && moment.title !== item.thread.title ? pointWhat(moment.title) : '')
+        || app;
+}
+
+const chipTextWidth = (text: string) => [...text].reduce((sum, ch) => sum + (/[\u2e80-\u9fff\uff00-\uffef]/.test(ch) ? 12 : 6.6), 0);
+
+/** Chips only when every stretch shows its full time (activity review
+ *  v1.0.7 AR51). Each segment gets its flex share of the strip; a stretch
+ *  needs its label plus padding. Away labels may still shorten. An
+ *  unmeasured strip (width 0) keeps chips. */
+export function stripChipsFit(segments: { kind: 'stretch' | 'gap'; grow: number; label: string }[], width: number): boolean {
+    if (width <= 0 || segments.length === 0) return true;
+    const total = segments.reduce((sum, segment) => sum + segment.grow, 0);
+    const free = width - 2 * (segments.length - 1);
+    return segments.every((segment) => segment.kind !== 'stretch' || (segment.grow / total) * free >= chipTextWidth(segment.label) + 14);
+}
+
+function useElementWidth(ref: RefObject<HTMLElement | null>): number {
+    const [width, setWidth] = useState(0);
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const measure = () => setWidth(el.clientWidth);
+        measure();
+        if (typeof ResizeObserver === 'undefined') return;
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [ref]);
+    return width;
 }
 
 const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: { item: StitchedThread; title: string; threads: ActivityThreadView[]; selected: boolean }) {
@@ -900,6 +950,21 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
     ]
         .filter(Boolean)
         .join(' · ');
+
+    const stripRef = useRef<HTMLDivElement>(null);
+    const stripWidth = useElementWidth(stripRef);
+    const segments = stretches.flatMap((stretch, i) => {
+        const gap = i > 0 ? gaps[i - 1] : undefined;
+        const stretchSegment = {
+            kind: 'stretch' as const, start: stretch.start, end: stretch.end,
+            grow: Math.max(stretch.end - stretch.start, 60_000),
+            label: t('stitched.stretchLabel', { time: clock(stretch.start), duration: formatDurationMs(stretch.activeMs) }),
+        };
+        return gap && gap.end > gap.start
+            ? [{ kind: 'gap' as const, start: gap.start, end: gap.end, grow: gap.end - gap.start, label: gapLabel(t, gap, threads, thread.id) }, stretchSegment]
+            : [stretchSegment];
+    });
+    const chipsFit = stripChipsFit(segments, stripWidth);
 
     const point = (stretch: ActivityThreadStretch, at: 'end' | 'start') => {
         const time = clock(at === 'end' ? stretch.end : stretch.start);
@@ -968,42 +1033,51 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
                     </span>
                 )}
                 <span className="ml-auto text-[12.5px] text-muted tabular-nums">
-                    {t('threads.span', { start: clock(first.start), end: clock(last.end) })}
+                    {formatTimeRangeFromMs(first.start, last.end, i18n.language)}
                 </span>
             </div>
             <div className="flex flex-col gap-1.5">
-                <div className="flex h-[26px] gap-0.5 overflow-hidden rounded-md" data-testid="stitched-strip">
-                    {stretches.map((stretch, i) => {
-                        const gap = i > 0 ? gaps[i - 1] : undefined;
-                        return [
-                            gap && gap.end > gap.start ? (
-                                <span
-                                    key={`gap-${gap.start}`}
-                                    data-work-away
-                                    className="flex min-w-[6px] items-center justify-center overflow-hidden whitespace-nowrap bg-panel-warm px-1.5 text-[11.5px] text-muted"
-                                    style={{
-                                        flex: `${gap.end - gap.start} 1 0`,
-                                    }}
-                                >
-                                    <span className="min-w-0 truncate">{gapLabel(t, gap, threads, thread.id)}</span>
-                                </span>
-                            ) : null,
-                            <span
-                                key={`stretch-${stretch.start}`}
-                                data-work-stretch
-                                className="flex min-w-[6px] items-center justify-center overflow-hidden whitespace-nowrap bg-ink px-1.5 text-[11.5px] text-background"
-                                style={{ flex: `${Math.max(stretch.end - stretch.start, 60_000)} 1 0` }}
-                            >
-                                <span className="min-w-0 truncate">
-                                    {t('stitched.stretchLabel', {
-                                        time: clock(stretch.start),
-                                        duration: formatDurationMs(stretch.activeMs),
-                                    })}
-                                </span>
-                            </span>,
-                        ];
-                    })}
+                {chipsFit ? (
+                <div ref={stripRef} className="flex h-[26px] gap-0.5 overflow-hidden rounded-md" data-testid="stitched-strip">
+                    {segments.map((segment) => segment.kind === 'gap' ? (
+                        <span
+                            key={`gap-${segment.start}`}
+                            data-work-away
+                            className="flex min-w-[6px] items-center justify-center overflow-hidden whitespace-nowrap bg-panel-warm px-1.5 text-[11.5px] text-muted"
+                            style={{ flex: `${segment.grow} 1 0` }}
+                        >
+                            <span className="min-w-0 truncate">{segment.label}</span>
+                        </span>
+                    ) : (
+                        <span
+                            key={`stretch-${segment.start}`}
+                            data-work-stretch
+                            className="flex min-w-[6px] items-center justify-center overflow-hidden whitespace-nowrap bg-ink px-1.5 text-[11.5px] text-background"
+                            style={{ flex: `${segment.grow} 1 0` }}
+                        >
+                            <span className="min-w-0 truncate">{segment.label}</span>
+                        </span>
+                    ))}
                 </div>
+                ) : (
+                // Too many stretches to label: a plain bar on the thread's own
+                // scale, each stretch's time on hover.
+                <div ref={stripRef} className="relative h-[26px] overflow-hidden rounded-md bg-panel-warm" data-testid="stitched-strip" data-plain-strip>
+                    {segments.filter((segment) => segment.kind === 'stretch').map((segment) => (
+                        <span
+                            key={`stretch-${segment.start}`}
+                            data-work-stretch
+                            title={segment.label}
+                            aria-label={segment.label}
+                            className="absolute inset-y-0 rounded-[3px] bg-ink"
+                            style={{
+                                left: `${((segment.start - first.start) / Math.max(1, last.end - first.start)) * 100}%`,
+                                width: `max(4px, ${((segment.end - segment.start) / Math.max(1, last.end - first.start)) * 100}%)`,
+                            }}
+                        />
+                    ))}
+                </div>
+                )}
                 <span className="text-[12.5px] text-muted">{stats}</span>
             </div>
             {(leftOff || pickedUp) && (

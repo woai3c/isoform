@@ -39,7 +39,7 @@
         "workedOn": "What you worked on",
         "isoformRan": "Isoform ran {{name}}",
         "unknownSchedule": "a schedule",
-        "openResult": "Open result",
+        "openResult": "Show",
         "learned": "What it learned",
         "learnedKnowHow": "How you do things",
         "learnedAboutYou": "About you",
@@ -53,7 +53,8 @@
         "links": "Links: {{names}}",
         "deleteFromHistory": "Delete from history",
         "learnedShowMore": "Show more",
-        "deleteMomentFailed": "Couldn't delete this from history."
+        "deleteMomentFailed": "Couldn't delete this from history.",
+        "isoformUpdatedTopics": "Isoform updated your topics"
     },
     "rowActions": {
         "addFollowUp": "Add follow-up",
@@ -224,18 +225,17 @@
         "linkingNote": "Short moments stay together while Isoform links the work. The As recorded list is already complete.",
         "subline": "From {{start}} to {{end}} · {{active}} active",
         "laneDetailMeta": "{{detail}} · {{active}} active",
-        "gapResumed_one": "{{count}} resume · away {{duration}}",
-        "gapResumed_other": "{{count}} resumes · away {{duration}}",
         "gapTip": "Away {{duration}} · {{span}} · {{label}}",
         "gapTipPlain": "Away {{duration}} · {{span}}",
-        "shortMoments": "Short moments · {{count}} · {{minutes}} min active",
+        "shortMoments": "Short moments · {{minutes}} min in all",
         "otherWork": "Other work · {{count}} · {{minutes}} min",
         "hours_one": "{{count}} hour",
         "hours_other": "{{count}} hours",
         "laneActiveSuffix": " · {{active}} active",
         "durationHoursMinutes": "{{hours}}h {{minutes}}m",
         "durationHours": "{{hours}}h",
-        "durationMinutes": "{{minutes}}m"
+        "durationMinutes": "{{minutes}}m",
+        "gapAwayInAll": "Away {{duration}} in all"
     },
     "activityCard": {
         "live": "In progress",
@@ -317,7 +317,7 @@
             "last30": "Last 30 Days",
             "custom": "Custom Range"
         },
-        "allApps": "All Apps",
+        "allApps": "All apps",
         "appCount_one": "{{count}} app",
         "appCount_other": "{{count}} apps",
         "selectAll": "All",

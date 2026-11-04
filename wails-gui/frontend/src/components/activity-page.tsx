@@ -27,7 +27,7 @@ import {
     Mic,
     MicOff,
     Activity as ActivityIcon,
-    Bug,
+    Info,
     ClipboardCopy,
     Sun,
     Briefcase,
@@ -45,6 +45,8 @@ import { ActivityWeekView } from './activity-week-view';
 import { AutomationDetailDialog } from '@/components/automations/AutomationDetailDialog';
 import {
     formatDateStr,
+    formatRoundedDurationMs,
+    formatTimeFromMs,
     formatTimeRangeFromMs,
     useCalendarData,
     type CronJobsProp,
@@ -232,26 +234,14 @@ function extractSnapshotPreview(snap: main.ActivitySnapshotRow): {
 
 /** Format ms timestamp to HH:MM */
 function formatTimeShort(ms: number): string {
-    const d = new Date(ms);
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return formatTimeFromMs(ms);
 }
 
-/** Format duration in ms to human-readable string */
-function formatDuration(ms: number): string {
-    const totalSec = Math.round(ms / 1000);
-    if (totalSec < 60) return `${totalSec}s`;
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
-    if (min < 60) return sec > 0 ? `${min}m ${sec}s` : `${min}m`;
-    const hr = Math.floor(min / 60);
-    const remMin = min % 60;
-    return remMin > 0 ? `${hr}h ${remMin}m` : `${hr}h`;
-}
-
-/** A session's length: "1 min" under an hour, "1h 10m" past it (activity review v1.0.5 V2). */
+/** A session's length: "3 min" under an hour, "1h 10m" past it, rounded to
+ *  the minute as the list rounds (activity review v1.0.5 V2, v1.0.7 AR14). */
 function formatSessionDuration(ms: number, minutes: (count: number) => string): string {
-    const min = Math.max(1, Math.floor(ms / 60_000));
-    return min < 60 ? minutes(min) : formatDuration(ms);
+    const min = Math.max(1, Math.round(ms / 60_000));
+    return min < 60 ? minutes(min) : formatRoundedDurationMs(ms);
 }
 
 /** A transcript too thin to be a step (activity review v1.0.5 V6), as in Go's
@@ -264,8 +254,9 @@ export function isSpeechScrap(text?: string): boolean {
     return [...trimmed].length < 6;
 }
 
+/** Minutes only, rounded; under a minute reads "1m" (activity review v1.0.7 AR14). */
 function formatTimelineGroupDuration(ms: number): string {
-    return formatDuration(Math.max(1000, ms));
+    return formatRoundedDurationMs(ms);
 }
 
 /** Format bytes to human-readable string */
@@ -3891,8 +3882,9 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                 ? snapshotImageURL(bridgePort, { filePath: group.firstFrame.path })
                                                 : null;
                                             const title = group.summary?.title || group.appName || (t('sessionList.unknownApp') as string);
-                                            const anchors = (group.identityAnchors ?? []).slice(0, 2).join(' · ');
-                                            const subtitleBase = group.summary?.title ? `${group.appName} · ${formatTimeShort(group.startTime)}` : formatTimeShort(group.startTime);
+                                            // Time first, the app once: "9:52 PM · Claude" (activity review v1.0.6 AR41).
+                                            const anchors = (group.identityAnchors ?? []).filter((anchor) => anchor !== group.appName).slice(0, 2).join(' · ');
+                                            const subtitleBase = group.summary?.title ? `${formatTimeShort(group.startTime)} · ${group.appName}` : formatTimeShort(group.startTime);
                                             const subtitle = anchors ? `${subtitleBase} · ${anchors}` : subtitleBase;
                                             const isSummarizing = !group.summary && group.summaryStatus === 'generating';
                                             return (
@@ -3934,7 +3926,7 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                         <span className="min-w-0 truncate tabular-nums">
                                                             {subtitle}
                                                         </span>
-                                                        <span className="justify-self-end tabular-nums text-right">
+                                                        <span className="justify-self-end whitespace-nowrap tabular-nums text-right">
                                                             {formatTimelineGroupDuration(group.activeMs)}
                                                         </span>
                                                     </div>
@@ -5149,7 +5141,7 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                 )}
                                                 title={t('identityDebug.toggleTooltip') as string}
                                             >
-                                                <Bug className="h-3 w-3 shrink-0 -translate-y-[0.5px]" />
+                                                <Info className="h-3 w-3 shrink-0 -translate-y-[0.5px]" />
                                                 {identityDebugOn
                                                     ? t('identityDebug.toggleOn')
                                                     : t('identityDebug.toggleOff')}
@@ -5306,8 +5298,6 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                             selectedSpeakerTimestamps !== null &&
                                                             selectedSpeakerTimestamps.has(evt.timestamp);
                                                         const isAppSwitch = prevEvt && prevEvt.appName !== evt.appName;
-                                                        const timeDelta = prevEvt ? evt.timestamp - prevEvt.timestamp : 0;
-                                                        const showGap = timeDelta > 2000; // show gap indicator if > 2s
                                                         const action = eventActionLabel(evt, t);
                                                         const eventRole = eventRoleLabel(
                                                             evt.kind === 'click' ? evt.clickRole : evt.kind === 'focus' ? evt.focusRole : undefined,
@@ -5323,14 +5313,6 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                                         {evt.appName || (t('session.unknownApp') as string)}
                                                                     </span>
                                                                     <div className="flex-1 h-px bg-border" />
-                                                                </div>
-                                                            )}
-                                                            {/* Time gap indicator */}
-                                                            {!isAppSwitch && showGap && (
-                                                                <div className="flex items-center justify-center py-0.5">
-                                                                    <span className="text-[9px] text-muted/40 tabular-nums">
-                                                                        +{timeDelta >= 60000 ? `${Math.round(timeDelta / 60000)}m` : `${Math.round(timeDelta / 1000)}s`}
-                                                                    </span>
                                                                 </div>
                                                             )}
                                                         <div

@@ -210,6 +210,10 @@ describe('ActivityPage section panel', () => {
         expect(notes.querySelector('img, [aria-hidden="true"].animate-pulse')).toBeNull();
         expect(memo).toHaveTextContent('9:12 AM');
         expect(memo).not.toHaveTextContent(/09:12/);
+        // Activity review v1.0.6 AR41 and v1.0.7 AR14: time first, the app
+        // once, and the length in rounded minutes.
+        expect(within(memo).getByText(/^9:12\sAM · VS Code$/)).toBeInTheDocument();
+        expect(within(memo).getByText('50m')).toBeInTheDocument();
         fireEvent.click(memo);
         expect(await screen.findByTestId('session-meta')).toHaveTextContent('9:12–10:02 AM');
         expect(screen.queryByText(/\d+ events|Local only|:\d\d:\d\d/)).toBeNull();

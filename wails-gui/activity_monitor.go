@@ -4648,8 +4648,12 @@ func (a *App) GetActivitySessionDetail(id string) (perfValue *ActivitySessionDet
 		return nil, err
 	}
 
-	var appNames []string
-	json.Unmarshal([]byte(session.AppNames), &appNames)
+	var rawAppNames []string
+	json.Unmarshal([]byte(session.AppNames), &rawAppNames)
+	appNames := make([]string, 0, len(rawAppNames))
+	for _, name := range rawAppNames {
+		appNames = appendUniqueString(appNames, timelineDisplayAppName(name))
+	}
 
 	return &ActivitySessionDetail{
 		ActivitySessionSummary: ActivitySessionSummary{

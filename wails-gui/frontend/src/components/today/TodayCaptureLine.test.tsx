@@ -28,10 +28,12 @@ describe("describeTodayCapture", () => {
     });
 
     it("names screens and minutes with speech, with plurals and formatted numbers", () => {
-        expect(describe_(counts(412, 38))).toBe("Today Isoform saw 412 screens and heard speech during 38 minutes.");
-        expect(describe_(counts(1, 1))).toBe("Today Isoform saw 1 screen and heard speech during 1 minute.");
+        expect(describe_(counts(412, 38))).toBe("Today Isoform saw 412 screens and heard speech for 38 minutes.");
+        expect(describe_(counts(1, 1))).toBe("Today Isoform saw 1 screen and heard speech for 1 minute.");
         expect(describe_(counts(2903, 0))).toBe("Today Isoform saw 2,903 screens.");
-        expect(describe_(counts(0, 5))).toBe("Today Isoform heard speech during 5 minutes.");
+        expect(describe_(counts(0, 5))).toBe("Today Isoform heard speech for 5 minutes.");
+        // "for 2 hours", not "during 120 minutes" (activity review v1.0.7 AR52).
+        expect(describe_(counts(0, 120))).toBe("Today Isoform heard speech for 2 hours.");
         expect(describe_(counts(0, 0))).toBe("Isoform has not captured anything yet today.");
     });
 
@@ -46,7 +48,7 @@ describe("describeTodayCapture", () => {
 
     it("reads in Chinese", async () => {
         await i18n.changeLanguage("zh-CN");
-        expect(describe_(counts(412, 38))).toBe("今天 Isoform 看到了 412 个屏幕画面，在 38 分钟里听到了语音。");
+        expect(describe_(counts(412, 38))).toBe("今天 Isoform 看到了 412 个屏幕画面，听到了 38 分钟的语音。");
     });
 });
 

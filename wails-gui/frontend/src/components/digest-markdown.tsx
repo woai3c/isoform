@@ -5,6 +5,8 @@ import remarkGfm from 'remark-gfm';
 import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 
 // The digest's Markdown (headings, lists, bold) in the app's type styles.
+// In "card", paragraphs keep the blank line between them: a p margin reset
+// here would outrank the sibling spacing (activity review v1.0.7 AR54).
 // "card" is the Activity digest card. "compact" is Today's "Today so far"
 // card, built from the design system (docs/design-system): body-sm text on
 // its 1.4 line height, headings as small group labels (11px medium,
@@ -14,7 +16,7 @@ import { BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 const DIGEST_MARKDOWN_STYLES = {
     card: `text-[14px] text-ink leading-[1.65]
         [&>*+*]:mt-3
-        [&_p]:my-0
+        [&_p]:mb-0
         [&_strong]:font-semibold [&_strong]:text-ink
         [&_em]:italic
         [&_a]:text-accent [&_a]:underline [&_a]:underline-offset-2

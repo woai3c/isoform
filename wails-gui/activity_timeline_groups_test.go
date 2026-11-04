@@ -855,3 +855,17 @@ func TestTimelineRunIsWorkDropsSystemRuns(t *testing.T) {
 		}
 	}
 }
+
+func TestTimelineDisplayAppNameShowsTheApp(t *testing.T) {
+	for in, want := range map[string]string{
+		"Safari Web Content":              "Safari",
+		"Google Chrome Helper (Renderer)": "Google Chrome",
+		"Slack Helper":                    "Slack",
+		"Safari":                          "Safari",
+		" Web Content":                    "Web Content",
+	} {
+		if got := timelineDisplayAppName(in); got != want {
+			t.Errorf("timelineDisplayAppName(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

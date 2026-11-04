@@ -265,11 +265,19 @@ describe('Activity Day view', () => {
         });
         await screen.findByText('Isoform ran Weekly recap');
         expect(screen.queryByText(/news_json/)).not.toBeInTheDocument();
-        const openResult = screen.getByText('Open result');
+        const openResult = screen.getByText('Show');
         expect(openResult).toBeInTheDocument();
         // The row opens the run's detail dialog via the parent.
         fireEvent.click(openResult.closest('button')!);
         expect(screen.getByText('Isoform ran Weekly recap')).toBeInTheDocument();
+    });
+
+    // Activity review v1.0.7 AR16 (v1.0.0 #16): the topic finds run reads in words.
+    it('says Isoform updated your topics for the topic finds run', async () => {
+        renderDay({ automationRuns: [run({ id: 'run-topics', jobName: 'New on your topics', resultSummary: '' })] });
+        expect(await screen.findByText('Isoform updated your topics')).toBeInTheDocument();
+        expect(screen.queryByText(/Isoform ran New on your topics/)).toBeNull();
+        expect(screen.getByText('Show')).toBeInTheDocument();
     });
 
     it('opens one row at a time and shows its details in place', async () => {
@@ -874,7 +882,7 @@ describe('Activity Day view — threads', () => {
     it('shows one row per thread with its span, active time and moment count', async () => {
         renderDay({ automationRuns: [] });
         expect(await screen.findByText('Isoform: brief fix, workers')).toBeInTheDocument();
-        expect(screen.getByText('9:10 AM to 11:45 AM · 17m active · 2 moments')).toBeInTheDocument();
+        expect(screen.getByText('9:10–11:45 AM · 17m active')).toBeInTheDocument();
         // The thread's moments stay inside it until it is opened.
         expect(screen.queryByText('Fix morning briefing generation')).not.toBeInTheDocument();
         // Historical source status never makes a past-day thread live.
@@ -885,7 +893,7 @@ describe('Activity Day view — threads', () => {
         binding('GetDayThreads').mockResolvedValue({ grouped: true, threads: [{ ...isoformThread,
             endMs: new Date(2026, 9, 20, 12).getTime() }] });
         renderDay({ automationRuns: [], workedOnView: 'recorded' });
-        expect(await screen.findByText('9:10 AM to 12:00 AM · 17m active · 2 moments')).toBeInTheDocument();
+        expect(await screen.findByText('9:10 AM–12:00 AM · 17m active')).toBeInTheDocument();
         expect(screen.queryByText('In progress')).toBeNull();
     });
 
@@ -995,15 +1003,17 @@ describe('Activity Day view — threads', () => {
     it('translates the thread line into Chinese', async () => {
         await i18n.changeLanguage('zh-CN');
         renderDay({ automationRuns: [] });
-        expect(await screen.findByText(/至 .* · 2 个片段/)).toBeInTheDocument();
+        // 24-hour range and Chinese duration (activity review v1.0.6 AR42).
+        expect(await screen.findByText(/^\d{1,2}:\d{2}–\d{1,2}:\d{2} · 活跃 17 分钟$/)).toBeInTheDocument();
     });
 
     it('shows active time on thread rows now that the day line counts reading time', () => {
         const t = i18n.getFixedT('en', 'activity');
-        expect(threadMetaLine(t, isoformThread, 2)).toMatch(/· 17m active · 2 moments$/);
+        // "10:02–10:30 AM · 28m active": the range, then the active time (activity review v1.0.6 AR40, AR48).
+        expect(threadMetaLine(t, isoformThread)).toMatch(/^\d{1,2}:\d{2}( [AP]M)?–\d{1,2}:\d{2} [AP]M · 17m active$/);
         // Under a minute reads as "0m active"; the span says enough.
-        expect(threadMetaLine(t, { ...isoformThread, timeSpentMs: 30_000 }, 2)).not.toMatch(/active/);
-        expect(threadMetaLine(t, isoformThread, 2, false)).not.toMatch(/active/);
+        expect(threadMetaLine(t, { ...isoformThread, timeSpentMs: 30_000 })).not.toMatch(/active/);
+        expect(threadMetaLine(t, isoformThread, false)).not.toMatch(/active/);
         expect(SHOW_THREAD_TIME_SPENT).toBe(true);
     });
 });

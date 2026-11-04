@@ -1133,6 +1133,21 @@ func timelineRunIsWork(run ActivityTimelineRunRow, events []ActivityTimelineEven
 	return false
 }
 
+// timelineHelperProcessSuffixes are the helper processes macOS reports as
+// their own app; they show as the app they serve: "Safari Web Content" is
+// Safari (activity review v1.0.7 AR53).
+var timelineHelperProcessSuffixes = []string{" Web Content", " Networking", " Graphics and Media", " Helper (Renderer)", " Helper (GPU)", " Helper (Plugin)", " Helper"}
+
+func timelineDisplayAppName(name string) string {
+	name = strings.TrimSpace(name)
+	for _, suffix := range timelineHelperProcessSuffixes {
+		if base := strings.TrimSuffix(name, suffix); base != name && strings.TrimSpace(base) != "" {
+			return strings.TrimSpace(base)
+		}
+	}
+	return name
+}
+
 func timelineRunToGroup(run ActivityTimelineRunRow, events []ActivityTimelineEvent) ActivityTimelineGroup {
 	primarySessionID := ""
 	if len(run.SessionIDs) > 0 {
@@ -1141,7 +1156,7 @@ func timelineRunToGroup(run ActivityTimelineRunRow, events []ActivityTimelineEve
 	return ActivityTimelineGroup{
 		ID:               run.ID,
 		AppKey:           run.AppKey,
-		AppName:          run.AppName,
+		AppName:          timelineDisplayAppName(run.AppName),
 		StartTime:        run.StartMs,
 		EndTime:          run.EndMs,
 		ActiveMs:         run.ActiveMs,

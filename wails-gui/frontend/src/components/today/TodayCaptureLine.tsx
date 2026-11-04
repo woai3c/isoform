@@ -22,7 +22,13 @@ export function describeTodayCapture(
     const screens = today("screens");
     const minutes = today("audioMinutes");
     const screensText = t("captured.screens", { count: screens, n: format.format(screens) });
-    const minutesText = t("captured.minutes", { count: minutes, n: format.format(minutes) });
+    // "for 2 hours", not "during 120 minutes" (activity review v1.0.7 AR52).
+    const hours = Math.floor(minutes / 60);
+    const hoursText = t("captured.hours", { count: hours, n: format.format(hours) });
+    const restText = t("captured.minutes", { count: minutes % 60, n: format.format(minutes % 60) });
+    const minutesText = hours === 0
+        ? t("captured.minutes", { count: minutes, n: format.format(minutes) })
+        : minutes % 60 === 0 ? hoursText : t("captured.hoursMinutes", { hours: hoursText, minutes: restText });
     if (screens > 0 && minutes > 0) {
         return t("captured.screensAndAudio", { screens: screensText, minutes: minutesText });
     }

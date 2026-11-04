@@ -17,6 +17,16 @@ import { formatDateStr, formatDurationMs } from './timeline/useCalendarData';
 // (date, active time, the day's first digest sentence) that opens that day
 // in the Day view.
 
+/** The week's look-back with a blank line between paragraphs: a single
+ *  line break would run them together in Markdown (activity review v1.0.7
+ *  AR54). Lists, headings and quotes keep their own lines. */
+export function weekParagraphs(text: string | undefined): string {
+    return (text ?? '').replace(/([^\n])\n(?=[^\n\s\-*+>#|]|\d+[.)]\s)/g, (match, last: string, offset: number, all: string) => {
+        const next = all.slice(offset + match.length);
+        return /^\d+[.)]\s/.test(next) ? match : `${last}\n\n`;
+    });
+}
+
 export function ActivityWeekView({
     date,
     onOpenDay,
@@ -220,7 +230,7 @@ export function ActivityWeekView({
         <>
             {yourWeekFailedNotice}
             <AISummaryCard
-                summary={weeklyData.aiSummary}
+                summary={weekParagraphs(weeklyData.aiSummary)}
                 summaryStatus={weeklyData.aiSummaryStatus}
                 cachedLanguage={weeklyData.aiSummaryLanguage}
                 generating={generating}

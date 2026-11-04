@@ -39,7 +39,7 @@
         "workedOn": "你在忙什么",
         "isoformRan": "Isoform 运行了 {{name}}",
         "unknownSchedule": "一个定时任务",
-        "openResult": "打开结果",
+        "openResult": "查看",
         "learned": "它学到的内容",
         "learnedKnowHow": "你的方法",
         "learnedAboutYou": "关于你",
@@ -53,7 +53,8 @@
         "links": "链接：{{names}}",
         "deleteFromHistory": "从历史中删除",
         "learnedShowMore": "显示更多",
-        "deleteMomentFailed": "无法从历史记录中删除。"
+        "deleteMomentFailed": "无法从历史记录中删除。",
+        "isoformUpdatedTopics": "Isoform 更新了你的话题"
     },
     "rowActions": {
         "addFollowUp": "添加跟进",
@@ -156,8 +157,8 @@
         "continuesAfter": "继续到下一天",
         "titleDetail": "{{title}} · {{detail}}",
         "titleNumber": "{{title}} ({{count}})",
-        "axisTime": "{{period}}{{hour}}时",
-        "axisHour": "{{hour}}时",
+        "axisTime": "{{hour}}:00",
+        "axisHour": "{{hour}}:00",
         "viewLabel": "这一天的显示方式",
         "stitchedTab": "按工作串起",
         "recordedTab": "按记录",
@@ -224,18 +225,17 @@
         "linkingNote": "Isoform 串联工作时，短暂片刻会归在一起。按记录列表已完整显示。",
         "subline": "从 {{start}} 到 {{end}} · 活跃 {{active}}",
         "laneDetailMeta": "{{detail}} · 活跃 {{active}}",
-        "gapResumed_one": "续接 {{count}} 次 · 离开 {{duration}}",
-        "gapResumed_other": "续接 {{count}} 次 · 离开 {{duration}}",
         "gapTip": "离开 {{duration}} · {{span}} · {{label}}",
         "gapTipPlain": "离开 {{duration}} · {{span}}",
-        "shortMoments": "短暂片刻 · {{count}} · 活跃 {{minutes}} 分钟",
+        "shortMoments": "短暂片刻 · 共 {{minutes}} 分钟",
         "otherWork": "其他工作 · {{count}} · {{minutes}} 分钟",
         "hours_one": "{{count}} 小时",
         "hours_other": "{{count}} 小时",
         "laneActiveSuffix": " · 活跃 {{active}}",
-        "durationHoursMinutes": "{{hours}}小时{{minutes}}分",
-        "durationHours": "{{hours}}小时",
-        "durationMinutes": "{{minutes}}分"
+        "durationHoursMinutes": "{{hours}} 小时 {{minutes}} 分钟",
+        "durationHours": "{{hours}} 小时",
+        "durationMinutes": "{{minutes}} 分钟",
+        "gapAwayInAll": "共离开 {{duration}}"
     },
     "activityCard": {
         "live": "进行中",

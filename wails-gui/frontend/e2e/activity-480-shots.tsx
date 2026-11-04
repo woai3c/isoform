@@ -1,6 +1,6 @@
 // Component fixture only: the real ActivityPage over synthetic, walk-through-shaped
 // reads (a Monday of ERP review and a launch memo). No app or backend connection.
-// URL params: section, date (YYYY-MM-DD), case (writing | unwritten | sections | weekFail | weekEmpty), lang (en | zh-CN), theme (paper | onedark).
+// URL params: section, date (YYYY-MM-DD), case (writing | unwritten | sections | weekFail | weekEmpty | weekDigest | workedOnFails), lang (en | zh-CN), theme (paper | onedark).
 // Screen timeline frames load from a local stand-in for the host bridge on port 4317.
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -30,6 +30,26 @@ const descriptions: Record<string, string> = {
 };
 activities.forEach((a) => { a.description = descriptions[a.id] ?? ''; });
 
+// The afternoon: a support thread picked back up six times (seven stretches,
+// activity review v1.0.7 AR51), its last stop known only from text read off
+// the screen (AR50), then three one-minute moments (Short moments).
+const supportStarts = [0, 24, 48, 72, 96, 120, 144].map((m) => at(2, 13, m));
+const support = supportStarts.map((start, i) => ({ ...activities[0], id: `b${i + 1}`, title: 'Answering Northwind support tickets', description: 'You answered Northwind support tickets about invoice sync.',
+    latestChange: '', startMs: start, endMs: start + 12 * 60_000, activeMs: 12 * 60_000,
+    apps: [{ appKey: '', appName: i === 6 ? 'Finder' : 'Safari', activeMs: 12 * 60_000 }] }));
+const shortMoments = [38, 40, 42].map((m, i) => ({ ...activities[0], id: `c${i + 1}`, title: ['Checked the build status', 'Opened the calendar', 'Copied a link'][i], description: '', latestChange: '',
+    startMs: at(2, 15, m), endMs: at(2, 15, m + 1), activeMs: 60_000, apps: [{ appKey: '', appName: ['GitHub', 'Calendar', 'Safari'][i], activeMs: 60_000 }] }));
+activities.push(...support, ...shortMoments);
+threads.push({ ...threads[0], id: 'sup', title: 'Answering Northwind support tickets', startMs: supportStarts[0], endMs: supportStarts[6] + 12 * 60_000,
+    timeSpentMs: 84 * 60_000, activeMs: 84 * 60_000, activityIds: support.map((m) => m.id), unfinished: false, interruption: false,
+    stretches: support.map((m, i) => ({ start: m.startMs, end: m.endMs, activeMs: 12 * 60_000, activityIds: [m.id],
+        resumePoint: i === 6 ? { kind: 'path', label: 'Downloads/wnocishiscaeronaarivaNzrvactvcrasEuncneelvsc.niod' } : null })),
+    gaps: support.slice(1).map((m) => ({ start: m.startMs - 12 * 60_000, end: m.startMs, minutes: 12, label: 'away', threadId: '' })),
+    linkReason: { kind: 'rule', keys: ['site:support.northwind.example'], text: '', resumedWithinMinutes: 12 } });
+// Go's topic finds run (topic_finds.go), with no result text.
+const cronRuns = [{ id: 'r1', jobId: 'topic-finds', startedAt: at(2, 8, 5), finishedAt: at(2, 8, 6), status: 'success', triggerKind: 'cron', error: '', durationMs: 60_000,
+    resultSummary: '', hasLogs: false, notifyResult: '', jobName: 'New on your topics' }];
+
 const summaryText = 'You spent the morning on the ERP connector review. You left two comments on PR #212 and resolved both after the Northwind call. After lunch you wrote section 3 of the Halcyon launch memo.';
 // The day written in sections, as the daily digest prompt asks for them.
 const sectionsText = [
@@ -50,8 +70,8 @@ const daily = (date: string) => {
     return {
         date, aiSummary: none ? '' : scenario === 'sections' ? sectionsText : summaryText, aiSummaryStatus: none ? 'none' : 'done', aiSummaryLanguage: 'en', isPartial: false,
         summaryCreatedAt: at(2, 12, 4), autoStatus: none ? 'unavailable' : scenario === 'writing' ? 'refreshing' : 'ready',
-        // The rows' stretches: 2h + 47m + 28m + 23m.
-        totalActiveMs: 3 * 3600_000 + 38 * 60_000, activeAvgMs: 0, sessionCount: 7, sessionAvg: 0, uniqueApps: 6, uniqueAppsAvg: 0,
+        // The rows' stretches: 2h + 47m + 28m + 23m, the afternoon's 1h 24m and three 1-minute moments.
+        totalActiveMs: 3 * 3600_000 + 38 * 60_000 + 84 * 60_000 + 3 * 60_000, activeAvgMs: 0, sessionCount: 7, sessionAvg: 0, uniqueApps: 6, uniqueAppsAvg: 0,
         snapshotCount: 0, ocrPageCount: 0, hourlyActive: Array.from({ length: 24 }, (_, h) => (h >= 9 && h <= 13 ? 45 : 0)),
         appBreakdown: [{ appName: 'VS Code', bundleId: 'com.microsoft.VSCode', activeMs: 5400_000, percentage: 47 }, { appName: 'Google Docs', bundleId: 'com.google.Chrome', activeMs: 2820_000, percentage: 25 }],
         moments: [], topOcrKeywords: [], topWindowTitles: [],
@@ -65,7 +85,10 @@ const weekHeadlines: Record<string, string> = {
     '2026-10-30': 'You started the Halcyon launch memo.',
 };
 const weekly = {
-    weekStart: '2026-10-26', weekEnd: '2026-11-01', aiSummary: '', aiSummaryStatus: 'none', aiSummaryLanguage: 'en', autoStatus: 'unavailable',
+    // case=weekDigest: the written week, its paragraphs one line break apart as the model writes them.
+    weekStart: '2026-10-26', weekEnd: '2026-11-01',
+    aiSummary: scenario === 'weekDigest' ? 'You planned the ERP connector v0.3 release with the Northwind team and wrote the invoice mapping and its tests.\nOn Thursday you fixed the invoice sync dates and shipped v0.3 to staging.\nOn Friday you started the Halcyon launch memo. Next: its Integration risks section.' : '',
+    aiSummaryStatus: scenario === 'weekDigest' ? 'done' : 'none', aiSummaryLanguage: 'en', autoStatus: 'unavailable',
     dailyStats: [
         ['2026-10-26', 'Mon', 4 * 3600_000 + 5 * 60_000], ['2026-10-27', 'Tue', 5 * 3600_000 + 40 * 60_000], ['2026-10-28', 'Wed', 3 * 3600_000 + 15 * 60_000],
         ['2026-10-29', 'Thu', 6 * 3600_000 + 2 * 60_000], ['2026-10-30', 'Fri', 2 * 3600_000 + 30 * 60_000], ['2026-10-31', 'Sat', 0], ['2026-11-01', 'Sun', 0],
@@ -118,11 +141,11 @@ const reads: Record<string, (...args: any[]) => unknown> = {
     GetDayThreads: (start: number) => (scenario === 'workedOnFails' ? Promise.reject(new Error('read failed')) : { grouped: true, threads: ymd(start) === '2026-11-02' ? threads : [] }),
     GetDayNoticed: (date: string) => (date === '2026-11-02' ? [{ id: 'n1', kind: 'follow_up', momentId: 'a2', momentTitle: 'Northwind call', momentStartMs: at(2, 10, 2), text: 'Send Priya the corrected invoice sync dates', why: 'You told her on the Northwind call that you would send them today.' }] : []),
     GetMemoryEntries: () => memoryEntries, GetKnowledgeEntries: () => knowHow, GetAboutYou: () => aboutYou,
-    GetActivityMonthStats: () => [], GetCronRunsByDateRange: () => [], GetRecentMeetingNotes: () => [], GetMeetingNotesForSessions: () => [],
+    GetActivityMonthStats: () => [], GetCronRunsByDateRange: () => cronRuns, GetRecentMeetingNotes: () => [], GetMeetingNotesForSessions: () => [],
     EnsureWeeklySummary: () => { if (scenario === 'weekFail') throw new Error('database is locked'); return weekly; },
-    GetWeeklySummaryForDate: () => weekly, GetYourWeekForDate: () => (scenario === 'weekFail' || scenario === 'weekEmpty' ? { cards: [] } : yourWeek),
+    GetWeeklySummaryForDate: () => weekly, GetYourWeekForDate: () => (scenario === 'weekFail' || scenario === 'weekEmpty' || scenario === 'weekDigest' ? { cards: [] } : yourWeek),
     GetCaptureCounts: () => ({ paused: false, notReady: false, todayStart: at(2, 0), weekStart: at(2, 0),
-        sources: [{ source: 'screens', today: 385, week: 2140 }, { source: 'audioMinutes', today: 42, week: 160 }] }),
+        sources: [{ source: 'screens', today: 385, week: 2140 }, { source: 'audioMinutes', today: 120, week: 260 }] }),
     GetActivityTimelineGroups: () => groups, GetActivitySessions: () => sessions, GetActivityTimelineGroupsForSessions: () => groups,
     GetHostBridgePort: () => 4317, GetHostBridgeMediaToken: () => 'fixture',
     GetActivitySessionDetail: (id: string) => { const a = activities[Number(id.slice(1))]; return { id, startTime: a.startMs, endTime: a.endMs, triggerKind: '', appNames: [a.apps[0]?.appName ?? ''], eventCount: 3, snapshotCount: fixtureSnapshots(a).length, triageStatus: '', ocrStatus: '', segments: [], snapshots: fixtureSnapshots(a),

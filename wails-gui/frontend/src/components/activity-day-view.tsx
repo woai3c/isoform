@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useFirstDay } from '@/hooks/useFirstDay';
 import { useDoingNow } from '@/hooks/useDoingNow';
 import { ChevronDown, ChevronRight, Trash2, Zap } from 'lucide-react';
@@ -58,6 +59,7 @@ import {
     formatDateStr,
     formatDurationMs,
     formatTimeFromMs,
+    formatTimeRangeFromMs,
     type CronRunWithJobName,
 } from './timeline/useCalendarData';
 
@@ -356,9 +358,9 @@ export function ActivityDayView({
                 .filter((a): a is ActivityView => a !== undefined);
             if (moments.length < 2) continue;
             for (const moment of moments) grouped.add(moment.id);
-            // Newest first: a thread sits where its latest moment would.
-            const latest = Math.max(...moments.map((m) => m.startMs));
-            out.push({ kind: 'thread', id: `thread-${thread.id}`, startMs: latest, thread, moments });
+            // Newest first by start, the time the row shows (activity review v1.0.6 AR40).
+            const start = Math.min(...moments.map((m) => m.startMs));
+            out.push({ kind: 'thread', id: `thread-${thread.id}`, startMs: start, thread, moments });
         }
         for (const activity of activities) {
             if (grouped.has(activity.id)) continue;
@@ -1018,6 +1020,15 @@ const WorkItemRow = memo(function WorkItemRow({
 
 const rowTimeClass = 'w-14 shrink-0 text-[11px] text-muted/80 tabular-nums pt-[2px]';
 
+/** "10:02–10:30 AM · 28m active"; under a minute, the time alone. */
+function rowTimeLine(t: TFunction<'activity'>, startMs: number, endMs: number, activeMs: number): string {
+    const range = formatTimeRangeFromMs(startMs, endMs);
+    return activeMs >= 60_000 ? `${range} · ${t('threads.timeSpent', { duration: formatDurationMs(activeMs) })}` : range;
+}
+
+// Go's topic finds job (topic_finds.go topicFindsJobName).
+const TOPIC_FINDS_JOB_NAME = 'New on your topics';
+
 /** A quiet marker for an activity with recent evidence still in progress. */
 function LiveDot({ className }: { className?: string }) {
     return <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full bg-accent-2', className)} />;
@@ -1098,7 +1109,9 @@ function ActivityWorkRow({
                 setDeleteFailed(true);
             });
     };
-    const oneLine = activity.description || activity.latestChange || '';
+    // Every row's second line is its time and active time; the summary shows
+    // when the row is opened (activity review v1.0.6 AR40).
+    const oneLine = rowTimeLine(t, activity.startMs, activity.endMs, activity.activeMs);
     // People and the real repos/projects/pull-requests/channels this moment
     // touched. Topics stay out: they were the keyword chips, which the Day
     // view drops.
@@ -1231,7 +1244,7 @@ function MeetingWorkRow({
     const title =
         meeting.title ||
         (meeting.meetingApp ? t('meetingNotes.callTitle', { app: meeting.meetingApp }) : t('meetingNotes.untitledCall'));
-    const oneLine = meeting.summary.split('\n')[0]?.trim() ?? '';
+    const oneLine = rowTimeLine(t, meeting.startTime, meeting.endTime, meeting.endTime - meeting.startTime);
     return (
         <li>
             <button
@@ -1278,7 +1291,9 @@ function RunWorkRow({ run, onOpenRunDetail }: { run: CronRunWithJobName; onOpenR
                 <Zap className="h-3.5 w-3.5 shrink-0 mt-[3px] text-automation" />
                 <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-medium text-ink truncate">
-                        {t('day.isoformRan', { name: run.jobName || t('day.unknownSchedule') })}
+                        {run.jobName === TOPIC_FINDS_JOB_NAME
+                            ? t('day.isoformUpdatedTopics')
+                            : t('day.isoformRan', { name: run.jobName || t('day.unknownSchedule') })}
                     </div>
                     {result ? (
                         <p className="text-[12px] text-muted truncate mt-0.5">{result}</p>

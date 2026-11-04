@@ -91,9 +91,9 @@
         "tomorrowAt": "明天 {{time}}"
     },
     "captured": {
-        "screensAndAudio": "今天 Isoform 看到了 {{screens}}，在 {{minutes}}里听到了语音。",
+        "screensAndAudio": "今天 Isoform 看到了 {{screens}}，听到了 {{minutes}}的语音。",
         "screensOnly": "今天 Isoform 看到了 {{screens}}。",
-        "audioOnly": "今天 Isoform 在 {{minutes}}里听到了语音。",
+        "audioOnly": "今天 Isoform 听到了 {{minutes}}的语音。",
         "nothing": "今天 Isoform 还没有记录任何内容。",
         "paused": "已暂停。Isoform 现在不会记录任何内容。",
         "pausedSince": "自{{time}}起暂停",
@@ -104,6 +104,9 @@
         "screens_other": "{{n}} 个屏幕画面",
         "minutes_one": "{{n}} 分钟",
         "minutes_other": "{{n}} 分钟",
+        "hours_one": "{{n}} 小时",
+        "hours_other": "{{n}} 小时",
+        "hoursMinutes": "{{hours}} {{minutes}}",
         "open": "查看 Isoform 记录了什么"
     },
     "when": {

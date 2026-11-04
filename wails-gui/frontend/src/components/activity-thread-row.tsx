@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AppGlyph, useAppIcons } from './activities-view';
 import { cn } from '../lib/utils';
-import { formatDurationMs, formatTimeFromMs } from './timeline/useCalendarData';
+import { formatDurationMs, formatTimeFromMs, formatTimeRangeFromMs } from './timeline/useCalendarData';
 
 // "What you worked on" threads: Go groups a day's moments into threads
 // (activity_threads.go); this row only shows what Go returned. Opening a thread
@@ -32,20 +32,19 @@ const rowTimeClass = 'w-14 shrink-0 text-[11px] text-muted/80 tabular-nums pt-[2
  *  reading time since backlog item 70, so RC 1 shows it on every thread. */
 export const SHOW_THREAD_TIME_SPENT = true;
 
-/** The line under a thread's title: span, optional time spent, moment count. */
+/** The line under a thread's title: its time and active time, "10:02–10:30 AM
+ *  · 28m active" (activity review v1.0.6 AR40, AR48). */
 export function threadMetaLine(
     t: TFunction<'activity'>,
     thread: ActivityThreadView,
-    momentCount: number,
     showTimeSpent = SHOW_THREAD_TIME_SPENT,
 ): string {
     return [
-        t('threads.span', { start: formatTimeFromMs(thread.startMs), end: formatTimeFromMs(thread.endMs) }),
+        formatTimeRangeFromMs(thread.startMs, thread.endMs),
         // Under a minute reads as "0m active"; the span says enough.
         showTimeSpent && thread.timeSpentMs >= 60_000
             ? t('threads.timeSpent', { duration: formatDurationMs(thread.timeSpentMs) })
             : null,
-        t('threads.moments', { count: momentCount }),
     ]
         .filter(Boolean)
         .join(' · ');
@@ -163,7 +162,7 @@ export function ThreadWorkRow({
     const live = moments.some((m) => m.inProgress);
     const { renaming, setRenaming, busy, rename, renameFailed } = useThreadRename(thread.id);
 
-    const meta = threadMetaLine(t, thread, moments.length);
+    const meta = threadMetaLine(t, thread);
 
     return (
         <li>

@@ -226,16 +226,16 @@ describe('Stitched by work: reading the threads', () => {
         binding('GetDayThreads').mockImplementation(async (day: number) => ({ grouped: true, threads: [{ ...thread,
             activeMs: allocated(day), timeSpentMs: allocated(day), stretches: thread.stretches.map((s) => ({ ...s, activeMs: allocated(day) })) }] }));
         const yesterday = renderDay();
-        await screen.findByRole('heading', { name: '11:00 PM to 12:00 AM' });
+        await screen.findByRole('heading', { name: '11:00 PM–12:00 AM' });
         expect(screen.getByText('From 11:00 PM to 12:00 AM · 1h active')).toBeInTheDocument();
         expect(screen.getByTestId('stitched-continues-after')).toBeInTheDocument();
         expect(screen.getByLabelText('Continues into the next day')).toBeInTheDocument();
         expect(screen.queryByText('In progress')).toBeNull();
         const segments = screen.getAllByTestId('stitched-stretch');
-        expect(segments[0].getAttribute('title')).toContain('11:00 PM to 12:00 AM');
+        expect(segments[0].getAttribute('title')).toContain('11:00 PM–12:00 AM');
         yesterday.unmount();
         renderDay({ date: new Date(2026, 9, 20) });
-        await screen.findByRole('heading', { name: '12:00 AM to 2:00 AM' });
+        await screen.findByRole('heading', { name: '12:00–2:00 AM' });
         expect(screen.getByText('From 12:00 AM to 2:00 AM · 2h active')).toBeInTheDocument();
         expect(screen.getByTestId('stitched-continues-before')).toHaveTextContent('From yesterday');
         expect(within(lane('hal')).getByText('From yesterday')).toBeInTheDocument();
@@ -250,7 +250,7 @@ describe('Stitched by work: reading the threads', () => {
         renderDay();
         await screen.findByTestId('stitched-axis');
         const leftOff = within(card('msg')).getByText('Left off at').nextSibling;
-        expect(leftOff).toHaveTextContent(/^11:55\sAM$/);
+        expect(leftOff).toHaveTextContent(/^11:55\sAM · Mail$/);
         expect(within(card('msg')).queryByText(/answered three emails|Archived the rest|Email triage/)).toBeNull();
     });
 
@@ -293,7 +293,7 @@ describe('Stitched by work: reading the threads', () => {
         expect(today.step).toBe(3);
     });
 
-    // Activity review v1.0.1 #1: the window is 9:12 AM to 12:55 PM, so the
+    // Activity review v1.0.1 #1: the window is 9:12 AM–12:55 PM, so the
     // ticks are the whole hours inside it, on the bars' own scale.
     it('labels each whole hour inside the window with a fixed 170px right column in both languages', async () => {
         renderDay();
@@ -309,7 +309,7 @@ describe('Stitched by work: reading the threads', () => {
         const hourLines = [...lane('mer').querySelectorAll('[data-testid="stitched-hour-line"]')].map((el) => (el as HTMLElement).style.left);
         expect(hourLines).toEqual(['21.525%', '48.43%', '75.336%']);
         await act(async () => { await i18n.changeLanguage('zh-CN'); });
-        expect(texts()).toEqual(['上午10时', '11时', '中午12时']);
+        expect(texts()).toEqual(['10:00', '11:00', '12:00']);
     });
 
     it('bounds disambiguated titles and puts only the unused words in the meta line', async () => {
@@ -328,7 +328,7 @@ describe('Stitched by work: reading the threads', () => {
         await i18n.changeLanguage(language);
         const item = stitchThreads(threads, activities, 0, false)[0];
         const gaps = Array.from({ length: 7 }, (_, i) => ({ start: i * 4_000_000, end: i * 4_000_000 + 66 * 60_000, minutes: 66, threadId: item.thread.id, label: 'away' }));
-        expect(rowGapLabel(i18n.getFixedT(language, 'activity'), { ...item, gaps }, [])).toBe(language === 'en' ? '7 resumes · away 7h 42m' : '续接 7 次 · 离开 7小时42分');
+        expect(rowGapLabel(i18n.getFixedT(language, 'activity'), { ...item, gaps }, [])).toBe(language === 'en' ? 'Away 7h 42m in all' : '共离开 7 小时 42 分钟');
     });
 
     it('disambiguates repeated leading thread titles', async () => {
@@ -414,7 +414,7 @@ describe('Stitched by work: the page', () => {
         expect(await screen.findByText('4 pieces of work, 2 picked back up after an interruption')).toBeInTheDocument();
         expect(screen.getByRole('tab', { name: 'Stitched by work' })).toHaveAttribute('aria-selected', 'true');
         expect([...document.querySelectorAll('[data-thread-lane]')].map((el) => el.getAttribute('data-thread-lane'))).toEqual(['mer', 'hal', 'nw', 'msg']);
-        expect(screen.getByRole('heading', { name: '9:12 AM to 12:55 PM' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: '9:12 AM–12:55 PM' })).toBeInTheDocument();
     });
 
     it('draws a thread with two stretches as one row joined by a labelled connector', async () => {
@@ -441,7 +441,7 @@ describe('Stitched by work: the page', () => {
         expect(within(lane('hal')).getByText('2h active')).toBeInTheDocument();
         expect(within(lane('nw')).getByText('28m active')).toBeInTheDocument();
         expect(within(lane('msg')).getByText('23m active')).toBeInTheDocument();
-        expect(within(card('hal')).getByText('9:12 AM to 11:40 AM')).toBeInTheDocument();
+        expect(within(card('hal')).getByText('9:12–11:40 AM')).toBeInTheDocument();
         expect(within(card('hal')).getByText('2h active across 2 stretches · away 28m · VS Code, GitHub')).toBeInTheDocument();
     });
 
@@ -488,7 +488,7 @@ describe('Stitched by work: the page', () => {
         const hal = card('hal');
         expect(within(hal).queryByText(/20 s/)).toBeNull();
         expect(within(hal).queryByText(/\/agents\/example/)).toBeNull();
-        expect(within(hal).getByText('Left off at').nextSibling).toHaveTextContent(/^10:02\sAM$/);
+        expect(within(hal).getByText('Left off at').nextSibling).toHaveTextContent(/^10:02\sAM · VS Code$/);
     });
 
     it('shows the source active duration in the thread bar when its span is longer', async () => {
@@ -644,15 +644,21 @@ describe('Stitched by work: the page', () => {
         // Threads with two or more moments stay one row; the rest are moments.
         expect(screen.getAllByText('Reviewing ERP connector v0.3').length).toBe(1);
         expect(screen.getByText('Northwind call')).toBeInTheDocument();
-        expect(screen.getByText('9:12 AM to 11:40 AM · 2h active · 2 moments')).toBeInTheDocument();
+        expect(screen.getByText('9:12–11:40 AM · 2h active')).toBeInTheDocument();
         expect(screen.getByText('Everything Isoform recorded, newest first.')).toBeInTheDocument();
+        // Activity review v1.0.6 AR40: newest first by start, and every row's
+        // second line is its time and active time, never a summary.
+        const starts = [...document.querySelectorAll('li > button > time')].map((el) => el.textContent?.replace(/\s/g, ' '));
+        expect(starts).toEqual(['12:00 PM', '11:40 AM', '10:02 AM', '9:12 AM']);
+        expect(screen.getByText('10:02–10:30 AM · 28m active')).toBeInTheDocument();
+        expect(screen.queryByText(/You joined the Northwind call/)).toBeNull();
     });
 
     it('filters the threads by the search box', async () => {
         renderDay({ searchQuery: 'launch memo' });
         await screen.findByText('Work threads');
         expect([...document.querySelectorAll('[data-thread-lane]')].map((el) => el.getAttribute('data-thread-lane'))).toEqual(['mer']);
-        expect(screen.getByRole('heading', { name: '12:00 PM to 12:55 PM' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: '12:00–12:55 PM' })).toBeInTheDocument();
         expect(screen.getByText('From 12:00 PM to 12:55 PM · 47m active')).toBeInTheDocument();
     });
 
@@ -757,7 +763,7 @@ describe('Stitched by work: busy and failure states', () => {
         expect(await screen.findByText('Linking stretches of work…')).toBeInTheDocument();
         expect(document.querySelectorAll('[data-thread-lane]')).toHaveLength(0);
         expect(document.querySelectorAll('[data-aggregate-lane]')).toHaveLength(1);
-        fireEvent.click(screen.getByText('Short moments · 7 · 218 min active'));
+        fireEvent.click(screen.getByText('Short moments · 218 min in all'));
         expect(screen.getAllByRole('listitem')).toHaveLength(7);
     });
 
@@ -804,12 +810,12 @@ describe('Stitched by work in Chinese', () => {
         renderDay();
         expect(await screen.findByRole('tab', { name: '按工作串起' })).toBeInTheDocument();
         expect(screen.getByRole('tab', { name: '按记录' })).toBeInTheDocument();
-        expect(within(lane('hal')).getByText('离开 28m · Northwind call')).toBeInTheDocument();
-        expect(within(card('hal')).getByText('2 段共活跃 2h · 离开 28m · VS Code, GitHub')).toBeInTheDocument();
+        expect(within(lane('hal')).getByText('离开 28 分钟 · Northwind call')).toBeInTheDocument();
+        expect(within(card('hal')).getByText('2 段共活跃 2 小时 · 离开 28 分钟 · VS Code, GitHub')).toBeInTheDocument();
         expect(within(card('hal')).getByRole('button', { name: '没错' })).toBeInTheDocument();
         expect(screen.getByText('从上次停下的地方继续：Writing Halcyon launch memo')).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: '上午9:12 至 中午12:55' })).toBeInTheDocument();
-        expect(screen.getByText('你在 中午12:55 离开，此前已活跃 47 分钟。')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: '9:12–12:55' })).toBeInTheDocument();
+        expect(screen.getByText('你在 12:55 离开，此前已活跃 47 分钟。')).toBeInTheDocument();
         expect(document.body).not.toHaveTextContent('stitched.clock.');
         expect(document.body).not.toHaveTextContent('todayBrief.clock.');
         await act(async () => { await i18n.changeLanguage('en'); });
@@ -838,7 +844,7 @@ describe('Stitched cleanup: row policy and story', () => {
     });
 
     it('uses one summary per row, even with three gaps on a two-stretch projection', () => {
-        expect(rowGapLabel(t(), items()[0], items())).toBe('3 resumes · away 4h 29m');
+        expect(rowGapLabel(t(), items()[0], items())).toBe('Away 4h 29m in all');
         const gap = { ...items()[0].gaps[0], end: items()[0].gaps[0].start + 53 * 60_000, threadId: 'isoform', label: 'ignored, list, of, apps' };
         const interrupter = { ...items()[1], thread: { ...items()[1].thread, id: 'isoform', title: 'Isoform hub: Claude Code sessions' } };
         expect(rowGapLabel(t(), { ...items()[0], gaps: [gap] }, [interrupter])).toBe('Away 53m · Isoform hub');
@@ -856,7 +862,7 @@ describe('Stitched cleanup: row policy and story', () => {
         expect(splitThreadTitle('OpenClaw cleanup')).toEqual({ title: 'OpenClaw cleanup', detail: '' });
         const at = new Date(2026, 9, 19, 15, 52).getTime();
         expect(stitchedClock(at)).toBe('3:52 PM');
-        expect(stitchedClock(at, 'zh-CN')).toBe('下午3:52');
+        expect(stitchedClock(at, 'zh-CN')).toBe('15:52');
     });
 
     it('counts visible thread rows only, and puts the time range and active time in the subline', () => {
@@ -887,19 +893,19 @@ describe('Stitched cleanup: row policy and story', () => {
         // Gap links appear after the timeline measures its mounted axis.
         const links = await within(lane('work-0')).findAllByTestId('stitched-gap-link');
         expect(links).toHaveLength(3);
-        expect(links[0]).toHaveAttribute('title', 'Away 1h 36m · 8:25 AM to 10:01 AM · Project 1: Claude Code sessions');
+        expect(links[0]).toHaveAttribute('title', 'Away 1h 36m · 8:25–10:01 AM · Project 1: Claude Code sessions');
         expect(screen.getByTestId('stitched-legend').textContent).toBe('Focused workInterruptionSame work resumed');
-        fireEvent.click(screen.getByText('Short moments · 9 · 12 min active'));
-        const shortList = screen.getByRole('list', { name: 'Short moments · 9 · 12 min active' });
+        fireEvent.click(screen.getByText('Short moments · 12 min in all'));
+        const shortList = screen.getByRole('list', { name: 'Short moments · 12 min in all' });
         expect(within(shortList).getAllByRole('listitem')).toHaveLength(9);
         expect(within(shortList).getByText('Quick check 0')).toBeInTheDocument();
-        expect(within(shortList).getByText('2:00 PM to 2:00 PM')).toBeInTheDocument();
+        expect(within(shortList).getByText('2:00 PM')).toBeInTheDocument();
         for (const tick of document.querySelectorAll('[data-aggregate-lane="aggregate:short"] [data-testid="stitched-tick"]')) {
             expect(tick).toHaveStyle({ width: '6px' });
             expect(tick).not.toHaveAttribute('title');
         }
         fireEvent.click(screen.getByText('Other work · 2 · 23 min'));
-        expect(screen.queryByRole('list', { name: 'Short moments · 9 · 12 min active' })).toBeNull();
+        expect(screen.queryByRole('list', { name: 'Short moments · 12 min in all' })).toBeNull();
         const otherList = screen.getByRole('list', { name: 'Other work · 2 · 23 min' });
         expect(within(otherList).getAllByRole('listitem')).toHaveLength(2);
         expect(within(otherList).getByText('Project 9: Claude Code sessions')).toBeInTheDocument();
@@ -911,7 +917,7 @@ describe('Stitched cleanup: row policy and story', () => {
         const onCountsChange = vi.fn();
         renderDay({ onCountsChange });
         expect(await screen.findByText('0 pieces of work')).toBeInTheDocument();
-        expect(screen.getByText('Short moments · 9 · 12 min active')).toBeInTheDocument();
+        expect(screen.getByText('Short moments · 12 min in all')).toBeInTheDocument();
         expect(document.querySelectorAll('[data-thread-lane]')).toHaveLength(0);
         expect(onCountsChange).toHaveBeenLastCalledWith({ workedOn: 0, learned: 0 });
         expect(screen.queryByTestId('stitched-pick-up')).toBeNull();
@@ -1012,17 +1018,17 @@ describe('Stitched cleanup: caller and boundary guards', () => {
         binding('GetDayThreads').mockResolvedValue({ grouped: true, threads: modified });
         renderDay();
         await screen.findByText('Work threads');
-        expect(within(lane('hal')).getByTestId('stitched-gap-link')).toHaveAttribute('title', 'Away 1h 36m · 11:20 AM to 12:56 PM · Isoform hub: Claude Code sessions');
+        expect(within(lane('hal')).getByTestId('stitched-gap-link')).toHaveAttribute('title', 'Away 1h 36m · 11:20 AM–12:56 PM · Isoform hub: Claude Code sessions');
         expect(within(lane('hal')).getByTestId('stitched-gap-label')).toHaveTextContent('Away 1h 36m · Isoform hub');
     });
 });
 
 describe.each(['en', 'zh-CN'])('Stitched shared Today clock in %s', (language) => {
     it.each([
-        [7, 0, '7:00 AM', '上午7:00'],
-        [12, 30, '12:30 PM', '中午12:30'],
-        [15, 52, '3:52 PM', '下午3:52'],
-        [0, 5, '12:05 AM', '凌晨12:05'],
+        [7, 0, '7:00 AM', '7:00'],
+        [12, 30, '12:30 PM', '12:30'],
+        [15, 52, '3:52 PM', '15:52'],
+        [0, 5, '12:05 AM', '0:05'],
     ])('formats %s:%s using the shared catalog', (hour, minute, en, zh) => {
         const at = new Date(2026, 9, 19, hour, minute).getTime();
         expect(stitchedClock(at, language)).toBe(language === 'en' ? en : zh);
@@ -1163,7 +1169,7 @@ describe('Integration 2213: day bounds with render memoization', () => {
         expect(model.mock.calls.at(-1)?.[0]).toBe(threads);
         expect(model.mock.calls.at(-1)?.[1]).toBe(activities);
         view.rerender(dayElement({ searchQuery: 'launch memo' }));
-        await screen.findByRole('heading', { name: '12:00 PM to 12:55 PM' });
+        await screen.findByRole('heading', { name: '12:00–12:55 PM' });
         vi.mocked(Date.now).mockReturnValue(new Date(2026, 9, 23, 20, 1).getTime());
         await act(async () => { vi.advanceTimersByTime(60_000); });
         expect(model).toHaveBeenCalledTimes(calls);
@@ -1174,17 +1180,17 @@ describe('Integration 2213: day bounds with render memoization', () => {
         const source = overnightSource();
         const onStartChat = vi.fn();
         const view = renderDay({ onStartChat });
-        await screen.findByRole('heading', { name: '11:00 PM to 12:00 AM' });
+        await screen.findByRole('heading', { name: '11:00 PM–12:00 AM' });
         expect(screen.getByText('From 11:00 PM to 12:00 AM · 15m active')).toBeInTheDocument();
         expect(card(source.thread.id)).not.toBeNull();
         expect(screen.getByTestId('stitched-continues-after')).toBeInTheDocument();
         view.rerender(dayElement({ date: new Date(source.edge), onStartChat }));
-        await screen.findByRole('heading', { name: '12:00 AM to 2:00 AM' });
+        await screen.findByRole('heading', { name: '12:00–2:00 AM' });
         expect(screen.getByText('From 12:00 AM to 2:00 AM · 15m active')).toBeInTheDocument();
         expect(screen.getByTestId('stitched-continues-before')).toBeInTheDocument();
         expect(screen.queryByTestId('stitched-continues-after')).toBeNull();
         expect(screen.queryByText('In progress')).toBeNull();
-        expect(screen.getAllByTestId('stitched-stretch')[0].title).toContain('12:00 AM to 2:00 AM');
+        expect(screen.getAllByTestId('stitched-stretch')[0].title).toContain('12:00–2:00 AM');
         expect(source.moment.startMs).toBe(source.start);
         expect(source.thread.stretches[0].end).toBe(source.end);
         view.rerender(dayElement({ date: new Date(source.edge), onStartChat, workedOnView: 'recorded' }));
@@ -1201,12 +1207,12 @@ describe('Integration 2213: day bounds with render memoization', () => {
     it('updates cached header and moment span with the visible query while retaining total row counts', async () => {
         const onCountsChange = vi.fn();
         const view = renderDay({ searchQuery: 'launch memo', onCountsChange });
-        await screen.findByRole('heading', { name: '12:00 PM to 12:55 PM' });
+        await screen.findByRole('heading', { name: '12:00–12:55 PM' });
         expect(screen.getByText('From 12:00 PM to 12:55 PM · 47m active')).toBeInTheDocument();
         const counts = onCountsChange.mock.calls.at(-1)?.[0];
         expect(counts).toBeDefined();
         view.rerender(dayElement({ searchQuery: 'erp', onCountsChange }));
-        await screen.findByRole('heading', { name: '9:12 AM to 11:40 AM' });
+        await screen.findByRole('heading', { name: '9:12–11:40 AM' });
         expect(screen.getByText('From 9:12 AM to 11:40 AM · 2h active')).toBeInTheDocument();
         expect(screen.queryByText('From 12:00 PM to 12:55 PM · 47m active')).toBeNull();
         expect([...document.querySelectorAll('[data-thread-lane]')].map((row) => row.getAttribute('data-thread-lane'))).toEqual(['hal']);
@@ -1230,7 +1236,7 @@ describe('Integration 2213: day bounds with render memoization', () => {
         binding('GetActivitiesInRange').mockResolvedValue(source.cards);
         binding('GetDayThreads').mockResolvedValue(source.reply);
         await act(async () => { fixture.listeners.get('background-listening:changed')?.forEach((notify) => notify({ enabled: true })); });
-        await screen.findByRole('heading', { name: '11:00 PM to 12:00 AM' });
+        await screen.findByRole('heading', { name: '11:00 PM–12:00 AM' });
         expect(screen.getByTestId('stitched-continues-after')).toBeInTheDocument();
         expect(screen.queryByText('In progress')).toBeNull();
     });
@@ -1244,8 +1250,8 @@ describe('Integration 2213: day bounds with render memoization', () => {
         await waitFor(() => expect(card(source.thread.id)).toBeNull());
         expect(screen.queryByRole('button', { name: 'Looks right' })).toBeNull();
         expect(document.querySelector('[data-thread-card]')).toBeNull();
-        expect(screen.getByRole('heading', { name: '11:00 PM to 12:00 AM' })).toBeInTheDocument();
-        expect(screen.getByText('Short moments · 1 · 15 min active')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: '11:00 PM–12:00 AM' })).toBeInTheDocument();
+        expect(screen.getByText('Short moments · 15 min in all')).toBeInTheDocument();
     });
 
     it('refreshes memoized clipped hour tick boxes after resize and language change', async () => {
@@ -1292,16 +1298,14 @@ describe('Integration 2213: day bounds with render memoization', () => {
         const before = countTips();
         expect(before).toBeGreaterThan(0);
         const stretch = screen.getAllByTestId('stitched-stretch')[0];
-        expect(stretch.title).toContain('11:00 PM to 12:00 AM');
+        expect(stretch.title).toContain('11:00 PM–12:00 AM');
         fireEvent.click(lane(source.thread.id));
         view.rerender(dayElement());
         expect(countTips()).toBe(before);
         await act(async () => { await i18n.changeLanguage('zh-CN'); });
         expect(countTips()).toBeGreaterThan(before);
         const translate = i18n.getFixedT('zh-CN', 'activity');
-        expect(stretch.title).toContain(translate('threads.span', {
-            start: stitchedClock(source.start, 'zh-CN'), end: stitchedClock(source.edge, 'zh-CN'),
-        }));
+        expect(stretch.title).toContain(`${stitchedClock(source.start, 'zh-CN')}–${stitchedClock(source.edge, 'zh-CN')}`);
         expect(screen.getByLabelText(translate('stitched.continuesAfter'))).toBeInTheDocument();
     });
 });

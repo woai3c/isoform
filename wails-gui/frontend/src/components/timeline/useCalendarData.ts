@@ -11,6 +11,7 @@ import { ListCronJobs } from '@/lib/page-queries';
 import { invalidateActivitySessionCache, useActivitySessionQuery, useActivitySessionQueryState } from './activity-session-cache';
 import type { StreamItem } from '@/types';
 import type { CronJobState, CronRunState } from '@/hooks/useCronJobs';
+import i18n from '@/i18n';
 
 // ── Types ──
 
@@ -44,23 +45,43 @@ export function formatDateStr(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-export function formatDurationMs(ms: number): string {
-    if (ms <= 0) return '0m';
-    const totalMin = Math.floor(ms / 60000);
-    if (totalMin < 60) return `${totalMin}m`;
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+const isChinese = (language?: string) => (language ?? i18n.language ?? '').startsWith('zh');
+
+function durationWords(totalMin: number): string {
+    const t = i18n.getFixedT(null, 'activity');
+    if (totalMin < 60) return t('stitched.durationMinutes', { minutes: totalMin });
+    const hours = Math.floor(totalMin / 60);
+    const minutes = totalMin % 60;
+    return minutes > 0 ? t('stitched.durationHoursMinutes', { hours, minutes }) : t('stitched.durationHours', { hours });
 }
 
-export function formatTimeFromMs(ms: number): string {
+/** "3h 38m" / "3 小时 38 分钟": whole minutes, rounded down. */
+export function formatDurationMs(ms: number): string {
+    return durationWords(ms <= 0 ? 0 : Math.floor(ms / 60000));
+}
+
+/** A session's length in the Screen timeline list (activity review v1.0.7
+ *  AR14): minutes only, rounded, anything under a minute reads "1m". */
+export function formatRoundedDurationMs(ms: number): string {
+    return durationWords(Math.max(1, Math.round(ms / 60000)));
+}
+
+/** "9:12 AM"; in Chinese 24-hour with no leading zero or 上午 (activity review v1.0.6 AR42): "9:12", "13:05". */
+export function formatTimeFromMs(ms: number, language?: string): string {
     const d = new Date(ms);
+    if (isChinese(language)) return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
     return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-/** "9:12–10:02 AM": no leading zeros or seconds, the shared part said once. */
+/** "9:12–10:02 AM": no leading zeros or seconds, the shared part said once;
+ *  "9:12–10:02" in Chinese. */
 export function formatTimeRangeFromMs(startMs: number, endMs: number, language?: string): string {
+    if (isChinese(language)) return `${formatTimeFromMs(startMs, 'zh')}–${formatTimeFromMs(endMs, 'zh')}`;
     const clock = new Intl.DateTimeFormat(language || undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+    // Across midnight formatRange adds dates; the times alone say it: "11:00 PM–12:00 AM".
+    if (new Date(startMs).toDateString() !== new Date(endMs).toDateString()) {
+        return `${clock.format(startMs)}–${clock.format(endMs)}`.replace(/[\u202f\u00a0]/g, ' ');
+    }
     return clock.formatRange(startMs, endMs).replace(/\s*[–-]\s*/, '–').replace(/[\u202f\u00a0]/g, ' ');
 }
 

@@ -31,7 +31,7 @@ it('reads the counts only after the page has painted, then says what Isoform cap
     await act(async () => { await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined))); });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
     expect(mocks.read).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('activity-capture')).toHaveTextContent('Today Isoform saw 1,483 screens and heard speech during 239 minutes.');
+    expect(screen.getByTestId('activity-capture')).toHaveTextContent('Today Isoform saw 1,483 screens and heard speech for 3 hours 59 minutes.');
 });
 
 it('shows a cached answer at once', () => {
