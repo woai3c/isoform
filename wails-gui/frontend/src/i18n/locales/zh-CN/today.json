@@ -75,6 +75,10 @@
     "status": {
         "missedMorning": "早间简报没有在 {{time}} 送达。",
         "missedEvening": "晚间简报没有在 {{time}} 送达。",
+        "nextMorningAt": "早间简报会在 {{time}} 送达。",
+        "nextEveningAt": "晚间简报会在 {{time}} 送达。",
+        "nextMorningTomorrowAt": "早间简报会在明天 {{time}} 送达。",
+        "nextEveningTomorrowAt": "晚间简报会在明天 {{time}} 送达。",
         "why": "为什么",
         "success": "成功",
         "failed": "失败",

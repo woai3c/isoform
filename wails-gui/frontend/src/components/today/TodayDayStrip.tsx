@@ -114,7 +114,8 @@ function FreeLabels({ spans, start, end, initialNow, isToday, width, tr }: {
         return activeInterval(() => setNow(initialNow + Math.max(0, Date.now() - received)), 60_000);
     }, [initialNow, isToday]);
     return <>{spans.map((span) => {
-        const ahead = { start: isToday && Number.isFinite(now) ? Math.max(span.start, now) : span.start, end: span.end };
+        // Free time already past is plain, with no label (today-review v1.1.22 R21).
+        const ahead = { start: Number.isFinite(now) ? Math.max(span.start, now) : span.start, end: span.end };
         if (ahead.end - ahead.start < 45 * 60_000) return null;
         const minutes = Math.round((ahead.end - ahead.start) / 60_000);
         const hours = Math.floor(minutes / 60), remainder = minutes % 60;
@@ -149,6 +150,18 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
     const [holdNow, setHoldNow] = useState(() => Date.parse(shape?.now ?? ''));
     const shapeClock = useRef({ value: shape?.now, received: Date.now() });
     if (shapeClock.current.value !== shape?.now) shapeClock.current = { value: shape?.now, received: Date.now() };
+    // What is past moves on with the clock, not with the time the strip was
+    // read (today-review v1.1.22 R21). It redraws when the next block ends,
+    // so the now line's minute ticks never redraw the events.
+    const [, setEnded] = useState(0);
+    useEffect(() => {
+        const now = Date.parse(shape?.now ?? '') + Math.max(0, Date.now() - shapeClock.current.received);
+        if (!shape || !Number.isFinite(now)) return;
+        const ends = [...shape.events.map((event) => Date.parse(event.end)), Date.parse(shape.hold?.end ?? '')].filter((at) => Number.isFinite(at) && at > now);
+        if (!ends.length) return;
+        const timer = window.setTimeout(() => setEnded((count) => count + 1), Math.min(...ends) - now + 1);
+        return () => window.clearTimeout(timer);
+    });
     useEffect(() => {
         const now = Date.parse(shape?.now ?? '') + Math.max(0, Date.now() - shapeClock.current.received);
         setHoldNow(now);
@@ -194,7 +207,7 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
     const firstHour = new Date(start);
     firstHour.setMinutes(0, 0, 0);
     for (let at = firstHour.getTime(); at <= end; at += 3_600_000) if (at >= start) hours.push(at);
-    const now = Date.parse(shape.now);
+    const now = Date.parse(shape.now) + Math.max(0, Date.now() - shapeClock.current.received);
     const civilDay = (at: number) => {
         let parts: Intl.DateTimeFormatPart[];
         try { parts = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone }).formatToParts(at); }

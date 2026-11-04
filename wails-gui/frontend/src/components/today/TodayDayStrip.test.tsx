@@ -371,3 +371,23 @@ it('labels only the part of a free stretch still ahead and updates as time passe
         expect(screen.getByText('free 6h 58m')).toBeInTheDocument();
     } finally { vi.useRealTimers(); }
 });
+
+it.each(['en', 'zh-CN'])('a strip read at 8:00 and shown at 11:29 keeps past free time plain and dims what ended, with the now line (today-review v1.1.22 R21) in %s', async (language) => {
+    await i18n.changeLanguage(language);
+    vi.useFakeTimers();
+    try {
+        vi.setSystemTime(new Date('2026-10-23T08:00:00-07:00'));
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 2000 } as DOMRect);
+        render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, now: '2026-10-23T08:00:00-07:00', hold: null }} />);
+        const label = (duration: string) => screen.getAllByTestId('today-day-free').some((free) => free.textContent === duration);
+        const morningFree = i18n.t('today:dayStrip.freeDuration', { duration: i18n.t('today:dayStrip.hoursMinutes', { hours: 2, minutes: 15 }) });
+        expect(label(morningFree)).toBe(true);
+        act(() => { vi.advanceTimersByTime(209 * 60_000); });
+        expect(label(morningFree)).toBe(false);
+        const priya = screen.getAllByTestId('today-day-event-group').find((group) => group.querySelector('[aria-label*="Priya"]'));
+        expect(priya).toHaveStyle({ opacity: '0.45' });
+        expect(screen.getByTestId('today-day-now')).toBeInTheDocument();
+    } finally {
+        vi.useRealTimers();
+    }
+});

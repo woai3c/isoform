@@ -75,6 +75,10 @@
     "status": {
         "missedMorning": "Your morning brief didn't come at {{time}}.",
         "missedEvening": "Your evening brief didn't come at {{time}}.",
+        "nextMorningAt": "Your morning brief comes at {{time}}.",
+        "nextEveningAt": "Your evening brief comes at {{time}}.",
+        "nextMorningTomorrowAt": "Your morning brief comes tomorrow at {{time}}.",
+        "nextEveningTomorrowAt": "Your evening brief comes tomorrow at {{time}}.",
         "why": "Why",
         "success": "Succeeded",
         "failed": "Failed",

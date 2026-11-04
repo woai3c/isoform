@@ -1383,8 +1383,10 @@ describe("TodayPage panel width, the Chat button and the header (Claude Design, 
         }
     });
 
-    it("names the brief on the card in the display header and defaults to Morning brief without one", async () => {
+    it("names the brief on the card in the display header and follows the clock without one", async () => {
         width(1200);
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(new Date(closingBrief().asOf));
         withBrief(closingBrief());
         const { unmount } = render(<TodayPage handlers={handlers} />);
         await act(async () => {});
@@ -1395,6 +1397,29 @@ describe("TodayPage panel width, the Chat button and the header (Claude Design, 
         await act(async () => {});
         expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("todayBrief.slot.morning");
         expect(screen.getByRole("heading", { level: 1 })).toHaveClass("display");
+        vi.useRealTimers();
+    });
+
+    it("follows the slot once the brief gives way: evening from noon, the next morning's after midnight (today-review v1.1.22 R51)", async () => {
+        width(1200);
+        const brief = closingBrief();
+        const made = new Date(brief.asOf);
+        vi.useFakeTimers({ toFake: ["Date"] });
+        try {
+            vi.setSystemTime(new Date(made.getFullYear(), made.getMonth(), made.getDate(), 12, 0));
+            withBrief(brief);
+            const { unmount } = render(<TodayPage handlers={handlers} />);
+            await act(async () => {});
+            expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("todayBrief.slot.evening");
+            unmount();
+            vi.setSystemTime(new Date(made.getFullYear(), made.getMonth(), made.getDate() + 1, 0, 30));
+            withBrief({ ...brief, slot: "evening", asOf: new Date(made.getFullYear(), made.getMonth(), made.getDate(), 18, 0).toISOString() });
+            render(<TodayPage handlers={handlers} />);
+            await act(async () => {});
+            expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("todayBrief.slot.morning");
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it("keeps a prepared card and its context across three retained visits, then sends only on Send", async () => {

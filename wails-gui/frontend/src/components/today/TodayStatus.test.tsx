@@ -24,6 +24,20 @@ describe("TodayStatus", () => {
         expect(screen.queryByText(/didn't come/)).toBeNull();
     });
 
+    it.each(["en", "zh-CN"])("says what comes next once the slot has given way (today-review v1.1.22 R51) in %s", async (language) => {
+        await i18n.changeLanguage(language);
+        const now = new Date(2026, 10, 4, 11, 50);
+        const nextRunAt = new Date(2026, 10, 4, 18, 0).toISOString();
+        const base = { enabled: true, lastRunAt: "", lastSlot: "", nextRunAt, nextSlot: "evening", missedRuns: 0, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt: new Date(2026, 10, 4, 7, 0).toISOString(), pendingAttempts: 5, pendingCause: "timeout" };
+        const { rerender } = render(<TodayStatus brief={{ ...base, retryAt: "" }} now={now} />);
+        expect(screen.getByTestId("today-status-next")).toHaveTextContent(i18n.t("today:status.nextEveningAt", { time: language === "en" ? "6:00 PM" : "18:00" }));
+        rerender(<TodayStatus brief={{ ...base, nextRunAt: new Date(2026, 10, 5, 7, 0).toISOString(), nextSlot: "morning", retryAt: "" }} now={new Date(2026, 10, 4, 23, 40)} />);
+        expect(screen.getByTestId("today-status-next")).toHaveTextContent(i18n.t("today:status.nextMorningTomorrowAt", { time: "7:00" + (language === "en" ? " AM" : "") }));
+        rerender(<TodayStatus brief={{ ...base, retryAt: new Date(2026, 10, 4, 11, 58).toISOString() }} now={now} />);
+        expect(screen.queryByTestId("today-status-next")).toBeNull();
+        await i18n.changeLanguage("en");
+    });
+
     it("has no Make it now while the brief is missed: the card has the one button (v1.1.5 #2)", async () => {
         await i18n.changeLanguage("en");
         render(<TodayStatus brief={{ enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: "", nextSlot: "", missedRuns: 1, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt: at(0, 7) }} now={now} onMissedWhy={vi.fn()} />);

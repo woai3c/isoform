@@ -20,6 +20,19 @@ export function briefSlotKey(slot: string | undefined, asOf?: string, timeZone?:
     return hour < 12 ? "morning" : "evening";
 }
 
+/** The slot Today is named for: the brief on its way, else the shown brief
+ *  while its half of the day lasts, else the clock's slot. A brief gives way
+ *  at noon and at midnight, and the title follows (today-review v1.1.22 R51). */
+export function todayHeaderSlot(pendingSlot: string | undefined, brief: { slot?: string; asOf?: string; timezone?: string } | null | undefined, now = new Date(), pendingAt?: string): "morning" | "evening" {
+    const clock = now.getHours() < 12 ? "morning" : "evening";
+    const half = (date: Date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours() < 12}`;
+    const due = pendingAt ? new Date(pendingAt) : null;
+    if ((pendingSlot === "morning" || pendingSlot === "evening") && (!due || Number.isNaN(due.getTime()) || half(due) === half(now))) return pendingSlot;
+    const at = brief?.asOf ? new Date(brief.asOf) : null;
+    if (!brief || !at || Number.isNaN(at.getTime())) return clock;
+    return half(at) === half(now) ? briefSlotKey(brief.slot, brief.asOf, brief.timezone) : clock;
+}
+
 type ClockKey = "todayBrief.clock.time" | "todayBrief.clock.dateAtTime"
     | `todayBrief.clock.period.${"early" | "morning" | "noon" | "afternoon" | "evening"}`;
 type Translate = (key: ClockKey, options?: Record<string, unknown>) => string;

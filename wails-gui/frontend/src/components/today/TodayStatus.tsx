@@ -86,6 +86,10 @@ export function TodayStatus({
     // one can be tomorrow's (today-review v1.1.16 D17).
     const nextTomorrow = !!next && !!nextDate && new Date(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() === 86_400_000;
 
+    // A slot with no try left has given way: say what comes next (today-review v1.1.22 R51).
+    const givenWay = !!pending && !brief?.retryAt && !!next && !!nextDate;
+    const nextSlot = brief?.nextSlot === "morning" || brief?.nextSlot === "evening" ? brief.nextSlot : nextDate && nextDate.getHours() < 12 ? "morning" : "evening";
+
     const quietLines = quiet.filter((line) => line.text.trim());
     if (!date && !next && !pending && !capture && quietLines.length === 0) return null;
 
@@ -94,7 +98,7 @@ export function TodayStatus({
             data-testid="today-status"
             className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1 text-[12.5px] leading-snug text-muted"
         >
-            {tries ? date && <span data-testid="today-status-date">{date}</span> : pending ? <span>{t(pending.slot === "morning" ? "status.missedMorning" : "status.missedEvening", { time: pending.time })}{onMissedWhy && <> · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium hover:no-underline" onClick={() => openWhy(pending.slot as "morning" | "evening")}>{t("status.why")}</Button></>}</span> : <span>{date}{date && next && " · "}{next && t(nextTomorrow ? "status.nextBriefTomorrowAt" : "status.nextBriefAt", { time: next })}</span>}
+            {tries ? date && <span data-testid="today-status-date">{date}</span> : pending ? <span>{t(pending.slot === "morning" ? "status.missedMorning" : "status.missedEvening", { time: pending.time })}{givenWay && <span data-testid="today-status-next">{i18n.language.startsWith("zh") ? "" : " "}{t(nextSlot === "morning" ? nextTomorrow ? "status.nextMorningTomorrowAt" : "status.nextMorningAt" : nextTomorrow ? "status.nextEveningTomorrowAt" : "status.nextEveningAt", { time: next })}</span>}{onMissedWhy && <> · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium hover:no-underline" onClick={() => openWhy(pending.slot as "morning" | "evening")}>{t("status.why")}</Button></>}</span> : <span>{date}{date && next && " · "}{next && t(nextTomorrow ? "status.nextBriefTomorrowAt" : "status.nextBriefAt", { time: next })}</span>}
             {capture && <TodayCaptureLine text={capture.text} onOpen={capture.onOpen} />}
             {quietLines.map((line) => (
                 <p key={line.id} data-testid="today-quiet-line">{line.text}</p>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import i18n from "@/i18n";
-import { briefClockTime, briefDateTime, briefSlotKey, clockTime, shortBriefClockLabel, shortBriefTimes } from "./brief-time";
+import { briefClockTime, briefDateTime, briefSlotKey, clockTime, todayHeaderSlot, shortBriefClockLabel, shortBriefTimes } from "./brief-time";
 
 describe.each(["en", "zh-CN"])("brief clocks in %s", (language) => {
     const tr = (key: string, options?: Record<string, unknown>) => String(i18n.t(key as never, { ...options, ns: "today", lng: language }));
@@ -62,5 +62,32 @@ describe("briefSlotKey (today-review v1.1.16 D14)", () => {
         expect(briefSlotKey("on_request", "2026-11-04T01:24:00Z", "America/Los_Angeles")).toBe("evening");
         expect(briefSlotKey("on_request", "2026-11-03T05:00:00Z", "UTC")).toBe("morning");
         expect(briefSlotKey("morning", "2026-11-04T01:24:00Z", "America/Los_Angeles")).toBe("morning");
+    });
+});
+
+describe("todayHeaderSlot (today-review v1.1.22 R51)", () => {
+    const morning = { slot: "morning", asOf: new Date(2026, 10, 4, 7, 0).toISOString() };
+    const evening = { slot: "evening", asOf: new Date(2026, 10, 3, 18, 0).toISOString() };
+    it("names the brief on its way first", () => {
+        expect(todayHeaderSlot("morning", evening, new Date(2026, 10, 4, 11, 50))).toBe("morning");
+    });
+    it("names a missed slot only while its half of the day lasts", () => {
+        const sevenAM = new Date(2026, 10, 4, 7, 0).toISOString();
+        expect(todayHeaderSlot("morning", null, new Date(2026, 10, 4, 11, 50), sevenAM)).toBe("morning");
+        expect(todayHeaderSlot("morning", null, new Date(2026, 10, 4, 12, 10), sevenAM)).toBe("evening");
+        expect(todayHeaderSlot("evening", evening, new Date(2026, 10, 4, 0, 30), new Date(2026, 10, 3, 18, 0).toISOString())).toBe("morning");
+    });
+    it("keeps the shown brief's slot while its half of the day lasts", () => {
+        expect(todayHeaderSlot("", morning, new Date(2026, 10, 4, 11, 59))).toBe("morning");
+        expect(todayHeaderSlot("", evening, new Date(2026, 10, 3, 23, 59))).toBe("evening");
+    });
+    it("follows the slot once the brief gives way: evening from noon, the next morning's after midnight", () => {
+        expect(todayHeaderSlot("", morning, new Date(2026, 10, 4, 12, 0))).toBe("evening");
+        expect(todayHeaderSlot("", evening, new Date(2026, 10, 4, 0, 30))).toBe("morning");
+        expect(todayHeaderSlot("", { slot: "morning", asOf: new Date(2026, 10, 3, 7, 0).toISOString() }, new Date(2026, 10, 4, 0, 30))).toBe("morning");
+    });
+    it("follows the clock with no brief", () => {
+        expect(todayHeaderSlot(undefined, null, new Date(2026, 10, 4, 11, 29))).toBe("morning");
+        expect(todayHeaderSlot(undefined, null, new Date(2026, 10, 4, 13, 0))).toBe("evening");
     });
 });

@@ -16,7 +16,7 @@ import { TodayStatus } from "./TodayStatus";
 import { briefSlotKey, TodayBriefSection } from "./TodayBriefSection";
 import { YourTopicsDialog } from "./YourTopicsDialog";
 import { TopicPanel } from "./TopicPanel";
-import { briefClockTime, clockContextKey, clockTime, computerClock } from "@/lib/brief-time";
+import { briefClockTime, clockContextKey, clockTime, computerClock, todayHeaderSlot } from "@/lib/brief-time";
 import { meetingStarter, projectWithProblem } from "@/lib/first-day-starters";
 import { MainChatPanel } from "./MainChatPanel";
 import { TodayLastBriefPanel } from "./TodayLastBriefPanel";
@@ -752,9 +752,7 @@ export function TodayPage({
                         <h1 className="display text-ink">
                             {/* A brief still on its way names the page, not an
                                 older brief shown below it. */}
-                            {tr(`todayBrief.slot.${latest.view?.pendingSlot === "morning" || latest.view?.pendingSlot === "evening"
-                                ? latest.view.pendingSlot
-                                : briefSlotKey(latest.view?.brief?.slot, latest.view?.brief?.asOf, latest.view?.brief?.timezone)}`)}
+                            {tr(`todayBrief.slot.${todayHeaderSlot(latest.view?.pendingSlot, latest.view?.brief, new Date(), latest.view?.pendingAt)}`)}
                         </h1>
                         <TodayStatus
                             date={todayLabel(i18n.language)}
