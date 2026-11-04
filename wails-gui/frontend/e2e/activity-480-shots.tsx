@@ -123,6 +123,11 @@ const fixtureEvents = (a: (typeof activities)[number]) => [
     { kind: 'speech', speechSource: 'microphone', speechText: 'There the two.', timestamp: a.startMs + 120_000, appName: a.apps[0]?.appName ?? '' },
     { kind: 'keyboard', typedText: 'retry on 429 with backoff', timestamp: a.startMs + 180_000, appName: a.apps[0]?.appName ?? '' },
     { kind: 'speech', speechSource: 'microphone', speechText: "Let's ship the connector on Friday.", timestamp: a.startMs + 240_000, appName: a.apps[0]?.appName ?? '' },
+    // A click and its focus are one step; a role alone is no step (live walk AR57).
+    { kind: 'focus', focusLabel: 'Allow for this session', focusRole: 'AXButton', timestamp: a.startMs + 300_000, appName: 'Claude' },
+    { kind: 'click', clickLabel: 'Allow for this session', clickRole: 'AXButton', timestamp: a.startMs + 300_400, appName: 'Claude' },
+    { kind: 'focus', focusRole: 'AXGroup', timestamp: a.startMs + 330_000, appName: 'Claude' },
+    { kind: 'click', clickLabel: 'StaticText', clickRole: 'AXStaticText', timestamp: a.startMs + 340_000, appName: 'Claude' },
 ];
 // Sessions with a first frame keep their screenshots, so their view has a replay above Steps (activity review v1.0.6 AR43).
 const fixtureSnapshots = (a: (typeof activities)[number]) => a.id === 'a4' ? [] : [0, 1, 2].map((k) => ({
@@ -131,6 +136,10 @@ const fixtureSnapshots = (a: (typeof activities)[number]) => a.id === 'a4' ? [] 
 const groups = activities.map((a, i) => ({ id: `g${i}`, appKey: a.apps[0]?.appName ?? '', appName: a.apps[0]?.appName ?? '', startTime: a.startMs, endTime: a.endMs, activeMs: a.activeMs, eventCount: 3, sessionIds: [`s${i}`], triggerKinds: [], primarySessionId: `s${i}`, summaryStatus: 'done', summary: { title: a.title, description: a.description }, events: fixtureEvents(a),
     firstFrame: a.id === 'a4' ? undefined : { timestamp: a.startMs, path: `/Users/ana/Library/Isoform/frames/${a.id}.jpg`, focusX: 0, focusY: 0, focusW: 0, focusH: 0 } }));
 const sessions = activities.map((a, i) => ({ id: `s${i}`, appName: a.apps[0]?.appName ?? '', bundleId: '', windowTitle: a.title, startTime: a.startMs, endTime: a.endMs, durationMs: a.activeMs, activeMs: a.activeMs, snapshotCount: 0, eventCount: 3, summary: a.description, title: a.title }));
+
+// A long subtitle wraps in the chart (live walk AR58).
+const memoThread = threads.find((th) => th.title.includes('Halcyon'));
+if (memoThread) memoThread.title = `${memoThread.title.split(':')[0]}: release, launch film review and the partner FAQ for week one`;
 
 let asked = false;
 const userItemId = 'u-ask';

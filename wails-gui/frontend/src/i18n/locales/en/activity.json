@@ -269,7 +269,8 @@
         "said": "Said",
         "heard": "Heard",
         "switchedApp": "Switched app",
-        "recorded": "Recorded"
+        "recorded": "Recorded",
+        "inApp": "{{object}} in {{app}}"
     },
     "systemEvents": {
         "verb": "Noted",

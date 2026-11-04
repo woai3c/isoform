@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -294,6 +295,8 @@ Rules:
 - Timeline items must cite raw eventIds from the provided list. Use eventIds only, never array indexes.
 - Keyboard events: "typed" is the literal text the user entered (already IME-composed). "imeRawKeys" are raw keystrokes captured under a composing input method (e.g. pinyin) — they are NOT the entered text; never quote or paraphrase them as content.
 - Never emit app switches, empty focus changes, or accidental clicks as timeline items; the run is already scoped to one app.
+- Never name accessibility roles (AXGroup, Button, StaticText) in a step. A click and the focus it causes are one step, in words: "Clicked Allow for this session in Claude".
+- Say "your computer", never "your Mac".
 - Quote speech in a step only when it says something a person would recognize later; a scrap such as "There the two." is not a step.
 - Do not include status, confidence, intent, timestamps, event indexes, or invented ids.
 - If evidence is thin, stay conservative — but still name whatever specific content is visible.
@@ -344,6 +347,13 @@ func renderTimelineSummaryEvent(evt ActivityTimelineEvent) string {
 	if activitySourceAppIsSensitive(evt.AppBundleID, evt.AppName) || activitymon.IsPrivateBrowsing(evt.WindowTitle) {
 		return ""
 	}
+	switch evt.Kind {
+	case activitymon.EventClick, activitymon.EventFocus:
+		// A click or focus with no name a person can read isn't a step (AR57).
+		if _, target := timelineEventActionAndTarget(evt.ActivityEvent); target == "" {
+			return ""
+		}
+	}
 	fields := []string{
 		fmt.Sprintf("eventId=%s", evt.EventID),
 		fmt.Sprintf("kind=%s", evt.Kind),
@@ -359,9 +369,6 @@ func renderTimelineSummaryEvent(evt ActivityTimelineEvent) string {
 		if target != "" {
 			fields = append(fields, fmt.Sprintf("target=%q", truncateRunes(redactActivityModelText(target), 240)))
 		}
-	}
-	if s := timelineEventRole(evt.ActivityEvent); s != "" {
-		fields = append(fields, fmt.Sprintf("role=%q", s))
 	}
 	if evt.Kind == activitymon.EventKeyboard {
 		if s := strings.TrimSpace(redactActivityModelText(evt.TypedText)); s != "" {
@@ -384,11 +391,7 @@ func renderTimelineSummaryEvent(evt ActivityTimelineEvent) string {
 func timelineEventActionAndTarget(evt activitymon.ActivityEvent) (string, string) {
 	switch evt.Kind {
 	case activitymon.EventClick:
-		target := strings.TrimSpace(evt.ClickLabel)
-		if target == "" {
-			target = strings.TrimSpace(evt.ClickRole)
-		}
-		return "clicked", target
+		return "clicked", timelineReadableLabel(evt.ClickLabel)
 	case activitymon.EventKeyboard:
 		if s := strings.TrimSpace(evt.TypedText); s != "" {
 			return "typed", s
@@ -403,11 +406,7 @@ func timelineEventActionAndTarget(evt activitymon.ActivityEvent) (string, string
 		}
 		return "pressed key", ""
 	case activitymon.EventFocus:
-		target := strings.TrimSpace(evt.FocusLabel)
-		if target == "" {
-			target = strings.TrimSpace(evt.FocusRole)
-		}
-		return "focused", target
+		return "focused", timelineReadableLabel(evt.FocusLabel)
 	case activitymon.EventAppSwitch:
 		return "switched app", strings.TrimSpace(evt.AppName)
 	case activitymon.EventSpeech:
@@ -417,21 +416,32 @@ func timelineEventActionAndTarget(evt activitymon.ActivityEvent) (string, string
 	}
 }
 
-func timelineEventRole(evt activitymon.ActivityEvent) string {
-	var role string
-	switch evt.Kind {
-	case activitymon.EventClick:
-		role = evt.ClickRole
-	case activitymon.EventFocus:
-		role = evt.FocusRole
-	default:
+// timelineAXRoleToken matches an accessibility role name such as "AXGroup".
+var timelineAXRoleToken = regexp.MustCompile(`\bAX[A-Z][A-Za-z]*\b`)
+
+var timelineRoleWords = map[string]bool{
+	"group": true, "button": true, "statictext": true, "text": true, "textfield": true, "textarea": true,
+	"image": true, "cell": true, "row": true, "link": true, "window": true, "menuitem": true, "checkbox": true,
+	"radiobutton": true, "popupbutton": true, "scrollarea": true, "webarea": true, "toolbar": true, "list": true,
+	"outline": true, "table": true, "tab": true, "tabgroup": true, "splitter": true, "unknown": true,
+}
+
+// timelineReadableLabel is a click or focus label a person can read, or ""
+// when it is only an accessibility role ("AXGroup", "Button", "StaticText")
+// (live walk AR57).
+func timelineReadableLabel(label string) string {
+	label = strings.TrimSpace(label)
+	if timelineAXRoleToken.MatchString(label) || timelineRoleWords[strings.ToLower(strings.ReplaceAll(label, " ", ""))] {
 		return ""
 	}
-	role = strings.TrimSpace(role)
-	if role == "" || role == "AXGroup" {
-		return role
-	}
-	return strings.TrimPrefix(role, "AX")
+	return label
+}
+
+var timelineYourMac = regexp.MustCompile(`\b([Yy]our) Mac(?:Book(?: Pro| Air)?)?\b`)
+
+// timelineTitleSaysComputer names the computer, not the brand (live walk AR58).
+func timelineTitleSaysComputer(title string) string {
+	return timelineYourMac.ReplaceAllString(title, "${1} computer")
 }
 
 func sanitizeTimelineGroupSummary(group ActivityTimelineGroup, resp timelineGroupSummaryResponse) ActivityTimelineGroupSummary {
@@ -455,7 +465,7 @@ func sanitizeTimelineGroupSummary(group ActivityTimelineGroup, resp timelineGrou
 	switchOnly := make([]bool, 0, len(resp.Timeline))
 	for _, item := range resp.Timeline {
 		action := strings.TrimSpace(item.Action)
-		if action == "" {
+		if action == "" || timelineAXRoleToken.MatchString(action) {
 			continue
 		}
 		ids := make([]string, 0, len(item.EventIDs))
@@ -502,7 +512,7 @@ func sanitizeTimelineGroupSummary(group ActivityTimelineGroup, resp timelineGrou
 		timeline = meaningful
 	}
 
-	title := timelineTitlePastTense(strings.TrimSpace(resp.Title))
+	title := timelineTitleSaysComputer(timelineTitlePastTense(strings.TrimSpace(resp.Title)))
 	if title == "" {
 		title = fmt.Sprintf("Used %s", group.AppName)
 	}
@@ -538,17 +548,17 @@ func timelineSpeechIsScrap(text string) bool {
 // imperativeTitleVerbs maps the leading verb of an English session title to
 // its past tense, so titles read like a diary (activity review v1.0.5 V4).
 var imperativeTitleVerbs = map[string]string{
-	"Add": "Added", "Analyze": "Analyzed", "Browse": "Browsed", "Build": "Built", "Call": "Called",
+	"Add": "Added", "Analyze": "Analyzed", "Ask": "Asked", "Attend": "Attended", "Browse": "Browsed", "Build": "Built", "Call": "Called",
 	"Check": "Checked", "Click": "Clicked", "Close": "Closed", "Commit": "Committed", "Compose": "Composed",
 	"Configure": "Configured", "Copy": "Copied", "Create": "Created", "Debug": "Debugged", "Delete": "Deleted",
-	"Discuss": "Discussed", "Download": "Downloaded", "Draft": "Drafted", "Edit": "Edited", "Explore": "Explored",
+	"Chat": "Chatted", "Discuss": "Discussed", "Download": "Downloaded", "Draft": "Drafted", "Edit": "Edited", "Email": "Emailed", "Explore": "Explored",
 	"Find": "Found", "Fix": "Fixed", "Go": "Went", "Inspect": "Inspected", "Install": "Installed",
 	"Join": "Joined", "Launch": "Launched", "Listen": "Listened", "Look": "Looked", "Make": "Made",
-	"Merge": "Merged", "Message": "Messaged", "Navigate": "Navigated", "Open": "Opened", "Plan": "Planned",
+	"Meet": "Met", "Merge": "Merged", "Message": "Messaged", "Navigate": "Navigated", "Open": "Opened", "Plan": "Planned",
 	"Play": "Played", "Push": "Pushed", "Remove": "Removed", "Reply": "Replied", "Research": "Researched",
 	"Respond": "Responded", "Review": "Reviewed", "Run": "Ran", "Save": "Saved", "Schedule": "Scheduled",
 	"Scroll": "Scrolled", "Search": "Searched", "Select": "Selected", "Send": "Sent", "Share": "Shared",
-	"Sign": "Signed", "Start": "Started", "Switch": "Switched", "Test": "Tested", "Type": "Typed",
+	"Sign": "Signed", "Start": "Started", "Switch": "Switched", "Talk": "Talked", "Test": "Tested", "Text": "Texted", "Type": "Typed",
 	"Update": "Updated", "Upload": "Uploaded", "Use": "Used", "View": "Viewed", "Visit": "Visited",
 	"Watch": "Watched", "Write": "Wrote",
 }

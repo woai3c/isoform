@@ -220,7 +220,7 @@ export function ActivitySessionsList({
             {sessions.map((sess) => {
                 // Cap the title at three app names — raw joined lists run
                 // to a full line of system noise ("Dock, loginwindow, …").
-                const shown = sess.appNames.slice(0, 3).join(', ');
+                const shown = sess.appNames.slice(0, 3).map((app) => appLabel(tr, app)).join(', ');
                 const extra = sess.appNames.length - 3;
                 const apps = !sess.appNames.length ? '' : extra > 0 ? tr('activitySessionsMoreApps', { apps: shown, count: extra }) : shown;
                 const when = formatAbsolute(i18n.language, sess.startTime);

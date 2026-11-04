@@ -57,6 +57,32 @@ func AppDisplayName(app string) string {
 	return titleCase(app)
 }
 
+// chineseAppNames are the apps with their own Chinese name (design review
+// N44). Every other app keeps its brand name in Chinese text too.
+var chineseAppNames = map[string]string{
+	"wechat": "微信",
+	"weixin": "微信",
+	"feishu": "飞书",
+}
+
+// AppDisplayNameIn is AppDisplayName in the UI language: zh-CN uses an app's
+// Chinese name where it has one (WeChat is 微信). It also takes a display
+// name ("WeChat"), so a label already written in English can be localized.
+func AppDisplayNameIn(app, lang string) string {
+	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(lang)), "zh") {
+		if v, ok := ChineseAppName(app); ok {
+			return v
+		}
+	}
+	return AppDisplayName(app)
+}
+
+// ChineseAppName is the app's own Chinese name, when it has one.
+func ChineseAppName(app string) (string, bool) {
+	v, ok := chineseAppNames[strings.TrimSpace(strings.ToLower(app))]
+	return v, ok
+}
+
 // titleCase upper-cases the first rune of each underscore- or
 // dash-separated chunk and joins with a single space. Conservative
 // fallback for unknown app ids.

@@ -1812,11 +1812,38 @@ function KeyCharDisplay({ keyChars, keyword }: { keyChars: string[]; keyword: st
     );
 }
 
-function eventRoleLabel(role?: string): string {
-    const raw = role?.trim() ?? '';
-    if (!raw) return '';
-    if (raw === 'AXGroup') return raw;
-    return raw.replace(/^AX/, '');
+const AX_ROLE_TOKEN = /\bAX[A-Z][A-Za-z]*\b/;
+const ROLE_WORDS = new Set(['group', 'button', 'statictext', 'text', 'textfield', 'textarea', 'image', 'cell', 'row', 'link',
+    'window', 'menuitem', 'checkbox', 'radiobutton', 'popupbutton', 'scrollarea', 'webarea', 'toolbar', 'list', 'outline',
+    'table', 'tab', 'tabgroup', 'splitter', 'unknown']);
+
+/** No name a person can read: empty, or only an accessibility role such as
+ *  "AXGroup", "Button" or "StaticText" (live walk AR57), as in Go's
+ *  timelineReadableLabel. */
+export function isRoleName(value?: string): boolean {
+    const v = (value ?? '').trim();
+    return !v || AX_ROLE_TOKEN.test(v) || ROLE_WORDS.has(v.replace(/\s+/g, '').toLowerCase());
+}
+
+/** The events that are steps: a click or focus needs a readable name, the
+ *  focus a click causes folds into that click, and speech scraps drop
+ *  (activity review v1.0.5 V6, live walk AR57). */
+export function stepEventIndexes(events: activitymon.ActivityEvent[]): number[] {
+    return events.flatMap((evt, idx) => {
+        if (evt.kind === 'speech' && isSpeechScrap(evt.speechText)) return [];
+        if (evt.kind === 'click' && isRoleName(evt.clickLabel)) return [];
+        if (evt.kind !== 'focus') return [idx];
+        if (isRoleName(evt.focusLabel)) return [];
+        const label = evt.focusLabel!.trim();
+        const clickTwin = [events[idx - 1], events[idx + 1]].some((o) => o?.kind === 'click' && o.clickLabel?.trim() === label
+            && o.appName === evt.appName && Math.abs(o.timestamp - evt.timestamp) <= 5_000);
+        return clickTwin ? [] : [idx];
+    });
+}
+
+function stepObject(label: string | undefined, app: string | undefined, t: TFunction<'activity'>): string {
+    const object = isRoleName(label) ? '' : label!.trim();
+    return object && app ? t('stepVerbs.inApp', { object, app }) : object;
 }
 
 export function eventActionLabel(evt: activitymon.ActivityEvent, t: TFunction<'activity'>): { verb: string; object: string } {
@@ -1824,7 +1851,7 @@ export function eventActionLabel(evt: activitymon.ActivityEvent, t: TFunction<'a
         case 'click':
             return {
                 verb: t('stepVerbs.clicked'),
-                object: evt.clickLabel || eventRoleLabel(evt.clickRole),
+                object: stepObject(evt.clickLabel, evt.appName, t),
             };
         case 'keyboard':
             // typedText is the committed text recovered from focused-field
@@ -1833,7 +1860,7 @@ export function eventActionLabel(evt: activitymon.ActivityEvent, t: TFunction<'a
         case 'focus':
             return {
                 verb: t('stepVerbs.focused'),
-                object: evt.focusLabel || eventRoleLabel(evt.focusRole),
+                object: stepObject(evt.focusLabel, evt.appName, t),
             };
         case 'speech':
             return {
@@ -2612,9 +2639,8 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
     // rows hold a blank icon slot instead of flashing the 'focus' fallback
     // that the real kind then replaces.
     const timelineEventsPending = !!selectedTimelineGroup && detail?.id !== selectedTimelineGroup.id;
-    // Raw steps, without speech scraps (activity review v1.0.5 V6).
-    const stepEventRows = (detail?.events ?? []).flatMap((evt, idx) =>
-        evt.kind === 'speech' && isSpeechScrap(evt.speechText) ? [] : [idx]);
+    const stepEventRows = stepEventIndexes(detail?.events ?? []);
+    const stepEventSet = new Set(stepEventRows);
     const visibleDurationMs = selectedTimelineGroup ? selectedTimelineGroup.activeMs : (detail ? detail.endTime - detail.startTime : 0);
 
     useEffect(() => {
@@ -5159,7 +5185,9 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                             return { event: detail.events[eventIdx], eventIdx };
                                                         })
                                                         .filter((entry): entry is { event: activitymon.ActivityEvent; eventIdx: number } => Boolean(entry));
-                                                    if (sourceEvents.length > 0 && sourceEvents.every(({ event }) => event.kind === 'speech' && isSpeechScrap(event.speechText))) return null;
+                                                    if (AX_ROLE_TOKEN.test(item.action)) return null;
+                                                    const steps = sourceEvents.filter(({ eventIdx }) => stepEventSet.has(eventIdx));
+                                                    if (sourceEvents.length > 0 && steps.length === 0) return null;
                                                     const semanticIconKind = sourceEvents[0]?.event.kind ?? (timelineEventsPending ? null : 'focus');
                                                     const actionParts = splitSemanticAction(item.action);
                                                     const toggleExpanded = () => {
@@ -5217,11 +5245,8 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                                             ))}
                                                                             </div>
                                                                         )}
-                                                                        {sourceEvents.map(({ event, eventIdx }) => {
+                                                                        {steps.map(({ event, eventIdx }) => {
                                                                             const action = eventActionLabel(event, t);
-                                                                            const eventRole = eventRoleLabel(
-                                                                                event.kind === 'click' ? event.clickRole : event.kind === 'focus' ? event.focusRole : undefined,
-                                                                            );
                                                                             const keyboardChars = event.keyChars ?? (event.keyChar ? [event.keyChar] : []);
                                                                             const hasMedia = eventHasMedia.get(eventIdx) ?? false;
                                                                             return (
@@ -5254,9 +5279,9 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                                                                 <HighlightText text={action.object} keyword={debouncedKeyword} />
                                                                                             </span>
                                                                                         ) : null}
-                                                                                        {(eventRole || event.windowTitle) && (
+                                                                                        {event.windowTitle && (
                                                                                             <span className="ml-1 text-muted/55">
-                                                                                                {eventRole || event.windowTitle}
+                                                                                                {event.windowTitle}
                                                                                             </span>
                                                                                         )}
                                                                                     </span>
@@ -5299,9 +5324,6 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                             selectedSpeakerTimestamps.has(evt.timestamp);
                                                         const isAppSwitch = prevEvt && prevEvt.appName !== evt.appName;
                                                         const action = eventActionLabel(evt, t);
-                                                        const eventRole = eventRoleLabel(
-                                                            evt.kind === 'click' ? evt.clickRole : evt.kind === 'focus' ? evt.focusRole : undefined,
-                                                        );
                                                         const keyboardChars = evt.keyChars ?? (evt.keyChar ? [evt.keyChar] : []);
                                                         return (
                                                         <>
@@ -5388,13 +5410,8 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                                         </span>
                                                                     ) : null}
                                                                 </div>
-                                                                {(eventRole || evt.windowTitle) && (
+                                                                {evt.windowTitle && (
                                                                     <div className="flex items-center gap-1.5 text-[11px] text-muted/70 mt-0.5">
-                                                                        {eventRole && (
-                                                                            <span className="bg-panel-warm px-1 py-0.5 rounded text-[10px] font-mono">
-                                                                                <HighlightText text={eventRole} keyword={debouncedKeyword} />
-                                                                            </span>
-                                                                        )}
                                                                         {evt.windowTitle && (
                                                                             <span className="truncate text-muted/60">
                                                                                 <HighlightText text={evt.windowTitle} keyword={debouncedKeyword} />

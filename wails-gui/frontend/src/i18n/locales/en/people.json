@@ -312,7 +312,9 @@
     "apps": {
         "email": "Email",
         "calendar": "Calendar",
-        "contacts": "Contacts"
+        "contacts": "Contacts",
+        "wechat": "WeChat",
+        "feishu": "Feishu"
     },
     "firstDay": {
         "calendarGroup": "From this week's calendar",

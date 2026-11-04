@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"wails-gui/internal/identity"
 )
 
 var chatDuration = regexp.MustCompile(`^(\d+) (minute|minutes|hour|hours)$`)
@@ -55,6 +57,10 @@ func ChatParams(params map[string]string, lang string) map[string]string {
 					out[key] = translated + strings.TrimPrefix(value, prefix)
 					break
 				}
+			}
+		case "where":
+			if name, ok := identity.ChineseAppName(value); ok {
+				out[key] = name
 			}
 		case "people":
 			if strings.HasPrefix(value, "with ") {

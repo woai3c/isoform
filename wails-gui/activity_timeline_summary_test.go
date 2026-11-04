@@ -358,3 +358,40 @@ func TestBuildTimelineGroupSummaryPrompt_PastTenseTitlesAndSpeech(t *testing.T) 
 		}
 	}
 }
+
+func TestTimelineStepsHaveNoRoleNames(t *testing.T) {
+	for label, want := range map[string]string{
+		"AXGroup": "", "Button": "", "StaticText": "", "  ": "",
+		"Allow for this session": "Allow for this session", "Group chat": "Group chat",
+	} {
+		if got := timelineReadableLabel(label); got != want {
+			t.Fatalf("timelineReadableLabel(%q) = %q, want %q", label, got, want)
+		}
+	}
+	roleOnly := ActivityTimelineEvent{
+		ActivityEvent: activitymon.ActivityEvent{Kind: activitymon.EventFocus, FocusRole: "AXGroup"},
+		EventID:       "ae_1",
+	}
+	if line := renderTimelineSummaryEvent(roleOnly); line != "" {
+		t.Fatalf("a focus with only a role must not reach the model: %s", line)
+	}
+	click := ActivityTimelineEvent{
+		ActivityEvent: activitymon.ActivityEvent{Kind: activitymon.EventClick, ClickLabel: "Allow for this session", ClickRole: "AXButton"},
+		EventID:       "ae_2",
+	}
+	if line := renderTimelineSummaryEvent(click); !strings.Contains(line, "Allow for this session") || strings.Contains(line, "role=") || strings.Contains(line, "Button") {
+		t.Fatalf("click line must name the label and no role: %s", line)
+	}
+}
+
+func TestTimelineTitleSaysComputer(t *testing.T) {
+	for in, want := range map[string]string{
+		"Restarted your Mac":             "Restarted your computer",
+		"Your MacBook Pro went to sleep": "Your computer went to sleep",
+		"Opened Mac Mail":                "Opened Mac Mail",
+	} {
+		if got := timelineTitleSaysComputer(in); got != want {
+			t.Fatalf("timelineTitleSaysComputer(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

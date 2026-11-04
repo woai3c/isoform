@@ -60,3 +60,16 @@ func TestChatCopyLocalizesPlaybookFailureInstructionsBothWays(t *testing.T) {
 		}
 	}
 }
+
+func TestChatParamsUseTheChineseAppName(t *testing.T) {
+	copy, _ := Copy(KindPersonReappeared, "zh-CN")
+	if got := Render(copy.Sealed, ChatParams(map[string]string{"name": "王晓雨", "where": "WeChat"}, "zh-CN")); got != "王晓雨在微信中出现了。要记一笔吗？" {
+		t.Fatalf("zh-CN = %q", got)
+	}
+	if got := ChatParams(map[string]string{"where": "Slack"}, "zh-CN")["where"]; got != "Slack" {
+		t.Fatalf("Slack = %q", got)
+	}
+	if got := ChatParams(map[string]string{"where": "WeChat"}, "en")["where"]; got != "WeChat" {
+		t.Fatalf("en = %q", got)
+	}
+}

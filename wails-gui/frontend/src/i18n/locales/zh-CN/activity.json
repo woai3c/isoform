@@ -269,7 +269,8 @@
         "said": "说",
         "heard": "听到",
         "switchedApp": "切换应用",
-        "recorded": "记录"
+        "recorded": "记录",
+        "inApp": "{{app}} 中的 {{object}}"
     },
     "systemEvents": {
         "verb": "记录",

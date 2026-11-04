@@ -29,15 +29,13 @@ export function maskHandleId(id: string): string {
     return `${value.slice(0, 4)}…${value.slice(-6)}`;
 }
 
-// Product names stay as written; the ids that are plain words (email,
-// calendar) are translated. Anything else shows as stored, capitalized.
+// Product names stay as written, except those with their own Chinese name
+// (WeChat is 微信, Feishu is 飞书) and the ids that are plain words (email,
+// calendar): those are translated. Anything else shows as stored, capitalized.
 const APP_NAMES: Record<string, string> = {
     slack: 'Slack',
-    wechat: 'WeChat',
-    weixin: 'WeChat',
     telegram: 'Telegram',
     discord: 'Discord',
-    feishu: 'Feishu',
     lark: 'Lark',
     imessage: 'iMessage',
     whatsapp: 'WhatsApp',
@@ -49,6 +47,11 @@ const APP_WORDS: Record<string, string> = {
     mail: 'apps.email',
     calendar: 'apps.calendar',
     contacts: 'apps.contacts',
+    wechat: 'apps.wechat',
+    weixin: 'apps.wechat',
+    微信: 'apps.wechat',
+    feishu: 'apps.feishu',
+    飞书: 'apps.feishu',
 };
 
 export function appLabel(t: Translate, app: string): string {

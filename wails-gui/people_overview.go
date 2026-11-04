@@ -782,10 +782,10 @@ func (a *App) getPersonDetail(id string, cache *peopleReadGateCache) (PersonDeta
 	return detail, nil
 }
 
-// personTogether lists the moments that involve the person: meetings with
-// them and Activity moments where Isoform saw them (a message from or to
-// them while the moment ran) or that name them. Other work from a session
-// they appeared in stays in Activity.
+// personTogether lists the moments that involve the person: meetings they
+// attend and Activity moments whose title names them as the other side (a
+// message, reply or call with them, something made for them). Being seen in
+// the same session, app or hour is not enough; that work stays in Activity.
 func (a *App) personTogether(ctx context.Context, p storage.PrincipalRow, recent []storage.PrincipalRecentMessageRow, detail *PersonDetail, cache *peopleReadGateCache) error {
 	if a.IsClosedEyesModeEnabled() {
 		return nil
@@ -803,7 +803,8 @@ func (a *App) personTogether(ctx context.Context, p storage.PrincipalRow, recent
 				}
 				for _, attendee := range event.Attendees {
 					if attendee.PrincipalID == p.ID {
-						detail.Together = append(detail.Together, PersonTogether{Kind: "meeting", At: event.StartAt, Title: event.Title, App: "calendar", DurationMs: event.EndAt - event.StartAt})
+						title := strings.TrimSpace(personTogetherMeetingID.ReplaceAllString(event.Title, ""))
+						detail.Together = append(detail.Together, PersonTogether{Kind: "meeting", At: event.StartAt, Title: title, App: "calendar", DurationMs: event.EndAt - event.StartAt})
 						break
 					}
 				}
@@ -821,28 +822,7 @@ func (a *App) personTogether(ctx context.Context, p storage.PrincipalRow, recent
 	if err != nil {
 		return err
 	}
-	var seenAt []int64
-	for _, message := range recent {
-		seenAt = append(seenAt, message.SeenAt)
-	}
-	for _, sighting := range sightings {
-		seenAt = append(seenAt, sighting.FirstSeenAt, sighting.LastSeenAt)
-	}
 	names := personTogetherNames(p)
-	involves := func(moment ActivityRow) bool {
-		for _, at := range seenAt {
-			if at > 0 && at >= moment.StartMs && at <= moment.EndMs {
-				return true
-			}
-		}
-		title := strings.ToLower(moment.Title)
-		for _, name := range names {
-			if strings.Contains(title, name) {
-				return true
-			}
-		}
-		return false
-	}
 	seen := map[string]bool{}
 	for _, sighting := range sightings {
 		session, err := a.peopleSessionRow(sighting.SessionID, cache)
@@ -880,7 +860,7 @@ func (a *App) personTogether(ctx context.Context, p storage.PrincipalRow, recent
 					}
 				}
 			}
-			if !associated || !involves(moment) {
+			if !associated || !personTogetherParticipant(moment.Title, names) {
 				continue
 			}
 			seen[moment.ID] = true
@@ -889,7 +869,7 @@ func (a *App) personTogether(ctx context.Context, p storage.PrincipalRow, recent
 			if len(apps) > 0 {
 				app = apps[0]
 			}
-			detail.Together = append(detail.Together, PersonTogether{Kind: "activity", At: moment.StartMs, Title: moment.Title, App: app, DurationMs: moment.EndMs - moment.StartMs})
+			detail.Together = append(detail.Together, PersonTogether{Kind: "activity", At: moment.StartMs, Title: personTogetherTitle(moment.Title, app), App: app, DurationMs: moment.EndMs - moment.StartMs})
 		}
 	}
 	return nil
@@ -1239,17 +1219,4 @@ func (a *App) lockPeoplePublication(ctx context.Context, expected peopleReadRevi
 		releases = append(releases, unlock)
 	}
 	return release, nil
-}
-
-// personTogetherNames are the lowercase names a moment's title may use for
-// the person; one-rune names would match too much.
-func personTogetherNames(p storage.PrincipalRow) []string {
-	var names []string
-	for _, name := range append([]string{p.DisplayName}, p.Aliases...) {
-		name = strings.ToLower(strings.TrimSpace(name))
-		if len([]rune(name)) >= 2 {
-			names = append(names, name)
-		}
-	}
-	return names
 }

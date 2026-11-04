@@ -312,7 +312,9 @@
     "apps": {
         "email": "邮件",
         "calendar": "日历",
-        "contacts": "通讯录"
+        "contacts": "通讯录",
+        "wechat": "微信",
+        "feishu": "飞书"
     },
     "firstDay": {
         "calendarGroup": "来自本周日历",

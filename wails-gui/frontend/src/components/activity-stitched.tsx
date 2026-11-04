@@ -776,9 +776,9 @@ function StitchedTimeline({
                                 <span className={cn(LABEL_COLUMN, 'flex flex-col gap-px pl-2 pr-3')} title={laneTip}>
                                     <span className="break-words text-[13px] font-semibold text-ink" title={item.thread.title}>{titles.get(id) ?? title.title}</span>
                                     {item.continuesBefore && <span className="text-[11px] text-muted">{t('stitched.continuesBefore')}</span>}
-                                    <span className="flex text-[11.5px] text-muted" title={meta}>
-                                        {detail && <span className="truncate">{detail}</span>}
-                                        <span className="shrink-0 whitespace-pre">{activeSuffix}</span>
+                                    <span className="break-words text-[11.5px] text-muted" title={meta}>
+                                        {detail}
+                                        <span className="whitespace-pre">{activeSuffix}</span>
                                     </span>
                                 </span>
                                 <span className="relative block h-[22px] min-w-[300px] flex-1 overflow-hidden">

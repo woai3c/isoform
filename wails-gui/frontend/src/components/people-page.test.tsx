@@ -593,8 +593,9 @@ describe("N39, N41: Together says who did it, in the past tense, the app said on
             render(<PeoplePage />);
             const aside = await screen.findByRole("complementary");
             expect(await within(aside).findByText("王晓雨给你发了邮件")).toBeInTheDocument();
-            expect(within(aside).getByText("你和王晓雨聊了发布时间 · WeChat")).toBeInTheDocument();
+            expect(within(aside).getByText("你和王晓雨聊了发布时间 · 微信")).toBeInTheDocument();
             expect(aside).not.toHaveTextContent(/给 ?王晓雨 ?发了/);
+            expect(aside).not.toHaveTextContent(/WeChat/);
         } finally {
             await i18n.changeLanguage("en");
         }
@@ -961,6 +962,22 @@ describe("Everything stays reachable", () => {
         await waitFor(() => expect(mocks.sessions).toHaveBeenCalledWith("marcus", 50));
         expect(within(aside).queryByRole("button", { name: /Activity sessions/ })).not.toBeInTheDocument();
         for (const lng of ["en", "zh-CN"]) expect(i18n.exists("people:activitySessionsEmpty", { lng })).toBe(false);
+    });
+
+    it("N44: Activity session app names use the same localized labels as Together", async () => {
+        await i18n.changeLanguage("zh-CN");
+        try {
+            world();
+            mocks.sessions.mockResolvedValue([{ sessionId: "s1", startTime: Date.now(), endTime: 0, appNames: ["WeChat", "Feishu", "Safari"], firstSeenAt: 0, lastSeenAt: 0 }]);
+            render(<PeoplePage />);
+            const aside = await screen.findByRole("complementary");
+            const fold = await within(aside).findByRole("button", { name: /活动会话/ });
+            fireEvent.click(fold);
+            expect(await within(aside).findByText("微信, 飞书, Safari")).toBeInTheDocument();
+            expect(aside).not.toHaveTextContent(/WeChat|Feishu/);
+        } finally {
+            await i18n.changeLanguage("en");
+        }
     });
 
     it("N3/N17: a failed delete says so at the top of the detail with Try again, no toast", async () => {

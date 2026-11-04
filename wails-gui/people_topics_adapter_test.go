@@ -184,7 +184,7 @@ func TestPersonSharedTopicsReadFailureKeepsTheDetail(t *testing.T) {
 	a := peopleTopicsTestApp(t)
 	p := peopleTestContact(t, a, "Mei Chen")
 	at := time.Now().Add(-time.Hour).UnixMilli()
-	peopleTestActivity(t, a, p, "kept", "Code", "Readable work", "done", at)
+	peopleTestActivity(t, a, p, "kept", "Code", "Message Mei about readable work", "done", at)
 	if err := a.store.BumpPrincipalSighting(t.Context(), p.ID, "wechat", "", at, "preview never in detail"); err != nil {
 		t.Fatal(err)
 	}

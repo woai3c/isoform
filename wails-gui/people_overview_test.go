@@ -286,11 +286,11 @@ func TestPersonDetailTogetherPrivacyAndClosedEyes(t *testing.T) {
 		t.Fatal(err)
 	}
 	at := time.Now().Add(-time.Hour).UnixMilli()
-	peopleTestActivity(t, a, p, "allowed", "Code", "Readable work", "done", at)
-	peopleTestActivity(t, a, p, "protected", "Code", "private protected title", "protected", at+2000)
-	peopleTestActivity(t, a, p, "sensitive", "Secret App", "private sensitive title", "done", at+4000)
-	peopleTestActivity(t, a, p, "mail", "Mail", "private mail subject", "done", at+6000)
-	peopleTestActivity(t, a, p, "private-window", "Code", "Private - Incognito", "done", at+8000)
+	peopleTestActivity(t, a, p, "allowed", "Code", "Message Mei about Readable work", "done", at)
+	peopleTestActivity(t, a, p, "protected", "Code", "Message Mei about private protected title", "protected", at+2000)
+	peopleTestActivity(t, a, p, "sensitive", "Secret App", "Message Mei about private sensitive title", "done", at+4000)
+	peopleTestActivity(t, a, p, "mail", "Mail", "Message Mei about private mail subject", "done", at+6000)
+	peopleTestActivity(t, a, p, "private-window", "Code", "Message Mei - Private - Incognito", "done", at+8000)
 	pii.SetUserSensitiveApps(map[string]string{"com.example.secret": "Secret App"})
 	got, err := a.GetPersonDetail(p.ID)
 	if err != nil {
@@ -299,7 +299,7 @@ func TestPersonDetailTogetherPrivacyAndClosedEyes(t *testing.T) {
 	if got.Notes != p.Notes || got.ResearchSummary != "stored research summary" {
 		t.Fatal(got)
 	}
-	if len(got.Together) != 1 || got.Together[0].Kind != "activity" || got.Together[0].Title != "Readable work" || got.Together[0].DurationMs != 1000 {
+	if len(got.Together) != 1 || got.Together[0].Kind != "activity" || got.Together[0].Title != "Messaged Mei about Readable work" || got.Together[0].DurationMs != 1000 {
 		t.Fatalf("together=%+v", got.Together)
 	}
 	raw, _ := json.Marshal(got)

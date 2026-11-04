@@ -843,7 +843,7 @@ func (s *ActivityStore) GetTimelineGroupSummaries(groupIDs []string) (map[string
 			&summary.ActivityType, &entitiesJSON, &timelineJSON); err != nil {
 			return nil, fmt.Errorf("scan timeline group summary: %w", err)
 		}
-		summary.Title = timelineTitlePastTense(summary.Title)
+		summary.Title = timelineTitleSaysComputer(timelineTitlePastTense(summary.Title))
 		if err := json.Unmarshal([]byte(entitiesJSON), &summary.Entities); err != nil {
 			log.Printf("[activity] failed to unmarshal timeline group summary entities: %v", err)
 		}

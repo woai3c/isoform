@@ -42,3 +42,20 @@ func TestAppDisplayName(t *testing.T) {
 		})
 	}
 }
+
+func TestAppDisplayNameIn(t *testing.T) {
+	for _, c := range []struct{ app, lang, want string }{
+		{"wechat", "zh-CN", "微信"},
+		{"WeChat", "zh-CN", "微信"},
+		{"weixin", "zh", "微信"},
+		{"feishu", "zh-CN", "飞书"},
+		{"slack", "zh-CN", "Slack"},
+		{"pages", "zh-CN", "Pages"},
+		{"wechat", "en", "WeChat"},
+		{"wechat", "", "WeChat"},
+	} {
+		if got := AppDisplayNameIn(c.app, c.lang); got != c.want {
+			t.Errorf("AppDisplayNameIn(%q, %q) = %q, want %q", c.app, c.lang, got, c.want)
+		}
+	}
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '@/i18n';
-import { durationWords, formatAbsolute, togetherWords } from './people-format';
+import { appLabel, durationWords, formatAbsolute, togetherWords } from './people-format';
 
 const t = (lng: string) => (key: string, options?: Record<string, unknown>) => i18n.t(`people:${key}` as never, { lng, ...options } as never) as unknown as string;
 
@@ -50,11 +50,30 @@ describe('N41: each Together line says who did it', () => {
     it('zh-CN: incoming says they wrote to you, never 给…发了消息', () => {
         const zh = t('zh-CN');
         expect(togetherWords(zh, line('message', '', 'email', 'in'), '王晓雨')).toBe('王晓雨给你发了邮件');
-        expect(togetherWords(zh, line('message', '', 'wechat', 'in'), '王晓雨')).toBe('王晓雨给你发了消息 · WeChat');
-        expect(togetherWords(zh, line('message', '', 'wechat', 'out'), '王晓雨')).toBe('你给王晓雨发了消息 · WeChat');
+        expect(togetherWords(zh, line('message', '', 'wechat', 'in'), '王晓雨')).toBe('王晓雨给你发了消息 · 微信');
+        expect(togetherWords(zh, line('message', '', 'wechat', 'out'), '王晓雨')).toBe('你给王晓雨发了消息 · 微信');
         expect(togetherWords(zh, line('message', '', 'email'), '王晓雨')).toBe('和王晓雨的邮件');
-        expect(togetherWords(zh, line('activity', '和王晓雨聊了发布时间', 'WeChat'), '王晓雨')).toBe('你和王晓雨聊了发布时间 · WeChat');
+        expect(togetherWords(zh, line('activity', '和王晓雨聊了发布时间', 'WeChat'), '王晓雨')).toBe('你和王晓雨聊了发布时间 · 微信');
         expect(togetherWords(zh, line('activity', '你为王晓雨写了发布说明', 'Pages'), '王晓雨')).toBe('你为王晓雨写了发布说明 · Pages');
         expect(togetherWords(zh, line('message', '', 'wechat', 'in'), '王晓雨')).not.toMatch(/^给/);
+    });
+
+    it('a reply in the live walk reads as yours, the app named once', () => {
+        expect(togetherWords(t('en'), line('activity', 'Messaged Aiden about the website and release timing', 'WeChat'), 'Aiden')).toBe('You messaged Aiden about the website and release timing · WeChat');
+        expect(togetherWords(t('en'), line('activity', 'Replied to Aiden about the beta invite', 'WeChat'), 'Aiden')).toBe('You replied to Aiden about the beta invite · WeChat');
+    });
+});
+
+describe('N44: app names in zh-CN use their Chinese name', () => {
+    it('WeChat is 微信 and Feishu is 飞书; names without one stay', () => {
+        const zh = t('zh-CN');
+        expect(appLabel(zh, 'wechat')).toBe('微信');
+        expect(appLabel(zh, 'WeChat')).toBe('微信');
+        expect(appLabel(zh, 'weixin')).toBe('微信');
+        expect(appLabel(zh, 'feishu')).toBe('飞书');
+        expect(appLabel(zh, 'slack')).toBe('Slack');
+        expect(appLabel(zh, 'Pages')).toBe('Pages');
+        expect(appLabel(t('en'), 'wechat')).toBe('WeChat');
+        expect(appLabel(t('en'), 'feishu')).toBe('Feishu');
     });
 });
