@@ -65,7 +65,7 @@ export function CallTranscript({ meetingKey, sessionId }: { meetingKey: string; 
                 <div className="flex items-baseline gap-2 text-[11px]">
                     {turn.speakerId === 'you' ? <span className="font-medium text-ink">{label(turn)}</span> :
                         <button type="button" aria-label={t('callTurns.renameLabel', { name: label(turn) })} onClick={() => { setEditing(turn); setName(turn.name); setRenameFailed(false); }} className="rounded-md px-1 -ml-1 font-medium text-ink hover:bg-border/50 underline decoration-border underline-offset-2">{label(turn)}</button>}
-                    <time dateTime={new Date(turn.startTime).toISOString()} className="text-muted tabular-nums">{new Date(turn.startTime).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>
+                    <time dateTime={new Date(turn.startTime).toISOString()} className="text-muted tabular-nums">{new Date(turn.startTime).toLocaleTimeString(i18n.language, { hour: 'numeric', minute: '2-digit' })}</time>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap break-words text-[12.5px] leading-relaxed text-ink">{turn.text}</p>
             </li>)}

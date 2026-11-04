@@ -178,8 +178,17 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 	storedRead := a.launchStoredReads()
 	var latest MobileBriefV1
 	var ok bool
-	if service, isService := svc.(*mobileBriefService); isService && storedRead {
-		latest, ok = service.storedLatestForLaunch()
+	if service, isService := svc.(*mobileBriefService); isService && service != nil {
+		// Today shows the stored brief, checked against the current privacy
+		// rules, at once. Its live signals are read in the background: that
+		// read can take minutes and waits for any refresh in progress.
+		var readErr error
+		if latest, ok, readErr = service.finishedLatest(); readErr != nil {
+			return TodayBriefView{}, readErr
+		}
+		if !storedRead {
+			service.refreshTodaySoon()
+		}
 	} else {
 		latest, ok = svc.LatestMobileBrief()
 	}
@@ -228,7 +237,10 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 		switch {
 		case !selectedAt.IsZero():
 			if !ok || latest.BriefID != selected.BriefID {
-				latest, ok = service.GetMobileBrief(selected.BriefID)
+				var readErr error
+				if latest, ok, readErr = service.finishedBrief(selected.BriefID); readErr != nil {
+					return TodayBriefView{}, readErr
+				}
 			}
 			latestReady = selectedAt
 		case ok:
@@ -346,7 +358,16 @@ func (a *App) GetTodayBriefByID(briefID string) (TodayBriefView, error) {
 	if svc == nil {
 		return a.GetLatestBrief()
 	}
-	brief, ok := svc.GetMobileBrief(briefID)
+	var brief MobileBriefV1
+	var ok bool
+	if service, isService := svc.(*mobileBriefService); isService && service != nil {
+		var err error
+		if brief, ok, err = service.finishedBrief(briefID); err != nil {
+			return TodayBriefView{}, err
+		}
+	} else {
+		brief, ok = svc.GetMobileBrief(briefID)
+	}
 	if !ok || brief.BriefID != briefID {
 		return a.GetLatestBrief()
 	}

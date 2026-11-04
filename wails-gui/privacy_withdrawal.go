@@ -68,5 +68,6 @@ func subscribePrivacyWithdrawals(subscriber func(privacyWithdrawal)) func() {
 }
 
 func publishPrivacyWithdrawal(scope privacyWithdrawalScope) {
+	noteMobileBriefReadInputsChanged()
 	privacyWithdrawals.publish(privacyWithdrawal{Scope: scope})
 }

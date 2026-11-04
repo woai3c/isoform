@@ -1,8 +1,8 @@
 import { memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { AlertCircle, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react';
-import { ActivityInlineNotice, errorNotice, type ActivityNotice } from './activity-inline-notice';
+import { ChevronLeft, ChevronRight, Undo2 } from 'lucide-react';
+import { ACTION_LINK, ActivityInlineNotice, errorNotice, type ActivityNotice } from './activity-inline-notice';
 import {
     ConfirmActivityThreadLink,
     MoveActivityToThread,
@@ -270,16 +270,16 @@ export function stitchedAxisTicks(start: number, end: number, trackWidth: number
 
 /** dayActiveMs is the day's one active time (the Your day line); without it,
  *  as while a search narrows the rows, the shown rows' time is summed. */
-export function stitchedSubline(t: TFunction<'activity'>, items: StitchedThread[], momentCount: number, dayActiveMs?: number): string {
+export function stitchedSubline(t: TFunction<'activity'>, items: StitchedThread[], dayActiveMs?: number, language = 'en'): string {
     const range = timelineRange(items);
     return t('stitched.subline', {
-        count: momentCount,
-        span: t('stitched.hours', { count: Math.max(1, Math.ceil((range.end - range.start) / HOUR_MS)) }),
+        start: stitchedClock(range.start, language),
+        end: stitchedClock(range.end, language),
         active: formatDurationMs(dayActiveMs ?? items.reduce((sum, item) => sum + activeTime(item), 0)),
     });
 }
 
-/** "Isoform linked these because: ..." in words. Go sends the provenance;
+/** "Linked because: ..." in words; "Picked back up" only after an interruption. Go sends the provenance;
  *  the sentence is written here and never decides grouping. */
 export function linkReasonText(t: TFunction<'activity'>, reason: ActivityThreadLinkReason | undefined, language: string): string {
     let base = t('stitched.whyFallback');
@@ -300,9 +300,9 @@ export function linkReasonText(t: TFunction<'activity'>, reason: ActivityThreadL
             base = t('stitched.whySame', { things: joinList(nouns, language) });
         }
     }
-    return reason?.resumedWithinMinutes != null
+    return reason?.resumedWithinMinutes != null && reason.resumedWithinMinutes * 60_000 >= INTERRUPTION_MS
         ? t('stitched.whyResumed', { reason: base, minutes: reason.resumedWithinMinutes })
-        : base;
+        : t('stitched.why', { reason: base });
 }
 
 function joinList(items: string[], language: string): string {
@@ -537,16 +537,13 @@ function StitchedLoading() {
 export function StitchedFailure({ onRetry }: { onRetry: () => void }) {
     const { t } = useTranslation('activity');
     return (
-        <div className={cn(STATE_CARD, 'gap-2.5')}>
-            <p role="alert" className="flex items-center gap-2 text-[13.5px] text-ink">
-                <AlertCircle className="size-[15px] shrink-0 text-copper" />
-                {t('stitched.loadFailed')}
-            </p>
-            <div>
-                <Button size="sm" variant="secondary" onClick={onRetry}>
+        <div className={STATE_CARD}>
+            <p role="alert" className="text-[13.5px] text-copper">
+                {t('stitched.loadFailed')}{' '}
+                <button type="button" className={ACTION_LINK} onClick={onRetry}>
                     {t('stitched.retry')}
-                </Button>
-            </div>
+                </button>
+            </p>
         </div>
     );
 }
@@ -1018,7 +1015,7 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
             {thread.activityIds.length > 1 && (
                 <div className="flex flex-wrap items-center gap-2 border-t border-border-divider pt-2.5">
                     <span className="text-[12.5px] text-muted">
-                        {t('stitched.why', { reason: linkReasonText(t, thread.linkReason, i18n.resolvedLanguage ?? i18n.language) })}
+                        {linkReasonText(t, thread.linkReason, i18n.resolvedLanguage ?? i18n.language)}
                     </span>
                     <div className="ml-auto flex items-center gap-1.5">
                         <DropdownMenu>

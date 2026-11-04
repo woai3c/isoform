@@ -62,9 +62,7 @@ func (s *mobileBriefService) CurrentMobileBrief() (MobileBriefV1, bool) {
 	if !ok {
 		return MobileBriefV1{}, false
 	}
-	deliver := func(brief MobileBriefV1) MobileBriefV1 {
-		return s.app.mobileBriefWithCards(s.app.mobileBriefForDelivery(brief))
-	}
+	deliver := s.deliveredWithAudio
 	chosen := deliver(stored)
 	if !mobileBriefHasWrittenText(stored) || mobileBriefHasWrittenText(chosen) {
 		return chosen, true

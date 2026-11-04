@@ -130,6 +130,12 @@ type mobileBriefService struct {
 	// spoken version, new finds), so neither overwrites the other.
 	patchMu sync.Mutex
 	todayMu sync.Mutex
+	// todayRefreshing is set while refreshTodaySoon runs; todayRefreshAgain
+	// asks it for one more pass. Both guarded by todayRefreshMu.
+	todayRefreshMu    sync.Mutex
+	todayRefreshing   bool
+	todayRefreshAgain bool
+	todayRefreshWG    sync.WaitGroup
 	// withheldLogged is the last withheld text latestWithToday logged, so a
 	// condition that lasts is logged once. Guarded by todayMu.
 	withheldLogged string
@@ -546,6 +552,7 @@ func (s *mobileBriefService) PatchLatestMobileBrief(fn func(MobileBriefV1) (Mobi
 		return latest, false
 	}
 	s.patchMu.Unlock()
+	s.saveFinishedRead(patched)
 	s.deliverStoredBrief(patched, after)
 	return patched, true
 }
@@ -917,7 +924,11 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 		}
 		defer gathered.close()
 	}
-	input, err := s.gather(context.WithValue(ctx, mobileBriefGatherContextKey{}, true), slot, windowStart, asOf)
+	gatherCtx := context.WithValue(ctx, mobileBriefGatherContextKey{}, true)
+	if gathered != nil && gathered.memory != nil {
+		gatherCtx = context.WithValue(gatherCtx, mobileBriefPinnedMemoryKey{}, gathered.memory)
+	}
+	input, err := s.gather(gatherCtx, slot, windowStart, asOf)
 	if err != nil {
 		return MobileBriefV1{}, withLogStage("gather", err)
 	}
@@ -933,6 +944,8 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 	input.PreviousBriefs = s.store.briefs()
 	input = mobileBriefWithoutExcluded(input, s.app.mobileBriefExclusions())
 	brief := buildMobileBriefV1(input)
+	// Cited as collected, before the read gates drop a source that left.
+	gathered.cite(brief)
 	brief.DisplaySlot = mobileBriefDisplaySlot(brief, s.config.load())
 	if generation != nil {
 		generation.GeneratedAt = brief.AsOf
@@ -1076,6 +1089,9 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 	// completion only after the brief is saved and before its first projection.
 	if onStored != nil {
 		onStored(brief)
+	}
+	if brief.NarrativeStatus != "quiet" {
+		s.saveFinishedRead(brief)
 	}
 	if brief.NarrativeStatus == "quiet" {
 		firstReadBriefMu.Unlock()
@@ -1263,6 +1279,7 @@ func (s *mobileBriefService) addAudioWithLatestGuard(ctx context.Context, brief 
 		return
 	}
 	s.patchMu.Unlock()
+	s.saveFinishedRead(stored)
 	if s.app != nil {
 		// Delivery may wait on the relay; local readers never wait on it.
 		// No second notice: the phone re-reads on its next poll.
@@ -1368,7 +1385,10 @@ func mobileBriefAudioForRead(brief MobileBriefV1) *MobileBriefAudio {
 func (s *mobileBriefService) Audio(briefID string) (MobileBriefAudioData, bool) {
 	brief, found := s.store.load(briefID)
 	if s.app != nil {
-		if !found || s.app.mobileBriefForDelivery(brief).Audio == nil {
+		if !found {
+			return MobileBriefAudioData{}, false
+		}
+		if delivered := s.app.mobileBriefForDelivery(brief); s.finishedReadAudio(context.Background(), brief, delivered) == nil {
 			return MobileBriefAudioData{}, false
 		}
 	}
@@ -1422,7 +1442,7 @@ func (s *mobileBriefService) holdPower(reason string) func() {
 func (s *mobileBriefService) LatestMobileBrief() (MobileBriefV1, bool) {
 	brief, ok := s.latestWithToday()
 	if ok {
-		brief = s.app.mobileBriefWithCards(s.app.mobileBriefForDelivery(brief))
+		brief = s.deliveredWithAudio(brief)
 	}
 	return brief, ok
 }
@@ -1436,7 +1456,7 @@ func (s *mobileBriefService) ListMobileBriefs(limit int) []MobileBriefSummary {
 // is opened.
 func (s *mobileBriefService) GetMobileBrief(briefID string) (MobileBriefV1, bool) {
 	if brief, ok := s.store.load(briefID); ok {
-		return s.app.mobileBriefWithCards(s.app.mobileBriefForDelivery(brief)), true
+		return s.deliveredWithAudio(brief), true
 	}
 	brief, ok := s.store.currentToday()
 	loc := s.location
@@ -1446,7 +1466,7 @@ func (s *mobileBriefService) GetMobileBrief(briefID string) (MobileBriefV1, bool
 	if !ok || brief.BriefID != briefID || brief.LocalDate != s.now().In(loc).Format("2006-01-02") {
 		return MobileBriefV1{}, false
 	}
-	return s.app.mobileBriefWithCards(s.app.mobileBriefForDelivery(brief)), true
+	return s.deliveredWithAudio(brief), true
 }
 
 // RequestMobileBrief starts an on-demand brief. The result is "started" when a

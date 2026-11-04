@@ -26,7 +26,7 @@ for (const language of ['en', 'zh-CN']) {
         await expect(page.getByText(language === 'en' ? 'In progress' : '进行中', { exact: true })).toHaveCount(0);
         if (language === 'en') {
             await expect(page.getByRole('heading', { name: '9:12 AM to 12:00 AM' })).toBeVisible();
-            await expect(page.getByText(/8 moments in 15 hours/)).toBeVisible();
+            await expect(page.getByText(/^From .+ to .+ · .+ active$/)).toBeVisible();
             await page.screenshot({ path: '../../docs/hub-reviews/assets/activity-day-bounds-en-760.png', fullPage: true });
         }
     });

@@ -113,7 +113,10 @@ type mobileBriefInput struct {
 	RecapEvidence []MobileBriefRef
 	// Generation delays this output-only cache until its source fence passes.
 	deferAttendanceCache bool
-	attendanceCache      *mobileBriefAttendanceDay
+	// memory is the memory folder as the collection began, when pinned by
+	// the gather fence (mobileBriefPinnedMemory); nil reads it now.
+	memory          *memoryExternalSnapshot
+	attendanceCache *mobileBriefAttendanceDay
 }
 
 // mobileBriefCandidate is one source record before it becomes a section item.
@@ -802,6 +805,7 @@ func collectMobileBriefInput(
 		Timezone:             mobileBriefTimezoneName(time.Local),
 		HubName:              mobileBriefHubName(),
 		deferAttendanceCache: ctx.Value(mobileBriefGatherContextKey{}) == true,
+		memory:               mobileBriefPinnedMemory(ctx),
 	}
 	if a != nil {
 		in.ClockLayout = mobileBriefClockLayout(a.currentUILanguageName())
@@ -1123,8 +1127,12 @@ func collectMobileBriefRecall(a *App, in *mobileBriefInput) {
 		log.Printf("[mobile-brief] recall privacy unavailable: %v", err)
 		return
 	}
-	memories, err := a.GetMemoryEntries()
-	if err != nil {
+	// A collection reads the memory folder as it began (the gather fence's
+	// pinned snapshot), not the notes written while it runs.
+	var memories []MemoryEntry
+	if in.memory != nil {
+		memories = in.memory.rawEntries()
+	} else if memories, err = a.GetMemoryEntries(); err != nil {
 		log.Printf("[mobile-brief] memory unavailable: %v", err)
 	}
 	for _, entry := range memories {

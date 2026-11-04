@@ -1113,6 +1113,26 @@ func (s *ActivityStore) loadTimelineRunEventsBetween(run ActivityTimelineRunRow,
 
 // timelineRunToGroup assembles the Wails-facing group payload from a
 // persisted run and its loaded events.
+// timelineRunIsWork reports whether a run is your work for the Screen
+// timeline (activity review v1.0.0 #17): an unknown app, a system surface
+// such as loginwindow, or only lock, unlock, sleep and wake changes is not a
+// session.
+func timelineRunIsWork(run ActivityTimelineRunRow, events []ActivityTimelineEvent) bool {
+	if run.AppKey == "unknown" || strings.EqualFold(strings.TrimSpace(run.AppName), "Unknown") ||
+		isSystemNoiseApp(run.AppName, run.AppKey) {
+		return false
+	}
+	if len(events) == 0 {
+		return true
+	}
+	for _, evt := range events {
+		if evt.Kind != activitymon.EventSessionState {
+			return true
+		}
+	}
+	return false
+}
+
 func timelineRunToGroup(run ActivityTimelineRunRow, events []ActivityTimelineEvent) ActivityTimelineGroup {
 	primarySessionID := ""
 	if len(run.SessionIDs) > 0 {

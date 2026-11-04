@@ -40,7 +40,7 @@
         "isoformRan": "Isoform 运行了 {{name}}",
         "unknownSchedule": "一个定时任务",
         "openResult": "打开结果",
-        "learned": "Isoform 学到的内容",
+        "learned": "它学到的内容",
         "learnedKnowHow": "你的方法",
         "learnedAboutYou": "关于你",
         "untitled": "未命名",
@@ -161,15 +161,13 @@
         "viewLabel": "这一天的显示方式",
         "stitchedTab": "按工作串起",
         "recordedTab": "按记录",
+        "recordedHeader": "Isoform 记录的全部内容，最新的在前。",
         "headline_one": "{{count}} 项工作",
         "headline_other": "{{count}} 项工作",
         "headlineAllResumed_one": "{{count}} 项工作，在中断后接着做",
         "headlineAllResumed_other": "{{count}} 项工作，每项都在中断后接着做",
         "headlineSomeResumed_one": "{{count}} 项工作，其中 {{resumed}} 项在中断后接着做",
         "headlineSomeResumed_other": "{{count}} 项工作，其中 {{resumed}} 项在中断后接着做",
-        "recordedHeadline_one": "{{count}} 项，按 Isoform 的记录",
-        "recordedHeadline_other": "{{count}} 项，按 Isoform 的记录",
-        "recordedSubline": "片段、会议和 Isoform 运行的内容，最新的在前。",
         "timelineNote": "每项工作一行。选中一行即可聚焦。",
         "legendWork": "专注工作",
         "legendInterruption": "中断",
@@ -188,11 +186,11 @@
         "leftOff": "停在",
         "pickedUp": "接着做",
         "pointAt": "{{time}} · {{what}}",
-        "why": "Isoform 把它们连在一起，因为：{{reason}}",
+        "why": "关联原因：{{reason}}。",
         "whyUser": "是你把它们放在一起的",
         "whySame": "涉及同一个{{things}}",
         "whyFallback": "它们是同一项工作的延续",
-        "whyResumed": "{{reason}}，{{minutes}} 分钟内接着做",
+        "whyResumed": "关联原因：{{reason}}。{{minutes}} 分钟后接着做。",
         "noun": {
             "pr_one": "PR",
             "pr_other": "PR",
@@ -220,12 +218,11 @@
             "from": "从 {{time}} 开始"
         },
         "loading": "正在读取这一天的活动",
-        "loadFailed": "无法读取这一天的活动。",
+        "loadFailed": "没能加载你在忙什么。",
         "retry": "重试",
         "linking": "正在连接各段工作…",
         "linkingNote": "Isoform 串联工作时，短暂片刻会归在一起。按记录列表已完整显示。",
-        "subline_one": "{{span}}内有 {{count}} 个片刻 · 活跃 {{active}}",
-        "subline_other": "{{span}}内有 {{count}} 个片刻 · 活跃 {{active}}",
+        "subline": "从 {{start}} 到 {{end}} · 活跃 {{active}}",
         "laneDetailMeta": "{{detail}} · 活跃 {{active}}",
         "gapResumed_one": "续接 {{count}} 次 · 离开 {{duration}}",
         "gapResumed_other": "续接 {{count}} 次 · 离开 {{duration}}",
@@ -264,6 +261,15 @@
     "triggerLabels": {
         "meeting": "会议",
         "scheduled": "定时"
+    },
+    "stepVerbs": {
+        "clicked": "点击了",
+        "typed": "输入了",
+        "focused": "聚焦",
+        "said": "说",
+        "heard": "听到",
+        "switchedApp": "切换应用",
+        "recorded": "记录"
     },
     "systemEvents": {
         "verb": "记录",
@@ -409,16 +415,13 @@
         "title": "你的这一周"
     },
     "session": {
-        "events": "{{count}} 个事件",
         "frames": "{{count}} 帧",
-        "localOnly": "仅本地",
-        "localOnlyTitle": "所有数据均存储在你的本地设备上",
         "peopleHeading": "出现的人({{count}})",
         "peopleChipSelectTitle": "高亮 {{name}} 在这个 session 里的消息",
         "peopleChipClearTitle": "取消高亮",
         "voicesHeading": "声音({{count}})",
         "voiceChipTitle": "{{label}} —— 在本 session 里说话 {{count}} 次。点击高亮下方对应行。",
-        "selectPrompt": "从左侧选择一个会话以查看详情。",
+        "selectPrompt": "选一个会话来回放。",
         "missingError": "会话 {{id}} 已不可用,可能已被存储轮转移除。",
         "recording": "录制",
         "hostBridgeUnavailable": "本地桥接服务不可用。",
@@ -495,7 +498,6 @@
         "segment": "片段 {{current}} / {{total}}",
         "videoUnsupported": "你的浏览器不支持视频标签。",
         "switchTitle": "切换:{{app}} - {{time}}",
-        "events_section": "步骤({{count}})",
         "noEventsRecorded": "没有记录任何步骤。",
         "unknownApp": "未知",
         "ocrMatchAppName": "OCR 匹配",
@@ -504,7 +506,9 @@
         "ocrTimeSeconds": "{{value}} 秒",
         "ocrConfidence": "置信度 {{value}}%",
         "ocrFrameAlt": "{{value}} 秒处的 OCR 画面",
-        "knowledgeSection": "知识({{count}})"
+        "knowledgeSection": "知识({{count}})",
+        "minutes": "{{count}} 分钟",
+        "stepsHeading": "步骤"
     },
     "meetingNotes": {
         "loadFailed": "无法加载会议笔记。",
@@ -544,8 +548,8 @@
         "deleteFailed": "无法删除这些纪要。"
     },
     "identityDebug": {
-        "toggleOn": "身份判定已开",
-        "toggleOff": "身份判定",
+        "toggleOn": "为什么这样分组",
+        "toggleOff": "为什么这样分组",
         "toggleTooltip": "显示身份系统对每条事件的判定结果(performed / received / observed / ambient / unknown)及其推理依据。只读调试用。",
         "badgeAria": "身份判定:{{mode}}",
         "modeHeader": "内容模式",

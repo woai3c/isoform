@@ -283,7 +283,7 @@ func TestTodayV1111FirstBriefKeepsTheSnapshotBelow(t *testing.T) {
 	svc.app = rig.app
 	rig.app.mobileBriefSvc = svc
 	addTodayRefreshSources(t, rig, now)
-	view, err := rig.app.GetLatestBrief()
+	view, err := latestBriefAfterRefresh(t, rig.app)
 	if err != nil || !view.FirstBrief || view.PendingSlot != mobileBriefSlotMorning || view.LastBriefID != "" {
 		t.Fatalf("day one after the slot: want the first brief's card, got %+v, %v", view, err)
 	}

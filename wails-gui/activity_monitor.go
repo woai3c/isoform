@@ -128,6 +128,8 @@ type ActivityTimelineGroup struct {
 	Events           []ActivityTimelineEvent       `json:"events,omitempty"`
 	Summary          *ActivityTimelineGroupSummary `json:"summary,omitempty"`
 	IdentityAnchors  []string                      `json:"identityAnchors,omitempty"`
+	// FirstFrame is the run's first kept screenshot, nil when none was kept.
+	FirstFrame *ActivityRunFrame `json:"firstFrame,omitempty"`
 	// SummaryStatus is the persisted run's summary generation state
 	// (none|generating|done|skipped|failed_transient|failed_permanent), so
 	// the UI can show progress without a summary payload.
@@ -3872,7 +3874,15 @@ func (a *App) assembleTimelineGroups(runs []ActivityTimelineRunRow) ([]ActivityT
 		if err != nil {
 			return nil, err
 		}
-		groups = append(groups, timelineRunToGroup(run, events))
+		if !timelineRunIsWork(run, events) {
+			continue
+		}
+		group := timelineRunToGroup(run, events)
+		if frames := a.activityRunFrames(run); len(frames) > 0 {
+			first := frames[0]
+			group.FirstFrame = &first
+		}
+		groups = append(groups, group)
 		groupIDs = append(groupIDs, run.ID)
 	}
 

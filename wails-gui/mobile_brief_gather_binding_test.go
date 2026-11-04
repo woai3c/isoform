@@ -16,10 +16,13 @@ import (
 )
 
 // The mutation happens after a real collector read, before its callback returns.
-// Keep this on the production generation/storage path: a later current read
-// must never certify the earlier title or its evidence label.
-func TestMobileBriefGenerationRejectsCorrectionBeforeCapture(t *testing.T) {
-	for _, change := range []string{"unchanged", "title", "body", "restored bytes"} {
+// Keep this on the production generation/storage path. The brief is built
+// from the memory snapshot pinned when it began, so an edit meanwhile (even
+// one replacing the note and restoring its bytes) keeps it and shows in the
+// next brief (today-review v1.1.15 D12); removing the cited note rejects it,
+// and a later current read never certifies the removed title.
+func TestMobileBriefGenerationKeepsEditsButNotRemovalDuringCollection(t *testing.T) {
+	for _, change := range []string{"unchanged", "title", "body", "restored bytes", "removed"} {
 		t.Run(change, func(t *testing.T) {
 			app, tag, _ := todaySendTestApp(t)
 			const privateTitle = "Confidential acquisition plan"
@@ -79,15 +82,20 @@ func TestMobileBriefGenerationRejectsCorrectionBeforeCapture(t *testing.T) {
 				}
 				found := false
 				for _, item := range collected.Learned {
-					if item.SourceKind == "memory" && item.SourceID == "launch" && item.Title == privateTitle {
-						found = true
+					if item.SourceKind == "memory" && item.SourceID == "launch" && (item.Title == privateTitle || change == "restored bytes") {
+						found = found || item.Title == privateTitle
 						// Select this real collected record as a goal, so both the
 						// narrative and its offer consume the captured title.
 						item.Kind, item.Status = "goal", "active"
 						collected.OpenLoops = append(collected.OpenLoops, item)
 					}
 				}
-				if !found {
+				// The collector reads the memory folder pinned when collection
+				// began: a note replaced during it is never read.
+				if change == "restored bytes" && found {
+					t.Fatal("the collector read a note written after collection began")
+				}
+				if change != "restored bytes" && !found {
 					t.Fatal("real collector did not read the original title")
 				}
 				switch change {
@@ -95,6 +103,8 @@ func TestMobileBriefGenerationRejectsCorrectionBeforeCapture(t *testing.T) {
 					_, err = app.SaveMemoryEntry("launch", "# Public launch plan\nPrepare the public release.")
 				case "body":
 					_, err = app.SaveMemoryEntry("launch", "# "+privateTitle+"\nCorrected public body.")
+				case "removed":
+					err = os.Remove(path)
 				case "restored bytes":
 					err = os.WriteFile(path, original, 0600)
 					if err == nil {
@@ -104,7 +114,7 @@ func TestMobileBriefGenerationRejectsCorrectionBeforeCapture(t *testing.T) {
 				return collected, err
 			}
 			brief, generationErr := svc.generate(t.Context(), "morning", mobileBriefReasonPhone)
-			if change == "unchanged" {
+			if change != "removed" {
 				if generationErr != nil {
 					t.Fatalf("unchanged generation: %v", generationErr)
 				}
@@ -129,7 +139,7 @@ func TestMobileBriefGenerationRejectsCorrectionBeforeCapture(t *testing.T) {
 				}
 			}
 			cache, err := app.store.GetUIState(t.Context(), mobileBriefAttendanceKeyPrefix+now.In(time.Local).Format("2006-01-02"))
-			if err != nil || (cache != "") != (change == "unchanged") {
+			if err != nil || (cache != "") != (change != "removed") {
 				t.Fatalf("attendance output crossed collection fence: cached=%v, change=%s, err=%v", cache != "", change, err)
 			}
 			for _, kind := range []string{"brief"} {
@@ -140,11 +150,11 @@ func TestMobileBriefGenerationRejectsCorrectionBeforeCapture(t *testing.T) {
 					row := storage.StreamItemRow{ID: "gather-" + kind, Kind: "user", Content: "Let's go through this brief."}
 					result, _, admitErr := app.admitTodayChatTurn(t.Context(), tag, row, ref, nil)
 					for phase, err := range map[string]error{"resolve": resolveErr, "draft": draftErr, "admit": admitErr} {
-						if (err == nil) != (change == "unchanged") {
+						if (err == nil) != (change != "removed") {
 							t.Errorf("%s %s: %v", change, phase, err)
 						}
 					}
-					if change != "unchanged" && (strings.Contains(fmt.Sprint(item), privateTitle) || strings.Contains(fmt.Sprint(result), privateTitle)) {
+					if change == "removed" && (strings.Contains(fmt.Sprint(item), privateTitle) || strings.Contains(fmt.Sprint(result), privateTitle)) {
 						t.Error("removed collected title entered model context")
 					}
 					page, err := app.store.LoadStreamItemsLatest(t.Context(), tag, 100)
@@ -155,7 +165,7 @@ func TestMobileBriefGenerationRejectsCorrectionBeforeCapture(t *testing.T) {
 					for _, saved := range page.Items {
 						persisted = persisted || saved.ID == row.ID
 					}
-					if persisted != (change == "unchanged") {
+					if persisted != (change != "removed") {
 						t.Fatalf("atomic row persisted=%v, change=%s", persisted, change)
 					}
 				})

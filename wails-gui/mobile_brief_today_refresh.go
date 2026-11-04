@@ -18,8 +18,52 @@ import (
 const mobileBriefTodayFileName = "today.json"
 
 func (s *mobileBriefService) latestWithToday() (MobileBriefV1, bool) {
+	brief, ok, _ := s.refreshToday()
+	return brief, ok
+}
+
+// refreshTodaySoon brings the stored Today signals up to date off the read
+// path. A source read takes minutes on a busy computer, and a live refresh
+// holds todayMu throughout, so Today reads the stored brief at once
+// (GetLatestBrief) and a stored change is announced (brief:stored) for the
+// next read. A request during a refresh runs one more after it.
+func (s *mobileBriefService) refreshTodaySoon() {
+	s.todayRefreshMu.Lock()
+	if s.todayRefreshing {
+		s.todayRefreshAgain = true
+		s.todayRefreshMu.Unlock()
+		return
+	}
+	s.todayRefreshing = true
+	s.todayRefreshMu.Unlock()
+	s.wg.Add(1)
+	s.todayRefreshWG.Add(1)
+	go func() {
+		defer s.wg.Done()
+		defer s.todayRefreshWG.Done()
+		for {
+			if brief, ok, changed := s.refreshToday(); changed && ok && s.app != nil {
+				s.saveFinishedRead(brief)
+				s.app.emitBrowserEvent("brief:stored", "")
+			}
+			s.todayRefreshMu.Lock()
+			if !s.todayRefreshAgain {
+				s.todayRefreshing = false
+				s.todayRefreshMu.Unlock()
+				return
+			}
+			s.todayRefreshAgain = false
+			s.todayRefreshMu.Unlock()
+		}
+	}()
+}
+
+// refreshToday reads Today's live signals into the stored brief and reports
+// whether the stored copy changed.
+func (s *mobileBriefService) refreshToday() (MobileBriefV1, bool, bool) {
 	if s.app == nil {
-		return s.store.current()
+		brief, ok := s.store.current()
+		return brief, ok, false
 	}
 	// Order live projections without blocking audio, finds or generation while
 	// source stores (including the scheduler's initial load) are being read.
@@ -40,7 +84,7 @@ func (s *mobileBriefService) latestWithToday() (MobileBriefV1, bool) {
 	latest, found := s.store.current()
 	day := now.In(loc).Format("2006-01-02")
 	if found && latest.LocalDate != day {
-		return latest, true
+		return latest, true, false
 	}
 	scheduled := found
 	base := latest
@@ -89,9 +133,11 @@ func (s *mobileBriefService) latestWithToday() (MobileBriefV1, bool) {
 		if _, exists := s.store.currentToday(); exists && changed {
 			if err := s.store.saveCurrentToday(updated); err != nil {
 				log.Printf("[mobile-brief] current Today snapshot could not be cleared: %v", err)
+				return latest, found, false
 			}
+			return latest, found, true
 		}
-		return latest, found
+		return latest, found, false
 	}
 	if changed {
 		var err error
@@ -102,13 +148,13 @@ func (s *mobileBriefService) latestWithToday() (MobileBriefV1, bool) {
 		}
 		if err != nil {
 			log.Printf("[mobile-brief] current Today signals could not be stored: %v", err)
-			return latest, found
+			return latest, found, false
 		}
 	}
 	if changed {
 		s.app.noteTodayDayShapeUpdate()
 	}
-	return updated, true
+	return updated, true, changed
 }
 
 // Refresh only the sources folded from Today. Unrelated sections and the

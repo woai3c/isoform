@@ -56,6 +56,13 @@ func (a *App) memoryReadFilter() (func(string, string) bool, error) {
 }
 
 func (a *App) memoryReadFilterContext(ctx context.Context) (func(string, string) bool, error) {
+	return a.memoryReadFilterWithDependencyContext(ctx, nil)
+}
+
+// memoryReadFilterWithDependencyContext is memoryReadFilterContext with the
+// activity-session check supplied by the caller, so one read can check each
+// session a set of notes shares once. nil checks every session again.
+func (a *App) memoryReadFilterWithDependencyContext(ctx context.Context, allowsDependency func(string, []string) bool) (func(string, string) bool, error) {
 	if a == nil || a.IsClosedEyesModeEnabled() && !pausedBriefReadAllowed(ctx) {
 		return func(string, string) bool { return false }, nil
 	}
@@ -72,7 +79,13 @@ func (a *App) memoryReadFilterContext(ctx context.Context) (func(string, string)
 		if _, corrected := suppressed[id]; corrected {
 			return false
 		}
-		return gate.allows(content)
+		if allowsDependency == nil {
+			return gate.allows(content)
+		}
+		if a.IsClosedEyesModeEnabled() && !pausedBriefReadAllowed(ctx) {
+			return false
+		}
+		return a.memorySourceAllowsReadWithDependency(content, allowsDependency)
 	}, nil
 }
 

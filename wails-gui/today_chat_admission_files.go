@@ -67,6 +67,13 @@ func (a *App) readTodayChatAdmissionFiles(ctx context.Context, ref TodayChatCont
 // Collection fences the same source files without including generated brief
 // outputs, which are not inputs to the frozen synthesis.
 func (a *App) readTodayChatSourceFiles(ctx context.Context, ref TodayChatContextRef, includeBrief bool) (todayChatAdmissionFileRevision, error) {
+	return a.readTodayChatSourceFilesWith(ctx, ref, includeBrief, true)
+}
+
+// readTodayChatSourceFilesWith is readTodayChatSourceFiles, leaving out the
+// memory notes themselves when memoryNotes is false: the brief's collection
+// fence checks those one by one (mobileBriefGatherChange).
+func (a *App) readTodayChatSourceFilesWith(ctx context.Context, ref TodayChatContextRef, includeBrief, memoryNotes bool) (todayChatAdmissionFileRevision, error) {
 	var empty todayChatAdmissionFileRevision
 	digest := sha256.New()
 	memory, err := memoryDir()
@@ -78,7 +85,11 @@ func (a *App) readTodayChatSourceFiles(ctx context.Context, ref TodayChatContext
 		return empty, err
 	}
 	for _, source := range []struct{ key, dir string }{{"memory", memory}, {"knowledge", knowledge}, {"memory semantic controls", filepath.Join(memory, ".semantic")}} {
-		if err := todayChatAdmissionDirectory(ctx, digest, source.key, source.dir); err != nil {
+		var keep func(string) bool
+		if !memoryNotes && source.key == "memory" {
+			keep = func(name string) bool { return filepath.Ext(name) != ".md" }
+		}
+		if err := todayChatAdmissionDirectoryFiltered(ctx, digest, source.key, source.dir, keep); err != nil {
 			return empty, err
 		}
 	}
@@ -144,6 +155,12 @@ func (a *App) validateTodayChatAdmissionFiles(ctx context.Context, ref TodayChat
 // Admission needs the source markdown and small privacy controls, never audio,
 // screenshots, binaries or an unbounded traversal of the application folder.
 func todayChatAdmissionDirectory(ctx context.Context, digest hash.Hash, key, dir string) error {
+	return todayChatAdmissionDirectoryFiltered(ctx, digest, key, dir, nil)
+}
+
+// todayChatAdmissionDirectoryFiltered hashes the files keep accepts (all
+// when keep is nil).
+func todayChatAdmissionDirectoryFiltered(ctx context.Context, digest hash.Hash, key, dir string, keep func(string) bool) error {
 	info, err := os.Lstat(dir)
 	if os.IsNotExist(err) {
 		todayChatAdmissionHash(digest, key, nil)
@@ -168,7 +185,7 @@ func todayChatAdmissionDirectory(ctx context.Context, digest hash.Hash, key, dir
 			return err
 		}
 		name := entry.Name()
-		if entry.IsDir() {
+		if entry.IsDir() || keep != nil && !keep(name) {
 			continue
 		}
 		switch filepath.Ext(name) {

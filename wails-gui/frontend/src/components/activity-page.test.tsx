@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import enActivity from '@/i18n/locales/en/activity.json';
-import { ActivityPage, EventFramePopup, SessionPeopleChips, SessionSpeakerChips, type ActivitySectionId } from './activity-page';
+import { ActivityPage, eventActionLabel, EventFramePopup, SessionPeopleChips, SessionSpeakerChips, type ActivitySectionId } from './activity-page';
+import type { activitymon } from '../../wailsjs/go/models';
 import type { CronJobsProp } from './timeline/useCalendarData';
 import type { MobileBriefActivityTarget } from '@/lib/wails-shim-app';
 
@@ -183,6 +184,82 @@ describe('ActivityPage section panel', () => {
         });
     });
 
+    // Thursday A3 and A1: each session row shows its first kept frame or no
+    // thumbnail space, and the session meta drops system counts.
+    it('shows each session with its first frame or no thumbnail space, and no system counts', async () => {
+        const at = (h: number, m: number) => new Date(2026, 10, 2, h, m).getTime();
+        binding('GetHostBridgePort').mockResolvedValue(4317);
+        binding('GetHostBridgeMediaToken').mockResolvedValue('token');
+        binding('GetActivityTimelineGroups').mockResolvedValue([
+            { id: 'g1', appKey: 'com.microsoft.VSCode', appName: 'VS Code', startTime: at(9, 12), endTime: at(10, 2), activeMs: 50 * 60_000,
+                eventCount: 0, sessionIds: ['s1'], triggerKinds: [], primarySessionId: 's1', summaryStatus: 'done',
+                summary: { title: 'Reviewing ERP connector v0.3' },
+                firstFrame: { timestamp: at(9, 12), path: '/Users/ana/Isoform/snap-1.jpg', focusX: 0, focusY: 0, focusW: 0, focusH: 0 } },
+            { id: 'g2', appKey: 'com.google.Chrome', appName: 'Google Chrome', startTime: at(10, 5), endTime: at(10, 20), activeMs: 15 * 60_000,
+                eventCount: 0, sessionIds: ['s2'], triggerKinds: [], primarySessionId: 's2', summaryStatus: 'done',
+                summary: { title: 'Northwind invoice sync notes' } },
+        ]);
+        binding('GetActivitySessionDetail').mockResolvedValue({ id: 's1', startTime: at(9, 12), endTime: at(10, 2), triggerKind: '',
+            appNames: ['VS Code'], eventCount: 0, snapshotCount: 0, triageStatus: '', ocrStatus: '', events: [], segments: [], snapshots: [] });
+        await act(async () => { render(<Harness initialSection="timeline" initialDate="2026-11-02" />); });
+        const row = async (title: string) => (await screen.findAllByText(title)).map((el) => el.closest('button')).find(Boolean)!;
+        const memo = await row('Reviewing ERP connector v0.3');
+        const notes = await row('Northwind invoice sync notes');
+        await waitFor(() => expect(within(memo).getByTestId('timeline-first-frame')).toBeInTheDocument());
+        expect(within(notes).queryByTestId('timeline-first-frame')).toBeNull();
+        expect(notes.querySelector('img, [aria-hidden="true"].animate-pulse')).toBeNull();
+        expect(memo).toHaveTextContent('9:12 AM');
+        expect(memo).not.toHaveTextContent(/09:12/);
+        fireEvent.click(memo);
+        expect(await screen.findByTestId('session-meta')).toHaveTextContent('9:12–10:02 AM');
+        expect(screen.queryByText(/\d+ events|Local only|:\d\d:\d\d/)).toBeNull();
+    });
+
+    // activity review v1.0.5 V2, V3, V5, V6: the session view reads
+    // "9:12–10:02 AM · 50 min · VS Code", has no Recording box without a
+    // screenshot, a "Steps" heading with no count, and no speech scraps.
+    it('writes the session meta in words and drops the empty Recording box, step counts and speech scraps', async () => {
+        const at = (h: number, m: number) => new Date(2026, 10, 2, h, m).getTime();
+        binding('GetActivityTimelineGroups').mockResolvedValue([
+            { id: 'g1', appKey: 'com.microsoft.VSCode', appName: 'VS Code', startTime: at(9, 12), endTime: at(10, 2), activeMs: 50 * 60_000,
+                eventCount: 1, sessionIds: ['s1'], triggerKinds: [], primarySessionId: 's1', summaryStatus: 'done',
+                summary: { title: 'Reviewed ERP connector v0.3' } },
+        ]);
+        binding('GetActivitySessionDetail').mockResolvedValue({ id: 's1', startTime: at(9, 12), endTime: at(10, 2), triggerKind: '',
+            appNames: ['VS Code'], eventCount: 1, snapshotCount: 0, triageStatus: '', ocrStatus: '', segments: [], snapshots: [],
+            events: [{ kind: 'speech', speechSource: 'microphone', speechText: 'There the two.', timestamp: at(9, 13), appName: 'VS Code' }] });
+        await act(async () => { render(<Harness initialSection="timeline" initialDate="2026-11-02" />); });
+        const row = (await screen.findAllByText('Reviewed ERP connector v0.3')).map((el) => el.closest('button')).find(Boolean)!;
+        fireEvent.click(row);
+        expect(await screen.findByTestId('session-meta')).toHaveTextContent('9:12–10:02 AM · 50 min · VS Code');
+        expect(screen.getByText('Steps')).toBeInTheDocument();
+        expect(screen.queryByText(/Steps \(/)).toBeNull();
+        expect(screen.queryByText('Recording')).toBeNull();
+        expect(screen.queryByText('No screenshots were captured for this session.')).toBeNull();
+        expect(screen.queryByText(/There the two/)).toBeNull();
+    });
+
+    // activity review v1.0.6 AR43: a session with screenshots keeps its replay above Steps.
+    it('keeps the replay above Steps for a session with screenshots', async () => {
+        const at = (h: number, m: number) => new Date(2026, 10, 2, h, m).getTime();
+        binding('GetActivityTimelineGroups').mockResolvedValue([
+            { id: 'g1', appKey: 'com.microsoft.VSCode', appName: 'VS Code', startTime: at(9, 12), endTime: at(10, 2), activeMs: 50 * 60_000,
+                eventCount: 0, sessionIds: ['s1'], triggerKinds: [], primarySessionId: 's1', summaryStatus: 'done',
+                summary: { title: 'Reviewed ERP connector v0.3' },
+                firstFrame: { timestamp: at(9, 12), path: '/Users/ana/frames/a.jpg', focusX: 0, focusY: 0, focusW: 0, focusH: 0 } },
+        ]);
+        binding('GetActivitySessionDetail').mockResolvedValue({ id: 's1', startTime: at(9, 12), endTime: at(10, 2), triggerKind: '',
+            appNames: ['VS Code'], eventCount: 0, snapshotCount: 1, triageStatus: '', ocrStatus: '', segments: [], events: [],
+            snapshots: [{ id: 1, sessionId: 's1', timestamp: at(9, 13), filePath: '/Users/ana/frames/a.jpg', width: 1440, height: 900,
+                sizeBytes: 0, trigger: 'interval', storageTier: 'full', axText: '', browserUrl: '', app: 'VS Code' }] });
+        await act(async () => { render(<Harness initialSection="timeline" initialDate="2026-11-02" />); });
+        const row = (await screen.findAllByText('Reviewed ERP connector v0.3')).map((el) => el.closest('button')).find(Boolean)!;
+        fireEvent.click(row);
+        const recording = await screen.findByText('Recording');
+        const steps = screen.getByText('Steps');
+        expect(recording.compareDocumentPosition(steps) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
     it('states only the supported privacy line on the Screen timeline', async () => {
         await act(async () => { render(<Harness initialSection="timeline" />); });
         expect(screen.getByText('Screenshots and audio are stored on your computer.')).toBeInTheDocument();
@@ -194,6 +271,17 @@ describe('ActivityPage section panel', () => {
         await act(async () => { render(<Harness initialSection="timeline" />); });
         expect(screen.getByText('屏幕截图和音频存储在你的电脑上。')).toBeInTheDocument();
         expect(screen.queryByText(/脱敏|密码|API 密钥/)).not.toBeInTheDocument();
+    });
+
+    it('writes the step verbs in the UI language', async () => {
+        await i18n.changeLanguage('zh-CN');
+        const t = i18n.getFixedT('zh-CN', 'activity') as unknown as Parameters<typeof eventActionLabel>[1];
+        const verb = (evt: Partial<activitymon.ActivityEvent>) => eventActionLabel(evt as activitymon.ActivityEvent, t).verb;
+        expect(verb({ kind: 'focus', focusLabel: 'connector/retry.go' })).toBe('聚焦');
+        expect(verb({ kind: 'keyboard', typedText: 'retry on 429 with backoff' })).toBe('输入了');
+        expect(verb({ kind: 'click', clickLabel: 'Merge' })).toBe('点击了');
+        expect(verb({ kind: 'speech', speechSource: 'microphone', speechText: "Let's ship the connector on Friday." })).toBe('说');
+        expect(verb({ kind: 'app_switch', appName: 'Slack' })).toBe('切换应用');
     });
 
     it('opens on the day the caller asked for', async () => {

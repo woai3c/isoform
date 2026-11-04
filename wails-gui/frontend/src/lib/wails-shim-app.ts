@@ -4163,6 +4163,8 @@ export interface ActivityTimelineGroup {
     events?: ActivityTimelineEvent[];
     summary?: ActivityTimelineGroupSummary;
     identityAnchors?: string[];
+    /** The run's first kept screenshot; absent when none was kept. */
+    firstFrame?: ActivityRunFrame;
     // Persisted summary generation state:
     // none|generating|done|skipped|failed_transient|failed_permanent
     summaryStatus: string;

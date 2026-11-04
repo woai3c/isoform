@@ -38,7 +38,7 @@ func TestTodayRefreshesStoredSignalsBetweenSlots(t *testing.T) {
 	originalWindow := svc.windowStart(mobileBriefTestDay(18, 0))
 	clock.Set(mobileBriefTestDay(11, 0))
 	addTodayRefreshSources(t, rig, clock.Now())
-	view, err := rig.app.GetLatestBrief()
+	view, err := latestBriefAfterRefresh(t, rig.app)
 	if err != nil || view.Brief == nil {
 		t.Fatalf("view = %+v, %v", view, err)
 	}
@@ -78,12 +78,12 @@ func TestTodayRefreshesStoredSignalsBetweenSlots(t *testing.T) {
 	if _, err := rig.activity.SaveSummaryWithLanguage("2026-10-09", "daily", "Revised day summary", "test", false, rig.app.currentUILanguage()); err != nil {
 		t.Fatal(err)
 	}
-	next, err := rig.app.GetLatestBrief()
+	next, err := latestBriefAfterRefresh(t, rig.app)
 	if err != nil || next.Brief == nil || next.DailySummary == nil || len(next.Brief.Upcoming) != 0 || len(next.Brief.Sections.OpenLoops) != 0 || len(next.Brief.Sections.Learned) != 0 || next.DailySummary.Text != "Revised day summary" {
 		t.Fatalf("stale Today content: %+v, %v", next.Brief, err)
 	}
 	assertTodayRefsResolve(t, *next.Brief)
-	again, _ := rig.app.GetLatestBrief()
+	again, _ := latestBriefAfterRefresh(t, rig.app)
 	if !reflect.DeepEqual(again.Brief, next.Brief) {
 		t.Fatal("unchanged reads changed the stored content")
 	}
@@ -113,7 +113,7 @@ func TestTodayWithoutScheduledBriefStillStoresCurrentWork(t *testing.T) {
 				}
 			}
 			addTodayRefreshSources(t, rig, now)
-			view, err := rig.app.GetLatestBrief()
+			view, err := latestBriefAfterRefresh(t, rig.app)
 			if mode == "before-service-start" && view.PendingSlot != "" && (!view.FirstBrief || view.LastBriefID != "") {
 				// today-review v1.1.11 #1: once a slot is due and no brief has
 				// ever been made, "Your first brief" sits above the snapshot.
@@ -341,4 +341,23 @@ func TestMobileBriefLatestTodayRefreshesCurrentPurposeLedger(t *testing.T) {
 	if !ok || len(stored.Sections.WorkingToward) != 0 || len(stored.Sections.OpenLoops) != 0 {
 		t.Fatalf("stored Today kept the completed Purpose: %+v", stored.Sections)
 	}
+}
+
+// latestBriefAfterRefresh reads Today as the user sees it once the live
+// refresh a read starts has landed: the read, its refresh, then the next read
+// (the brief:stored event's).
+func latestBriefAfterRefresh(t *testing.T, app *App) (TodayBriefView, error) {
+	t.Helper()
+	svc, _ := app.ensureMobileBriefService().(*mobileBriefService)
+	if _, err := app.GetLatestBrief(); err != nil {
+		return TodayBriefView{}, err
+	}
+	if svc != nil {
+		svc.todayRefreshWG.Wait()
+	}
+	view, err := app.GetLatestBrief()
+	if svc != nil {
+		svc.todayRefreshWG.Wait()
+	}
+	return view, err
 }

@@ -55,6 +55,8 @@ func TestMobileBriefWatchingRechecksStoredBrowserSources(t *testing.T) {
 					t.Fatalf("readable Watching lost after prune=%v: %+v, %v", prune, view, err)
 				}
 			}
+			// Today's live refresh runs in the background; let it land first.
+			svc.todayRefreshWG.Wait()
 			switch reason {
 			case "sensitive browser":
 				pii.SetUserSensitiveApps(map[string]string{"com.google.Chrome": "Chrome"})

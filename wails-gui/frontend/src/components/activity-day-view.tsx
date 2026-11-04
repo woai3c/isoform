@@ -97,6 +97,22 @@ function useStablePickUp(next: PickUpNotice | null): PickUpNotice | null {
  *  output is markup/JSON or spans several lines — those runs show only their
  *  title plus an "Open result" link to the automation detail dialog, so raw
  *  tags never land on the day page. */
+
+/** A read still running after this says so in place, with Try again
+ *  (activity review v1.0.5 V1); placeholders show only before it. */
+export const ACTIVITY_LOAD_DEADLINE_MS = 15_000;
+
+export function useLoadDeadline(loading: boolean, attempt: number): boolean {
+    const [late, setLate] = useState(false);
+    useEffect(() => {
+        setLate(false);
+        if (!loading) return;
+        const timer = setTimeout(() => setLate(true), ACTIVITY_LOAD_DEADLINE_MS);
+        return () => clearTimeout(timer);
+    }, [loading, attempt]);
+    return late && loading;
+}
+
 export function displayableRunResult(summary: string | undefined): string | null {
     const text = (summary ?? '').trim();
     if (!text) return null;
@@ -166,7 +182,7 @@ export interface ActivityDayViewProps {
     /** A suggestion's source link reveals its moment in What you worked on. */
     onSectionChange?: (section: ActivityDaySection) => void;
     /** Reports the day's row counts (unfiltered) so the section panel can
-     *  label "What you worked on" and "What Isoform learned" with them. */
+     *  label "What you worked on" and "What it learned" with them. */
     onCountsChange?: (counts: { workedOn: number; learned: number }) => void;
     /** What you worked on: "Stitched by work" or "As recorded". The Activity
      *  page keeps the pick; without it the view keeps its own, Stitched first. */
@@ -199,7 +215,7 @@ export function ActivityDayView({
     workedOnView,
     onWorkedOnViewChange,
 }: ActivityDayViewProps) {
-    const { t } = useTranslation('activity');
+    const { t, i18n } = useTranslation('activity');
     const dateStr = formatDateStr(date);
     const dayStart = dayStartMs(date);
     const dayEnd = dayEndMs(date);
@@ -217,13 +233,15 @@ export function ActivityDayView({
     }, [dateStr]);
 
     // ── The day's composed activities (AI-titled sessions) ──
+    const [loadAttempt, setLoadAttempt] = useState(0);
     const loadActivities = useCallback(() => GetActivitiesInRange(dayStart, dayEnd), [dayStart, dayEnd]);
     const activityState = useActivitySessionQueryState(`activities:${dateStr}`, loadActivities);
     const rawActivities = activityState.data ?? NO_ACTIVITIES;
     const activities = useMemo(() => rawActivities.filter((activity) => activity.endMs > dayStart && activity.startMs < dayEnd)
         .map((activity) => clipDayActivity(activity, dayStart, dayEnd, isToday)), [rawActivities, dayStart, dayEnd, isToday]);
     // A failed read says so; it never reads as an empty day.
-    const activitiesFailed = activityState.error !== undefined && activityState.data === undefined;
+    const activitiesLate = useLoadDeadline(activityState.loading, loadAttempt);
+    const activitiesFailed = (activityState.error !== undefined && activityState.data === undefined) || activitiesLate;
     // A live session's duration counts up on the local minute clock below;
     // its rows follow capture events, applied at most every 5 minutes
     // (activity-session-cache), never by a refetch timer.
@@ -235,7 +253,8 @@ export function ActivityDayView({
         .map((thread) => ({ ...thread, startMs: Math.max(dayStart, thread.startMs), endMs: Math.min(dayEnd, thread.endMs) })),
         [rawThreads, dayStart, dayEnd]);
     const threadsLoaded = !threadState.loading;
-    const threadsFailed = threadState.error !== undefined && threadState.data === undefined;
+    const threadsLate = useLoadDeadline(threadState.loading, loadAttempt);
+    const threadsFailed = (threadState.error !== undefined && threadState.data === undefined) || threadsLate;
     const handleActivityDeleted = useCallback((id: string) => {
         updateActivitySessionData<ActivityView[]>(`activities:${dateStr}`, (rows) => (rows ?? []).filter((row) => row.id !== id));
     }, [dateStr]);
@@ -472,7 +491,10 @@ export function ActivityDayView({
         setScrollThreadId(initialThreadId);
         onInitialThreadConsumed?.(initialThreadId);
     }, [initialThreadId, threadsLoaded, workItems, setView, onInitialThreadConsumed]);
-    const retryDay = useCallback(() => invalidateActivitySessionCache(), []);
+    const retryDay = useCallback(() => {
+        setLoadAttempt((n) => n + 1);
+        invalidateActivitySessionCache();
+    }, []);
     const viewIds = useId();
 
     const visibleWorkItems = useMemo(
@@ -497,12 +519,11 @@ export function ActivityDayView({
         () => (stitchedStatus === 'ready' ? stitchedHeadline(t, visibleStitched, pickUp?.threadId) : null),
         [t, stitchedStatus, visibleStitched, pickUp?.threadId],
     );
-    const visibleMomentCount = useMemo(() => new Set(visibleStitched.flatMap((item) => item.moments.map((moment) => moment.id))).size, [visibleStitched]);
     const stitchedSub = useMemo(
         // One active time per day (activity review v1.0.0 #5): the Your day
         // number, unless a search narrows the rows.
-        () => (stitchedHead ? stitchedSubline(t, visibleStitched, visibleMomentCount, query || !dailyData?.totalActiveMs ? undefined : dailyData.totalActiveMs) : null),
-        [t, stitchedHead, visibleStitched, visibleMomentCount, query, dailyData?.totalActiveMs],
+        () => (stitchedHead ? stitchedSubline(t, visibleStitched, query || !dailyData?.totalActiveMs ? undefined : dailyData.totalActiveMs, i18n.resolvedLanguage ?? i18n.language) : null),
+        [t, i18n, stitchedHead, visibleStitched, query, dailyData?.totalActiveMs],
     );
     const workedOnCount = view === 'stitched' ? stitchedRowModel.threads.length : workItems.length;
     useEffect(() => {
@@ -644,9 +665,9 @@ export function ActivityDayView({
             mode === 'stitched'
                 ? stitchedHead
                 : workItems.length > 0
-                  ? t('stitched.recordedHeadline', { count: workItems.length })
+                  ? t('stitched.recordedHeader')
                   : null;
-        const subline = headline ? (mode === 'stitched' ? stitchedSub : t('stitched.recordedSubline')) : null;
+        const subline = headline ? (mode === 'stitched' ? stitchedSub : null) : null;
         return (
             <section>
                 <div className={cn('mb-4 flex flex-wrap gap-x-6 gap-y-3', headline ? 'items-end' : 'items-center')}>
@@ -1021,7 +1042,7 @@ const OUTCOME_REASON_KEYS = {
  *  Fixed, Done or Abandoned, with its evidence reason. Same data, same copy. */
 function ActivityOutcomeLine({ outcome }: { outcome: ActivityOutcome }) {
     const { t, i18n } = useTranslation('activity');
-    const time = new Date(outcome.occurredAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
+    const time = new Date(outcome.occurredAt).toLocaleTimeString(i18n.language, { hour: 'numeric', minute: '2-digit' });
     const status = outcome.status === 'reported' && outcome.target
         ? t('activityCard.outcome.reportedTo', { target: outcome.target, time })
         : t(OUTCOME_STATUS_KEYS[outcome.status], { time });
@@ -1273,7 +1294,7 @@ function RunWorkRow({ run, onOpenRunDetail }: { run: CronRunWithJobName; onOpenR
     );
 }
 
-// ── "What Isoform learned" rows ──
+// ── "What it learned" rows ──
 
 interface LearnedEntry {
     id: string;

@@ -529,7 +529,9 @@ func TestMigrateActivityTimelineGroups_BackfillAndRekey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetTimelineGroupSummaries: %v", err)
 	}
-	if summaries[codex.ID].Title != "Edit code in Codex" {
+	// Stored titles read back in the past tense (activity review v1.0.5 V4),
+	// so the legacy "Edit code in Codex" comes back as "Edited code in Codex".
+	if summaries[codex.ID].Title != "Edited code in Codex" {
 		t.Fatalf("re-keyed summary = %+v, want legacy title under new id", summaries)
 	}
 
@@ -829,5 +831,27 @@ func TestMigrateTimelineSummaryImageFailureRequeue(t *testing.T) {
 	}
 	if len(due) != 1 || due[0].ID != parked.ID {
 		t.Fatalf("due = %+v, want the requeued run", due)
+	}
+}
+
+func TestTimelineRunIsWorkDropsSystemRuns(t *testing.T) {
+	state := ActivityTimelineEvent{ActivityEvent: activitymon.ActivityEvent{Kind: activitymon.EventSessionState}}
+	typing := ActivityTimelineEvent{ActivityEvent: activitymon.ActivityEvent{Kind: activitymon.EventAppSwitch}}
+	cases := []struct {
+		name   string
+		run    ActivityTimelineRunRow
+		events []ActivityTimelineEvent
+		want   bool
+	}{
+		{"work", ActivityTimelineRunRow{AppKey: "com.microsoft.VSCode", AppName: "VS Code"}, []ActivityTimelineEvent{typing}, true},
+		{"unknown app", ActivityTimelineRunRow{AppKey: "unknown", AppName: "Unknown"}, []ActivityTimelineEvent{typing}, false},
+		{"loginwindow", ActivityTimelineRunRow{AppKey: "com.apple.loginwindow", AppName: "loginwindow"}, []ActivityTimelineEvent{typing}, false},
+		{"only state changes", ActivityTimelineRunRow{AppKey: "com.microsoft.VSCode", AppName: "VS Code"}, []ActivityTimelineEvent{state, state}, false},
+		{"state change inside work", ActivityTimelineRunRow{AppKey: "com.microsoft.VSCode", AppName: "VS Code"}, []ActivityTimelineEvent{state, typing}, true},
+	}
+	for _, tc := range cases {
+		if got := timelineRunIsWork(tc.run, tc.events); got != tc.want {
+			t.Errorf("%s: timelineRunIsWork = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }

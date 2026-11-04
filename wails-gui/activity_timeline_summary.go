@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"wails-gui/internal/pii"
 	"wails-gui/internal/platform/activitymon"
@@ -286,13 +287,14 @@ Quoting (overrides the language rule for quoted material only):
 
 Rules:
 - Output JSON only. No markdown, no code fences.
-- title: verb + the specific artifact named exactly — the article's real title, the repo/file, the person or channel. A generic title like "Read article" or "Browse website" is wrong whenever the evidence names the artifact.
+- title: a past-tense verb + the specific artifact named exactly, 60 characters at most, like a diary entry ("Opened System Settings", never "Open System Settings") — the article's real title, the repo/file, the person or channel. A generic title like "Read article" or "Browse website" is wrong whenever the evidence names the artifact.
 - description: 1-2 sentences stating what the user did, the artifact's exact name, and its source (publication, site, repo, channel) when visible.
 - entities: exact names of the real things this run touched: article titles, publications, people, repos, files, domains, tools, commands. No generic categories like "article" or "website".
 - timeline: each item is one concrete semantic step; merge adjacent raw events that represent the same step. Carry key original information in details — exact titles, authors, URLs, key points read, text typed, commands run — not generic restatements.
 - Timeline items must cite raw eventIds from the provided list. Use eventIds only, never array indexes.
 - Keyboard events: "typed" is the literal text the user entered (already IME-composed). "imeRawKeys" are raw keystrokes captured under a composing input method (e.g. pinyin) — they are NOT the entered text; never quote or paraphrase them as content.
 - Never emit app switches, empty focus changes, or accidental clicks as timeline items; the run is already scoped to one app.
+- Quote speech in a step only when it says something a person would recognize later; a scrap such as "There the two." is not a step.
 - Do not include status, confidence, intent, timestamps, event indexes, or invented ids.
 - If evidence is thin, stay conservative — but still name whatever specific content is visible.
 
@@ -300,7 +302,7 @@ Rules:
 
 JSON shape:
 {
-  "title": "Verb + specific artifact",
+  "title": "Past-tense verb + specific artifact",
   "description": "One or two sentences describing the work in this app run.",
   "activityType": "coding|writing|research|communication|design|ops|browsing|system|other",
   "entities": ["entity", "entity"],
@@ -435,6 +437,7 @@ func timelineEventRole(evt activitymon.ActivityEvent) string {
 func sanitizeTimelineGroupSummary(group ActivityTimelineGroup, resp timelineGroupSummaryResponse) ActivityTimelineGroupSummary {
 	allowed := make(map[string]bool, len(group.Events))
 	appSwitchIDs := make(map[string]bool)
+	scrapSpeechIDs := make(map[string]bool)
 	for _, evt := range group.Events {
 		if strings.TrimSpace(evt.EventID) == "" || activitySourceAppIsSensitive(evt.AppBundleID, evt.AppName) || activitymon.IsPrivateBrowsing(evt.WindowTitle) {
 			continue
@@ -442,6 +445,9 @@ func sanitizeTimelineGroupSummary(group ActivityTimelineGroup, resp timelineGrou
 		allowed[evt.EventID] = true
 		if evt.Kind == activitymon.EventAppSwitch {
 			appSwitchIDs[evt.EventID] = true
+		}
+		if evt.Kind == activitymon.EventSpeech && timelineSpeechIsScrap(evt.SpeechText) {
+			scrapSpeechIDs[evt.EventID] = true
 		}
 	}
 
@@ -455,6 +461,7 @@ func sanitizeTimelineGroupSummary(group ActivityTimelineGroup, resp timelineGrou
 		ids := make([]string, 0, len(item.EventIDs))
 		seen := map[string]bool{}
 		itemSwitchOnly := true
+		itemScrapOnly := true
 		for _, id := range item.EventIDs {
 			id = strings.TrimSpace(id)
 			if !allowed[id] || seen[id] {
@@ -465,8 +472,11 @@ func sanitizeTimelineGroupSummary(group ActivityTimelineGroup, resp timelineGrou
 			if !appSwitchIDs[id] {
 				itemSwitchOnly = false
 			}
+			if !scrapSpeechIDs[id] {
+				itemScrapOnly = false
+			}
 		}
-		if len(ids) == 0 {
+		if len(ids) == 0 || itemScrapOnly {
 			continue
 		}
 		timeline = append(timeline, ActivityTimelineSemanticItem{
@@ -492,9 +502,9 @@ func sanitizeTimelineGroupSummary(group ActivityTimelineGroup, resp timelineGrou
 		timeline = meaningful
 	}
 
-	title := strings.TrimSpace(resp.Title)
+	title := timelineTitlePastTense(strings.TrimSpace(resp.Title))
 	if title == "" {
-		title = fmt.Sprintf("Use %s", group.AppName)
+		title = fmt.Sprintf("Used %s", group.AppName)
 	}
 	description := strings.TrimSpace(resp.Description)
 	if description == "" {
@@ -512,6 +522,46 @@ func sanitizeTimelineGroupSummary(group ActivityTimelineGroup, resp timelineGrou
 		Entities:     cleanStringList(resp.Entities, 12, 80),
 		Timeline:     timeline,
 	}
+}
+
+// timelineSpeechIsScrap reports a transcript too thin to be a step
+// (activity review v1.0.5 V6): under four words, or under six characters in
+// a language written without spaces.
+func timelineSpeechIsScrap(text string) bool {
+	text = strings.TrimSpace(text)
+	if words := strings.Fields(text); len(words) > 1 {
+		return len(words) < 4
+	}
+	return utf8.RuneCountInString(text) < 6
+}
+
+// imperativeTitleVerbs maps the leading verb of an English session title to
+// its past tense, so titles read like a diary (activity review v1.0.5 V4).
+var imperativeTitleVerbs = map[string]string{
+	"Add": "Added", "Analyze": "Analyzed", "Browse": "Browsed", "Build": "Built", "Call": "Called",
+	"Check": "Checked", "Click": "Clicked", "Close": "Closed", "Commit": "Committed", "Compose": "Composed",
+	"Configure": "Configured", "Copy": "Copied", "Create": "Created", "Debug": "Debugged", "Delete": "Deleted",
+	"Discuss": "Discussed", "Download": "Downloaded", "Draft": "Drafted", "Edit": "Edited", "Explore": "Explored",
+	"Find": "Found", "Fix": "Fixed", "Go": "Went", "Inspect": "Inspected", "Install": "Installed",
+	"Join": "Joined", "Launch": "Launched", "Listen": "Listened", "Look": "Looked", "Make": "Made",
+	"Merge": "Merged", "Message": "Messaged", "Navigate": "Navigated", "Open": "Opened", "Plan": "Planned",
+	"Play": "Played", "Push": "Pushed", "Remove": "Removed", "Reply": "Replied", "Research": "Researched",
+	"Respond": "Responded", "Review": "Reviewed", "Run": "Ran", "Save": "Saved", "Schedule": "Scheduled",
+	"Scroll": "Scrolled", "Search": "Searched", "Select": "Selected", "Send": "Sent", "Share": "Shared",
+	"Sign": "Signed", "Start": "Started", "Switch": "Switched", "Test": "Tested", "Type": "Typed",
+	"Update": "Updated", "Upload": "Uploaded", "Use": "Used", "View": "Viewed", "Visit": "Visited",
+	"Watch": "Watched", "Write": "Wrote",
+}
+
+func timelineTitlePastTense(title string) string {
+	verb, rest, _ := strings.Cut(title, " ")
+	if past, ok := imperativeTitleVerbs[verb]; ok {
+		if rest == "" {
+			return past
+		}
+		return past + " " + rest
+	}
+	return title
 }
 
 func cleanStringList(values []string, maxItems int, maxRunes int) []string {

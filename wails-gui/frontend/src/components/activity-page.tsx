@@ -24,9 +24,6 @@ import {
     Calendar as CalendarIcon,
     CalendarDays,
     BookOpen,
-    ShieldCheck,
-    Clock,
-    Zap,
     Mic,
     MicOff,
     Activity as ActivityIcon,
@@ -40,7 +37,6 @@ import { ActivityOpenChatContext } from './activity-ask-inline';
 import { ActivityInlineNotice, type ActivityNotice } from './activity-inline-notice';
 import { SearchIcon } from '@/assets/icons/SearchIcon';
 import { RedactionShieldIcon } from '@/components/icons/redaction-shield-icon';
-import { AppIcon, YansuIcon, hasAppIcon } from '@/components/icons/app-icons';
 import { ActivityDayView, type ActivityDaySection } from './activity-day-view';
 import type { WorkedOnView } from './activity-stitched';
 import type { MobileBriefActivityTarget, MobileBriefCard } from '@/lib/wails-shim-app';
@@ -49,6 +45,7 @@ import { ActivityWeekView } from './activity-week-view';
 import { AutomationDetailDialog } from '@/components/automations/AutomationDetailDialog';
 import {
     formatDateStr,
+    formatTimeRangeFromMs,
     useCalendarData,
     type CronJobsProp,
 } from './timeline/useCalendarData';
@@ -78,7 +75,6 @@ import {
     GetKnowledgeForSession,
     SemanticSearchActivitySessions,
     AddVoiceInputApp,
-    ListSystemApps,
 } from '../../wailsjs/go/main/App';
 import {
     ChatSenderVerdictDTO,
@@ -91,7 +87,6 @@ import {
     SessionPrincipalDTO,
     GetActivityTimelineGroups,
     GetActivityTimelineGroupsForSessions,
-    GetAppIconsForBundleIDs,
     GenerateActivityTimelineGroupSummary,
     ActivityTimelineGroup,
 } from '../lib/wails-shim-app';
@@ -204,7 +199,7 @@ interface ActivityPageProps {
 /** Format ms timestamp to HH:MM:SS */
 function formatTime(ms: number): string {
     const d = new Date(ms);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 /** Extract a short, human-readable preview from a snapshot row for the
@@ -238,7 +233,7 @@ function extractSnapshotPreview(snap: main.ActivitySnapshotRow): {
 /** Format ms timestamp to HH:MM */
 function formatTimeShort(ms: number): string {
     const d = new Date(ms);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 /** Format duration in ms to human-readable string */
@@ -251,6 +246,22 @@ function formatDuration(ms: number): string {
     const hr = Math.floor(min / 60);
     const remMin = min % 60;
     return remMin > 0 ? `${hr}h ${remMin}m` : `${hr}h`;
+}
+
+/** A session's length: "1 min" under an hour, "1h 10m" past it (activity review v1.0.5 V2). */
+function formatSessionDuration(ms: number, minutes: (count: number) => string): string {
+    const min = Math.max(1, Math.floor(ms / 60_000));
+    return min < 60 ? minutes(min) : formatDuration(ms);
+}
+
+/** A transcript too thin to be a step (activity review v1.0.5 V6), as in Go's
+ *  timelineSpeechIsScrap: under four words, or under six characters in a
+ *  language written without spaces. */
+export function isSpeechScrap(text?: string): boolean {
+    const trimmed = (text ?? '').trim();
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    if (words.length > 1) return words.length < 4;
+    return [...trimmed].length < 6;
 }
 
 function formatTimelineGroupDuration(ms: number): string {
@@ -793,81 +804,6 @@ function splitSemanticAction(action: string): { verb: string; rest: string } {
         verb: match?.[1] ?? trimmed,
         rest: match?.[2] ?? '',
     };
-}
-
-function normalizeAppIconKey(value: string): string {
-    return value.trim().toLowerCase();
-}
-
-function timelineGroupIconCandidates(group: ActivityTimelineGroup): string[] {
-    const rawAppKey = group.appKey.trim();
-    const appKey = rawAppKey.replace(/^app:/, '');
-    const appName = group.appName.trim();
-    const values = [
-        rawAppKey,
-        appKey,
-        appName,
-        appName.endsWith('.app') ? appName.slice(0, -4) : `${appName}.app`,
-    ];
-
-    const lower = `${rawAppKey} ${appName}`.toLowerCase();
-    if (lower.includes('slack')) {
-        values.push('Slack', 'Slack.app', 'com.tinyspeck.slackmacgap');
-    }
-    if (lower.includes('chrome') || lower.includes('google')) {
-        values.push('Google Chrome', 'Google Chrome.app', 'Chrome.app', 'com.google.Chrome');
-    }
-    if (lower.includes('codex')) {
-        values.push('Codex', 'Codex.app');
-    }
-    if (lower.includes('claude')) {
-        values.push('Claude', 'Claude.app', 'com.anthropic.claudefordesktop');
-    }
-    if (lower.includes('yansu')) {
-        values.push('Yansu', 'Yansu.app');
-    }
-    if (lower.includes('tencent') || lower.includes('腾讯会议')) {
-        values.push('Tencent Meeting', '腾讯会议', 'Tencent Meeting.app', '腾讯会议.app', 'com.tencent.meeting');
-    }
-    if (lower.includes('shottr')) {
-        values.push('Shottr', 'Shottr.app', 'cc.ffitch.shottr');
-    }
-
-    return Array.from(new Set(values.filter((value) => value.trim() !== '')));
-}
-
-function TimelineAppIcon({ group, active, iconUrl, pending }: { group: ActivityTimelineGroup; active: boolean; iconUrl?: string; pending?: boolean }) {
-    const candidates = timelineGroupIconCandidates(group);
-    const appBundle = candidates.find((candidate) => hasAppIcon(candidate)) ?? (group.appName.endsWith('.app') ? group.appName : `${group.appName}.app`);
-    const fallback = (group.appName || '?').trim().slice(0, 1).toUpperCase();
-    const hasIcon = hasAppIcon(appBundle);
-    const isYansu = group.appName.toLowerCase() === 'yansu' || group.appKey.toLowerCase().includes('yansu');
-    const iconClassName = 'size-6 shrink-0 object-contain';
-    if (iconUrl) {
-        return <img src={iconUrl} alt="" className={iconClassName} aria-hidden />;
-    }
-    if (isYansu) {
-        return <YansuIcon className={iconClassName} />;
-    }
-    // Icon sources still resolving: hold a neutral placeholder instead of
-    // flashing a brand glyph or monogram that the real icon then replaces.
-    if (pending) {
-        return <span className="size-6 shrink-0 rounded-md bg-panel-warm animate-pulse" aria-hidden />;
-    }
-    if (hasIcon) {
-        return <AppIcon appBundle={appBundle} className={iconClassName} />;
-    }
-    return (
-        <span
-            className={cn(
-                'flex size-6 shrink-0 items-center justify-center text-[11px] font-semibold',
-                active ? 'text-accent-2' : 'text-muted',
-            )}
-            aria-hidden
-        >
-            {group.appName ? fallback : <AppWindow className="size-4" />}
-        </span>
-    );
 }
 
 // Renders the parsed structured content extracted from a snapshot
@@ -1892,29 +1828,29 @@ function eventRoleLabel(role?: string): string {
     return raw.replace(/^AX/, '');
 }
 
-function eventActionLabel(evt: activitymon.ActivityEvent, t: TFunction<'activity'>): { verb: string; object: string } {
+export function eventActionLabel(evt: activitymon.ActivityEvent, t: TFunction<'activity'>): { verb: string; object: string } {
     switch (evt.kind) {
         case 'click':
             return {
-                verb: 'Clicked',
+                verb: t('stepVerbs.clicked'),
                 object: evt.clickLabel || eventRoleLabel(evt.clickRole),
             };
         case 'keyboard':
             // typedText is the committed text recovered from focused-field
             // diffs (IME-composed); raw keyChars render separately.
-            return { verb: 'Typed', object: evt.typedText ?? '' };
+            return { verb: t('stepVerbs.typed'), object: evt.typedText ?? '' };
         case 'focus':
             return {
-                verb: 'Focused',
+                verb: t('stepVerbs.focused'),
                 object: evt.focusLabel || eventRoleLabel(evt.focusRole),
             };
         case 'speech':
             return {
-                verb: evt.speechSource === 'microphone' ? 'Said' : 'Heard',
+                verb: evt.speechSource === 'microphone' ? t('stepVerbs.said') : t('stepVerbs.heard'),
                 object: evt.speechText || '',
             };
         case 'app_switch':
-            return { verb: 'Switched app', object: evt.appName || '' };
+            return { verb: t('stepVerbs.switchedApp'), object: evt.appName || '' };
         // Events Isoform itself produced are rendered from their fields, so
         // the line follows the UI language.
         case 'calendar_peek': {
@@ -1950,7 +1886,7 @@ function eventActionLabel(evt: activitymon.ActivityEvent, t: TFunction<'activity
             return { verb: t('systemEvents.verb'), object: t(`systemEvents.state.${state}` as never) };
         }
         default:
-            return { verb: 'Recorded', object: evt.windowTitle || evt.appName || '' };
+            return { verb: t('stepVerbs.recorded'), object: evt.windowTitle || evt.appName || '' };
     }
 }
 
@@ -2085,15 +2021,6 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
     const [sessions, setSessions] = useState<main.ActivitySessionSummary[]>([]);
     const [timelineGroups, setTimelineGroups] = useState<ActivityTimelineGroup[]>([]);
     const [expandedSemanticTimelineItems, setExpandedSemanticTimelineItems] = useState<Set<string>>(() => new Set());
-    const [systemAppIconByBundle, setSystemAppIconByBundle] = useState<Map<string, string>>(new Map());
-    const [systemAppIconByName, setSystemAppIconByName] = useState<Map<string, string>>(new Map());
-    // True once the ListSystemApps scan has settled (success or failure), so
-    // icon placeholders know when to stop waiting on the by-name source.
-    const [systemAppsLoaded, setSystemAppsLoaded] = useState(false);
-    // Per-bundle-id native icon resolutions: data URL = resolved, null =
-    // definitive miss, absent = still resolving.
-    const [nativeAppIcons, setNativeAppIcons] = useState<Map<string, string | null>>(new Map());
-    const pendingIconFetchesRef = useRef<Set<string>>(new Set());
     const [selectedId, setSelectedId] = useState<string | null>(initialSessionId ?? null);
     const [selectedTimelineGroupId, setSelectedTimelineGroupId] = useState<string | null>(null);
     const [detail, setDetail] = useState<main.ActivitySessionDetail | null>(null);
@@ -2410,89 +2337,6 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
         return () => { cancelled = true; };
     }, []);
 
-    // The system app-icon scan only feeds the Screen timeline's rows, and a
-    // slow first run must not tax the Day sections — start it the first time
-    // the timeline is picked, not on page mount.
-    useEffect(() => {
-        if (!isTimeline) return;
-        let cancelled = false;
-        ListSystemApps()
-            .then((apps) => {
-                if (cancelled) return;
-                const byBundle = new Map<string, string>();
-                const byName = new Map<string, string>();
-                for (const app of apps ?? []) {
-                    if (!app.icon) continue;
-                    const bundleId = normalizeAppIconKey(app.bundleId ?? '');
-                    if (bundleId) {
-                        byBundle.set(bundleId, app.icon);
-                    }
-                    for (const name of [app.name, app.englishName]) {
-                        const key = normalizeAppIconKey(name ?? '');
-                        if (key) {
-                            byName.set(key, app.icon);
-                            byName.set(normalizeAppIconKey(`${name}.app`), app.icon);
-                        }
-                    }
-                }
-                setSystemAppIconByBundle(byBundle);
-                setSystemAppIconByName(byName);
-            })
-            .catch((err) => {
-                console.warn('[activity] load system app icons failed:', err);
-            })
-            .finally(() => {
-                if (!cancelled) setSystemAppsLoaded(true);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [isTimeline]);
-
-    // Resolve native icons per bundle id for the visible timeline groups.
-    // Unlike the ListSystemApps scan above (slow first run, install-root
-    // bound), this LaunchServices lookup is cheap and covers apps installed
-    // anywhere — so rows get the real app icon instead of falling back to
-    // brand glyphs or letter monograms. Entries: data URL = resolved,
-    // null = definitive miss (fall back), absent = still resolving
-    // (render the neutral placeholder, never a wrong icon).
-    useEffect(() => {
-        const wanted = new Set<string>();
-        for (const group of timelineGroups) {
-            const appKey = (group.appKey ?? '').trim();
-            if (!appKey || appKey === 'unknown' || appKey.startsWith('app:')) continue;
-            if (nativeAppIcons.has(appKey) || pendingIconFetchesRef.current.has(appKey)) continue;
-            wanted.add(appKey);
-        }
-        if (wanted.size === 0) return;
-        const batch = Array.from(wanted);
-        for (const id of batch) pendingIconFetchesRef.current.add(id);
-        GetAppIconsForBundleIDs(batch)
-            .then((icons) => {
-                setNativeAppIcons((prev) => {
-                    const next = new Map(prev);
-                    for (const id of batch) {
-                        next.set(id, icons?.[id] ?? null);
-                    }
-                    return next;
-                });
-            })
-            .catch(() => {
-                // Mark as definitive misses so rows fall back instead of
-                // showing the placeholder forever.
-                setNativeAppIcons((prev) => {
-                    const next = new Map(prev);
-                    for (const id of batch) {
-                        if (!next.has(id)) next.set(id, null);
-                    }
-                    return next;
-                });
-            })
-            .finally(() => {
-                for (const id of batch) pendingIconFetchesRef.current.delete(id);
-            });
-    }, [timelineGroups, nativeAppIcons]);
-
     // Resolve the anchor session (when opened via a session-jump from memory
     // or knowledge). Reads its start time and switches the time filter to
     // that session's day so the sidebar shows sibling sessions from the same
@@ -2775,10 +2619,11 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
     // the summary timeline renders while its event ids can't be resolved yet
     // (or resolve against the previous group's detail). During that window
     // rows hold a blank icon slot instead of flashing the 'focus' fallback
-    // that the real kind then replaces — same rule as TimelineAppIcon's
-    // pending placeholder.
+    // that the real kind then replaces.
     const timelineEventsPending = !!selectedTimelineGroup && detail?.id !== selectedTimelineGroup.id;
-    const visibleEventCount = selectedTimelineSummary?.timeline?.length ?? detail?.events?.length ?? 0;
+    // Raw steps, without speech scraps (activity review v1.0.5 V6).
+    const stepEventRows = (detail?.events ?? []).flatMap((evt, idx) =>
+        evt.kind === 'speech' && isSpeechScrap(evt.speechText) ? [] : [idx]);
     const visibleDurationMs = selectedTimelineGroup ? selectedTimelineGroup.activeMs : (detail ? detail.endTime - detail.startTime : 0);
 
     useEffect(() => {
@@ -3586,9 +3431,10 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
             skipNextActiveScrollRef.current = false;
             return;
         }
-        if (activeEventIndex >= 0 && virtuosoRef.current) {
+        const activeRow = stepEventRows.indexOf(activeEventIndex);
+        if (activeRow >= 0 && virtuosoRef.current) {
             virtuosoRef.current.scrollToIndex({
-                index: activeEventIndex,
+                index: activeRow,
                 align: 'center',
                 behavior: 'smooth',
             });
@@ -4041,22 +3887,9 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                     <div className="flex flex-col gap-0.5">
                                         {dateGroups.map((group) => {
                                             const isActive = selectedTimelineGroupId === group.id;
-                                            const groupBundleId = !group.appKey.startsWith('app:') && group.appKey !== 'unknown'
-                                                ? group.appKey.trim()
-                                                : '';
-                                            const nativeIcon = groupBundleId ? nativeAppIcons.get(groupBundleId) : undefined;
-                                            const iconUrl = nativeIcon || timelineGroupIconCandidates(group).reduce<string | undefined>((found, candidate) => {
-                                                if (found) return found;
-                                                const key = normalizeAppIconKey(candidate);
-                                                return systemAppIconByBundle.get(key) ?? systemAppIconByName.get(key);
-                                            }, undefined);
-                                            // Still waiting on an icon source: the per-bundle
-                                            // lookup hasn't settled, or (for name-only groups)
-                                            // the system scan is still running. Render a neutral
-                                            // placeholder instead of flashing a wrong glyph.
-                                            const iconPending = !iconUrl && (
-                                                groupBundleId ? nativeIcon === undefined : !systemAppsLoaded
-                                            );
+                                            const firstFrameSrc = group.firstFrame && bridgePort
+                                                ? snapshotImageURL(bridgePort, { filePath: group.firstFrame.path })
+                                                : null;
                                             const title = group.summary?.title || group.appName || (t('sessionList.unknownApp') as string);
                                             const anchors = (group.identityAnchors ?? []).slice(0, 2).join(' · ');
                                             const subtitleBase = group.summary?.title ? `${group.appName} · ${formatTimeShort(group.startTime)}` : formatTimeShort(group.startTime);
@@ -4071,20 +3904,25 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                         setSelectedId(group.primarySessionId);
                                                         onSectionChange('timeline');
                                                     }}
-                                                    className={`grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-x-2 gap-y-0.5 px-3 py-2 rounded-lg text-left transition-colors ${
+                                                    className={`grid ${firstFrameSrc ? 'grid-cols-[3.5rem_minmax(0,1fr)]' : 'grid-cols-[minmax(0,1fr)]'} items-start gap-x-2 gap-y-0.5 px-3 py-2 rounded-lg text-left transition-colors ${
                                                         isActive
                                                             ? 'bg-active-row-bg text-ink'
                                                             : 'text-muted hover:text-ink hover:bg-surface-hover'
                                                     }`}
                                                 >
-                                                    {/* pt-[2px] optically aligns the icon's top edge with the
-                                                        title's glyph top (line-box half-leading minus the icon
-                                                        artwork's own inset). */}
-                                                    <span className="flex pt-[2px]">
-                                                        <TimelineAppIcon group={group} active={isActive} iconUrl={iconUrl} pending={iconPending} />
-                                                    </span>
+                                                    {firstFrameSrc && (
+                                                        <img
+                                                            src={firstFrameSrc}
+                                                            alt=""
+                                                            aria-hidden
+                                                            loading="lazy"
+                                                            draggable={false}
+                                                            data-testid="timeline-first-frame"
+                                                            className="row-span-2 h-9 w-14 rounded-md border border-border object-cover"
+                                                        />
+                                                    )}
                                                     <span className="min-w-0 flex items-center gap-1.5 text-[13px] font-medium">
-                                                        <span className="min-w-0 truncate">{title}</span>
+                                                        <span className="min-w-0 truncate" title={title}>{title}</span>
                                                         {isSummarizing && (
                                                             <Loader2
                                                                 className="h-3 w-3 shrink-0 animate-spin opacity-60"
@@ -4092,7 +3930,7 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                             />
                                                         )}
                                                     </span>
-                                                    <div className="col-start-2 min-w-0 grid grid-cols-[minmax(0,1fr)_4.25rem] items-center gap-2 text-[11px] opacity-70">
+                                                    <div className={cn('min-w-0 grid grid-cols-[minmax(0,1fr)_4.25rem] items-center gap-2 text-[11px] opacity-70', firstFrameSrc && 'col-start-2')}>
                                                         <span className="min-w-0 truncate tabular-nums">
                                                             {subtitle}
                                                         </span>
@@ -4102,7 +3940,7 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                     </div>
                                                     {group.sessionIds?.some((id) => semanticMatches.has(id)) && (
                                                         <span
-                                                            className="col-start-1 row-start-2 justify-self-center flex items-center gap-0.5 text-[9px] text-muted/80"
+                                                            className={cn('flex items-center gap-0.5 text-[9px] text-muted/80', firstFrameSrc ? 'col-start-2' : 'justify-self-start')}
                                                             title={t('sessionList.semanticMatchTitle', {
                                                                 text: (semanticMatches.get(group.sessionIds.find((id) => semanticMatches.has(id)) ?? '')?.matchText ?? '').slice(0, 80),
                                                             }) as string}
@@ -4186,8 +4024,7 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                 className="text-[20px] font-semibold tracking-tight text-ink truncate min-w-0"
                                                 title={selectedTimelineSummary?.title || undefined}
                                             >
-                                                {selectedTimelineSummary?.title ||
-                                                    `${formatTime(detail.startTime)} - ${formatTime(detail.endTime)}`}
+                                                {selectedTimelineSummary?.title || formatTimeRangeFromMs(detail.startTime, detail.endTime)}
                                             </h1>
                                             {triggerLabel(detail.triggerKind, t as (key: string) => string) && (
                                                 <span className="text-[10px] bg-panel-warm px-1.5 py-0.5 rounded font-medium text-muted">
@@ -4197,33 +4034,12 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                         </div>
                                         {/* Summary stats row */}
                                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
-                                            {selectedTimelineSummary?.title && (
-                                                <span className="shrink-0 whitespace-nowrap">
-                                                    {formatTime(detail.startTime)} - {formatTime(detail.endTime)}
-                                                </span>
-                                            )}
-                                            <span className="flex items-center gap-1 shrink-0 whitespace-nowrap">
-                                                <Clock className="h-3 w-3 opacity-60" />
-                                                {formatDuration(visibleDurationMs)}
-                                            </span>
-                                            <span className="flex items-center gap-1 shrink-0 whitespace-nowrap">
-                                                <Zap className="h-3 w-3 opacity-60" />
-                                                {t('session.events', { count: detail.events?.length ?? 0 })}
-                                            </span>
-                                            {(detail.snapshots?.length ?? 0) > 0 && (
-                                                <span className="flex items-center gap-1 shrink-0 whitespace-nowrap">
-                                                    <Film className="h-3 w-3 opacity-60" />
-                                                    {t('session.frames', { count: detail.snapshots!.length })}
-                                                </span>
-                                            )}
-                                            {detail.appNames?.length > 0 && (
-                                                <span className="truncate opacity-70 min-w-0" title={detail.appNames.join(', ')}>
-                                                    {detail.appNames.join(', ')}
-                                                </span>
-                                            )}
-                                            <span className="flex items-center gap-1 shrink-0 whitespace-nowrap" title={t('session.localOnlyTitle') as string}>
-                                                <ShieldCheck className="h-3 w-3 opacity-40" />
-                                                <span className="opacity-50">{t('session.localOnly')}</span>
+                                            <span className="min-w-0 truncate" data-testid="session-meta" title={detail.appNames?.join(', ') || undefined}>
+                                                {[
+                                                    selectedTimelineSummary?.title ? formatTimeRangeFromMs(detail.startTime, detail.endTime) : '',
+                                                    formatSessionDuration(visibleDurationMs, (count) => t('session.minutes', { count })),
+                                                    detail.appNames?.join(', ') ?? '',
+                                                ].filter(Boolean).join(' · ')}
                                             </span>
                                         </div>
                                         {/* People Isoform identified in this session. Click a chip
@@ -4432,7 +4248,8 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                     {/* ── Meeting notes section ── */}
                                     <ActivityMeetingNotes sessionIds={meetingNotesSessionIds} bridgePort={bridgePort} />
 
-                                    {/* ── Recording section ── */}
+                                    {/* ── Recording section: none when no screenshot was kept ── */}
+                                    {(isSnapshotSession || segmentCount > 0) && (
                                     <div className="space-y-3 shrink-0">
                                         <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                                             {t('session.recording')}
@@ -5312,12 +5129,13 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                             </div>
                                         )}
                                     </div>
+                                    )}
 
                                     {/* ── Event timeline ── */}
                                     <div className="space-y-3 flex-1 min-h-[320px] flex flex-col">
                                         <div className="flex items-center justify-between gap-2 shrink-0">
                                             <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                                                {t('session.events_section', { count: visibleEventCount })}
+                                                {t('session.stepsHeading')}
                                             </h2>
                                             <button
                                                 type="button"
@@ -5349,6 +5167,7 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                             return { event: detail.events[eventIdx], eventIdx };
                                                         })
                                                         .filter((entry): entry is { event: activitymon.ActivityEvent; eventIdx: number } => Boolean(entry));
+                                                    if (sourceEvents.length > 0 && sourceEvents.every(({ event }) => event.kind === 'speech' && isSpeechScrap(event.speechText))) return null;
                                                     const semanticIconKind = sourceEvents[0]?.event.kind ?? (timelineEventsPending ? null : 'focus');
                                                     const actionParts = splitSemanticAction(item.action);
                                                     const toggleExpanded = () => {
@@ -5461,7 +5280,7 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                     );
                                                 })}
                                             </div>
-                                        ) : (!detail.events || detail.events.length === 0) ? (
+                                        ) : stepEventRows.length === 0 ? (
                                             <p className="text-sm text-muted">{t('session.noEventsRecorded')}</p>
                                         ) : (
                                             <div
@@ -5471,10 +5290,11 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                                                 <Virtuoso
                                                     ref={virtuosoRef}
                                                     style={{ height: eventsListHeight }}
-                                                    totalCount={detail.events.length}
-                                                    itemContent={(idx) => {
+                                                    totalCount={stepEventRows.length}
+                                                    itemContent={(row) => {
+                                                        const idx = stepEventRows[row];
                                                         const evt = detail.events[idx];
-                                                        const prevEvt = idx > 0 ? detail.events[idx - 1] : null;
+                                                        const prevEvt = row > 0 ? detail.events[stepEventRows[row - 1]] : null;
                                                         // O(1) lookup of precomputed media availability (see eventHasMedia)
                                                         // — avoids an O(N) findClosestSnapshotIndex scan per visible row on
                                                         // every scroll render. A row is clickable only when THIS event's

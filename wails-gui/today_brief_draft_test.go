@@ -18,7 +18,7 @@ func briefDraftTestAnswer(t *testing.T, prepare func(*App, *mobileBriefService, 
 	if err := a.store.SetUIState(t.Context(), permissionUIStateKey(mailPermissionKey), "true"); err != nil {
 		t.Fatal(err)
 	}
-	view, err := a.GetLatestBrief()
+	view, err := latestBriefAfterRefresh(t, a)
 	if err != nil || view.Brief == nil {
 		t.Fatalf("brief: %v", err)
 	}

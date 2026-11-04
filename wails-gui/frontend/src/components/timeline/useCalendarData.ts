@@ -55,7 +55,13 @@ export function formatDurationMs(ms: number): string {
 
 export function formatTimeFromMs(ms: number): string {
     const d = new Date(ms);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+/** "9:12–10:02 AM": no leading zeros or seconds, the shared part said once. */
+export function formatTimeRangeFromMs(startMs: number, endMs: number, language?: string): string {
+    const clock = new Intl.DateTimeFormat(language || undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+    return clock.formatRange(startMs, endMs).replace(/\s*[–-]\s*/, '–').replace(/[\u202f\u00a0]/g, ' ');
 }
 
 export function dayStartMs(d: Date): number {

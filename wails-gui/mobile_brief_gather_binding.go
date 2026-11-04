@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -36,6 +38,75 @@ type mobileBriefGatherRevision struct {
 	// began; stopWatching ends that subscription (close).
 	withdrawn    atomic.Bool
 	stopWatching func()
+	// memory is the memory folder as collection began. The brief is built
+	// from it (mobileBriefPinnedMemoryKey), so the notes Isoform writes all
+	// the time during a long collection change nothing the brief read.
+	memory    *memoryExternalSnapshot
+	memoryDir string
+	// mu guards cited and forgotten. cited is the memory notes the brief
+	// cites once it is built (cite), nil before: until then removing any
+	// note counts. forgotten is the notes forgotten during collection.
+	mu        sync.Mutex
+	cited     map[string]bool
+	forgotten map[string]bool
+}
+
+type mobileBriefPinnedMemoryKey struct{}
+
+// mobileBriefPinnedMemory is the memory snapshot a collection is built from,
+// or nil outside one.
+func mobileBriefPinnedMemory(ctx context.Context) *memoryExternalSnapshot {
+	snapshot, _ := ctx.Value(mobileBriefPinnedMemoryKey{}).(*memoryExternalSnapshot)
+	return snapshot
+}
+
+// cite records the memory notes the built brief cites. From then on only
+// removing or forgetting one of them rejects the brief.
+func (r *mobileBriefGatherRevision) cite(brief MobileBriefV1) {
+	if r == nil {
+		return
+	}
+	cited := map[string]bool{}
+	for _, ref := range brief.Evidence {
+		if ref.SourceKind == "memory" || ref.SourceKind == taskContextSourceMemoryKind {
+			id, _, _ := strings.Cut(ref.SourceID, ":")
+			cited[id] = true
+		}
+	}
+	r.mu.Lock()
+	r.cited = cited
+	r.mu.Unlock()
+}
+
+// noteCounts reports whether removing or forgetting the memory note id
+// rejects the brief: any note before the brief is built, then a cited one.
+func (r *mobileBriefGatherRevision) noteCounts(id string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.cited == nil || r.cited[id]
+}
+
+// memoryNote is the id of the memory note at path, or "" for another file.
+func (r *mobileBriefGatherRevision) memoryNote(path string) string {
+	if r.memoryDir == "" || filepath.Dir(path) != r.memoryDir || filepath.Ext(path) != ".md" {
+		return ""
+	}
+	return strings.TrimSuffix(filepath.Base(path), ".md")
+}
+
+func (r *mobileBriefGatherRevision) forgotCitedNote() bool {
+	r.mu.Lock()
+	ids := make([]string, 0, len(r.forgotten))
+	for id := range r.forgotten {
+		ids = append(ids, id)
+	}
+	r.mu.Unlock()
+	for _, id := range ids {
+		if r.noteCounts(id) {
+			return true
+		}
+	}
+	return false
 }
 
 // mobileBriefActivityPrivacyStamp is the privacy state of the activity
@@ -56,9 +127,19 @@ func (a *App) readMobileBriefGatherRevision(ctx context.Context) (*mobileBriefGa
 	if a == nil || a.store == nil || a.IsClosedEyesModeEnabled() {
 		return nil, errMobileBriefSourcesChanged
 	}
-	revision := &mobileBriefGatherRevision{startedMs: time.Now().UnixMilli()}
-	// Watch withdrawals first: one published during any later read rejects.
-	revision.stopWatching = subscribePrivacyWithdrawals(func(privacyWithdrawal) { revision.withdrawn.Store(true) })
+	revision := &mobileBriefGatherRevision{startedMs: time.Now().UnixMilli(), forgotten: map[string]bool{}}
+	// Watch withdrawals first: one published during any later read rejects,
+	// except a forgotten memory note, which rejects only a brief citing it.
+	revision.stopWatching = subscribePrivacyWithdrawals(func(withdrawal privacyWithdrawal) {
+		if scope := withdrawal.Scope; scope.Kind == privacyWithdrawalSource && scope.SourceKind == "memory" && scope.ID != "" {
+			id, _, _ := strings.Cut(scope.ID, ":")
+			revision.mu.Lock()
+			revision.forgotten[id] = true
+			revision.mu.Unlock()
+			return
+		}
+		revision.withdrawn.Store(true)
+	})
 	var err error
 	defer func() {
 		if err != nil {
@@ -69,11 +150,21 @@ func (a *App) readMobileBriefGatherRevision(ctx context.Context) (*mobileBriefGa
 	if err != nil {
 		return nil, err
 	}
+	revision.memoryDir, err = memoryDir()
+	if err != nil {
+		return nil, err
+	}
+	// Pinned after the file stamps: a note written between the two is in
+	// the snapshot and is a change the fence sees.
 	revision.fileRevisions, err = a.readMobileBriefGatherFiles(ctx)
 	if err != nil {
 		return nil, err
 	}
-	revision.files, err = a.readTodayChatSourceFiles(ctx, TodayChatContextRef{SourceKind: "brief"}, false)
+	revision.memory, err = a.memorySnapshot()
+	if err != nil {
+		return nil, err
+	}
+	revision.files, err = a.readTodayChatSourceFilesWith(ctx, TodayChatContextRef{SourceKind: "brief"}, false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -134,23 +225,39 @@ func (a *App) mobileBriefGatherChange(ctx context.Context, revision *mobileBrief
 	if ctx.Err() != nil {
 		return "canceled"
 	}
-	if revision.withdrawn.Load() {
+	if revision.withdrawn.Load() || revision.forgotCitedNote() {
 		return "privacy_withdrawal"
 	}
 	if revision.policy != a.mobileBriefGatherPolicy(ctx) {
 		return "policy"
 	}
-	files, err := a.readTodayChatSourceFiles(ctx, TodayChatContextRef{SourceKind: "brief"}, false)
+	files, err := a.readTodayChatSourceFilesWith(ctx, TodayChatContextRef{SourceKind: "brief"}, false, false)
 	if err != nil || files != revision.files {
 		return "source_files"
 	}
 	currentFiles, err := a.readMobileBriefGatherFiles(ctx)
-	if err != nil || len(currentFiles) != len(revision.fileRevisions) {
+	if err != nil {
 		return "memory_files"
 	}
+	// Isoform writes memory notes all the time, and the brief is built from
+	// the snapshot pinned when it began (today-review v1.1.15 D12): a note
+	// written or edited meanwhile shows in the next brief. Only a cited note
+	// that left (removed or forgotten) counts; every other file still does.
 	for path, old := range revision.fileRevisions {
 		current, ok := currentFiles[path]
-		if !ok || !os.SameFile(old, current) || old.ModTime() != current.ModTime() || old.Size() != current.Size() || old.Mode() != current.Mode() {
+		if ok && os.SameFile(old, current) && old.ModTime() == current.ModTime() && old.Size() == current.Size() && old.Mode() == current.Mode() {
+			continue
+		}
+		if id := revision.memoryNote(path); id != "" {
+			if !ok && revision.noteCounts(id) {
+				return "memory_files"
+			}
+			continue
+		}
+		return "memory_files"
+	}
+	for path := range currentFiles {
+		if _, existed := revision.fileRevisions[path]; !existed && revision.memoryNote(path) == "" {
 			return "memory_files"
 		}
 	}
@@ -159,7 +266,7 @@ func (a *App) mobileBriefGatherChange(ctx context.Context, revision *mobileBrief
 		return "activity_privacy"
 	}
 	// Checked last too: a withdrawal published during the reads above.
-	if revision.withdrawn.Load() {
+	if revision.withdrawn.Load() || revision.forgotCitedNote() {
 		return "privacy_withdrawal"
 	}
 	if ctx.Err() != nil {

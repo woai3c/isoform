@@ -40,7 +40,7 @@
         "isoformRan": "Isoform ran {{name}}",
         "unknownSchedule": "a schedule",
         "openResult": "Open result",
-        "learned": "What Isoform learned",
+        "learned": "What it learned",
         "learnedKnowHow": "How you do things",
         "learnedAboutYou": "About you",
         "untitled": "Untitled",
@@ -161,15 +161,13 @@
         "viewLabel": "How to show this day",
         "stitchedTab": "Stitched by work",
         "recordedTab": "As recorded",
+        "recordedHeader": "Everything Isoform recorded, newest first.",
         "headline_one": "{{count}} piece of work",
         "headline_other": "{{count}} pieces of work",
         "headlineAllResumed_one": "{{count}} piece of work, picked back up after an interruption",
         "headlineAllResumed_other": "{{count}} pieces of work, each picked back up after an interruption",
         "headlineSomeResumed_one": "{{count}} piece of work, {{resumed}} picked back up after an interruption",
         "headlineSomeResumed_other": "{{count}} pieces of work, {{resumed}} picked back up after an interruption",
-        "recordedHeadline_one": "{{count}} item, as Isoform recorded it",
-        "recordedHeadline_other": "{{count}} items, as Isoform recorded them",
-        "recordedSubline": "Moments, meetings and what Isoform ran, newest first.",
         "timelineNote": "One row per piece of work. Select a row to focus it.",
         "legendWork": "Focused work",
         "legendInterruption": "Interruption",
@@ -188,11 +186,11 @@
         "leftOff": "Left off at",
         "pickedUp": "Picked back up",
         "pointAt": "{{time}} · {{what}}",
-        "why": "Isoform linked these because: {{reason}}",
+        "why": "Linked because: {{reason}}.",
         "whyUser": "you put them together",
         "whySame": "same {{things}}",
         "whyFallback": "they continue the same work",
-        "whyResumed": "{{reason}}, resumed within {{minutes}} min",
+        "whyResumed": "Linked because: {{reason}}. Picked back up {{minutes}} min later.",
         "noun": {
             "pr_one": "PR",
             "pr_other": "PRs",
@@ -220,12 +218,11 @@
             "from": "From {{time}}"
         },
         "loading": "Reading this day's activity",
-        "loadFailed": "Could not read this day's activity.",
+        "loadFailed": "Couldn't load what you worked on.",
         "retry": "Try again",
         "linking": "Linking stretches of work…",
         "linkingNote": "Short moments stay together while Isoform links the work. The As recorded list is already complete.",
-        "subline_one": "{{count}} moment in {{span}} · {{active}} active",
-        "subline_other": "{{count}} moments in {{span}} · {{active}} active",
+        "subline": "From {{start}} to {{end}} · {{active}} active",
         "laneDetailMeta": "{{detail}} · {{active}} active",
         "gapResumed_one": "{{count}} resume · away {{duration}}",
         "gapResumed_other": "{{count}} resumes · away {{duration}}",
@@ -264,6 +261,15 @@
     "triggerLabels": {
         "meeting": "Meeting",
         "scheduled": "Scheduled"
+    },
+    "stepVerbs": {
+        "clicked": "Clicked",
+        "typed": "Typed",
+        "focused": "Focused",
+        "said": "Said",
+        "heard": "Heard",
+        "switchedApp": "Switched app",
+        "recorded": "Recorded"
     },
     "systemEvents": {
         "verb": "Noted",
@@ -409,16 +415,13 @@
         "title": "Your week"
     },
     "session": {
-        "events": "{{count}} events",
         "frames": "{{count}} frames",
-        "localOnly": "Local only",
-        "localOnlyTitle": "All data stored locally on your device",
         "peopleHeading": "People ({{count}})",
         "peopleChipSelectTitle": "Highlight {{name}}'s messages in this session",
         "peopleChipClearTitle": "Clear highlight",
         "voicesHeading": "Voices ({{count}})",
         "voiceChipTitle": "{{label}} — {{count}} utterance(s) in this session. Click to highlight matching rows below.",
-        "selectPrompt": "Select a session from the left to view details.",
+        "selectPrompt": "Pick a session to replay it.",
         "missingError": "Session {{id}} is no longer available. It may have been removed by storage rotation.",
         "recording": "Recording",
         "hostBridgeUnavailable": "Host bridge not available.",
@@ -495,7 +498,6 @@
         "segment": "Segment {{current}} / {{total}}",
         "videoUnsupported": "Your browser does not support the video tag.",
         "switchTitle": "Switch: {{app}} - {{time}}",
-        "events_section": "Steps ({{count}})",
         "noEventsRecorded": "No steps recorded.",
         "unknownApp": "Unknown",
         "ocrMatchAppName": "OCR Match",
@@ -504,7 +506,9 @@
         "ocrTimeSeconds": "{{value}}s",
         "ocrConfidence": "{{value}}% conf",
         "ocrFrameAlt": "OCR frame at {{value}}s",
-        "knowledgeSection": "Knowledge ({{count}})"
+        "knowledgeSection": "Knowledge ({{count}})",
+        "minutes": "{{count}} min",
+        "stepsHeading": "Steps"
     },
     "meetingNotes": {
         "loadFailed": "Couldn't load meeting notes.",
@@ -544,8 +548,8 @@
         "deleteFailed": "Couldn't delete these notes."
     },
     "identityDebug": {
-        "toggleOn": "Identity verdicts on",
-        "toggleOff": "Identity verdicts",
+        "toggleOn": "Why it's grouped this way",
+        "toggleOff": "Why it's grouped this way",
         "toggleTooltip": "Show how each event was classified by the identity system (performed / received / observed / ambient / unknown) plus the reasoning. Read-only debug overlay.",
         "badgeAria": "Identity verdict: {{mode}}",
         "modeHeader": "content mode",

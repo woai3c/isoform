@@ -1,6 +1,7 @@
 // Component fixture only: the real ActivityPage over synthetic, walk-through-shaped
 // reads (a Monday of ERP review and a launch memo). No app or backend connection.
-// URL params: section, date (YYYY-MM-DD), case (writing | unwritten | sections | weekFail | weekEmpty).
+// URL params: section, date (YYYY-MM-DD), case (writing | unwritten | sections | weekFail | weekEmpty), lang (en | zh-CN), theme (paper | onedark).
+// Screen timeline frames load from a local stand-in for the host bridge on port 4317.
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@/index.css';
@@ -92,15 +93,29 @@ const knowHow = [
 ].map(([id, title], i) => ({ id, title, kind: 'how_to', takeaway: title, content: `# ${title}\n\n${title}`, date: '2026-11-02', sessionIds: [], points: [], apps: [], sessionCount: 1, savedAt: at(2, 13) - i * 60_000, reuseCount: 0, topicId: '', topicName: '' }));
 const aboutYou = { beliefs: memoryEntries.map((m, i) => ({ id: m.id, title: m.title, area: i % 3 ? '' : 'work', source: i === 0 ? 'assistant-history' : 'activity', sourceAssistant: i === 0 ? 'claude' : '', sourceAt: m.modTime, status: 'inferred', confidence: 2 })), newThisWeek: [], totals: { beliefs: memoryEntries.length, confirmed: 0 } };
 
-const groups = activities.map((a, i) => ({ id: `g${i}`, appKey: a.apps[0]?.appName ?? '', appName: a.apps[0]?.appName ?? '', startTime: a.startMs, endTime: a.endMs, activeMs: a.activeMs, eventCount: 3, sessionIds: [`s${i}`], triggerKinds: [], primarySessionId: `s${i}`, summaryStatus: 'done', summary: { title: a.title, description: a.description } }));
+// Every session but Quick replies kept a first frame.
+// A scrap of speech ("There the two.") is not a step.
+const fixtureEvents = (a: (typeof activities)[number]) => [
+    { kind: 'focus', focusLabel: 'connector/retry.go', timestamp: a.startMs + 60_000, appName: a.apps[0]?.appName ?? '' },
+    { kind: 'speech', speechSource: 'microphone', speechText: 'There the two.', timestamp: a.startMs + 120_000, appName: a.apps[0]?.appName ?? '' },
+    { kind: 'keyboard', typedText: 'retry on 429 with backoff', timestamp: a.startMs + 180_000, appName: a.apps[0]?.appName ?? '' },
+    { kind: 'speech', speechSource: 'microphone', speechText: "Let's ship the connector on Friday.", timestamp: a.startMs + 240_000, appName: a.apps[0]?.appName ?? '' },
+];
+// Sessions with a first frame keep their screenshots, so their view has a replay above Steps (activity review v1.0.6 AR43).
+const fixtureSnapshots = (a: (typeof activities)[number]) => a.id === 'a4' ? [] : [0, 1, 2].map((k) => ({
+    id: k + 1, sessionId: '', timestamp: a.startMs + k * 60_000, filePath: `/Users/ana/Library/Isoform/frames/${a.id}.jpg`, width: 1440, height: 900,
+    sizeBytes: 0, trigger: 'interval', storageTier: 'full', axText: '', browserUrl: '', app: a.apps[0]?.appName ?? '' }));
+const groups = activities.map((a, i) => ({ id: `g${i}`, appKey: a.apps[0]?.appName ?? '', appName: a.apps[0]?.appName ?? '', startTime: a.startMs, endTime: a.endMs, activeMs: a.activeMs, eventCount: 3, sessionIds: [`s${i}`], triggerKinds: [], primarySessionId: `s${i}`, summaryStatus: 'done', summary: { title: a.title, description: a.description }, events: fixtureEvents(a),
+    firstFrame: a.id === 'a4' ? undefined : { timestamp: a.startMs, path: `/Users/ana/Library/Isoform/frames/${a.id}.jpg`, focusX: 0, focusY: 0, focusW: 0, focusH: 0 } }));
 const sessions = activities.map((a, i) => ({ id: `s${i}`, appName: a.apps[0]?.appName ?? '', bundleId: '', windowTitle: a.title, startTime: a.startMs, endTime: a.endMs, durationMs: a.activeMs, activeMs: a.activeMs, snapshotCount: 0, eventCount: 3, summary: a.description, title: a.title }));
 
 let asked = false;
 const userItemId = 'u-ask';
 const reads: Record<string, (...args: any[]) => unknown> = {
     EnsureDailySummary: (date: string) => daily(date), GetDailySummary: (date: string) => ({ ...daily(date), aiSummary: weekHeadlines[date] ?? '' }),
-    GetActivitiesInRange: (start: number) => (ymd(start) === '2026-11-02' ? activities : []),
-    GetDayThreads: (start: number) => ({ grouped: true, threads: ymd(start) === '2026-11-02' ? threads : [] }),
+    // case=workedOnFails: What you worked on can't be read.
+    GetActivitiesInRange: (start: number) => (scenario === 'workedOnFails' ? Promise.reject(new Error('read failed')) : ymd(start) === '2026-11-02' ? activities : []),
+    GetDayThreads: (start: number) => (scenario === 'workedOnFails' ? Promise.reject(new Error('read failed')) : { grouped: true, threads: ymd(start) === '2026-11-02' ? threads : [] }),
     GetDayNoticed: (date: string) => (date === '2026-11-02' ? [{ id: 'n1', kind: 'follow_up', momentId: 'a2', momentTitle: 'Northwind call', momentStartMs: at(2, 10, 2), text: 'Send Priya the corrected invoice sync dates', why: 'You told her on the Northwind call that you would send them today.' }] : []),
     GetMemoryEntries: () => memoryEntries, GetKnowledgeEntries: () => knowHow, GetAboutYou: () => aboutYou,
     GetActivityMonthStats: () => [], GetCronRunsByDateRange: () => [], GetRecentMeetingNotes: () => [], GetMeetingNotesForSessions: () => [],
@@ -109,7 +124,9 @@ const reads: Record<string, (...args: any[]) => unknown> = {
     GetCaptureCounts: () => ({ paused: false, notReady: false, todayStart: at(2, 0), weekStart: at(2, 0),
         sources: [{ source: 'screens', today: 385, week: 2140 }, { source: 'audioMinutes', today: 42, week: 160 }] }),
     GetActivityTimelineGroups: () => groups, GetActivitySessions: () => sessions, GetActivityTimelineGroupsForSessions: () => groups,
-    GetHostBridgePort: () => 0, GetHostBridgeMediaToken: () => '', GetAppIconsForBundleIDs: () => ({}), ListSystemApps: () => [], GetActivityReminderChoices: () => [],
+    GetHostBridgePort: () => 4317, GetHostBridgeMediaToken: () => 'fixture',
+    GetActivitySessionDetail: (id: string) => { const a = activities[Number(id.slice(1))]; return { id, startTime: a.startMs, endTime: a.endMs, triggerKind: '', appNames: [a.apps[0]?.appName ?? ''], eventCount: 3, snapshotCount: fixtureSnapshots(a).length, triageStatus: '', ocrStatus: '', segments: [], snapshots: fixtureSnapshots(a),
+        events: [] }; }, GetAppIconsForBundleIDs: () => ({}), ListSystemApps: () => [], GetActivityReminderChoices: () => [],
     GetMainChat: () => ({ session: { localId: 'main' } }),
     AskMainChatWithContext: () => { asked = true; return { sessionId: 'main', userItemId }; },
     LoadStreamItemsPage: () => ({ hasMore: false, nextCursor: 0, items: asked ? [
@@ -134,5 +151,6 @@ function Shot() {
     const [current, setCurrent] = useState<ActivitySectionId>(section);
     return <ActivityPage section={current} onSectionChange={setCurrent} cronJobs={cron} initialDate={initialDate} onOpenChat={noop} onStartChat={noop} />;
 }
-await i18n.changeLanguage('en');
+await i18n.changeLanguage(params.get('lang') ?? 'en');
+document.documentElement.setAttribute('data-theme', params.get('theme') ?? 'paper');
 createRoot(document.getElementById('root')!).render(<main className="bg-background h-screen flex flex-col"><Shot /></main>);

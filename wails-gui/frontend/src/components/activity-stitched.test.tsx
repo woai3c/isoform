@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { formatTimeFromMs, formatTimeRangeFromMs } from './timeline/useCalendarData';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import { toast } from 'sonner';
@@ -191,7 +192,7 @@ describe('Stitched by work: reading the threads', () => {
         expect(yesterday[0]).toMatchObject({ live: false, continuesBefore: false, continuesAfter: true });
         expect(today[0]).toMatchObject({ live: true, continuesBefore: true, continuesAfter: false });
         expect(timelineRange(yesterday)).toMatchObject({ start, end: edge });
-        expect(stitchedSubline(t(), yesterday, 1)).toContain('1 moment in 1 hour');
+        expect(stitchedSubline(t(), yesterday)).toContain(`From ${stitchedClock(start)} to ${stitchedClock(edge)} · `);
         const ticks = stitchedAxisTicks(start, edge, 760, (ms) => stitchedClock(ms));
         expect(ticks.every((tick) => tick.at >= start && tick.at <= edge)).toBe(true);
     });
@@ -226,7 +227,7 @@ describe('Stitched by work: reading the threads', () => {
             activeMs: allocated(day), timeSpentMs: allocated(day), stretches: thread.stretches.map((s) => ({ ...s, activeMs: allocated(day) })) }] }));
         const yesterday = renderDay();
         await screen.findByRole('heading', { name: '11:00 PM to 12:00 AM' });
-        expect(screen.getByText('1 moment in 1 hour · 1h active')).toBeInTheDocument();
+        expect(screen.getByText('From 11:00 PM to 12:00 AM · 1h active')).toBeInTheDocument();
         expect(screen.getByTestId('stitched-continues-after')).toBeInTheDocument();
         expect(screen.getByLabelText('Continues into the next day')).toBeInTheDocument();
         expect(screen.queryByText('In progress')).toBeNull();
@@ -235,7 +236,7 @@ describe('Stitched by work: reading the threads', () => {
         yesterday.unmount();
         renderDay({ date: new Date(2026, 9, 20) });
         await screen.findByRole('heading', { name: '12:00 AM to 2:00 AM' });
-        expect(screen.getByText('1 moment in 2 hours · 2h active')).toBeInTheDocument();
+        expect(screen.getByText('From 12:00 AM to 2:00 AM · 2h active')).toBeInTheDocument();
         expect(screen.getByTestId('stitched-continues-before')).toHaveTextContent('From yesterday');
         expect(within(lane('hal')).getByText('From yesterday')).toBeInTheDocument();
         expect(screen.queryByText('In progress')).toBeNull();
@@ -363,11 +364,13 @@ describe('Stitched by work: reading the threads', () => {
     });
 
     it('explains a link in words without deciding it', () => {
-        expect(linkReasonText(t(), threads[0].linkReason, 'en')).toBe('same PR and files, resumed within 28 min');
-        expect(linkReasonText(t(), threads[1].linkReason, 'en')).toBe('the same memo document, resumed within 8 min');
-        expect(linkReasonText(t(), { kind: 'user', keys: [], text: '' }, 'en')).toBe('you put them together');
-        expect(linkReasonText(t(), { kind: 'model', keys: [], text: '' }, 'en')).toBe('they continue the same work');
-        expect(linkReasonText(t(), { kind: 'rule', keys: ['person:Ana', 'unknown:x'], text: '' }, 'en')).toBe('same person');
+        // Thursday A1: "Picked back up" only after an interruption (10 min or more).
+        expect(linkReasonText(t(), threads[0].linkReason, 'en')).toBe('Linked because: same PR and files. Picked back up 28 min later.');
+        expect(linkReasonText(t(), threads[1].linkReason, 'en')).toBe('Linked because: the same memo document.');
+        expect(linkReasonText(t(), { kind: 'user', keys: [], text: '' }, 'en')).toBe('Linked because: you put them together.');
+        expect(linkReasonText(t(), { kind: 'model', keys: [], text: '' }, 'en')).toBe('Linked because: they continue the same work.');
+        expect(linkReasonText(t(), { kind: 'rule', keys: ['person:Ana', 'unknown:x'], text: '' }, 'en')).toBe('Linked because: same person.');
+        expect(linkReasonText(t(), threads[1].linkReason, 'zh-CN')).not.toMatch(/Isoform|分钟后接着做/);
     });
 
     it('counts pieces of work in the headline', () => {
@@ -545,7 +548,7 @@ describe('Stitched by work: the page', () => {
         expect(hal.getByText('10:02 AM · PR #212, invoice_mapping.go')).toBeInTheDocument();
         // Picked back up names the thing you were in (v1.0.1 #3).
         expect(hal.getByText('10:30 AM · PR #212')).toBeInTheDocument();
-        expect(hal.getByText('Isoform linked these because: same PR and files, resumed within 28 min')).toBeInTheDocument();
+        expect(hal.getByText('Linked because: same PR and files. Picked back up 28 min later.')).toBeInTheDocument();
         // Interruptions have no card of their own.
         expect(card('nw')).toBeNull();
     });
@@ -641,8 +644,8 @@ describe('Stitched by work: the page', () => {
         // Threads with two or more moments stay one row; the rest are moments.
         expect(screen.getAllByText('Reviewing ERP connector v0.3').length).toBe(1);
         expect(screen.getByText('Northwind call')).toBeInTheDocument();
-        expect(screen.getByText('09:12 AM to 11:40 AM · 2h active · 2 moments')).toBeInTheDocument();
-        expect(screen.getByText('4 items, as Isoform recorded them')).toBeInTheDocument();
+        expect(screen.getByText('9:12 AM to 11:40 AM · 2h active · 2 moments')).toBeInTheDocument();
+        expect(screen.getByText('Everything Isoform recorded, newest first.')).toBeInTheDocument();
     });
 
     it('filters the threads by the search box', async () => {
@@ -650,7 +653,7 @@ describe('Stitched by work: the page', () => {
         await screen.findByText('Work threads');
         expect([...document.querySelectorAll('[data-thread-lane]')].map((el) => el.getAttribute('data-thread-lane'))).toEqual(['mer']);
         expect(screen.getByRole('heading', { name: '12:00 PM to 12:55 PM' })).toBeInTheDocument();
-        expect(screen.getByText('2 moments in 1 hour · 47m active')).toBeInTheDocument();
+        expect(screen.getByText('From 12:00 PM to 12:55 PM · 47m active')).toBeInTheDocument();
     });
 
     it('says when nothing matches the search', async () => {
@@ -734,7 +737,7 @@ describe('Stitched by work: busy and failure states', () => {
     it('a failed read reads as a failure with Try again, never as an empty day', async () => {
         binding('GetDayThreads').mockRejectedValue(new Error('temporary read failure'));
         renderDay();
-        expect(await screen.findByText("Could not read this day's activity.")).toBeInTheDocument();
+        expect(await screen.findByText("Couldn't load what you worked on.")).toBeInTheDocument();
         expect(screen.queryByText('Nothing here for this day.')).toBeNull();
         binding('GetDayThreads').mockResolvedValue({ grouped: true, threads });
         fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
@@ -744,7 +747,7 @@ describe('Stitched by work: busy and failure states', () => {
     it('As recorded also says the read failed instead of showing an empty day', async () => {
         binding('GetActivitiesInRange').mockRejectedValue(new Error('temporary read failure'));
         renderDay({ workedOnView: 'recorded' });
-        expect(await screen.findByText("Could not read this day's activity.")).toBeInTheDocument();
+        expect(await screen.findByText("Couldn't load what you worked on.")).toBeInTheDocument();
         expect(screen.queryByText('Nothing here for this day.')).toBeNull();
     });
 
@@ -762,7 +765,7 @@ describe('Stitched by work: busy and failure states', () => {
         binding('GetActivitiesInRange').mockResolvedValue([]);
         binding('GetDayThreads').mockRejectedValue(new Error('temporary read failure'));
         renderDay({ section: undefined });
-        expect(await screen.findByText("Could not read this day's activity.")).toBeInTheDocument();
+        expect(await screen.findByText("Couldn't load what you worked on.")).toBeInTheDocument();
         expect(screen.queryByText('Nothing recorded for this day.')).toBeNull();
     });
 
@@ -856,11 +859,11 @@ describe('Stitched cleanup: row policy and story', () => {
         expect(stitchedClock(at, 'zh-CN')).toBe('下午3:52');
     });
 
-    it('counts visible thread rows only, and puts all moments and active time in the subline', () => {
+    it('counts visible thread rows only, and puts the time range and active time in the subline', () => {
         const sample = items().slice(0, 6).map((item, i) => ({ ...item, stretches: i < 4 ? [item.stretches[0], item.stretches[0]] : [item.stretches[0]] }));
         expect(stitchedHeadline(t(), sample)).toBe('6 pieces of work');
         const eightHours = [{ ...items()[0], thread: { ...items()[0].thread, activeMs: 134 * 60_000 }, stretches: [{ ...items()[0].stretches[0], start: 0, end: 8 * 3_600_000 }] }];
-        expect(stitchedSubline(t(), eightHours, 17)).toBe('17 moments in 8 hours · 2h 14m active');
+        expect(stitchedSubline(t(), eightHours)).toBe(`From ${stitchedClock(0)} to ${stitchedClock(8 * 3_600_000)} · 2h 14m active`);
     });
 
     it('renders aggregate lists, minimum tick widths, wrapped titles, links and the exact legend', async () => {
@@ -1117,10 +1120,10 @@ it.each([false, true])('renders the source-owned sparse total on both days (grou
         activityIds: [activities[0].id], activeMs: allocation(day), timeSpentMs: allocation(day), gaps: [],
         stretches: [{ start, end, activeMs: allocation(day), activityIds: [activities[0].id], resumePoint: null }] }] : [] }));
     const first = renderDay();
-    await screen.findByText('1 moment in 1 hour · 10m active');
+    await screen.findByText('From 11:00 PM to 12:00 AM · 10m active');
     expect(screen.queryByText('In progress')).toBeNull(); first.unmount();
     const second = renderDay({ date: new Date(2026, 9, 20) });
-    await screen.findByText('1 moment in 2 hours · 20m active'); second.unmount();
+    await screen.findByText('From 12:00 AM to 2:00 AM · 20m active'); second.unmount();
 });
 
 
@@ -1172,12 +1175,12 @@ describe('Integration 2213: day bounds with render memoization', () => {
         const onStartChat = vi.fn();
         const view = renderDay({ onStartChat });
         await screen.findByRole('heading', { name: '11:00 PM to 12:00 AM' });
-        expect(screen.getByText('1 moment in 1 hour · 15m active')).toBeInTheDocument();
+        expect(screen.getByText('From 11:00 PM to 12:00 AM · 15m active')).toBeInTheDocument();
         expect(card(source.thread.id)).not.toBeNull();
         expect(screen.getByTestId('stitched-continues-after')).toBeInTheDocument();
         view.rerender(dayElement({ date: new Date(source.edge), onStartChat }));
         await screen.findByRole('heading', { name: '12:00 AM to 2:00 AM' });
-        expect(screen.getByText('1 moment in 2 hours · 15m active')).toBeInTheDocument();
+        expect(screen.getByText('From 12:00 AM to 2:00 AM · 15m active')).toBeInTheDocument();
         expect(screen.getByTestId('stitched-continues-before')).toBeInTheDocument();
         expect(screen.queryByTestId('stitched-continues-after')).toBeNull();
         expect(screen.queryByText('In progress')).toBeNull();
@@ -1199,13 +1202,13 @@ describe('Integration 2213: day bounds with render memoization', () => {
         const onCountsChange = vi.fn();
         const view = renderDay({ searchQuery: 'launch memo', onCountsChange });
         await screen.findByRole('heading', { name: '12:00 PM to 12:55 PM' });
-        expect(screen.getByText('2 moments in 1 hour · 47m active')).toBeInTheDocument();
+        expect(screen.getByText('From 12:00 PM to 12:55 PM · 47m active')).toBeInTheDocument();
         const counts = onCountsChange.mock.calls.at(-1)?.[0];
         expect(counts).toBeDefined();
         view.rerender(dayElement({ searchQuery: 'erp', onCountsChange }));
         await screen.findByRole('heading', { name: '9:12 AM to 11:40 AM' });
-        expect(screen.getByText('2 moments in 3 hours · 2h active')).toBeInTheDocument();
-        expect(screen.queryByText('2 moments in 1 hour · 47m active')).toBeNull();
+        expect(screen.getByText('From 9:12 AM to 11:40 AM · 2h active')).toBeInTheDocument();
+        expect(screen.queryByText('From 12:00 PM to 12:55 PM · 47m active')).toBeNull();
         expect([...document.querySelectorAll('[data-thread-lane]')].map((row) => row.getAttribute('data-thread-lane'))).toEqual(['hal']);
         expect(onCountsChange.mock.calls.at(-1)?.[0]).toEqual(counts);
     });
@@ -1300,5 +1303,19 @@ describe('Integration 2213: day bounds with render memoization', () => {
             start: stitchedClock(source.start, 'zh-CN'), end: stitchedClock(source.edge, 'zh-CN'),
         }));
         expect(screen.getByLabelText(translate('stitched.continuesAfter'))).toBeInTheDocument();
+    });
+});
+
+// Thursday A2: no leading zeros or seconds anywhere in Activity.
+describe('Activity clock times', () => {
+    const at = (h: number, m: number) => new Date(2026, 10, 2, h, m, 37).getTime();
+    it('says 9:12 AM, never 09:12 or seconds', () => {
+        expect(formatTimeFromMs(at(9, 12))).toBe('9:12 AM');
+        expect(stitchedClock(at(9, 12))).toBe('9:12 AM');
+    });
+    it('writes a range once: 9:12–10:02 AM', () => {
+        expect(formatTimeRangeFromMs(at(9, 12), at(10, 2), 'en')).toBe('9:12–10:02 AM');
+        expect(formatTimeRangeFromMs(at(11, 40), at(12, 55), 'en')).toBe('11:40 AM–12:55 PM');
+        expect(formatTimeRangeFromMs(at(9, 12), at(10, 2), 'zh-CN')).not.toMatch(/0\d:|:\d\d:\d\d/);
     });
 });

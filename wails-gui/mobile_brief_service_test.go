@@ -69,6 +69,7 @@ func newTestMobileBriefService(t *testing.T, clock *fakeMobileBriefClock) (*mobi
 			t.Fatal(err)
 		}
 	}
+	t.Cleanup(svc.todayRefreshWG.Wait)
 	svc.now = clock.Now
 	svc.sleepState = nil // Synthetic sleep observations are supplied by each test.
 	svc.location = time.UTC

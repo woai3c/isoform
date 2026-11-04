@@ -40,7 +40,13 @@ func newHandoffTestRig(t *testing.T) *handoffTestRig {
 		activity.Close()
 		t.Fatal(err)
 	}
+	app := &App{store: state, handoffStore: handoffs, activity: &activityMonitorState{store: activity}}
 	t.Cleanup(func() {
+		// A Today read refreshes its signals in the background; let it land
+		// before the stores close and the folders are removed.
+		if svc, ok := app.mobileBriefSvc.(*mobileBriefService); ok && svc != nil {
+			svc.todayRefreshWG.Wait()
+		}
 		if err := state.Close(); err != nil {
 			t.Errorf("close state store: %v", err)
 		}
@@ -49,11 +55,7 @@ func newHandoffTestRig(t *testing.T) *handoffTestRig {
 		}
 	})
 	return &handoffTestRig{
-		app: &App{
-			store:        state,
-			handoffStore: handoffs,
-			activity:     &activityMonitorState{store: activity},
-		},
+		app:      app,
 		activity: activity,
 		state:    state,
 		handoffs: handoffs,

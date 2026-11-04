@@ -306,3 +306,55 @@ func TestTimelineSummarySamplesBeforeAXAugmentation(t *testing.T) {
 		}
 	}
 }
+
+func TestSanitizeTimelineGroupSummary_DropsSpeechScraps(t *testing.T) {
+	group := timelineSummaryTestGroup()
+	group.Events = append(group.Events,
+		ActivityTimelineEvent{ActivityEvent: activitymon.ActivityEvent{Kind: activitymon.EventSpeech, SpeechText: "There the two."}, EventID: "ae_4"},
+		ActivityTimelineEvent{ActivityEvent: activitymon.ActivityEvent{Kind: activitymon.EventSpeech, SpeechText: "Let's ship the connector on Friday."}, EventID: "ae_5"},
+	)
+	resp := timelineGroupSummaryResponse{
+		Title: "Open the Northwind call",
+		Timeline: []ActivityTimelineSemanticItem{
+			{EventIDs: []string{"ae_4"}, Action: "Said There the two."},
+			{EventIDs: []string{"ae_5"}, Action: "Said Let's ship the connector on Friday."},
+		},
+	}
+	summary := sanitizeTimelineGroupSummary(group, resp)
+	if len(summary.Timeline) != 1 || summary.Timeline[0].EventIDs[0] != "ae_5" {
+		t.Fatalf("timeline = %+v, want only the sentence a person would recognize", summary.Timeline)
+	}
+	if summary.Title != "Opened the Northwind call" {
+		t.Fatalf("title = %q, want past tense", summary.Title)
+	}
+}
+
+func TestTimelineTitlePastTense(t *testing.T) {
+	cases := map[string]string{
+		"Open System Settings from the menu": "Opened System Settings from the menu",
+		"Search Google for Halcyon pricing":  "Searched Google for Halcyon pricing",
+		"Viewed the Login page":              "Viewed the Login page",
+		"Read 「大势已定」 in WeChat":              "Read 「大势已定」 in WeChat",
+		"阅读环球时报文章":                           "阅读环球时报文章",
+		"Opening notes":                      "Opening notes",
+	}
+	for in, want := range cases {
+		if got := timelineTitlePastTense(in); got != want {
+			t.Errorf("timelineTitlePastTense(%q) = %q, want %q", in, got, want)
+		}
+	}
+	for text, scrap := range map[string]bool{"There the two.": true, "Okay": true, "": true, "Let's ship it on Friday.": false, "我们下周三上线": false} {
+		if got := timelineSpeechIsScrap(text); got != scrap {
+			t.Errorf("timelineSpeechIsScrap(%q) = %v, want %v", text, got, scrap)
+		}
+	}
+}
+
+func TestBuildTimelineGroupSummaryPrompt_PastTenseTitlesAndSpeech(t *testing.T) {
+	prompt := buildTimelineGroupSummaryPrompt(timelineSummaryTestGroup(), "", "")
+	for _, want := range []string{"past-tense verb", "60 characters at most", "\"Opened System Settings\"", "Quote speech in a step only when"} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("prompt missing %q", want)
+		}
+	}
+}

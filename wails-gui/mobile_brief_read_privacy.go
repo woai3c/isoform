@@ -247,7 +247,22 @@ func (a *App) mobileBriefDelivery(brief MobileBriefV1) (MobileBriefV1, mobileBri
 func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV1) (MobileBriefV1, mobileBriefWithholding) {
 	staticEmpty := mobileBriefStaticEmpty(brief)
 	subjects, mailErr := mobileBriefMailSubjects(a)
-	allowMemory, memoryErr := a.memoryReadFilterContext(ctx)
+	// One read checks its refs as a batch: the work records are listed once,
+	// the read policy is loaded once, and each activity session the refs
+	// depend on is checked once, however many refs share it.
+	listed := withMainChatReadMemo(context.Background())
+	gate := newPeopleReadGateCache()
+	dependencies := map[string]bool{}
+	dependencyAllowed := func(ctx context.Context, id string, apps []string) bool {
+		key := strings.Join(append([]string{strconv.FormatBool(pausedBriefReadAllowed(ctx)), id}, apps...), "\x00")
+		if allowed, seen := dependencies[key]; seen {
+			return allowed
+		}
+		allowed := a.activityDependencyAllowsModelReadWithCacheContext(ctx, id, apps, gate)
+		dependencies[key] = allowed
+		return allowed
+	}
+	allowMemory, memoryErr := a.memoryReadFilterWithDependencyContext(ctx, func(id string, apps []string) bool { return dependencyAllowed(ctx, id, apps) })
 	closed := a == nil || a.IsClosedEyesModeEnabled() && !pausedBriefReadAllowed(ctx)
 	pauses, pauseErr := a.observationPauses()
 	reader := mobileBriefPurposeReader{app: a, asOf: time.Now(), pauses: pauses, pausesReadable: pauseErr == nil, cache: map[string]mobileBriefPurposeObservation{}}
@@ -352,7 +367,7 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 					// Existing evidence must pass the captured-source policy too.
 					privacy := reader.sessionPrivacy([]string{sessionID})
 					if !privacy.MissingEvidence {
-						allowed = allowed && a.activityDependencyAllowsModelReadWithCacheContext(ctx, sessionID, nil, nil)
+						allowed = allowed && dependencyAllowed(ctx, sessionID, nil)
 					}
 				}
 			}
@@ -366,7 +381,7 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 	for _, row := range brief.MeetingAttendance {
 		allowed := !closed && mailErr == nil && row.sourceSessionIDs != nil && !mobileBriefValueEchoesMail(row, subjects)
 		for _, sessionID := range row.sourceSessionIDs {
-			allowed = allowed && a.activityDependencyAllowsModelRead(sessionID, nil)
+			allowed = allowed && dependencyAllowed(context.Background(), sessionID, nil)
 		}
 		if previous, exists := readableAttendance[row.EventID]; exists {
 			allowed = allowed && previous
@@ -463,7 +478,7 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 			case "history":
 				// Completion removes a live card, not its synthesis dependency.
 				// Legacy unresolvable history cannot establish source authority.
-				allowed = a.mobileBriefHandoffSourceReadable(context.Background(), ref.SourceID)
+				allowed = a.mobileBriefHandoffSourceReadable(listed, ref.SourceID)
 			case mobileBriefWaitingReplySource:
 				_, allowed = a.mobileBriefWaitingReply(ctx, ref.SourceID, time.Now())
 			case "deliverable":
@@ -548,7 +563,7 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 					observation := reader.source(ref.SourceKind, ref.SourceID, 0, false)
 					allowed = !observation.Sensitive && !observation.Unavailable && !observation.MissingEvidence
 					for _, sessionID := range observation.SessionIDs {
-						allowed = allowed && a.activityDependencyAllowsModelRead(sessionID, nil)
+						allowed = allowed && dependencyAllowed(context.Background(), sessionID, nil)
 					}
 					if ref.SourceKind == taskContextSourceSelfKind {
 						entry, err := reader.store.GetSelfModelEntryByID(ref.SourceID)

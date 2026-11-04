@@ -164,7 +164,7 @@ func TestTodayKeepsTemplateBriefParagraphsWhoseCardsStillRead(t *testing.T) {
 
 	clock.Set(mobileBriefTestDay(11, 0))
 	for read := 1; read <= 2; read++ {
-		view, err := rig.app.GetLatestBrief()
+		view, err := latestBriefAfterRefresh(t, rig.app)
 		if err != nil || view.Brief == nil {
 			t.Fatalf("read %d: view = %+v, %v", read, view, err)
 		}

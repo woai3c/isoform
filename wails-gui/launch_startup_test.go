@@ -88,7 +88,7 @@ func TestLaunchStoredBriefPrecedesRefreshAndKeepsCanonicalDocument(t *testing.T)
 	// The normal source path remains the refresh owner and produces the same
 	// current content after the first screen.
 	app.launch.storedReads.Store(false)
-	view, err = app.GetLatestBrief()
+	view, err = latestBriefAfterRefresh(t, app)
 	if err != nil {
 		t.Fatal(err)
 	}

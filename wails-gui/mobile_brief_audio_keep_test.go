@@ -66,7 +66,7 @@ func TestMobileBriefAudioSurvivesTodayReadDuringSynthesis(t *testing.T) {
 	// Today reads the brief the moment it is stored, with new live rows.
 	clock.Set(mobileBriefTestDay(7, 1))
 	addTodayRefreshSources(t, rig, clock.Now())
-	if view, err := rig.app.GetLatestBrief(); err != nil || view.Brief == nil {
+	if view, err := latestBriefAfterRefresh(t, rig.app); err != nil || view.Brief == nil {
 		t.Fatalf("Today read = %+v, %v", view, err)
 	}
 	if stored, _ := svc.store.load(brief.BriefID); len(stored.Evidence) == len(brief.Evidence) {
@@ -98,6 +98,35 @@ func TestMobileBriefAudioSurvivesLaterRewrites(t *testing.T) {
 		t.Fatalf("the phone's latest brief lost its recording: %+v", latest.Audio)
 	}
 	assertBriefPlays(t, rig, svc, brief.BriefID, "after the phone's read")
+}
+
+// Today opens the saved brief without waiting for its live refresh: a live
+// row that left before that refresh has stored the brief again keeps the
+// recording on every read (Today, its player, the phone and the audio).
+func TestMobileBriefAudioPlaysBeforeTodayRefreshStoresTheBrief(t *testing.T) {
+	rig, svc, clock, brief, release := audioKeepRig(t)
+	close(release)
+	svc.wg.Wait()
+	clock.Set(mobileBriefTestDay(9, 0))
+	addTodayRefreshSources(t, rig, clock.Now())
+	if _, err := latestBriefAfterRefresh(t, rig.app); err != nil {
+		t.Fatal(err)
+	}
+	assertBriefPlays(t, rig, svc, brief.BriefID, "after a Today refresh with new rows")
+	svc.todayRefreshWG.Wait()
+	clock.Set(mobileBriefTestDay(11, 0))
+	dir, _ := memoryDir()
+	if err := os.Remove(filepath.Join(dir, "live-note.md")); err != nil {
+		t.Fatal(err)
+	}
+	checkMemoryFolderNow(rig.app)
+	func() {
+		svc.todayMu.Lock()
+		defer svc.todayMu.Unlock()
+		assertBriefPlays(t, rig, svc, brief.BriefID, "after a live row left, before the refresh")
+	}()
+	svc.todayRefreshWG.Wait()
+	assertBriefPlays(t, rig, svc, brief.BriefID, "after the refresh")
 }
 
 // The live briefs that lost their recording had written text (narrative
@@ -154,7 +183,7 @@ func TestMobileBriefAudioNeverSpeaksTextTheBriefNoLongerShows(t *testing.T) {
 	if _, err := rig.app.GetMobileBriefAudio(brief.BriefID); err == nil {
 		t.Fatal("the recording of other words was served")
 	}
-	if view, err := rig.app.GetLatestBrief(); err != nil || view.Brief == nil || view.Brief.Audio != nil {
+	if view, err := latestBriefAfterRefresh(t, rig.app); err != nil || view.Brief == nil || view.Brief.Audio != nil {
 		t.Fatalf("Today plays a recording of other words: %+v, %v", view.Brief, err)
 	}
 	if kept, _ := svc.store.load(brief.BriefID); kept.Audio != nil {

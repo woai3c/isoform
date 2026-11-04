@@ -299,7 +299,7 @@ describe('Activity Day view', () => {
             memoryEntries: [{ id: 'm1', title: 'Prefers pnpm', content: 'Use pnpm, not npm.', modTime: DAY_START }],
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any);
-        expect(await screen.findByText('What Isoform learned')).toBeInTheDocument();
+        expect(await screen.findByText('What it learned')).toBeInTheDocument();
         expect(screen.getByText('Postgres JSONB gotcha')).toBeInTheDocument();
         expect(screen.getByText('How you do things')).toBeInTheDocument();
         expect(screen.getByText('Prefers pnpm')).toBeInTheDocument();
@@ -525,7 +525,8 @@ describe('Activity Day view — restored row behaviors', () => {
         binding('GetActivitiesInRange').mockResolvedValue([activity({ latestOutcome: outcome() })]);
         renderDay();
         await openFirstRow();
-        const time = new Date(DAY_START).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+        const time = new Date(DAY_START).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' });
+        expect(time).toBe('9:00 AM');
         expect(
             screen.getByText(`Reported to Claude at ${time}. A message with this task's details was sent.`),
         ).toBeInTheDocument();
@@ -873,7 +874,7 @@ describe('Activity Day view — threads', () => {
     it('shows one row per thread with its span, active time and moment count', async () => {
         renderDay({ automationRuns: [] });
         expect(await screen.findByText('Isoform: brief fix, workers')).toBeInTheDocument();
-        expect(screen.getByText('09:10 AM to 11:45 AM · 17m active · 2 moments')).toBeInTheDocument();
+        expect(screen.getByText('9:10 AM to 11:45 AM · 17m active · 2 moments')).toBeInTheDocument();
         // The thread's moments stay inside it until it is opened.
         expect(screen.queryByText('Fix morning briefing generation')).not.toBeInTheDocument();
         // Historical source status never makes a past-day thread live.
@@ -884,7 +885,7 @@ describe('Activity Day view — threads', () => {
         binding('GetDayThreads').mockResolvedValue({ grouped: true, threads: [{ ...isoformThread,
             endMs: new Date(2026, 9, 20, 12).getTime() }] });
         renderDay({ automationRuns: [], workedOnView: 'recorded' });
-        expect(await screen.findByText('09:10 AM to 12:00 AM · 17m active · 2 moments')).toBeInTheDocument();
+        expect(await screen.findByText('9:10 AM to 12:00 AM · 17m active · 2 moments')).toBeInTheDocument();
         expect(screen.queryByText('In progress')).toBeNull();
     });
 
