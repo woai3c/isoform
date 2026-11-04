@@ -1393,3 +1393,14 @@ func TestYourAgentResendOnAnotherDeviceRenewsExpiredCache(t *testing.T) {
 		t.Fatalf("server renewal must win over the old cached expiry: %+v, %v", read, err)
 	}
 }
+
+func TestYourAgentOldSnapshotIsNotShown(t *testing.T) {
+	state := &yourAgentStateFile{Insights: &yourAgentSnapshot{Insights: YourAgentInsights{
+		Specialties: []YourAgentSpecialty{{Name: "Product Harness cmd", Seen: 5}},
+		Taste:       []string{"Observed while a user troubleshot a command."},
+	}}}
+	got := yourAgentCachedInsights(state)
+	if len(got.Specialties) != 0 || len(got.Taste) != 0 {
+		t.Fatalf("old snapshot leaked: %+v", got)
+	}
+}

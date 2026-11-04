@@ -12,14 +12,14 @@ import (
 var beliefSelfVerbs = map[string]bool{
 	"block": true, "decline": true, "get": true, "give": true, "guard": true, "make": true, "protect": true, "put": true, "say": true, "set": true, "take": true, "think": true, "try": true, "wake": true,
 	"answer": true, "ask": true, "attend": true, "avoid": true, "batch": true, "build": true,
-	"call": true, "care": true, "check": true, "choose": true, "code": true, "commit": true,
+	"call": true, "care": true, "check": true, "choose": true, "code": true, "commit": true, "compare": true,
 	"debug": true, "delegate": true, "deploy": true, "design": true, "dictate": true, "draft": true,
 	"drink": true, "edit": true, "email": true, "enjoy": true, "exercise": true, "expect": true,
 	"favor": true, "favour": true, "find": true, "fix": true, "follow": true, "gather": true,
 	"group": true, "hand": true, "coordinate": true, "handle": true, "keep": true, "lead": true, "learn": true, "like": true,
-	"listen": true, "live": true, "log": true, "love": true, "manage": true, "meet": true,
+	"let": true, "listen": true, "live": true, "log": true, "love": true, "manage": true, "meet": true,
 	"merge": true, "monitor": true, "need": true, "open": true, "organize": true, "plan": true,
-	"prefer": true, "prioritize": true, "push": true, "read": true, "record": true, "refactor": true,
+	"prefer": true, "prioritize": true, "push": true, "queue": true, "read": true, "record": true, "refactor": true,
 	"rely": true, "reply": true, "report": true, "review": true, "run": true, "schedule": true,
 	"send": true, "share": true, "ship": true, "sign": true, "skip": true, "sleep": true,
 	"speak": true, "split": true, "start": true, "study": true, "talk": true, "teach": true,
@@ -97,6 +97,12 @@ func beliefFirstPersonToYou(text string) string {
 		return "You're " + rest
 	case "My":
 		return "Your " + rest
+	}
+	if strings.EqualFold(first, "never") || strings.EqualFold(first, "always") || strings.EqualFold(first, "often") || strings.EqualFold(first, "usually") {
+		verb, after, _ := strings.Cut(rest, " ")
+		if base, ok := beliefBaseVerbOf(verb); ok {
+			return strings.TrimSpace("You " + strings.ToLower(first) + " " + base + " " + after)
+		}
 	}
 	if base, ok := beliefBaseVerb(first); ok {
 		return "You " + base + " " + rest

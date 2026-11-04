@@ -35,3 +35,12 @@ it('says an erasure failure in copper with a working Try again', async () => {
     await waitFor(() => expect(mocks.forget).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
 });
+it.each([
+    ['en', 'When you name a call speaker, their voice signature is stored on this computer.'],
+    ['zh-CN', '为通话中的说话人命名后，其声音特征存储在这台电脑上。'],
+])('describes remembered voices on this computer in %s (ST75)', async (language, sentence) => {
+    await i18n.changeLanguage(language);
+    render(<VoiceMemoryCard />);
+    expect(screen.getByText(new RegExp(sentence))).toBeInTheDocument();
+    expect(screen.queryByText(/never sent|绝不会发送/)).not.toBeInTheDocument();
+});

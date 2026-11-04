@@ -109,6 +109,19 @@ func parseKnowHowMoment(raw string) (KnowHowMoment, bool) {
 	return KnowHowMoment{At: at, Assistant: parts[1], App: parts[2], SessionID: parts[3]}, true
 }
 
+// Identical substantive takeaways describe the same lesson even when titles differ.
+func sameKnowHowContent(a, b KnowHowCard) bool {
+	left, right := strings.TrimSpace(a.Takeaway), strings.TrimSpace(b.Takeaway)
+	if len([]rune(left)) >= 40 && strings.EqualFold(left, right) {
+		return true
+	}
+	if len(a.Points) == 0 || len(a.Points) != len(b.Points) {
+		return false
+	}
+	joined := strings.TrimSpace(strings.Join(a.Points, " "))
+	return len([]rune(joined)) >= 40 && strings.EqualFold(joined, strings.TrimSpace(strings.Join(b.Points, " ")))
+}
+
 // mergeKnowHowLessons folds near-duplicate cards into the first one saved.
 // Cards arrive newest first and leave in the same order.
 func mergeKnowHowLessons(cards []KnowHowCard) []KnowHowCard {
@@ -122,7 +135,7 @@ func mergeKnowHowLessons(cards []KnowHowCard) []KnowHowCard {
 		tokens := knowHowLessonTokens(card.Title)
 		merged := false
 		for j := range lessons {
-			if !sameKnowHowLessonTokens(lessons[j].tokens, tokens) {
+			if !sameKnowHowLessonTokens(lessons[j].tokens, tokens) && !sameKnowHowContent(lessons[j].card, card) {
 				continue
 			}
 			into := &lessons[j].card

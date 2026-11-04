@@ -180,7 +180,10 @@ type YourAgentReserveResult struct {
 
 // yourAgentSnapshot is the cached insights with the day and the store
 // fingerprint they were computed under.
+const yourAgentInsightsVersion = 1
+
 type yourAgentSnapshot struct {
+	Version     int               `json:"version"`
 	Day         string            `json:"day"`
 	Fingerprint string            `json:"fingerprint"`
 	Insights    YourAgentInsights `json:"insights"`
@@ -711,7 +714,7 @@ func refreshYourAgentInsights(env yourAgentEnv) error {
 	if err != nil {
 		return err
 	}
-	if snap := state.Insights; snap != nil && snap.Day == day && snap.Fingerprint == fingerprint {
+	if snap := state.Insights; snap != nil && snap.Version == yourAgentInsightsVersion && snap.Day == day && snap.Fingerprint == fingerprint {
 		return nil
 	}
 	entries, err := env.entries()
@@ -720,7 +723,7 @@ func refreshYourAgentInsights(env yourAgentEnv) error {
 	}
 	insights := computeYourAgentInsights(entries, env.fullName)
 	_, err = updateYourAgentState(env, func(state *yourAgentStateFile) {
-		state.Insights = &yourAgentSnapshot{Day: day, Fingerprint: fingerprint, Insights: insights}
+		state.Insights = &yourAgentSnapshot{Version: yourAgentInsightsVersion, Day: day, Fingerprint: fingerprint, Insights: insights}
 	})
 	return err
 }
@@ -728,7 +731,7 @@ func refreshYourAgentInsights(env yourAgentEnv) error {
 // yourAgentCachedInsights returns the stored insights, or a still-learning
 // result when nothing has been computed yet.
 func yourAgentCachedInsights(state *yourAgentStateFile) YourAgentInsights {
-	if state.Insights == nil {
+	if state.Insights == nil || state.Insights.Version != yourAgentInsightsVersion {
 		// Not computed yet: nothing to show, and no Still learning claim.
 		return YourAgentInsights{Specialties: []YourAgentSpecialty{}, Taste: []string{}}
 	}
@@ -753,7 +756,7 @@ func yourAgentCachedPage(env yourAgentEnv) (YourAgentPage, error) {
 		NameCandidates: yourAgentNameCandidates(env.fullName),
 		Reservation:    state.Reservation,
 		Online:         true,
-		Computed:       state.Insights != nil,
+		Computed:       state.Insights != nil && state.Insights.Version == yourAgentInsightsVersion,
 	}, nil
 }
 

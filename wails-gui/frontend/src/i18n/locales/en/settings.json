@@ -1639,7 +1639,7 @@
         "voices": {
             "title": "Voice memory",
             "remembered": "Remembered voices",
-            "description": "When you name a call speaker, their voice signature is stored on this computer and never sent to your AI or your phone. Forget voices removes all saved voice signatures, including voice enrollment. Names already written in call notes stay. Deleting a call also removes signatures learned only from that call.",
+            "description": "When you name a call speaker, their voice signature is stored on this computer. Forget voices removes all saved voice signatures, including voice enrollment. Names already written in call notes stay. Deleting a call also removes signatures learned only from that call.",
             "forget": "Forget voices",
             "forgotten": "Saved voices forgotten.",
             "failed": "Couldn't forget your saved voices.",

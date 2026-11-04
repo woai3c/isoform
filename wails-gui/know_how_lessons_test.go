@@ -103,3 +103,20 @@ func TestKnowHowLearningAgainAddsTheMoment(t *testing.T) {
 		t.Fatal("except must skip the entry being written")
 	}
 }
+
+func TestKnowHowCopiesWithDifferentTitlesKeepMoments(t *testing.T) {
+	cards := []KnowHowCard{
+		{ID: "new", Title: "Panel response caching", Takeaway: "Cache the failed response until the next refresh to keep the panel responsive.", Moments: []KnowHowMoment{{At: 2}}},
+		{ID: "old", Title: "Reducing panel CPU", Takeaway: "Cache the failed response until the next refresh to keep the panel responsive.", Moments: []KnowHowMoment{{At: 1}}},
+		{ID: "other", Title: "A separate lesson", Takeaway: "Use a different timeout when refreshing the panel after a failed request.", Moments: []KnowHowMoment{{At: 3}}},
+	}
+	got := mergeKnowHowLessons(cards)
+	if len(got) != 2 {
+		t.Fatalf("cards = %+v", got)
+	}
+	for _, card := range got {
+		if card.ID == "old" && (len(card.MergedIDs) != 1 || len(card.Moments) != 2 || card.Moments[1].At != 2) {
+			t.Fatalf("lost provenance: %+v", card)
+		}
+	}
+}
