@@ -199,7 +199,8 @@ func TestMobileBriefMissedWindowNotifiesOncePerSlot(t *testing.T) {
 }
 
 // Identical failures continue with backoff, and the slot is missed only once
-// its window closes.
+// its window closes: noon for the morning, when the evening brief takes over
+// (today-review v1.1.21 R49).
 func TestMobileBriefFailuresKeepRetryingUntilTheNextSlot(t *testing.T) {
 	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(7, 5)}
 	svc, rig := missedBriefRig(t, clock)
@@ -229,13 +230,13 @@ func TestMobileBriefFailuresKeepRetryingUntilTheNextSlot(t *testing.T) {
 		}
 		clock.Advance(time.Second)
 	}
-	clock.Set(mobileBriefTestDay(17, 59))
+	clock.Set(mobileBriefTestDay(11, 59))
 	svc.checkDue(ctx)
 	if moments := openMoments(t, rig.store, string(engagement.KindBriefMissed)); len(moments) != 0 {
-		t.Fatalf("the morning was announced missed before the evening slot: %+v", moments)
+		t.Fatalf("the morning was announced missed before noon: %+v", moments)
 	}
-	// The evening slot closes the morning's window: missed once, attempts kept.
-	clock.Set(mobileBriefTestDay(18, 0))
+	// Noon closes the morning's window: missed once, attempts kept.
+	clock.Set(mobileBriefTestDay(12, 0))
 	svc.checkDue(ctx)
 	clock.Advance(time.Hour)
 	svc.checkDue(ctx)
@@ -249,6 +250,71 @@ func TestMobileBriefFailuresKeepRetryingUntilTheNextSlot(t *testing.T) {
 	}
 	if morning := byID["2026-10-09-morning"]; morning.Status != mobileBriefRunMissed || morning.Attempts < mobileBriefMissedAfterFailures || !morning.Notified {
 		t.Fatalf("morning = %+v", morning)
+	}
+}
+
+// A failed morning's tries stop at noon, when the evening brief takes over,
+// and a failed evening's at midnight, when the next morning's does: Today
+// never says Isoform tries again after that (today-review v1.1.21 R49).
+func TestMobileBriefRetriesGiveWayToTheNextSlot(t *testing.T) {
+	for _, tc := range []struct {
+		name, slot, evening string
+		failAt              time.Time
+		next                time.Time
+	}{
+		{"morning", "morning", "18:00", mobileBriefTestDay(11, 40), mobileBriefTestDay(18, 0)},
+		{"evening", "evening", "18:00", mobileBriefTestDay(23, 40), mobileBriefTestDay(7, 0).AddDate(0, 0, 1)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			clock := &fakeMobileBriefClock{now: tc.failAt}
+			svc, rig := missedBriefRig(t, clock)
+			if err := svc.config.save(mobileBriefSettings{Enabled: true, Morning: "07:00", Evening: tc.evening}); err != nil {
+				t.Fatal(err)
+			}
+			builds := 0
+			svc.gather = func(context.Context, string, time.Time, time.Time) (mobileBriefInput, error) {
+				builds++
+				return mobileBriefInput{}, context.DeadlineExceeded
+			}
+			ctx := context.Background()
+			// Five failures in a row: the next try waits 30 minutes, past
+			// the end of the window.
+			for i := 0; i < 5; i++ {
+				svc.recordFailure(mobileBriefSlotOccurrence{BriefID: "2026-10-09-" + tc.slot, Slot: tc.slot, ScheduledAt: map[string]time.Time{"morning": mobileBriefTestDay(7, 0), "evening": mobileBriefTestDay(18, 0)}[tc.slot]}, context.DeadlineExceeded)
+			}
+			health := svc.Health()
+			if health.PendingSlot != tc.slot || health.PendingAttempts != 5 {
+				t.Fatalf("the failing %s is not pending: %+v", tc.slot, health)
+			}
+			if health.RetryAt != "" {
+				t.Fatalf("Today says the %s tries again at %s, after its window closes", tc.slot, health.RetryAt)
+			}
+			at, catchUp := svc.slotNextRun(clock.Now(), svc.config.load(), tc.slot)
+			if catchUp || !at.After(clock.Now().Add(time.Hour)) {
+				t.Fatalf("the %s's next run = %s (catch-up %v), want its next day's slot", tc.slot, at, catchUp)
+			}
+			if next, ok := mobileBriefScheduledNextRun(clock.Now(), svc.location, svc.config.load(), svc.scheduleFacts(clock.Now(), svc.config.load())); !ok || !next.ScheduledAt.Equal(tc.next) {
+				t.Fatalf("next scheduled = %+v, want %s", next, tc.next)
+			}
+			// After the window closes the failed slot is never tried again.
+			clock.Set(tc.failAt.Add(31 * time.Minute))
+			svc.checkDue(ctx)
+			if builds != 0 {
+				t.Fatalf("the %s was tried again after its window closed", tc.slot)
+			}
+			if _, ok := svc.store.load("2026-10-09-" + tc.slot); ok {
+				t.Fatalf("the %s was made after its window closed", tc.slot)
+			}
+			missed := 0
+			for _, moment := range openMoments(t, rig.store, string(engagement.KindBriefMissed)) {
+				if moment.SubjectID == "2026-10-09-"+tc.slot {
+					missed++
+				}
+			}
+			if missed != 1 {
+				t.Fatalf("want one missed notice for the %s, got %d", tc.slot, missed)
+			}
+		})
 	}
 }
 
@@ -375,11 +441,13 @@ func TestMobileBriefSourcesChangedCollectsAgainAtOnce(t *testing.T) {
 func TestMobileBriefFailingMorningDoesNotDelayTheEvening(t *testing.T) {
 	for _, adaptive := range []bool{false, true} {
 		t.Run(catchUpMode(adaptive), func(t *testing.T) {
-			clock := &fakeMobileBriefClock{now: mobileBriefTestDay(17, 50)}
+			clock := &fakeMobileBriefClock{now: mobileBriefTestDay(11, 50)}
 			svc, _, _ := catchUpRig(t, clock, adaptive)
 			base := svc.gather
+			mornings := 0
 			svc.gather = func(ctx context.Context, slot string, start, asOf time.Time) (mobileBriefInput, error) {
 				if slot == mobileBriefSlotMorning {
+					mornings++
 					return mobileBriefInput{}, context.DeadlineExceeded
 				}
 				return base(ctx, slot, start, asOf)
@@ -390,8 +458,14 @@ func TestMobileBriefFailingMorningDoesNotDelayTheEvening(t *testing.T) {
 				}
 			}
 			svc.checkDue(context.Background())
-			if !svc.retryAfter.After(mobileBriefTestDay(18, 0)) {
-				t.Fatalf("the sixth failure should wait past 18:00: %s", svc.retryAfter)
+			if mornings != 1 || !svc.retryAfter.After(mobileBriefTestDay(12, 0)) {
+				t.Fatalf("the sixth failure should wait past noon: tries=%d retry=%s", mornings, svc.retryAfter)
+			}
+			// Its window closed at noon (today-review v1.1.21 R49): no more tries.
+			clock.Set(mobileBriefTestDay(12, 30))
+			svc.checkDue(context.Background())
+			if mornings != 1 {
+				t.Fatalf("the morning was tried %d times, want no try after noon", mornings)
 			}
 			clock.Set(mobileBriefTestDay(18, 0))
 			svc.checkDue(context.Background())

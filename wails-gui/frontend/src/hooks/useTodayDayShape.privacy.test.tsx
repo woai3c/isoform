@@ -27,7 +27,7 @@ async function emit(name: string) {
     await act(async () => { await Promise.all([...(fixture.events.get(name) ?? [])].map((handler) => handler(true))); });
 }
 beforeEach(() => { resetPageQueries(); fixture.events.clear(); fixture.read.mockReset().mockResolvedValue(dayShapeFixture); });
-afterEach(() => { cleanup(); resetPageQueries(); });
+afterEach(() => { cleanup(); resetPageQueries(); vi.useRealTimers(); });
 
 it.each(privacyEvents)('clears rendered calendar titles immediately on %s while the gated reread waits', async (event) => {
     const hook = renderHook(() => useTodayDayShape(true, '2026-10-23'));
@@ -76,6 +76,9 @@ it('shares the cached native read across simultaneous strip readers', async () =
 });
 
 it.each(['calendar:synced', 'brief:stored'])('keeps the strip cache and preview stable on unrelated source event %s', async (event) => {
+    // The strip reads the brief's own day while that is today (today-review v1.1.20 R44).
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 23, 9));
     const hook = renderHook(() => useTodayDayShape(true, '2026-10-23'));
     await waitFor(() => expect(hook.result.current.shape).toEqual(dayShapeFixture));
     const snapshot = hook.result.current.shape;

@@ -35,7 +35,6 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
 .pl.ghost { background:var(--color-panel-warm); color:var(--color-muted); box-shadow:inset 0 0 0 1px var(--color-border); }
 .pl.ghost.dim svg { opacity:.45; }
 .pl.acc { color:var(--color-accent); }
-.pl.ph { background:var(--ph); box-shadow:none; }
 .br .tx { display:flex; flex-direction:column; gap:2px; min-width:0; flex:1; }
 .br .tx b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .meta { font-size:12px; color:var(--color-muted); font-variant-numeric:tabular-nums; }
@@ -44,17 +43,15 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
 .spin { animation:sp .9s linear infinite; } @keyframes sp { to { transform:rotate(360deg); } }
 
 .sh { height:38px; display:flex; align-items:center; gap:7px; padding:6px 14px 0; }
-#count { min-width:18px; height:18px; padding:0 5px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; background:var(--color-warning-bg); color:var(--color-warning); font-variant-numeric:tabular-nums; }
 #items { display:flex; flex-direction:column; padding-top:8px; }
-.it { height:56px; display:flex; flex-direction:column; justify-content:center; gap:2px; margin:0 10px 6px; padding:0 12px; border-radius:10px; background:var(--color-panel-warm); border:1px solid transparent; width:calc(100% - 20px); }
+.it { min-height:56px; display:flex; flex-direction:column; justify-content:center; gap:2px; margin:0 10px 6px; padding:0 12px; border-radius:10px; background:var(--color-panel-warm); border:1px solid transparent; width:calc(100% - 20px); }
 .it:hover, .it:focus-visible { border-color:var(--color-border-strong); outline:none; }
-.it b, .it span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.it { padding-top:8px; padding-bottom:8px; }
+.it b { display:block; overflow-wrap:anywhere; }
+.it span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .it span { font-size:12px; color:var(--color-muted); }
 .it.in { animation:slide .2s ease-out; } @keyframes slide { from { opacity:0; transform:translateY(-6px); } }
 .it.out { transition:opacity .15s; opacity:0; }
-.it.ph { gap:7px; }
-.phb { display:block; height:9px; border-radius:4px; background:var(--ph); }
-.phb.s { height:8px; }
 .fade { animation:fade .15s ease-out; } @keyframes fade { from { opacity:0; } }
 #more { display:inline-flex; align-items:center; gap:2px; height:28px; padding:0 14px 6px; font-size:12px; font-weight:500; color:var(--color-accent); }
 .note { margin:0; display:flex; align-items:center; gap:8px; min-height:34px; padding:0 14px 12px; color:var(--color-muted); }
@@ -79,8 +76,8 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
   <span class="pl" id="pl"></span>
   <span class="tx"><b id="briefTitle"></b><span class="bar" id="bar" hidden><i id="barFill"></i></span><span class="meta" id="briefMeta"></span></span>
 </button>
-<section>
-  <div class="sh"><b id="waiting"></b><span id="count" hidden></span></div>
+<section id="wsec">
+  <div class="sh"><b id="waiting"></b></div>
   <div id="items"></div>
   <button id="more" type="button" hidden></button>
   <p class="note" id="empty" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span id="emptyText"></span></p>
@@ -99,7 +96,6 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
 (function () {
     const icon = name => document.getElementById('i-' + name).content.cloneNode(true);
     const setIcon = (node, name) => node.replaceChildren(icon(name));
-    const bar = (width, small) => { const span = document.createElement('span'); span.className = small ? 'phb s' : 'phb'; span.style.width = width; return span; };
     let model;
     let playback = { briefId: '', state: 'idle', position: 0, duration: 0 };
     let shownItems = null;
@@ -113,15 +109,12 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         const w = model.words, brief = model.brief || {}, row = el('br'), pl = el('pl');
         const playing = !model.loading && brief.kind === 'ready' && playback.briefId === brief.id && (playback.state === 'playing' || playback.state === 'loading');
         row.classList.toggle('on', playing);
-        row.disabled = !!model.loading || brief.kind === 'none' || brief.kind === 'making';
+        row.disabled = !!model.loading || brief.kind === 'none' || brief.kind === 'making' || brief.kind === 'trying';
         pl.className = 'pl';
         el('bar').hidden = !playing;
-        if (model.loading) {
-            pl.className = 'pl ph'; pl.replaceChildren();
-            el('briefTitle').replaceChildren(bar('180px'));
-            const meta = bar('92px', true); meta.style.marginTop = '5px'; el('briefMeta').replaceChildren(meta);
-            return;
-        }
+        // No placeholders: before the first read the row isn't there.
+        row.hidden = !!model.loading;
+        if (model.loading) return;
         el('briefTitle').textContent = brief.title || '';
         if (brief.kind === 'ready') {
             setIcon(pl, playing && playback.state === 'playing' ? 'pause' : 'play');
@@ -132,6 +125,8 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
             } else el('briefMeta').textContent = brief.meta || '';
         } else if (brief.kind === 'read') {
             pl.className = 'pl ghost'; setIcon(pl, 'page'); el('briefMeta').textContent = brief.meta || '';
+        } else if (brief.kind === 'trying') {
+            pl.className = 'pl ghost dim'; setIcon(pl, 'page'); el('briefMeta').textContent = '';
         } else if (brief.kind === 'making') {
             pl.className = 'pl ghost acc'; setIcon(pl, 'spin'); el('briefMeta').textContent = brief.meta || '';
         } else {
@@ -141,8 +136,9 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
 
     function renderItems() {
         const box = el('items');
-        if (model.loading || model.withdrawn) {
-            box.replaceChildren(...[0, 1].map(() => { const row = document.createElement('div'); row.className = 'it ph'; row.append(bar('70%'), bar('42%', true)); return row; }));
+        // A popover never shows placeholders: until Isoform knows, the section isn't there.
+        if (model.loading || model.withdrawn || model.waitingPending) {
+            box.replaceChildren();
             shownItems = null;
             return;
         }
@@ -186,8 +182,8 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         const pending = !!model.loading || !!model.withdrawn || !!model.waitingPending;
         const failed = !pending && !!model.error;
         const none = !pending && !failed && model.waiting === 0;
-        el('count').hidden = pending || failed || model.waiting === 0;
-        el('count').textContent = String(model.waiting);
+        // Nothing in Tasks › Needs you: the section isn't shown (evening walk B7).
+        el('wsec').hidden = pending || failed || none;
         renderItems();
         el('items').hidden = none || failed;
         el('more').hidden = pending || failed || model.waiting <= 3;
@@ -223,13 +219,21 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         window.updateMenuBar(Object.assign({}, model, {withdrawn: true, waiting: 0, items: [], error: ''}));
     };
 
+    // Mirrors observationMenuClock in observation_menu.go.
+    function wallClock(when, lang) {
+        const h = when.getHours(), m = String(when.getMinutes()).padStart(2, '0');
+        if (lang !== 'zh-CN') return ((h % 12) || 12) + ':' + m + (h < 12 ? ' AM' : ' PM');
+        // zh-CN: 24-hour, no leading zero, no 上午/下午 (shell review v1.0.2 B8).
+        return h + ':' + m;
+    }
     // Pause and Resume change the header at once; Go's read confirms it.
     el('hb').onclick = () => {
         const command = el('hb').dataset.command;
         send(command);
         if (!model || (command !== 'pause15' && command !== 'resume')) return;
         const paused = command === 'pause15';
-        window.updateMenuBar(Object.assign({}, model, {status: paused ? 'paused' : 'observing', paused, state: paused ? model.words.paused : model.words.observing}));
+        const until = wallClock(new Date(Date.now() + 15 * 60 * 1000), model.language);
+        window.updateMenuBar(Object.assign({}, model, {status: paused ? 'paused' : 'observing', paused, state: paused ? fill(model.words.pausedUntil, {time: until}) : model.words.observing}));
     };
     // Play answers at once: the row shows loading, or paused when this brief
     // is already playing. Today's player confirms it a moment later.

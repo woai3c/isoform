@@ -1017,7 +1017,7 @@
         },
         "subtitle": "On your computer, right now.",
         "mail": {
-            "on": "Reads your mail and writes drafts. Sends only when you tap Send.",
+            "on": "Reads your mail and writes drafts. Sends only when you click Send.",
             "off": "Can't see your mail yet, so there are no drafts."
         },
         "calendar": {
@@ -1025,11 +1025,11 @@
             "off": "Can't see your calendar yet, so briefs start without your day."
         },
         "calls": {
-            "on": "Hears them to take notes. Audio stays on your computer.",
+            "on": "Hears them to take notes. Audio is stored on your computer.",
             "off": "Can't hear your calls yet, so meetings have no notes."
         },
         "screen": {
-            "on": "Sees the app and window you're in. Screenshots are stored on your computer. For WeChat, a cropped screenshot goes to your AI.",
+            "on": "Sees the app and window you're in, and the text you type. Screenshots are stored on your computer. For WeChat, a cropped screenshot goes to your AI.",
             "off": "Can't see your screen yet, so Isoform doesn't know what you work on."
         },
         "assistant": {
@@ -1048,17 +1048,18 @@
                 "codex": "The text a task needs, to your AI, Codex.",
                 "isoform": "The text a task needs, to the AI Isoform uses."
             },
-            "phone": "Your briefs, cards and drafts, to this phone, encrypted end to end.",
-            "never": "Screenshots and audio never leave your computer."
+            "phone": "Your briefs, cards and drafts, to your phone, encrypted end to end.",
+            "wechat": "For WeChat, a cropped screenshot of the open chat, to your AI."
         },
         "tap": {
-            "title": "Only with your tap",
-            "line": "Isoform doesn't send, delete or accept anything until you tap."
+            "title": "Only when you say so",
+            "line": "Isoform doesn't send, delete or accept anything until you say so."
         },
-        "foot": "Change these in Isoform on your computer › Settings › Privacy.",
+        "foot": "Change these in Settings › Privacy",
         "title": "What Isoform sees",
         "loadFailed": "Could not load what Isoform sees.",
-        "close": "Close"
+        "close": "Close",
+        "retry": "Try again"
     },
     "taskThread": {
         "loading": "Loading task…",

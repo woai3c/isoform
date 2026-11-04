@@ -88,7 +88,7 @@ describe("Settings About", () => {
         render(<HelpAboutPage onReplayOnboarding={vi.fn()} />);
         const build = await screen.findByText(i18n.t("settings:aboutPolish.build"));
         const row = build.closest("[data-about-row]") ?? build.parentElement!;
-        expect(row.textContent).toBe(language === "en" ? "BuildStaging · Oct 22 at 10:22 PM" : "构建预发布版 · 10月22日 晚上10:22");
+        expect(row.textContent).toBe(language === "en" ? "BuildStaging · Oct 22 at 10:22 PM" : "构建预发布版 · 10月22日 22:22");
         fireEvent.click(screen.getByRole("button", { name: /Advanced|高级/ }));
         const discord = screen.getByRole("button", { name: i18n.t("settings:support.discordButton") });
         expect(discord).toHaveClass("text-ink", "border-border", "bg-background");

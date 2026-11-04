@@ -118,7 +118,7 @@ func TestMobileBriefSurfacesReadOneCurrentBrief(t *testing.T) {
 		t.Fatal("no current brief")
 	}
 	now := clock.Now()
-	row := menuBarBriefRow(menuBarWords("en"), "en", latest, ok, false, "", now)
+	row := menuBarBriefRow(menuBarWords("en"), "en", latest, ok, false, MobileBriefHealth{}, now)
 	if row.ID != want {
 		t.Fatalf("menu bar names %q, want %s", row.ID, want)
 	}
@@ -135,31 +135,31 @@ func TestMenuBarPlaysTheCurrentBriefOnlyWithItsWords(t *testing.T) {
 
 	yesterday := mobileBriefCurrentWritten(t, "2026-10-08", mobileBriefSlotEvening, 18, "Evening words.")
 	yesterday.Audio = audio
-	if row := menuBarBriefRow(w, "en", yesterday, true, false, "", now); row.Kind != "ready" || row.ID != yesterday.BriefID {
+	if row := menuBarBriefRow(w, "en", yesterday, true, false, MobileBriefHealth{}, now); row.Kind != "ready" || row.ID != yesterday.BriefID {
 		t.Fatalf("written brief with audio: row = %+v, want ready on %s", row, yesterday.BriefID)
 	}
 
 	silent := mobileBriefStoredBrief(t, "2026-10-08", mobileBriefSlotEvening, 18)
 	silent.Audio = audio
-	if row := menuBarBriefRow(w, "en", silent, true, false, "", now); row.Kind == "ready" {
+	if row := menuBarBriefRow(w, "en", silent, true, false, MobileBriefHealth{}, now); row.Kind == "ready" {
 		t.Fatalf("audio without words must not be playable: row = %+v", row)
 	}
 
 	week := mobileBriefCurrentWritten(t, "2026-10-08", mobileBriefSlotEvening, 18, "Week words.")
 	week.Audio = audio
 	week.YourWeek = &MobileBriefWeek{}
-	if row := menuBarBriefRow(w, "en", week, true, false, "", now); row.Kind != "ready" || row.Title != w["week"] {
+	if row := menuBarBriefRow(w, "en", week, true, false, MobileBriefHealth{}, now); row.Kind != "ready" || row.Title != w["week"] {
 		t.Fatalf("week brief: row = %+v, want the week title", row)
 	}
 
 	// A brief someone asked for is "Brief", even at a morning hour.
 	asked := mobileBriefCurrentWritten(t, "2026-10-09", mobileBriefSlotOnRequest, 8, "Asked for words.")
 	asked.Audio = audio
-	if row := menuBarBriefRow(w, "en", asked, true, false, "", now); row.Kind != "ready" || row.Title != w["brief"] {
+	if row := menuBarBriefRow(w, "en", asked, true, false, MobileBriefHealth{}, now); row.Kind != "ready" || row.Title != w["brief"] {
 		t.Fatalf("asked-for brief: row = %+v, want the Brief title", row)
 	}
 
-	if row := menuBarBriefRow(w, "en", MobileBriefV1{}, false, false, "", now); row.Kind != "none" {
+	if row := menuBarBriefRow(w, "en", MobileBriefV1{}, false, false, MobileBriefHealth{}, now); row.Kind != "none" {
 		t.Fatalf("no brief: row = %+v, want none", row)
 	}
 }

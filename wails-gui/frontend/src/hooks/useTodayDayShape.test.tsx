@@ -111,6 +111,8 @@ it('removes the strip when a successful reread disconnects the calendar', async 
     expect(screen.queryByTestId('today-day-strip-placeholder')).not.toBeInTheDocument();
 });
 it('renders the strip from the preloaded cache on its first paint', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 23, 9));
     pageQueryCache.set('GetTodayDayShape', ['2026-10-23'], dayShapeFixture);
     function Strip() {
         const { shape, dateISO } = useTodayDayShape(true, '2026-10-23');
@@ -150,7 +152,15 @@ it('advances the marker and date after midnight, and stops reading when inactive
     await act(async () => { await vi.advanceTimersByTimeAsync(120_000); });
     expect(mocks.read).not.toHaveBeenCalled();
 });
-it('requests tomorrow for an evening brief, including month rollover', async () => {
+// An evening brief shows the rest of its own day; after midnight the strip is
+// the new day's, across a month too (today-review v1.1.20 R44).
+it('requests an evening brief\'s own day, then the new day after midnight, including month rollover', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 31, 18, 30));
+    const evening = renderHook(() => useTodayDayShape(true, '2026-10-31', true));
+    await waitFor(() => expect(mocks.read).toHaveBeenCalledWith('2026-10-31'));
+    evening.unmount();
+    vi.setSystemTime(new Date(2026, 10, 1, 0, 30));
     renderHook(() => useTodayDayShape(true, '2026-10-31', true));
     await waitFor(() => expect(mocks.read).toHaveBeenCalledWith('2026-11-01'));
 });

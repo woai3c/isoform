@@ -179,12 +179,12 @@ describe("BriefDetailPane (K3)", () => {
         await i18n.changeLanguage("zh-CN");
         render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
         expect(screen.getByRole("heading", { name: "早间简报" })).toBeInTheDocument();
-        expect(await screen.findByTestId("brief-detail-schedule")).toHaveTextContent("每天上午7:30 · 下次：明天");
+        expect(await screen.findByTestId("brief-detail-schedule")).toHaveTextContent("每天7:30 · 下次：明天");
         expect(screen.getByText("变化、接下来的事和需要你的事，在“今日”上准备好。")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "现在生成" })).toBeInTheDocument();
         expect(screen.getByText("最近三次")).toBeInTheDocument();
-        await waitFor(() => expect(document.querySelector('[data-brief-run="b-yesterday"]')).toHaveTextContent("没有运行：上午7:30时电脑在睡眠。"));
-        expect(document.querySelector('[data-brief-run="b-before"]')).toHaveTextContent("上午7:30没有运行。");
+        await waitFor(() => expect(document.querySelector('[data-brief-run="b-yesterday"]')).toHaveTextContent("没有运行：7:30时电脑在睡眠。"));
+        expect(document.querySelector('[data-brief-run="b-before"]')).toHaveTextContent("7:30没有运行。");
         expect(screen.getByTestId("brief-detail-foot")).toHaveTextContent("更改时间 · 在“设置 › 简报”中");
     });
 });
@@ -255,10 +255,10 @@ describe("BriefDetailPane (v1.0.3)", () => {
             { briefId: "b-now", status: "ok", scheduledAt: at(-2, 7, 0).toISOString(), at: at(-2, 9, 16).toISOString(), madeNow: true },
         ] }));
         render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
-        expect(await screen.findByTestId("brief-detail-schedule")).toHaveTextContent("每天上午7:00 · 下次：明天");
-        await waitFor(() => expect(document.querySelector('[data-brief-run="b-late"] [data-brief-run-line]')).toHaveTextContent("上午9:16才生成，不是7:00：电脑在睡眠。"));
-        expect(document.querySelector('[data-brief-run="b-plain"] [data-brief-run-line]')).toHaveTextContent("上午9:16才生成，不是7:00。");
-        expect(document.querySelector('[data-brief-run="b-now"] [data-brief-run-line]')).toHaveTextContent("上午9:16用“现在生成”生成。");
+        expect(await screen.findByTestId("brief-detail-schedule")).toHaveTextContent("每天7:00 · 下次：明天");
+        await waitFor(() => expect(document.querySelector('[data-brief-run="b-late"] [data-brief-run-line]')).toHaveTextContent("9:16才生成，不是7:00：电脑在睡眠。"));
+        expect(document.querySelector('[data-brief-run="b-plain"] [data-brief-run-line]')).toHaveTextContent("9:16才生成，不是7:00。");
+        expect(document.querySelector('[data-brief-run="b-now"] [data-brief-run-line]')).toHaveTextContent("9:16用“现在生成”生成。");
         expect(i18n.t("app:briefDetail.nextTodayAt", { time: "下午6:00" })).toBe("下次：今天下午6:00");
         expect(i18n.t("app:briefDetail.lateReason.closed")).toBe("Isoform 没有打开");
     });
@@ -266,7 +266,7 @@ describe("BriefDetailPane (v1.0.3)", () => {
     it.each([
         ["en", 6, "Today, 7:30 AM", "Tried 6 times without finishing. Isoform tries again at 8:37 AM."],
         ["en", 0, "Today, 7:30 AM", "Didn't finish. Isoform tries again at 8:37 AM."],
-        ["zh-CN", 6, "今天上午7:30", "试了 6 次都没完成。Isoform 会在上午8:37再试。"],
+        ["zh-CN", 6, "今天 7:30", "试了 6 次都没完成。Isoform 会在8:37再试。"],
     ])("puts today's failed run first with what the record proves in %s (tasks-review v1.0.8 #2)", async (language, attempts, title, line) => {
         await i18n.changeLanguage(language);
         mocks.detail.mockResolvedValue(detail({ runs: [

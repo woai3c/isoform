@@ -120,12 +120,12 @@ func proactiveCommitmentSentence(title string, due, now time.Time, lang string) 
 	chinese := normalizeUILanguage(lang) == "zh-CN"
 	if due.Format("2006-01-02") == now.Format("2006-01-02") {
 		if chinese {
-			return title + " · 今天" + clock + "到期"
+			return title + " · 今天 " + clock + " 到期"
 		}
 		return title + " · due today " + clock
 	}
 	if chinese {
-		return fmt.Sprintf("%s · %d月%d日 %s到期", title, due.Month(), due.Day(), clock)
+		return fmt.Sprintf("%s · %d月%d日 %s 到期", title, due.Month(), due.Day(), clock)
 	}
 	return title + " · due " + due.Format("Jan 2") + " at " + clock
 }

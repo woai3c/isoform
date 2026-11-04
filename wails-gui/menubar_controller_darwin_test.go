@@ -20,17 +20,23 @@ func TestMenuBarWaitingClickSurvivesQueueChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i, id := range []string{"chosen", "newer-a", "newer-b", "newer-c"} {
-		card := mainChatProactive{MomentID: id, Kind: "menu_fixture", State: "pending"}
+	// Waiting on you lists Tasks › Needs you in its order (evening walk B7), so
+	// the clicked row is added last and falls below the three visible rows.
+	for i, id := range []string{"older-a", "older-b", "older-c", "chosen"} {
+		card := mainChatProactive{MomentID: id, Kind: "waiting_on_reply", State: "pending", Headline: "Someone is waiting on your reply.", Body: "Halcyon"}
 		if _, err := app.store.AppendStreamItem(t.Context(), main.LocalID, storage.StreamItemRow{ID: id, Kind: "system", ToolName: mainChatProactiveTool, ToolInput: mainChatViewPayload(t, card), CreatedAt: time.Now().Add(time.Duration(i) * time.Second).UnixMilli()}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	page, err := app.ListMainChatWaitingItems("", 50)
+	needs, err := app.GetNeedsYou(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, item := range menuBarWaitingItems(page, "en") {
+	items, ids := menuBarNeedItems(needs.Items, "en")
+	if len(ids) != 4 {
+		t.Fatalf("needs ids %v", ids)
+	}
+	for _, item := range items {
 		if item.ID == "chosen" {
 			t.Fatal("fixture must move the clicked row below the three visible rows")
 		}
@@ -235,7 +241,9 @@ func TestMenuBarLaunchPreloadBuildsViewWithoutClick(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	card := mainChatProactive{MomentID: "waiting-at-launch", Kind: "menu_fixture", State: "pending", Headline: "Someone is waiting on your reply.", Localized: map[string]mainChatProactiveCopy{"en": {Headline: "Someone is waiting on your reply."}, "zh-CN": {Headline: "有人在等你回复。"}}}
+	// A waiting_on_reply card is what Tasks › Needs you lists, so Waiting on you
+	// shows it (evening walk B7).
+	card := mainChatProactive{MomentID: "waiting-at-launch", Kind: "waiting_on_reply", State: "pending", Headline: "Someone is waiting on your reply.", Body: "Halcyon", Localized: map[string]mainChatProactiveCopy{"en": {Headline: "Someone is waiting on your reply."}, "zh-CN": {Headline: "有人在等你回复。"}}}
 	if _, err := app.store.AppendStreamItem(t.Context(), main.LocalID, storage.StreamItemRow{ID: "waiting-at-launch", Kind: "system", ToolName: mainChatProactiveTool, ToolInput: mainChatViewPayload(t, card), CreatedAt: time.Now().UnixMilli()}); err != nil {
 		t.Fatal(err)
 	}

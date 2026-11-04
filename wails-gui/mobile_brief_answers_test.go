@@ -38,7 +38,9 @@ func TestMobileBriefClosingAnswersMatchQuestion(t *testing.T) {
 		}
 	}
 	store := newMobileBriefStore(t.TempDir())
-	if err := store.save(brief, time.Now()); err != nil {
+	// Saved as of the brief's own day: a later clock would sweep the dated
+	// fixture out of the store before it is read back.
+	if err := store.save(brief, mobileBriefAsOfTime(brief)); err != nil {
 		t.Fatal(err)
 	}
 	loaded, ok := store.load(brief.BriefID)

@@ -862,7 +862,9 @@ func (s *mobileBriefService) withPending(view MobileBriefHealth, now time.Time, 
 	s.mu.Lock()
 	retryAfter, retryFor := s.retryAfter, s.retryFor
 	s.mu.Unlock()
-	if retryAfter.After(now) && retryFor == pending.BriefID {
+	// A try after the window closes never runs: the next slot takes over
+	// (today-review v1.1.21 R49).
+	if retryAfter.After(now) && retryFor == pending.BriefID && retryAfter.Before(mobileBriefSlotCloses(pending, s.location, settings)) {
 		view.RetryAt = formatMobileBriefTime(retryAfter)
 	}
 	return view

@@ -98,12 +98,12 @@ beforeEach(async () => {
 
 describe("open-answer promise line", () => {
     it.each([
-        [answer(), "I'll let you know when it's settled, around 10:00 AM.", "有结果我告诉你，大约上午10:00。"],
-        [answer({ settles: "status" }), "I'll check again around 10:00 AM.", "我大约上午10:00再查一次。"],
+        [answer(), "I'll let you know when it's settled, around 10:00 AM.", "有结果我告诉你，大约10:00。"],
+        [answer({ settles: "status" }), "I'll check again around 10:00 AM.", "我大约10:00再查一次。"],
         [answer({ settles: "reply", watchedEvent: { who: "Mina", label: "reply" } }), "Not yet. I'll let you know when Mina replies.", "还没有。Mina 回复后我告诉你。"],
         [answer({ delivery: "settled_only" }), "I'll let you know when it's settled.", "有定论再告诉你。"],
         [answer({ delivery: "brief" }), "I'll put it in tomorrow's brief.", "我会放进明天的简报。"],
-        [answer({ state: "saw_it", sawAt: "2026-10-26T10:00:00-07:00" }), "You saw it at 10:00 AM.", "你在上午10:00已经看到了。"],
+        [answer({ state: "saw_it", sawAt: "2026-10-26T10:00:00-07:00" }), "You saw it at 10:00 AM.", "你在10:00已经看到了。"],
         [answer({ state: "gave_up", watchedEvent: { who: "Mina", label: "reply" } }), "Mina hasn't replied in a week, so I've stopped checking.", "Mina 一周都没回复，我先不查了。"],
         [answer({ state: "gave_up" }), "I've stopped checking.", "我先不查了。"],
     ])("renders exact English and Chinese promise copy", async (record, en, zh) => {
@@ -487,7 +487,7 @@ describe("answer_ready card", () => {
         await waitFor(() => expect(bindings.undo).toHaveBeenCalledWith(record.kind));
         expect(within(screen.getByTestId("answer-ready-card")).queryByRole("button", { name: /let me know/i })).toBeNull();
         await i18n.changeLanguage("zh-CN");
-        expect(screen.getByText("你问过 · 上午9:00")).toBeInTheDocument();
-        expect(screen.getByText("来自Weather service · 中午12:00")).toBeInTheDocument();
+        expect(screen.getByText("你问过 · 9:00")).toBeInTheDocument();
+        expect(screen.getByText("来自Weather service · 12:00")).toBeInTheDocument();
     });
 });

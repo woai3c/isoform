@@ -224,26 +224,32 @@ func (a *App) stopDoingNow() {
 }
 
 // doingNowResting reports the screen locked or the display asleep. Nobody can
-// see the menu bar then, so the loop does nothing until it wakes.
+// see the menu bar then, so the poll skips its ticks until it wakes. The
+// first refresh and a nudge (an event that changed the line) always run.
 var doingNowResting = func() bool { return activitymon.IsScreenLocked() || activitymon.IsDisplayAsleep() }
 
+// doingNowTickEvery is the poll's tick; tests shorten it.
+var doingNowTickEvery = doingNowPollInterval
+
 func (a *App) runDoingNow(ctx context.Context, nudges <-chan struct{}) {
-	ticker := time.NewTicker(doingNowPollInterval)
+	ticker := time.NewTicker(doingNowTickEvery)
 	defer ticker.Stop()
+	a.refreshDoingNow()
 	for {
-		if !doingNowResting() {
-			a.refreshDoingNow()
-		}
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if doingNowResting() {
+				continue
+			}
 		case <-nudges:
 		}
 		// A stop that lands with a tick or a nudge must still win.
 		if ctx.Err() != nil {
 			return
 		}
+		a.refreshDoingNow()
 	}
 }
 

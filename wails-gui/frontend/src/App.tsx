@@ -2641,6 +2641,13 @@ export default function App() {
             }, () => { reportChatPlaceFailure({ key: "failure.loadChat", retry: open }); return false; });
             void open();
         });
+        // A Needs you item with no chat card opens Tasks › Needs you (evening walk B7).
+        const offNeeds = EventsOn("menubar:needs", () => {
+            closeOverlaysForSearch();
+            handleSetAppMode("tasks");
+            setHandoffOpenId(null);
+            setTasksFocus((current) => ({ section: "needs", nonce: (current?.nonce ?? 0) + 1 }));
+        });
         // Plays in the shared player without bringing the app forward; the
         // popover shows the progress (menu bar 1.0).
         const offBrief = EventsOn("menubar:brief-play", (briefId: string) => {
@@ -2665,7 +2672,7 @@ export default function App() {
         const offForget = EventsOn("memory:updated", stopBriefPlayback);
         const offStored = EventsOn("brief:stored", stopBriefPlayback);
         const offSources = ["permissions:changed", "sensitive-apps:updated", "background-listening:changed"].map(event => EventsOn(event, stopBriefPlayback));
-        return () => { offWaiting(); offBrief(); offMake(); offPause(); offForget(); offStored(); offSources.forEach(off => off()); };
+        return () => { offWaiting(); offNeeds(); offBrief(); offMake(); offPause(); offForget(); offStored(); offSources.forEach(off => off()); };
     }, [chatJump.jump, closeOverlaysForSearch, handleSetAppMode, projects.handleOpenMainChat, t, tChat, tToday]);
 
     const searchShortcutFor = useCallback(

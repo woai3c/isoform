@@ -7,7 +7,7 @@ import (
 )
 
 func TestBriefScheduleDetailListsTheLastThreeWithTheRecordedReasonOnly(t *testing.T) {
-	now := mobileBriefTestDay(14, 0)
+	now := mobileBriefTestDay(10, 0)
 	settings := defaultMobileBriefSettings()
 	settings.Enabled = true
 	day := func(offset int) string { return formatMobileBriefTime(mobileBriefTestDay(7, 0).AddDate(0, 0, offset)) }
@@ -37,6 +37,12 @@ func TestBriefScheduleDetailListsTheLastThreeWithTheRecordedReasonOnly(t *testin
 		if detail.Runs[i] != want[i] {
 			t.Fatalf("run %d = %+v, want %+v", i, detail.Runs[i], want[i])
 		}
+	}
+	// From noon the evening brief takes over: the failed morning has no next
+	// try (today-review v1.1.21 R49).
+	afterNoon := briefScheduleDetailFrom(mobileBriefTestDay(14, 0), time.UTC, state, "morning")
+	if len(afterNoon.Runs) == 0 || afterNoon.Runs[0].BriefID != "2026-10-09-morning" || afterNoon.Runs[0].NextTryAt != "" {
+		t.Fatalf("after noon runs = %+v, want the failed morning with no next try", afterNoon.Runs)
 	}
 }
 

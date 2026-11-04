@@ -73,8 +73,8 @@
         "suggestion": "一个建议"
     },
     "status": {
-        "missedMorning": "早间简报没有在{{time}}送达。",
-        "missedEvening": "晚间简报没有在{{time}}送达。",
+        "missedMorning": "早间简报没有在 {{time}} 送达。",
+        "missedEvening": "晚间简报没有在 {{time}} 送达。",
         "why": "为什么",
         "success": "成功",
         "failed": "失败",

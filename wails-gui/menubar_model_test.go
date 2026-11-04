@@ -102,11 +102,11 @@ func TestMenuBarBriefRow(t *testing.T) {
 	morning := MobileBriefV1{BriefID: "2026-10-27-morning", Slot: mobileBriefSlotMorning, LocalDate: "2026-10-27", AsOf: time.Date(2026, 10, 27, 7, 0, 0, 0, time.Local).Format(time.RFC3339),
 		Narrative: []MobileBriefPara{{Text: "Good morning. Three meetings today."}},
 		Audio:     &MobileBriefAudio{Bytes: 10, Status: mobileBriefAudioStatusOK, DurationSeconds: 48}}
-	if got := menuBarBriefRow(w, "en", morning, true, false, "", now); got.Kind != "ready" || got.Title != "Hear your morning brief" || got.Meta != "7:00 AM · 0:48" || got.ID != morning.BriefID {
+	if got := menuBarBriefRow(w, "en", morning, true, false, MobileBriefHealth{}, now); got.Kind != "ready" || got.Title != "Hear your morning brief" || got.Meta != "Today, 7:00 AM · 0:48" || got.ID != morning.BriefID {
 		t.Fatalf("ready %+v", got)
 	}
 	evening := MobileBriefV1{BriefID: "2026-10-27-evening", Slot: mobileBriefSlotEvening, LocalDate: "2026-10-27", AsOf: time.Date(2026, 10, 27, 19, 30, 0, 0, time.Local).Format(time.RFC3339)}
-	if got := menuBarBriefRow(w, "en", evening, true, false, "", now); got.Kind != "read" || got.Title != "Read your evening brief" || got.Meta != "7:30 PM · no recording" {
+	if got := menuBarBriefRow(w, "en", evening, true, false, MobileBriefHealth{}, now); got.Kind != "read" || got.Title != "Read your brief" || got.Meta != "Today, 7:30 PM" {
 		t.Fatalf("read %+v", got)
 	}
 	next := time.Date(2026, 10, 28, 7, 0, 0, 0, time.Local).UTC().Format(time.RFC3339)
@@ -114,16 +114,16 @@ func TestMenuBarBriefRow(t *testing.T) {
 	// Today and Chat show).
 	yesterday := morning
 	yesterday.LocalDate = "2026-10-26"
-	if got := menuBarBriefRow(w, "en", yesterday, true, false, next, now); got.Kind != "ready" || got.ID != morning.BriefID {
+	if got := menuBarBriefRow(w, "en", yesterday, true, false, MobileBriefHealth{NextRunAt: next}, now); got.Kind != "ready" || got.ID != morning.BriefID {
 		t.Fatalf("an earlier day's current brief %+v", got)
 	}
-	if got := menuBarBriefRow(w, "en", MobileBriefV1{}, false, false, next, now); got.Kind != "none" || got.Title != "No brief yet today" || got.Meta != "Next brief tomorrow at 7:00 AM" {
+	if got := menuBarBriefRow(w, "en", MobileBriefV1{}, false, false, MobileBriefHealth{NextRunAt: next}, now); got.Kind != "none" || got.Title != "No brief yet today" || got.Meta != "Next brief tomorrow at 7:00 AM" {
 		t.Fatalf("none %+v", got)
 	}
-	if got := menuBarBriefRow(w, "en", morning, true, true, "", now); got.Kind != "making" || got.Title != "Making your brief…" || got.Meta != "About a minute" {
+	if got := menuBarBriefRow(w, "en", morning, true, true, MobileBriefHealth{}, now); got.Kind != "making" || got.Title != "Making your brief…" || got.Meta != "About a minute" {
 		t.Fatalf("making %+v", got)
 	}
-	if got := menuBarBriefRow(menuBarWords("zh-CN"), "zh-CN", evening, true, false, "", now); got.Title != "阅读晚间简报" || got.Meta != "晚上7:30 · 没有录音" {
+	if got := menuBarBriefRow(menuBarWords("zh-CN"), "zh-CN", evening, true, false, MobileBriefHealth{}, now); got.Title != "阅读简报" || got.Meta != "今天 19:30" {
 		t.Fatalf("zh-CN read %+v", got)
 	}
 	if got := menuBarLabel(w, "Observing", 3); got != "Isoform, observing, 3 waiting on you" && got != "Isoform, Observing, 3 waiting on you" {
@@ -138,7 +138,7 @@ func TestMenuBarWaitingReadUsesChatProjection(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, id := range []string{"a", "b", "c", "d", "closed", "routine", "expired"} {
-		card := mainChatProactive{MomentID: id, Kind: "menu_fixture", State: "pending", Headline: "Someone is waiting on your reply.", Body: "Halcyon\nDraft ready", Localized: map[string]mainChatProactiveCopy{"en": {Headline: "Someone is waiting on your reply.", Body: "Halcyon\nDraft ready"}, "zh-CN": {Headline: "有人在等你回复。", Body: "Halcyon 草稿已就绪"}}}
+		card := mainChatProactive{MomentID: id, Kind: "waiting_on_reply", State: "pending", Headline: "Someone is waiting on your reply.", Body: "Halcyon\nDraft ready", Localized: map[string]mainChatProactiveCopy{"en": {Headline: "Someone is waiting on your reply.", Body: "Halcyon\nDraft ready"}, "zh-CN": {Headline: "有人在等你回复。", Body: "Halcyon 草稿已就绪"}}}
 		switch id {
 		case "closed":
 			card.State = "dismissed"
@@ -152,20 +152,24 @@ func TestMenuBarWaitingReadUsesChatProjection(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	page, err := app.ListMainChatWaitingItems("", 50)
+	// Evening walk B7: Waiting on you is what Tasks › Needs you lists, in its
+	// order; a brief ("routine") is never listed.
+	needs, err := app.GetNeedsYou(0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	items := menuBarWaitingItems(page, "zh-CN")
-	if len(items) != 3 || items[0].ID != "d" || items[2].ID != "b" || items[0].SessionID != main.LocalID {
-		t.Fatalf("waiting %+v", items)
+	items, ids := menuBarNeedItems(needs.Items, "zh-CN")
+	if !reflect.DeepEqual(ids, []string{"a", "b", "c", "d"}) || len(items) != 3 || items[0].ID != "a" || items[0].SessionID != main.LocalID {
+		t.Fatalf("waiting %+v ids %v", items, ids)
 	}
-	if items[0].Title != "有人在等你回复。" {
-		t.Fatalf("localization %+v", items[0])
+	view, err := app.menuBarView("en", true)
+	if err != nil || view.Waiting != len(needs.Items) || !reflect.DeepEqual(view.WaitingIDs, ids) {
+		t.Fatalf("view %+v %v", view, err)
 	}
-	en := menuBarWaitingItems(page, "en")
-	if strings.ContainsAny(en[0].Detail, "\n\r") {
-		t.Fatal("detail is not one line")
+	for _, item := range view.Items {
+		if strings.ContainsAny(item.Title+item.Detail, "\n\r") {
+			t.Fatalf("not one line %+v", item)
+		}
 	}
 	overview, err := app.GetMainChatOverview()
 	if err != nil || overview.Waiting != 4 {
@@ -224,12 +228,13 @@ func TestMenuBarWaitingWithdrawsUnverifiableSourceCopy(t *testing.T) {
 	if _, err := app.store.AppendStreamItem(t.Context(), main.LocalID, storage.StreamItemRow{ID: "private", Kind: "system", ToolName: mainChatProactiveTool, ToolInput: mainChatViewPayload(t, card)}); err != nil {
 		t.Fatal(err)
 	}
-	page, err := app.ListMainChatWaitingItems("", 50)
+	needs, err := app.GetNeedsYou(0)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, lang := range []string{"en", "zh-CN"} {
-		data, _ := json.Marshal(menuBarWaitingItems(page, lang))
+		items, _ := menuBarNeedItems(needs.Items, lang)
+		data, _ := json.Marshal(items)
 		if strings.Contains(string(data), "PRIVATE_") {
 			t.Fatalf("%s leaked source text: %s", lang, data)
 		}
@@ -406,23 +411,143 @@ func TestMenuBarIdleTicksDoNotReadWaiting(t *testing.T) {
 	}
 }
 
-// With #295's in-memory waiting state ready, the menu bar reads it instead
-// of the overview and the 50-row waiting list.
-func TestMenuBarViewReadsInMemoryWaitingState(t *testing.T) {
+// Evening walk B7: the in-memory chat count also counts briefs, so the menu
+// bar never takes it; with nothing in Needs you the section has nothing.
+func TestMenuBarViewIgnoresChatWaitingCount(t *testing.T) {
 	app := mainChatTestApp(t)
-	card := mainChatProactive{MomentID: "held", Kind: "menu_fixture", State: "pending", Headline: "Someone is waiting on your reply.", Localized: map[string]mainChatProactiveCopy{"en": {Headline: "Someone is waiting on your reply."}}}
+	card := mainChatProactive{MomentID: "held", Kind: "brief_ready", State: "pending", Headline: "Your first week with Isoform."}
 	app.mainChatWaiting.mu.Lock()
-	app.mainChatWaiting.state = MainChatWaitingState{SessionID: "main", Count: 7, Ready: true, Items: []StreamItemData{{ID: "held", Kind: "system", ToolName: mainChatProactiveTool, ToolInput: mainChatViewPayload(t, card)}}}
+	app.mainChatWaiting.state = MainChatWaitingState{SessionID: "main", Count: 1, Ready: true, Items: []StreamItemData{{ID: "held", Kind: "system", ToolName: mainChatProactiveTool, ToolInput: mainChatViewPayload(t, card)}}}
 	app.mainChatWaiting.mu.Unlock()
-	// The store has no main chat: a slow read would find nothing waiting.
 	view, err := app.menuBarView("en", true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if view.Waiting != 7 || len(view.Items) != 1 || view.Items[0].ID != "held" || view.Items[0].SessionID != "main" || !reflect.DeepEqual(view.WaitingIDs, []string{"held"}) {
-		t.Fatalf("view did not come from the in-memory state: %+v", view)
+	if view.Waiting != 0 || len(view.Items) != 0 || len(view.WaitingIDs) != 0 || view.Label != menuBarLabel(view.Words, view.State, 0) {
+		t.Fatalf("view listed what Needs you doesn't: %+v", view)
 	}
-	if view.Label != menuBarLabel(view.Words, view.State, 7) {
-		t.Fatalf("label %q", view.Label)
+}
+
+func TestMenuBarNeedItemsOpenTasksWithoutAChatCard(t *testing.T) {
+	needs := []TodayNeed{
+		{ID: "m1", Sentence: "Reply to Halcyon", SentenceLocalized: map[string]string{"zh-CN": "回复 Halcyon"}, TargetKind: "chat_item", TargetID: "row-1", ChatID: "main"},
+		{ID: "h1", Sentence: "Review the Lumen draft", TargetKind: "handoff", TargetID: "h1"},
+	}
+	items, ids := menuBarNeedItems(needs, "zh-CN")
+	if len(items) != 2 || items[0].ID != "row-1" || items[0].SessionID != "main" || items[0].Title != "回复 Halcyon" || items[0].Detail != "" {
+		t.Fatalf("chat need %+v", items)
+	}
+	if items[1].ID != menuBarNeedNoChat+"h1" || items[1].SessionID != "" || !reflect.DeepEqual(ids, []string{"row-1", menuBarNeedNoChat + "h1"}) {
+		t.Fatalf("handoff need %+v %v", items, ids)
+	}
+}
+
+// shell-review v1.0.2 B7: one item format, the sentence and then what it's
+// about, for a single card and for a card inside a digest.
+func TestMenuBarNeedItemsUseOneFormat(t *testing.T) {
+	card := mainChatProactive{Kind: "waiting_on_reply", Headline: "Maya Chen is waiting on your reply.", Body: "About the launch checklist for Thursday",
+		Localized: map[string]mainChatProactiveCopy{"zh-CN": {Headline: "Maya Chen 在等你回复。", Body: "关于周四的发布清单"}}}
+	single, _ := json.Marshal(card)
+	digest, _ := json.Marshal(mainChatProactive{Kind: "digest", Headline: "2 things are waiting", Items: []mainChatProactive{
+		{Kind: "decision_due", Headline: "Rowan Hale needs a decision.", Body: "Move the design review"}, card}})
+	needs := []TodayNeed{
+		{ID: "a", Sentence: card.Body, TargetKind: "chat_item", TargetID: "row-1", ChatID: "main", Source: "Mail", Item: &StreamItemData{ToolInput: string(single)}},
+		{ID: "b", Sentence: "Move the design review", TargetKind: "chat_item", TargetID: "row-2", ChatID: "main", Item: &StreamItemData{ToolInput: string(digest)}},
+	}
+	for _, tc := range []struct{ lang, title, detail string }{
+		{"en", "Maya Chen is waiting on your reply.", "About the launch checklist for Thursday"},
+		{"zh-CN", "Maya Chen 在等你回复。", "关于周四的发布清单"},
+	} {
+		items, _ := menuBarNeedItems(needs, tc.lang)
+		if items[0].Title != tc.title || items[0].Detail != tc.detail {
+			t.Fatalf("%s card %+v", tc.lang, items[0])
+		}
+	}
+	items, _ := menuBarNeedItems(needs, "en")
+	if items[1].Title != "Rowan Hale needs a decision." || items[1].Detail != "Move the design review" {
+		t.Fatalf("digest card %+v", items[1])
+	}
+}
+
+// shell-review v1.0.0 B4: the row is the latest brief with its day, never a
+// bare time or "no recording"; while today's is still being tried, it is
+// Today's tries line.
+func TestMenuBarBriefRowNamesTheDayAndTheTries(t *testing.T) {
+	now := time.Date(2026, 11, 3, 16, 17, 0, 0, time.Local)
+	brief := func(day int, hour, minute int) MobileBriefV1 {
+		at := time.Date(2026, 11, day, hour, minute, 0, 0, time.Local)
+		return MobileBriefV1{BriefID: at.Format("2006-01-02") + "-evening", Slot: mobileBriefSlotEvening, LocalDate: at.Format("2006-01-02"), AsOf: at.Format(time.RFC3339)}
+	}
+	for _, c := range []struct {
+		lang, want string
+		brief      MobileBriefV1
+	}{
+		{"en", "Yesterday, 5:18 PM", brief(2, 17, 18)},
+		{"en", "Today, 7:00 AM", brief(3, 7, 0)},
+		{"en", "Friday, 6:00 PM", brief(-1, 18, 0)},
+		{"zh-CN", "昨天 17:18", brief(2, 17, 18)},
+	} {
+		got := menuBarBriefRow(menuBarWords(c.lang), c.lang, c.brief, true, false, MobileBriefHealth{}, now)
+		if got.Kind != "read" || got.Meta != c.want || strings.Contains(got.Meta, "recording") || strings.Contains(got.Meta, "录音") {
+			t.Errorf("%s %s: %+v, want %q", c.lang, c.brief.LocalDate, got, c.want)
+		}
+	}
+	if got := menuBarBriefRow(menuBarWords("en"), "en", brief(2, 17, 18), true, false, MobileBriefHealth{}, now); got.Title != "Read your brief" {
+		t.Errorf("title %q", got.Title)
+	}
+	old := menuBarBriefRow(menuBarWords("en"), "en", brief(20, 18, 0), true, false, MobileBriefHealth{}, time.Date(2026, 11, 30, 9, 0, 0, 0, time.Local))
+	if old.Meta != "Nov 20, 6:00 PM" {
+		t.Errorf("a brief over a week old names its date: %+v", old)
+	}
+
+	retry := time.Date(2026, 11, 3, 16, 35, 0, 0, time.Local).UTC().Format(time.RFC3339)
+	trying := MobileBriefHealth{PendingSlot: mobileBriefSlotMorning, PendingAttempts: 13, RetryAt: retry}
+	if got := menuBarBriefRow(menuBarWords("en"), "en", brief(2, 17, 18), true, false, trying, now); got.Kind != "trying" || got.Title != "Tried 13 times without finishing. Isoform tries again at 4:35 PM." || got.Meta != "" {
+		t.Errorf("tries line %+v", got)
+	}
+	if got := menuBarBriefRow(menuBarWords("zh-CN"), "zh-CN", brief(2, 17, 18), true, false, trying, now); got.Title != "试了 13 次都没完成。Isoform 会在 16:35 再试。" {
+		t.Errorf("zh tries line %q", got.Title)
+	}
+	once := MobileBriefHealth{PendingSlot: mobileBriefSlotMorning, FailingSlot: mobileBriefSlotMorning, FailedAttempts: 1, RetryAt: retry}
+	if got := menuBarBriefRow(menuBarWords("en"), "en", MobileBriefV1{}, false, false, once, now); got.Title != "Tried once without finishing. Isoform tries again at 4:35 PM." {
+		t.Errorf("once %q", got.Title)
+	}
+	// A retry time already past is not a promise: the latest brief shows.
+	past := MobileBriefHealth{PendingSlot: mobileBriefSlotMorning, PendingAttempts: 13, RetryAt: time.Date(2026, 11, 3, 16, 0, 0, 0, time.Local).Format(time.RFC3339)}
+	if got := menuBarBriefRow(menuBarWords("en"), "en", brief(2, 17, 18), true, false, past, now); got.Kind != "read" {
+		t.Errorf("past retry %+v", got)
+	}
+	// Making wins over the tries line.
+	if got := menuBarBriefRow(menuBarWords("en"), "en", brief(2, 17, 18), true, true, trying, now); got.Kind != "making" {
+		t.Errorf("making %+v", got)
+	}
+}
+
+// shell-review v1.0.0 B6: the footer names the sheet it opens.
+func TestMenuBarFooterNamesWhatIsoformSees(t *testing.T) {
+	if got := menuBarWords("en")["onThisMac"]; got != "What Isoform sees" {
+		t.Fatalf("en footer %q", got)
+	}
+	if got := menuBarWords("zh-CN")["onThisMac"]; got != "Isoform 能看到什么" {
+		t.Fatalf("zh-CN footer %q", got)
+	}
+	for _, lang := range []string{"en", "zh-CN"} {
+		for _, v := range menuBarCopy[lang] {
+			if strings.Contains(v, "no recording") || strings.Contains(v, "没有录音") || v == "On this computer" || v == "在这台电脑上" {
+				t.Errorf("%s: retired %q is back", lang, v)
+			}
+		}
+	}
+}
+
+func TestMenuBarPausedStateSaysUntilWhen(t *testing.T) {
+	until := time.Date(2026, 11, 5, 19, 15, 0, 0, time.Local).UnixMilli()
+	for _, tc := range []struct{ lang, want string }{{"en", "Paused until 7:15 PM"}, {"zh-CN", "已暂停至 19:15"}} {
+		if got := menuBarPausedState(menuBarWords(tc.lang), tc.lang, DoingNow{Kind: doingNowPaused, PausedUntil: until}); got != tc.want {
+			t.Fatalf("%s: got %q, want %q", tc.lang, got, tc.want)
+		}
+	}
+	if got := menuBarPausedState(menuBarWords("en"), "en", DoingNow{Kind: doingNowPaused}); got != "Observing paused" {
+		t.Fatalf("no timer: got %q", got)
 	}
 }

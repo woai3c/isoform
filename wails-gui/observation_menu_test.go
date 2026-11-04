@@ -45,7 +45,7 @@ func TestObservingMenuStatesMatchSidebar(t *testing.T) {
 			{DoingNow{Kind: doingNowWatching}, true, "label", ""},
 			{DoingNow{Kind: doingNowWorking}, false, "notObserving", ""},
 			{DoingNow{Kind: doingNowPaused}, true, "paused", ""},
-			{DoingNow{Kind: doingNowPaused, PausedUntil: until.UnixMilli()}, true, "pausedUntil", map[string]string{"en": "3:15 PM", "zh-CN": "下午3:15"}[lang]},
+			{DoingNow{Kind: doingNowPaused, PausedUntil: until.UnixMilli()}, true, "pausedUntil", map[string]string{"en": "3:15 PM", "zh-CN": "15:15"}[lang]},
 		}
 		for _, tc := range cases {
 			want := strings.ReplaceAll(catalog.Observing[tc.key], "{{time}}", tc.want)
@@ -119,7 +119,7 @@ func TestObservingMenuClockMatchesTheMergedClockFormat(t *testing.T) {
 	if got := observationMenuClock(when, "en"); got != "9:00 AM" {
 		t.Fatal(got)
 	}
-	if got := observationMenuClock(when, "zh-CN"); got != "上午9:00" {
+	if got := observationMenuClock(when, "zh-CN"); got != "9:00" {
 		t.Fatal(got)
 	}
 }

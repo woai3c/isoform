@@ -21,15 +21,23 @@ func TestBriefNextRunWaitsForTomorrowWhenABriefStoodIn(t *testing.T) {
 		t.Fatalf("evening next = %v, want today 18:00", at)
 	}
 	// A catch-up the scheduler really makes keeps its true time: its retry.
-	retry := mobileBriefTestDay(17, 50)
-	at, catchUp = mobileBriefSlotNextRun(now, time.UTC, settings, mobileBriefSlotMorning, mobileBriefScheduleFacts{RetryAt: func(id string) time.Time {
-		if id == "2026-10-09-morning" {
-			return retry
-		}
-		return time.Time{}
-	}})
+	retryAt := func(retry time.Time) mobileBriefScheduleFacts {
+		return mobileBriefScheduleFacts{RetryAt: func(id string) time.Time {
+			if id == "2026-10-09-morning" {
+				return retry
+			}
+			return time.Time{}
+		}}
+	}
+	retry := mobileBriefTestDay(11, 50)
+	at, catchUp = mobileBriefSlotNextRun(mobileBriefTestDay(11, 45), time.UTC, settings, mobileBriefSlotMorning, retryAt(retry))
 	if !at.Equal(retry) || !catchUp {
-		t.Fatalf("catch-up next = %v catchUp=%v, want the retry at 17:50", at, catchUp)
+		t.Fatalf("catch-up next = %v catchUp=%v, want the retry at 11:50", at, catchUp)
+	}
+	// From noon the morning's retries give way: tomorrow (today-review v1.1.21 R49).
+	at, catchUp = mobileBriefSlotNextRun(now, time.UTC, settings, mobileBriefSlotMorning, retryAt(mobileBriefTestDay(17, 50)))
+	if !at.Equal(mobileBriefTestDay(7, 0).AddDate(0, 0, 1)) || catchUp {
+		t.Fatalf("after-noon next = %v catchUp=%v, want tomorrow 07:00", at, catchUp)
 	}
 	// A slot the scheduler won't make late waits for tomorrow too.
 	at, _ = mobileBriefSlotNextRun(now, time.UTC, settings, mobileBriefSlotMorning, mobileBriefScheduleFacts{CatchUpAllowed: func(time.Time) bool { return false }})

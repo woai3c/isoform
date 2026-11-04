@@ -1409,9 +1409,9 @@ describe("tasks-review v1.0.3", () => {
         await i18n.changeLanguage("zh-CN");
         mount({ upcoming: { loading: false, items: [brief("morning", "07:00", { nextRunAt: tomorrowAt(7), didntRunAt: todayAt(7) })] } });
         const row = (await screen.findByRole("region", { name: "定时任务" })).querySelector('[data-scheduled-row="brief:morning"]') as HTMLElement;
-        expect(row).toHaveTextContent("每天上午7:00");
+        expect(row).toHaveTextContent("每天7:00");
         expect(row).toHaveTextContent("下次：明天");
-        expect(row).toHaveTextContent("没有在上午7:00运行 · 查看原因");
+        expect(row).toHaveTextContent("没有在7:00运行 · 查看原因");
         expect(i18n.t("app:tasks.didntRun")).toBe("没有运行 · 查看原因");
         expect(i18n.t("app:tasks.allDoneLink")).toBe("全部已完成 ›");
     });

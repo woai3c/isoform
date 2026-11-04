@@ -17,6 +17,7 @@ const originalGo = (window as any).go;
 const invalidDateCode = 'TODAY_DAY_SHAPE_DATE_INVALID';
 beforeEach(() => { resetPageQueries(); runtime.listeners.clear(); });
 afterEach(async () => {
+    vi.useRealTimers();
     cleanup();
     resetPageQueries();
     (window as any).go = originalGo;
@@ -25,6 +26,9 @@ afterEach(async () => {
 
 it.each(['en', 'zh-CN'])('reports the stable invalid-date rejection on initial read in %s', async (language) => {
     await i18n.changeLanguage(language);
+    // The strip reads the brief's own day while that is today (today-review v1.1.20 R44).
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 22, 9));
     const binding = vi.fn().mockRejectedValue(invalidDateCode);
     (window as any).go = { main: { App: { GetTodayDayShape: binding } } };
     const hook = renderHook(() => useTodayDayShape(true, '2026-10-22'));

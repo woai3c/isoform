@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"strings"
+	"time"
 )
 
 // What Isoform sees, by job (Phone Threads §5): one row per kind of source,
@@ -28,6 +29,9 @@ type MobileSeesView struct {
 	// Assistant is the person's own AI the text a task needs goes to:
 	// claude_code, codex, or empty for Isoform's built-in model.
 	Assistant string `json:"assistant,omitempty"`
+	// PhonePaired is true while a phone is paired; the computer's sheet
+	// names the phone line only then (shell-review v1.0.0 B2).
+	PhonePaired bool `json:"phonePaired,omitempty"`
 }
 
 type mobileSeesSource = MobileSeesSource
@@ -64,7 +68,23 @@ func (bridge *mobileBridge) serveSees(w http.ResponseWriter) {
 
 // GetWhatIsoformSees uses the same job projection on the desktop and phone.
 func (a *App) GetWhatIsoformSees() MobileSeesView {
-	return mobileSeesFrom(a.GetPlatformPermissions(), loadAIProviderConfig().Provider)
+	view := mobileSeesFrom(a.GetPlatformPermissions(), loadAIProviderConfig().Provider)
+	if bridge := a.mobileBridgeForUse(); bridge != nil {
+		view.PhonePaired = bridge.phonePaired(time.Now())
+	}
+	return view
+}
+
+// phonePaired reports whether a phone's pairing is still current.
+func (bridge *mobileBridge) phonePaired(now time.Time) bool {
+	bridge.mu.Lock()
+	defer bridge.mu.Unlock()
+	for _, record := range bridge.devices {
+		if expires, ok := mobileParseTimestamp(record.ExpiresAt); ok && now.Before(expires) {
+			return true
+		}
+	}
+	return false
 }
 
 // mobileSeesNotice is what the Mac shows when the phone asks to turn a source

@@ -250,16 +250,20 @@ func mobileBriefTodaySlots(now time.Time, loc *time.Location, settings mobileBri
 	return out
 }
 
-// mobileBriefSlotCloses ends a slot's window: the next slot, capped by the end
-// of the slot's local day. Until then a brief that failed, or was missed while
-// the computer was off, asleep or restarting, is still made (morning until the
-// evening slot, evening until midnight).
+// mobileBriefSlotCloses ends a slot's window: the next slot, capped by noon
+// for a slot before noon and by midnight for one from noon, the times a brief
+// is named by (today-review v1.1.16 D14, v1.1.21 R49). Until then a brief that
+// failed, or was missed while the computer was off, asleep or restarting, is
+// still made.
 func mobileBriefSlotCloses(occurrence mobileBriefSlotOccurrence, loc *time.Location, settings mobileBriefSettings) time.Time {
 	if loc == nil {
 		loc = time.Local
 	}
 	at := occurrence.ScheduledAt.In(loc)
 	closes := time.Date(at.Year(), at.Month(), at.Day()+1, 0, 0, 0, 0, loc)
+	if at.Hour() < 12 {
+		closes = time.Date(at.Year(), at.Month(), at.Day(), 12, 0, 0, 0, loc)
+	}
 	if next, ok := mobileBriefNextSlot(occurrence.ScheduledAt, loc, settings); ok && next.ScheduledAt.Before(closes) {
 		closes = next.ScheduledAt
 	}

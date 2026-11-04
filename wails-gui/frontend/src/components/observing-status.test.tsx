@@ -176,7 +176,7 @@ describe("Folded observing dot", () => {
             mocks.getListening.mockResolvedValue(state !== "idle");
             mocks.getDoingNow.mockResolvedValue({ kind: state, ...(state === "paused" ? { pausedUntil: new Date(2026, 9, 22, 15, 15).getTime() } : {}) });
             const { unmount } = render(<ObservingStatus collapsed />);
-            const expected = state === "paused" ? t("observingStatus.pausedUntil", { time: language === "en" ? "3:15 PM" : "下午3:15" }) : t(state === "idle" ? "observingStatus.notObserving" : "observingStatus.label");
+            const expected = state === "paused" ? t("observingStatus.pausedUntil", { time: language === "en" ? "3:15 PM" : "15:15" }) : t(state === "idle" ? "observingStatus.notObserving" : "observingStatus.label");
             const trigger = await screen.findByRole("button", { name: expected });
             expect(trigger).toHaveAttribute("title", expected);
             expect(trigger.textContent).toBe("");

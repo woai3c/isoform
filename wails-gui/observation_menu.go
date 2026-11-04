@@ -40,18 +40,8 @@ func observationMenuClock(when time.Time, lang string) string {
 	if normalizeUILanguage(lang) != "zh-CN" {
 		return when.Format("3:04 PM")
 	}
-	hour := when.Hour()
-	period := "晚上"
-	if hour < 6 {
-		period = "凌晨"
-	} else if hour < 12 {
-		period = "上午"
-	} else if hour == 12 {
-		period = "中午"
-	} else if hour <= 18 {
-		period = "下午"
-	}
-	return period + when.Format("3:04")
+	// zh-CN is 24-hour with no leading zero and no 上午/下午 (shell review v1.0.2 B8).
+	return fmt.Sprintf("%d:%02d", when.Hour(), when.Minute())
 }
 
 func menuBarLanguage(app *App) string {

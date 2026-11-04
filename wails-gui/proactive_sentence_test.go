@@ -152,9 +152,9 @@ func TestProactiveCommitmentSentenceClock(t *testing.T) {
 		want string
 	}{
 		{"en", time.Date(2026, 10, 23, 12, 0, 0, 0, time.Local), "Countersign the Northwind SOW · due today 12:00 PM"},
-		{"zh-CN", time.Date(2026, 10, 23, 12, 0, 0, 0, time.Local), "Countersign the Northwind SOW · 今天中午12:00到期"},
+		{"zh-CN", time.Date(2026, 10, 23, 12, 0, 0, 0, time.Local), "Countersign the Northwind SOW · 今天 12:00 到期"},
 		{"en", time.Date(2026, 10, 24, 14, 47, 0, 0, time.Local), "Countersign the Northwind SOW · due Oct 24 at 2:47 PM"},
-		{"zh-CN", time.Date(2026, 10, 24, 14, 47, 0, 0, time.Local), "Countersign the Northwind SOW · 10月24日 下午2:47到期"},
+		{"zh-CN", time.Date(2026, 10, 24, 14, 47, 0, 0, time.Local), "Countersign the Northwind SOW · 10月24日 14:47 到期"},
 	} {
 		if got := proactiveCommitmentSentence("Countersign the Northwind SOW", tc.due, now, tc.lang); got != tc.want {
 			t.Errorf("%s: got %q want %q", tc.lang, got, tc.want)

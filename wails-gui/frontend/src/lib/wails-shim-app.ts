@@ -23,6 +23,7 @@ import type { OpenAnswer, OpenAnswerDelivery } from "@/lib/open-answers";
 export interface WhatIsoformSees {
     sources: { job: string; on: boolean }[];
     assistant?: string;
+    phonePaired?: boolean;
 }
 
 export const GetWhatIsoformSees = appBinding<[], WhatIsoformSees>("GetWhatIsoformSees");

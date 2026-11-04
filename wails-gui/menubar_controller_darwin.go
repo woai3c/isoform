@@ -339,6 +339,11 @@ func (a *App) runMenuBarCommand(command string) error {
 				a.emitBrowserEvent("notification:clicked", "today:brief:"+id)
 			}
 		}
+		if strings.HasPrefix(command, "waiting:"+menuBarNeedNoChat) {
+			a.showFromMenuBar()
+			a.emitBrowserEvent("menubar:needs")
+			return nil
+		}
 		if strings.HasPrefix(command, "waiting:") {
 			// Queue order may change between display and click. Validate the
 			// row's current visibility and main-chat membership, not its rank.

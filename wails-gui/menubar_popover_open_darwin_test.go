@@ -120,8 +120,10 @@ func runMenuBarPopoverHarness(t *testing.T, binary, htmlPath, modelPath, mode, e
 	return string(output)
 }
 
-// The first second after launch: "Starting…" and placeholders the size of
-// real rows; never "Loading…" or a claim such as "Nothing is waiting on you".
+// The first second after launch: "Starting…" with no brief row and no
+// Waiting on you section or See all line (no placeholders, shell-review B5;
+// no count, evening walk B7); never "Loading…" or a claim such as "Nothing is
+// waiting on you".
 func TestMenuBarLoadingPlaceholderMakesNoClaims(t *testing.T) {
 	view := menuBarPreloadView("en")
 	if view.Status != "starting" || view.State != "Starting…" || !view.Loading || len(view.Menu) == 0 {
@@ -134,8 +136,10 @@ func TestMenuBarLoadingPlaceholderMakesNoClaims(t *testing.T) {
 	for _, guard := range []string{
 		"const pending = !!model.loading || !!model.withdrawn || !!model.waitingPending;",
 		"const none = !pending && !failed && model.waiting === 0;",
-		"el('count').hidden = pending",
-		"if (model.loading) {",
+		"row.hidden = !!model.loading;",
+		"el('wsec').hidden = pending || failed || none;",
+		"el('more').hidden = pending || failed || model.waiting <= 3;",
+		"el('empty').hidden = !none;",
 		"hb.disabled = status === 'starting';",
 	} {
 		if !strings.Contains(html, guard) {

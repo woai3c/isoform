@@ -76,34 +76,38 @@ var menuBarCopy = map[string]map[string]string{
 	"en": {
 		"open": "Open Isoform", "make": "Make my brief now", "pause15": "Pause for 15 minutes", "resumeMenu": "Resume observing",
 		"settingsMenu": "Settings…", "quit": "Quit Isoform",
-		"observing": "Observing", "paused": "Observing paused", "off": "Observing is off", "starting": "Starting…",
+		"observing": "Observing", "paused": "Observing paused", "pausedUntil": "Paused until {time}", "off": "Observing is off", "starting": "Starting…",
 		"pause": "Pause 15 min", "resume": "Resume", "turnOn": "Turn on",
 		"morning": "Hear your morning brief", "evening": "Hear your evening brief", "brief": "Hear your brief", "week": "Hear your week",
-		"readMorning": "Read your morning brief", "readEvening": "Read your evening brief", "read": "Read your brief",
-		"noRecording": "{time} · no recording", "none": "No brief yet today", "next": "Next brief tomorrow at {time}", "nextToday": "Next brief today at {time}",
+		"read":    "Read your brief",
+		"dayTime": "{day}, {time}", "today": "Today", "yesterday": "Yesterday",
+		"tried": "Tried {n} times without finishing. Isoform tries again at {time}.", "triedOnce": "Tried once without finishing. Isoform tries again at {time}.",
+		"retry": "Isoform tries again at {time}.", "none": "No brief yet today", "next": "Next brief tomorrow at {time}", "nextToday": "Next brief today at {time}",
 		"making": "Making your brief…", "makingMeta": "About a minute", "playing": "{elapsed} of {length}",
 		"waiting": "Waiting on you", "seeAll": "See all {n} in Chat", "empty": "Nothing is waiting on you.",
 		"failed": "Could not load what is waiting on you. Your chat still has everything.",
 		"update": "Isoform {version} is ready", "restart": "Restart",
 		"models":   "Downloading models · {percent}%",
-		"settings": "Settings", "footerQuit": "Quit", "onThisMac": "On this computer", "openShortcut": "⌘⇧I",
+		"settings": "Settings", "footerQuit": "Quit", "onThisMac": "What Isoform sees", "openShortcut": "⌘⇧I",
 		"label": "Isoform, {state}, {n} waiting on you", "labelNone": "Isoform, {state}",
 		"actionFailed": "Could not complete that action. Open Isoform to try again.",
 	},
 	"zh-CN": {
 		"open": "打开 Isoform", "make": "立即生成简报", "pause15": "暂停 15 分钟", "resumeMenu": "恢复观察",
 		"settingsMenu": "设置…", "quit": "退出 Isoform",
-		"observing": "观察中", "paused": "观察已暂停", "off": "观察已关闭", "starting": "正在启动…",
+		"observing": "观察中", "paused": "观察已暂停", "pausedUntil": "已暂停至 {time}", "off": "观察已关闭", "starting": "正在启动…",
 		"pause": "暂停 15 分钟", "resume": "恢复", "turnOn": "打开",
 		"morning": "收听早间简报", "evening": "收听晚间简报", "brief": "收听简报", "week": "收听你的一周",
-		"readMorning": "阅读早间简报", "readEvening": "阅读晚间简报", "read": "阅读简报",
-		"noRecording": "{time} · 没有录音", "none": "今天还没有简报", "next": "下一份在明天{time}", "nextToday": "下一份在今天{time}",
+		"read":    "阅读简报",
+		"dayTime": "{day} {time}", "today": "今天", "yesterday": "昨天",
+		"tried": "试了 {n} 次都没完成。Isoform 会在 {time} 再试。", "triedOnce": "试了 1 次都没完成。Isoform 会在 {time} 再试。",
+		"retry": "Isoform 会在 {time} 再试。", "none": "今天还没有简报", "next": "下一份在明天 {time}", "nextToday": "下一份在今天 {time}",
 		"making": "正在生成简报…", "makingMeta": "大约一分钟", "playing": "{elapsed} / {length}",
 		"waiting": "等你处理", "seeAll": "在聊天中查看全部 {n} 项", "empty": "没有等你处理的事。",
 		"failed": "没能读取等你处理的事。聊天里的内容都还在。",
 		"update": "Isoform {version} 已就绪", "restart": "重新启动",
 		"models":   "正在下载模型 · {percent}%",
-		"settings": "设置", "footerQuit": "退出", "onThisMac": "在这台电脑上", "openShortcut": "⌘⇧I",
+		"settings": "设置", "footerQuit": "退出", "onThisMac": "Isoform 能看到什么", "openShortcut": "⌘⇧I",
 		"label": "Isoform，{state}，{n} 项等你处理", "labelNone": "Isoform，{state}",
 		"actionFailed": "无法完成操作。请打开 Isoform 重试。",
 	},
@@ -146,7 +150,8 @@ type menuBarWaitingItem struct {
 }
 
 // menuBarBrief is the popover's brief row: ready (with a recording), read
-// (no recording; opens Today), none (nothing yet today) or making.
+// (no recording; opens Today), trying (today's is still being tried), none
+// (nothing yet today) or making.
 type menuBarBrief struct {
 	Kind    string  `json:"kind"`
 	ID      string  `json:"id,omitempty"`
@@ -178,12 +183,12 @@ type menuBarView struct {
 	Label string `json:"label"`
 	Error string `json:"error,omitempty"`
 	// Loading marks the first second after launch, before the first read:
-	// "Starting…" and placeholders the size of real rows, never "Loading…"
-	// or a claim such as "Nothing is waiting on you".
+	// "Starting…" with no brief row and no Waiting on you section, never
+	// "Loading…" or a claim such as "Nothing is waiting on you".
 	Loading bool `json:"loading,omitempty"`
-	// WaitingPending shows placeholders for what is waiting when a read
-	// failed after the last list was withdrawn (a privacy change): no
-	// error, since an earlier read worked, and no stale rows.
+	// WaitingPending leaves Waiting on you out when a read failed after
+	// the last list was withdrawn (a privacy change): no error, since an
+	// earlier read worked, no stale rows and no placeholders (shell B5).
 	WaitingPending bool `json:"waitingPending,omitempty"`
 }
 
@@ -277,21 +282,69 @@ func menuBarDuration(seconds float64) string {
 	return fmt.Sprintf("%d:%02d", total/60, total%60)
 }
 func menuBarLine(s string) string { return strings.Join(strings.Fields(s), " ") }
-func menuBarWaitingItems(page MainChatWaitingPage, lang string) []menuBarWaitingItem {
+
+// menuBarNeedNoChat prefixes a Needs you item that has no chat card, so
+// clicking it opens Tasks › Needs you instead of Chat.
+const menuBarNeedNoChat = "need:"
+
+// menuBarNeedItems is the first rows of Needs you in Tasks' order, and the id
+// of every row so a new one lights the dot.
+func menuBarNeedItems(needs []TodayNeed, lang string) ([]menuBarWaitingItem, []string) {
 	items := []menuBarWaitingItem{}
-	for i := len(page.Items) - 1; i >= 0 && len(items) < menuBarMaxWaiting; i-- {
-		row := page.Items[i]
-		var card mainChatProactive
-		if json.Unmarshal([]byte(row.ToolInput), &card) != nil || mainChatProactiveRowClass(card, time.Now()) != MainChatRowWaiting {
+	ids := make([]string, 0, len(needs))
+	for _, need := range needs {
+		id, session := menuBarNeedNoChat+need.ID, ""
+		if need.TargetKind == "chat_item" && need.TargetID != "" {
+			id, session = need.TargetID, need.ChatID
+		}
+		ids = append(ids, id)
+		if len(items) == menuBarMaxWaiting {
 			continue
 		}
-		title, detail := card.Headline, card.Body
-		if copy, ok := card.Localized[normalizeUILanguage(lang)]; ok {
-			title, detail = copy.Headline, copy.Body
-		}
-		items = append(items, menuBarWaitingItem{ID: row.ID, SessionID: page.SessionID, Title: menuBarLine(title), Detail: menuBarLine(detail)})
+		title, detail := menuBarNeedLines(need, lang)
+		items = append(items, menuBarWaitingItem{ID: id, SessionID: session, Title: menuBarLine(title), Detail: menuBarLine(detail)})
 	}
-	return items
+	return items, ids
+}
+
+// menuBarNeedLines is one item format (shell review v1.0.2 B7): the sentence,
+// then what it's about. A chat card gives its headline and body; any other
+// Needs you item gives its sentence alone.
+func menuBarNeedLines(need TodayNeed, lang string) (string, string) {
+	language := normalizeUILanguage(lang)
+	if need.Item != nil {
+		var card mainChatProactive
+		if json.Unmarshal([]byte(need.Item.ToolInput), &card) == nil {
+			if card.Kind == "digest" {
+				card = menuBarDigestCard(card, need.Sentence)
+			}
+			title, detail := card.Headline, card.Body
+			if copy, ok := card.Localized[language]; ok {
+				title, detail = copy.Headline, copy.Body
+			}
+			if strings.TrimSpace(title) != "" {
+				return title, detail
+			}
+		}
+	}
+	if local := need.SentenceLocalized[language]; strings.TrimSpace(local) != "" {
+		return local, ""
+	}
+	return need.Sentence, ""
+}
+
+// menuBarDigestCard is the card in a digest that the need was projected from.
+func menuBarDigestCard(digest mainChatProactive, sentence string) mainChatProactive {
+	for _, card := range digest.Items {
+		line := strings.TrimSpace(card.Body)
+		if line == "" {
+			line = strings.TrimSpace(card.Headline)
+		}
+		if line == strings.TrimSpace(sentence) {
+			return card
+		}
+	}
+	return mainChatProactive{}
 }
 
 func menuBarLabel(w map[string]string, state string, waiting int) string {
@@ -301,19 +354,58 @@ func menuBarLabel(w map[string]string, state string, waiting int) string {
 	return menuBarFill(w["label"], "state", state, "n", fmt.Sprint(waiting))
 }
 
+// menuBarDay is the brief's day: Today, Yesterday, a weekday within the
+// week, else the date (shell-review v1.0.0 B4: never a time with no day).
+func menuBarDay(w map[string]string, lang string, when, now time.Time) string {
+	day := func(t time.Time) time.Time { y, m, d := t.Date(); return time.Date(y, m, d, 0, 0, 0, 0, time.Local) }
+	days := int(math.Round(day(now).Sub(day(when)).Hours() / 24))
+	zh := normalizeUILanguage(lang) == "zh-CN"
+	switch {
+	case days == 0:
+		return w["today"]
+	case days == 1:
+		return w["yesterday"]
+	case days > 1 && days < 7:
+		if zh {
+			return [...]string{"周日", "周一", "周二", "周三", "周四", "周五", "周六"}[when.Weekday()]
+		}
+		return when.Format("Monday")
+	case zh:
+		return fmt.Sprintf("%d月%d日", when.Month(), when.Day())
+	default:
+		return when.Format("Jan 2")
+	}
+}
+
 // menuBarBriefRow picks the brief row's state from the newest brief, whether
-// one is being made, and the next scheduled slot.
-func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, hasLatest, building bool, nextRunAt string, now time.Time) menuBarBrief {
+// one is being made, and the schedule: while today's is still being tried,
+// the row is Today's tries line; otherwise it is the latest brief with its day.
+func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, hasLatest, building bool, health MobileBriefHealth, now time.Time) menuBarBrief {
 	if building {
 		return menuBarBrief{Kind: "making", Title: w["making"], Meta: w["makingMeta"]}
 	}
 	today := now.Local().Format("2006-01-02")
+	if retry, err := time.Parse(time.RFC3339, health.RetryAt); health.PendingSlot != "" && err == nil && retry.After(now) {
+		at := observationMenuClock(retry.Local(), lang)
+		attempts := health.PendingAttempts
+		if attempts == 0 && health.FailingSlot == health.PendingSlot {
+			attempts = health.FailedAttempts
+		}
+		title := menuBarFill(w["retry"], "time", at)
+		if attempts == 1 {
+			title = menuBarFill(w["triedOnce"], "time", at)
+		} else if attempts > 1 {
+			title = menuBarFill(w["tried"], "n", fmt.Sprint(attempts), "time", at)
+		}
+		return menuBarBrief{Kind: "trying", Title: title}
+	}
 	// The current brief, whatever its date: it stays until the next arrives.
 	if hasLatest {
 		// The kind the title names (design section 1): a brief someone asked
 		// for is "Brief", whatever its hour.
 		kind := mobileBriefPackageKind(latest)
-		at := observationMenuClock(mobileBriefAsOfTime(latest).Local(), lang)
+		asOf := mobileBriefAsOfTime(latest).Local()
+		at := menuBarFill(w["dayTime"], "day", menuBarDay(w, lang, asOf, now.Local()), "time", observationMenuClock(asOf, lang))
 		// Play only where the words are too: a recording never plays alone.
 		if latest.Audio != nil && latest.Audio.Bytes > 0 && latest.Audio.Status == mobileBriefAudioStatusOK && len(latest.Narrative) > 0 {
 			title := w["brief"]
@@ -326,17 +418,11 @@ func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, has
 			}
 			return menuBarBrief{Kind: "ready", ID: latest.BriefID, Title: title, Meta: meta, Seconds: latest.Audio.DurationSeconds}
 		}
-		title := w["read"]
-		switch kind {
-		case mobileBriefSlotMorning:
-			title = w["readMorning"]
-		case mobileBriefSlotEvening:
-			title = w["readEvening"]
-		}
-		return menuBarBrief{Kind: "read", ID: latest.BriefID, Title: title, Meta: menuBarFill(w["noRecording"], "time", at)}
+		// No recording: the row reads the brief, and the player isn't there.
+		return menuBarBrief{Kind: "read", ID: latest.BriefID, Title: w["read"], Meta: at}
 	}
 	row := menuBarBrief{Kind: "none", Title: w["none"]}
-	if next, err := time.Parse(time.RFC3339, nextRunAt); err == nil {
+	if next, err := time.Parse(time.RFC3339, health.NextRunAt); err == nil {
 		next = next.Local()
 		key := "next"
 		if next.Format("2006-01-02") == today {
@@ -363,7 +449,7 @@ func (a *App) menuBarView(lang string, readWaiting bool) (perfValue menuBarView,
 	view := menuBarView{Language: lang, Theme: currentThemePreference(), Words: w, Paused: paused, Items: []menuBarWaitingItem{}}
 	switch {
 	case paused:
-		view.Status, view.State = "paused", observingMenuText(doing, observing, lang)
+		view.Status, view.State = "paused", menuBarPausedState(w, lang, doing)
 	case observing:
 		view.Status, view.State = "observing", w["observing"]
 	case !menuBarObservationStarted.Load():
@@ -386,42 +472,22 @@ func (a *App) menuBarView(lang string, readWaiting bool) (perfValue menuBarView,
 		if b, can := svc.(mobileBriefBuilding); can {
 			building = b.Building()
 		}
-		view.Brief = menuBarBriefRow(w, lang, latest, ok, building, svc.Health().NextRunAt, time.Now())
+		view.Brief = menuBarBriefRow(w, lang, latest, ok, building, svc.Health(), time.Now())
 	} else {
 		view.Brief = menuBarBrief{Kind: "none", Title: w["none"]}
 	}
 	if !readWaiting {
 		return view, nil
 	}
-	// The in-memory waiting state (count and newest cards, kept by
-	// main-chat writes, expiry and privacy withdrawals) once it is ready;
-	// the slow reads only before its first compute.
-	if state := a.GetMainChatWaiting(); state.Ready {
-		view.Waiting = state.Count
-		view.Items = menuBarWaitingItems(MainChatWaitingPage{SessionID: state.SessionID, Items: state.Items}, lang)
-		view.WaitingIDs = make([]string, 0, len(state.Items))
-		for _, item := range state.Items {
-			view.WaitingIDs = append(view.WaitingIDs, item.ID)
-		}
-		view.Label = menuBarLabel(w, view.State, view.Waiting)
-		return view, nil
-	}
-	overview, err := a.GetMainChatOverview()
+	// Waiting on you is what Tasks › Needs you lists (evening walk B7):
+	// never a brief or another chat card that Tasks doesn't list.
+	needs, err := a.GetNeedsYou(0)
 	if err != nil {
 		return view, err
 	}
-	view.Waiting, view.WaitingIDs = overview.Waiting, overview.WaitingItemIDs
+	view.Items, view.WaitingIDs = menuBarNeedItems(needs.Items, lang)
+	view.Waiting = len(needs.Items)
 	view.Label = menuBarLabel(w, view.State, view.Waiting)
-	page, err := a.ListMainChatWaitingItems("", 50)
-	if err != nil {
-		return view, err
-	}
-	view.Items = menuBarWaitingItems(page, lang)
-	// Overview bounds its id list. Include the displayed newest rows as well,
-	// so a replacement still lights the dot in a large waiting queue.
-	for _, item := range view.Items {
-		view.WaitingIDs = append(view.WaitingIDs, item.ID)
-	}
 	return view, nil
 }
 
@@ -437,6 +503,14 @@ func (a *App) menuBarModels(w map[string]string) string {
 		return ""
 	}
 	return menuBarFill(w["models"], "percent", fmt.Sprint(percent))
+}
+
+// menuBarPausedState is the header while paused: until when, if a timer ends it.
+func menuBarPausedState(w map[string]string, lang string, doing DoingNow) string {
+	if doing.PausedUntil <= 0 {
+		return w["paused"]
+	}
+	return menuBarFill(w["pausedUntil"], "time", observationMenuClock(time.UnixMilli(doing.PausedUntil).Local(), lang))
 }
 
 // menuBarLatestBrief is the saved finished brief Today opens (#506), not a

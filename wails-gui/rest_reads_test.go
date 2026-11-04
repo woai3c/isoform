@@ -139,24 +139,54 @@ func TestTopicInterestPrivacyChangesApplyOnTheNextRead(t *testing.T) {
 	}
 }
 
-// With the screen locked or the display asleep, the status loop does nothing.
+// With the screen locked or the display asleep, the status poll skips its
+// ticks; the first refresh and a nudge still run.
 func TestDoingNowLoopRestsWhileTheScreenIsLocked(t *testing.T) {
 	var resting atomic.Bool
 	resting.Store(true)
+	previousResting, previousTick := doingNowResting, doingNowTickEvery
+	doingNowResting, doingNowTickEvery = resting.Load, 20*time.Millisecond
+	t.Cleanup(func() { doingNowResting, doingNowTickEvery = previousResting, previousTick })
+	app := &App{activeTags: map[string]bool{}}
+	next := doingNowEventKinds(t, app)
+	app.startDoingNow(context.Background())
+	t.Cleanup(app.stopDoingNow)
+	if kind := next(2 * time.Second); kind != string(doingNowIdle) {
+		t.Fatalf("first line = %q, want idle", kind)
+	}
+	// A change no event announces waits for a tick, and a locked screen skips
+	// the ticks.
+	app.closedEyes.enabled.Store(true)
+	if kind := next(300 * time.Millisecond); kind != "" {
+		t.Fatalf("a locked screen's tick refreshed the status line: %q", kind)
+	}
+	app.nudgeDoingNow()
+	if kind := next(2 * time.Second); kind != string(doingNowPaused) {
+		t.Fatalf("a nudge while locked = %q, want paused", kind)
+	}
+	resting.Store(false)
+	app.closedEyes.enabled.Store(false)
+	if kind := next(2 * time.Second); kind != string(doingNowIdle) {
+		t.Fatalf("after unlock the tick = %q, want idle", kind)
+	}
+}
+
+// The loop refreshes on start and on a nudge whatever the lock detector
+// says on the machine running the tests.
+func TestDoingNowLoopRefreshesOnANudgeWhileResting(t *testing.T) {
 	previous := doingNowResting
-	doingNowResting = resting.Load
+	doingNowResting = func() bool { return true }
 	t.Cleanup(func() { doingNowResting = previous })
 	app := &App{activeTags: map[string]bool{}}
 	next := doingNowEventKinds(t, app)
 	app.startDoingNow(context.Background())
 	t.Cleanup(app.stopDoingNow)
-	app.nudgeDoingNow()
-	if kind := next(300 * time.Millisecond); kind != "" {
-		t.Fatalf("a locked screen refreshed the status line: %q", kind)
-	}
-	resting.Store(false)
-	app.nudgeDoingNow()
 	if kind := next(2 * time.Second); kind != string(doingNowIdle) {
-		t.Fatalf("after unlock = %q, want idle", kind)
+		t.Fatalf("first line = %q, want idle", kind)
+	}
+	app.closedEyes.enabled.Store(true)
+	app.noteDoingNowEvent(closedEyesModeChangedEvent)
+	if kind := next(2 * time.Second); kind != string(doingNowPaused) {
+		t.Fatalf("after the nudge = %q, want paused", kind)
 	}
 }

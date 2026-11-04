@@ -323,7 +323,8 @@ func TestNarrativePromptWritesLocalTimes(t *testing.T) {
 	if strings.Contains(prompt, "= Zoom") {
 		t.Fatal("the prompt lists time in a meeting app as a meeting")
 	}
-	if zh := mobileBriefTestPrompt(brief, "Simplified Chinese"); !strings.Contains(zh, "| 下午6:00") || strings.Contains(zh, "星期四, 下午6:00") {
+	if zh := mobileBriefTestPrompt(brief, "Simplified Chinese"); !strings.Contains(zh, "| 18:00") || strings.Contains(zh, "星期四, 18:00") || strings.Contains(zh, "下午6:00") {
+		// Written Chinese clocks are 24-hour (today-review v1.1.20 R47).
 		t.Fatal("the Chinese prompt does not use a natural local clock")
 	}
 }
