@@ -210,9 +210,10 @@ export function PersonDetailPanel({
                 </section>
             )}
 
-            {detail.together.length > 0 && (
+            {(detail.togetherFailed || detail.together.length > 0) && (
                 <section className="flex flex-col gap-1.5">
                     <h3 className="text-[13px] font-semibold text-ink">{tr('detail.together')}</h3>
+                    {detail.togetherFailed && <PeopleFailureLine text={tr('detail.togetherFailed')} onRetry={reread} />}
                     <ul className="flex flex-col">
                         {detail.together.map((item, i) => (
                             <li key={`${item.kind}:${item.at}:${i}`} className="flex gap-3 border-b border-border-divider py-[7px]">

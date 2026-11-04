@@ -138,7 +138,7 @@ func TestMainChatStatusStoredAndLegacyCopyLocalizes(t *testing.T) {
 func TestLegacyChineseGenericStatusGetsEnglishCopy(t *testing.T) {
 	entry := mainChatStatusEntry{Kind: "brief_missed", Text: "你的简报没有送达。"}
 	populateMainChatStatusCopy(&entry)
-	if entry.Localized["en"] != "Your brief did not arrive." || entry.Localized["zh-CN"] != "你的简报没有送达。" {
+	if entry.Localized["en"] != "Your brief didn't come." || entry.Localized["zh-CN"] != "你的简报没有来。" {
 		t.Fatalf("legacy language frozen: %+v", entry.Localized)
 	}
 }

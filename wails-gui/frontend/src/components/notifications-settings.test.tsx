@@ -164,8 +164,17 @@ function rankedOrder(): string[] {
 }
 
 function openFold() {
-    fireEvent.click(screen.getByRole("button", { name: /more kinds, nothing sent in the last 30 days/ }));
+    fireEvent.click(screen.getByRole("button", { name: /kinds that sent nothing in 30 days/ }));
 }
+
+const devTools = vi.hoisted(() => ({ on: true }));
+vi.mock("@/components/settings/settings-dev-tools", async (original) => ({
+    ...(await original<typeof import("@/components/settings/settings-dev-tools")>()),
+    useSettingsDevTools: () => devTools.on,
+}));
+beforeEach(() => {
+    devTools.on = true;
+});
 
 describe("NotificationsSettings", () => {
     beforeEach(async () => {
@@ -186,7 +195,7 @@ describe("NotificationsSettings", () => {
         expect(within(dial).getAllByRole("radio").map((radio) => radio.textContent)).toEqual(["Off", "Fewer", "Normal", "More"]);
         expect(within(dial).getByRole("radio", { name: "Normal" })).toHaveAttribute("aria-checked", "true");
         expect(
-            screen.getByText("The usual mix, with one suggestion a week. Up to 6 interruptions a day, quiet 22:00 to 08:00."),
+            screen.getByText("The usual mix, with one suggestion a week. Up to 6 interruptions a day, quiet 10:00 PM to 8:00 AM."),
         ).toBeInTheDocument();
         // The explanation of the dial and Custom stays on the page.
         expect(screen.getByText(en.proactiveNotifications.level.description)).toBeInTheDocument();
@@ -234,7 +243,9 @@ describe("NotificationsSettings", () => {
     it("marks a hand-tuned view as custom, and keeps the level and says so when a change fails", async () => {
         await renderReady(makeView({ level: "custom" }));
         expect(screen.getByText(en.proactiveNotifications.level.custom)).toBeInTheDocument();
-        expect(screen.getByText(en.proactiveNotifications.level.customHint)).toBeInTheDocument();
+        // ST72: one line under the dial, not a second hint saying the same.
+        expect(screen.getByText("Pick a level, then fine-tune any kind below.")).toBeInTheDocument();
+        expect(screen.queryByText(en.proactiveNotifications.level.customHint)).not.toBeInTheDocument();
         for (const radio of screen.getAllByRole("radio")) expect(radio).toHaveAttribute("aria-checked", "false");
         fireEvent.click(screen.getByRole("radio", { name: "Off" }));
         await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith(en.proactiveNotifications.level.saveFailed));
@@ -264,7 +275,7 @@ describe("NotificationsSettings", () => {
         expect(within(capture).getByText("Observing paused")).toBeInTheDocument();
         expect(within(capture).getByText("Noisy")).toBeInTheDocument();
         expect(within(capture).getByText("“Isoform stopped watching for a while.”")).toBeInTheDocument();
-        expect(within(capture).getByText("36 sent · 0 useful · 9 dismissed")).toBeInTheDocument();
+        expect(within(capture).getByText("36 sent · 0 useful · 9 closed")).toBeInTheDocument();
         expect(within(capture).getByRole("img", { name: "36 sent, 0 useful" })).toBeInTheDocument();
         expect(within(capture).getByText("Computer and phone")).toBeInTheDocument();
         // What the kind is stays on the row.
@@ -313,7 +324,7 @@ describe("NotificationsSettings", () => {
     it("folds the kinds with no sends into one line, each keeping its switch", async () => {
         await renderReady();
         const folded = KINDS.length - Object.keys(SENT).length;
-        const fold = screen.getByRole("button", { name: `${folded} more kinds, nothing sent in the last 30 days` });
+        const fold = screen.getByRole("button", { name: `${folded} kinds that sent nothing in 30 days` });
         expect(fold).toHaveAttribute("aria-expanded", "false");
         expect(screen.getAllByRole("switch")).toHaveLength(Object.keys(SENT).length);
         openFold();
@@ -427,7 +438,7 @@ describe("NotificationsSettings", () => {
         await renderReady(withKind(makeView(), "brief_ready", { paused: true, dismissed: 11 }));
         const row = rankedRow("brief_ready");
         expect(within(row).getByText("Paused")).toBeInTheDocument();
-        expect(within(row).getByText("Isoform paused Brief ready because you dismissed most of them.")).toBeInTheDocument();
+        expect(within(row).getByText("Isoform paused Brief ready because you closed most of them without acting.")).toBeInTheDocument();
         expect(within(row).getByRole("switch", { name: "Resume Brief ready" })).not.toBeChecked();
         mocks.setKind.mockResolvedValueOnce(makeView());
         fireEvent.click(within(row).getByRole("button", { name: "Resume" }));
@@ -478,14 +489,13 @@ describe("NotificationsSettings", () => {
 
     // ── Check-ins and where notices go ──
 
-    it("lists the one check-in that exists and when after-meeting ones come", async () => {
+    it("has no check-ins card, and the reply kind says it can be answered from the notice (ST17)", async () => {
         await renderReady();
-        const card = screen.getByRole("region", { name: "Check-ins that start a conversation" });
-        expect(within(card).getByText("Waiting on your reply")).toBeInTheDocument();
-        expect(
-            within(card).getByText("Someone you know wrote to you directly more than a day ago and has no answer yet."),
-        ).toBeInTheDocument();
-        expect(within(card).getByText(/After-meeting check-ins come later/)).toBeInTheDocument();
+        expect(screen.queryByRole("region", { name: "Check-ins that start a conversation" })).toBeNull();
+        expect(screen.queryByText(/After-meeting check-ins come later/)).toBeNull();
+        expect(en.proactiveNotifications.kinds.waiting_on_reply.description).toBe(
+            "Someone you know wrote to you directly more than a day ago and has no answer yet. You can answer from the notice.",
+        );
     });
 
     it("says where notices go and opens quiet hours and limits under Advanced", async () => {
@@ -599,5 +609,16 @@ describe("NotificationsSettings", () => {
         expect(within(capture).getByText("电脑和手机")).toBeInTheDocument();
         expect(screen.getByRole("heading", { name: "过去 30 天" })).toBeInTheDocument();
         await i18n.changeLanguage("en");
+    });
+});
+
+// ST13: the per-kind week table is developer-only; the week's line stays.
+describe("NotificationsSettings without Developer tools", () => {
+    it("keeps the week's line and hides the last 7 days in detail", async () => {
+        devTools.on = false;
+        mocks.getWeek.mockResolvedValue({ available: true, sent: 9, actedOn: 6, days: 7, kinds: [] });
+        await renderReady();
+        expect(await screen.findByText("Isoform spoke up 9 times this week, you acted on 6.")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "The last 7 days in detail" })).not.toBeInTheDocument();
     });
 });

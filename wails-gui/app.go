@@ -98,6 +98,8 @@ type App struct {
 	// the registry's committed snapshot (people_topics_adapter.go). Tests may
 	// inject a failing seam to prove topics read failures stay non-fatal.
 	peopleTopics peopleWorkTopics
+	// peopleTogetherProbe lets tests delay or fail the evidence read.
+	peopleTogetherProbe func() error
 	// peopleLineageProbe, when set, fires on each real principal lineage load
 	// so tests can count lineage walks per read generation.
 	peopleLineageProbe        func()

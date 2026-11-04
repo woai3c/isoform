@@ -65,7 +65,7 @@ func (s *mobileBriefService) composeRankedMorning(ctx context.Context, input mob
 	call := s.modelCall
 	if call == nil {
 		call = func(ctx context.Context, prompt string) (string, error) {
-			return s.app.runEphemeralClaudeModelContext(ctx, prompt, s.app.chatTaskModel(), mobileBriefNarrativeTimeout)
+			return s.app.mobileBriefModelCall(ctx, prompt)
 		}
 	}
 	brief := original

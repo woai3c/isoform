@@ -120,7 +120,7 @@ func TestMenuBarBriefRow(t *testing.T) {
 	if got := menuBarBriefRow(w, "en", MobileBriefV1{}, false, false, MobileBriefHealth{NextRunAt: next}, now); got.Kind != "none" || got.Title != "No brief yet today" || got.Meta != "Next brief tomorrow at 7:00 AM" {
 		t.Fatalf("none %+v", got)
 	}
-	if got := menuBarBriefRow(w, "en", morning, true, true, MobileBriefHealth{}, now); got.Kind != "making" || got.Title != "Making your brief…" || got.Meta != "" {
+	if got := menuBarBriefRow(w, "en", morning, true, true, MobileBriefHealth{}, now); got.Kind != "making" || got.Title != "Making your brief now." || got.Meta != "" {
 		t.Fatalf("making %+v", got)
 	}
 	if got := menuBarBriefRow(menuBarWords("zh-CN"), "zh-CN", evening, true, false, MobileBriefHealth{}, now); got.Title != "阅读简报" || got.Meta != "今天 19:30" {
@@ -505,7 +505,7 @@ func TestMenuBarBriefRowNamesTheDayAndTheTries(t *testing.T) {
 	if got := menuBarBriefRow(menuBarWords("en"), "en", brief(2, 17, 18), true, false, trying, now); got.Kind != "trying" || got.Title != "Tried 13 times without finishing. Isoform tries again at 4:35 PM." || got.Meta != "" {
 		t.Errorf("tries line %+v", got)
 	}
-	if got := menuBarBriefRow(menuBarWords("zh-CN"), "zh-CN", brief(2, 17, 18), true, false, trying, now); got.Title != "试了 13 次都没完成。Isoform 会在 16:35 再试。" {
+	if got := menuBarBriefRow(menuBarWords("zh-CN"), "zh-CN", brief(2, 17, 18), true, false, trying, now); got.Title != "试了 13 次都没完成。Isoform 会在16:35再试。" {
 		t.Errorf("zh tries line %q", got.Title)
 	}
 	once := MobileBriefHealth{PendingSlot: mobileBriefSlotMorning, FailingSlot: mobileBriefSlotMorning, FailedAttempts: 1, RetryAt: retry}
@@ -560,6 +560,23 @@ func TestMenuBarPausedStateSaysUntilWhen(t *testing.T) {
 	}
 	if got := menuBarPausedState(menuBarWords("en"), "en", DoingNow{Kind: doingNowPaused}); got != "Observing paused" {
 		t.Fatalf("no timer: got %q", got)
+	}
+}
+
+func TestMenuBarRetryIncludesCauseAndNoEstimate(t *testing.T) {
+	now := time.Date(2026, 11, 4, 8, 30, 0, 0, time.Local)
+	health := MobileBriefHealth{PendingSlot: "morning", PendingAttempts: 6, PendingCause: "timeout", RetryAt: now.Add(15 * time.Minute).Format(time.RFC3339)}
+	for _, tc := range []struct{ lang, want, making string }{
+		{"en", "Tried 6 times. It timed out. Isoform tries again at 8:45 AM.", "Making your morning brief now."},
+		{"zh-CN", "试了 6 次。超时了。Isoform 会在8:45再试。", "正在生成你的早间简报。"},
+	} {
+		w := menuBarWords(tc.lang)
+		if got := menuBarBriefRow(w, tc.lang, MobileBriefV1{}, false, false, health, now); got.Title != tc.want {
+			t.Errorf("%s retry: %+v", tc.lang, got)
+		}
+		if got := menuBarBriefRow(w, tc.lang, MobileBriefV1{}, false, true, health, now); got.Title != tc.making || got.Meta != "" {
+			t.Errorf("%s making: %+v", tc.lang, got)
+		}
 	}
 }
 

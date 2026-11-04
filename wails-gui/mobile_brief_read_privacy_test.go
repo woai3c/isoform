@@ -538,6 +538,7 @@ func newStoredMobileBriefPrivacyFixture(t *testing.T) (*App, *mobileBriefService
 	brief.Audio = &MobileBriefAudio{Status: mobileBriefAudioStatusOK, Attachment: &MobileBriefAudioAttachment{ID: "private-audio", Key: "private-audio-key"}}
 	t.Setenv("YANSU_MOBILE_STATE_DIR", t.TempDir())
 	svc := newMobileBriefService(app)
+	t.Cleanup(svc.Stop)
 	svc.location = time.UTC
 	svc.now = func() time.Time { return now }
 	app.mobileBriefSvc = svc

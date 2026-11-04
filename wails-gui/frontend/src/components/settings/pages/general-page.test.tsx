@@ -111,7 +111,7 @@ describe("GeneralPage", () => {
     it("reports a failed login setting read and retries without showing a guessed switch", async () => {
         mocks.getStartAtLogin.mockRejectedValueOnce(new Error("offline"));
         render(<Harness />);
-        expect(await screen.findByText("Could not read this setting.")).toBeInTheDocument();
+        expect(await screen.findByText("Couldn't read this setting.")).toBeInTheDocument();
         expect(screen.queryByRole("switch", { name: "Open Isoform when you log in" })).toBeNull();
         fireEvent.click(screen.getByRole("button", { name: "Try again" }));
         expect(await screen.findByRole("switch", { name: "Open Isoform when you log in" })).toBeChecked();

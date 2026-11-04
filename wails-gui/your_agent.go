@@ -37,6 +37,8 @@ import (
 const (
 	yourAgentSpecialtyMinSeen = 5
 	yourAgentSpecialtyLimit   = 3
+	// A specialty is what someone has done for weeks, not in one session.
+	yourAgentSpecialtyMinSpan = 14 * 24 * time.Hour
 	yourAgentTasteLimit       = 3
 	yourAgentDefaultAPI       = "https://www.isoform.ai/api/agents"
 	yourAgentStateFileName    = "your-agent.json"
@@ -371,15 +373,74 @@ func yourAgentThingKey(title string) (key string, display string) {
 }
 
 type yourAgentGroup struct {
-	display  string
-	sessions map[string]bool
-	entries  []KnowledgeEntry
+	display     string
+	sessions    map[string]bool
+	entries     []KnowledgeEntry
+	first, last time.Time
+}
+
+// yourAgentEntryTime is when the entry was saved, or zero when its date is unreadable.
+func yourAgentEntryTime(entry KnowledgeEntry) time.Time {
+	value := strings.TrimSpace(entry.Date)
+	for _, layout := range []string{time.RFC3339, "2006-01-02 15:04", "2006-01-02"} {
+		if at, err := time.Parse(layout, value); err == nil {
+			return at
+		}
+	}
+	return time.Time{}
+}
+
+var (
+	yourAgentToolCase   = regexp.MustCompile(`^\p{Ll}+\p{Lu}|^\p{Lu}+\p{Ll}+\p{Lu}`)
+	yourAgentShortWords = map[string]bool{"web": true, "app": true, "ads": true, "art": true, "tax": true, "pay": true, "law": true, "job": true}
+)
+
+// yourAgentToolWord reports a word that reads as a product or a command: a
+// CamelCase brand, digits or code punctuation, or a short lowercase command.
+func yourAgentToolWord(word string) bool {
+	if strings.ContainsAny(word, "0123456789_./`") || yourAgentToolCase.MatchString(word) {
+		return true
+	}
+	if len(word) > 3 || word != strings.ToLower(word) || yourAgentShortWords[word] {
+		return false
+	}
+	for _, r := range word {
+		if r > unicode.MaxASCII || !unicode.IsLetter(r) {
+			return false
+		}
+	}
+	return true
+}
+
+// yourAgentSpecialtyNamed keeps a specialty a buyer would understand: never a
+// product or tool name alone, so a tool word, or nothing but the entries' own
+// app names, leaves it out.
+func yourAgentSpecialtyNamed(display string, entries []KnowledgeEntry) bool {
+	apps := map[string]bool{}
+	for _, entry := range entries {
+		for _, app := range splitCommaList(entry.Apps) {
+			for _, word := range strings.Fields(strings.ToLower(app)) {
+				apps[word] = true
+			}
+		}
+	}
+	plain := 0
+	for _, word := range strings.Fields(display) {
+		if yourAgentToolWord(word) {
+			return false
+		}
+		if !apps[strings.ToLower(word)] {
+			plain++
+		}
+	}
+	return plain > 0
 }
 
 // computeYourAgentInsights groups work patterns by the thing made and counts
 // the separate pieces: each session that contributed to an entry is one piece,
 // and a piece is counted once even when two patterns make the same thing. It
-// keeps the top three groups seen at least five times, and takes the taste from
+// keeps the top three groups seen at least five times over at least two weeks,
+// named in plain words rather than a product or tool, and takes the taste from
 // the top group's entries, then from the next groups.
 func computeYourAgentInsights(entries []KnowledgeEntry, fullName string) YourAgentInsights {
 	groups := map[string]*yourAgentGroup{}
@@ -402,12 +463,22 @@ func computeYourAgentInsights(entries []KnowledgeEntry, fullName string) YourAge
 			}
 		}
 		group.entries = append(group.entries, entry)
+		if at := yourAgentEntryTime(entry); !at.IsZero() {
+			if group.first.IsZero() || at.Before(group.first) {
+				group.first = at
+			}
+			if at.After(group.last) {
+				group.last = at
+			}
+		}
 	}
 
 	ranked := make([]YourAgentSpecialty, 0, len(groups))
 	byName := map[string]*yourAgentGroup{}
 	for _, group := range groups {
-		if len(group.sessions) < yourAgentSpecialtyMinSeen {
+		if len(group.sessions) < yourAgentSpecialtyMinSeen ||
+			group.last.Sub(group.first) < yourAgentSpecialtyMinSpan ||
+			!yourAgentSpecialtyNamed(group.display, group.entries) {
 			continue
 		}
 		ranked = append(ranked, YourAgentSpecialty{Name: group.display, Seen: len(group.sessions)})
@@ -449,18 +520,40 @@ func computeYourAgentInsights(entries []KnowledgeEntry, fullName string) YourAge
 }
 
 // yourAgentTasteLine turns one know-how entry into one line for the taste
-// card: its takeaway, or its first point, with names and numbers stripped.
+// card: its takeaway, or its first point, with names and numbers stripped,
+// kept only when it reads as a skill said to the person (yourAgentTasteSkill).
 // Names are the person's own name words, plus anything the PII redaction
 // finds. An empty result means the entry has nothing usable.
 func yourAgentTasteLine(entry KnowledgeEntry, fullName string) string {
 	card := knowHowCard(entry)
 	candidates := append([]string{card.Takeaway}, card.Points...)
 	for _, text := range candidates {
-		if line := yourAgentRedactTaste(text, fullName); line != "" {
+		if line := yourAgentRedactTaste(text, fullName); line != "" && yourAgentTasteSkill(line) {
 			return line
 		}
 	}
 	return ""
+}
+
+var (
+	yourAgentTasteCode  = regexp.MustCompile("`" + `|\$\w|(^|\s)--?\p{Ll}|\b\w+_\w+\b|\b\p{Ll}+\p{Lu}\w*|\w\.(go|ts|tsx|js|py|md|json|sh|ya?ml|toml)\b|(^|\s)[~.]?/\w|\(\)|[{}<>]`)
+	yourAgentTasteNever = []string{"observed", "the user", "user's", "users ", "api key", "token", "password", "passcode", "secret", "credential", "private key"}
+)
+
+// yourAgentTasteSkill keeps a taste line that is a skill, said to the person
+// ("You can ..."): never a log line about "the user", code, or a key, token
+// or password.
+func yourAgentTasteSkill(line string) bool {
+	lower := strings.ToLower(line)
+	for _, word := range yourAgentTasteNever {
+		if strings.Contains(lower, word) {
+			return false
+		}
+	}
+	if yourAgentTasteCode.MatchString(line) {
+		return false
+	}
+	return strings.HasPrefix(line, "You ") || strings.HasPrefix(line, "You'") || strings.HasPrefix(line, "你")
 }
 
 func yourAgentRedactTaste(text, fullName string) string {

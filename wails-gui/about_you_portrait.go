@@ -963,6 +963,19 @@ func (s *AboutYouPortraitService) readNow(path string) (AboutYouPortrait, bool, 
 		}
 	}
 	s.fileMu.Unlock()
+	if doc != nil && doc.GeneratedAt > 0 && (doc.Language != s.app.currentUILanguage() || !portraitLanguageMatches(s.app.currentUILanguage(), doc.Sentences, doc.WorkWithMe)) {
+		s.poke()
+		result := s.project(doc, live, entries)
+		result.Name, result.NameAreas = []string{}, [][]string{}
+		result.Sentences, result.WorkWithMe, result.Lately = []AboutYouPortraitSentence{}, []AboutYouPortraitLine{}, nil
+		if result.Failure != nil {
+			result.State = "failed"
+		} else {
+			result.State = "writing"
+			result.Writing = true
+		}
+		return result, false, nil
+	}
 	return s.project(doc, live, entries), remember, nil
 }
 
@@ -1270,7 +1283,7 @@ func (s *AboutYouPortraitService) check(ctx context.Context, now time.Time) {
 		due = "first"
 	case doc.Removed:
 		due = "forgotten"
-	case doc.Language != language:
+	case doc.Language != language || !portraitLanguageMatches(language, doc.Sentences, doc.WorkWithMe):
 		due = "language"
 	case portraitChanges(doc.Inputs, sources, since) >= portraitRewriteChanges:
 		due = "changes"
@@ -1456,6 +1469,8 @@ func (s *AboutYouPortraitService) write(ctx context.Context, path string, now ti
 	unchanged := map[int]bool{}
 	if previous != nil {
 		prevPoles = previous.Poles
+	}
+	if previous != nil && previous.Language == language && portraitLanguageMatches(language, previous.Sentences, previous.WorkWithMe) {
 		check.previous = previous.Sentences
 		for i, sentence := range previous.Sentences {
 			same := true
@@ -1528,6 +1543,14 @@ func (s *AboutYouPortraitService) write(ctx context.Context, path string, now ti
 			}
 			retried = true
 			prompt += "\nYour previous answer was not strict JSON in the shape above. Return ONLY that JSON.\n"
+			continue
+		}
+		if !portraitLanguageMatches(language, draft.Sentences, draft.WorkWithMe) {
+			if retried {
+				break
+			}
+			retried = true
+			prompt += "\nWrite every sentence and every How to work with me line in Simplified Chinese.\n"
 			continue
 		}
 		checked := check.checkDraft(aliases.draft(draft))

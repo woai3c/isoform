@@ -971,8 +971,8 @@ describe('main chat proactive messages', () => {
             await openCardPanel(en.mainChat.card.button.review);
             const panel = within(screen.getByTestId('main-chat-item-panel'));
             await waitFor(() => expect(within(screen.getByTestId('main-chat-item-panel')).getByText('Full privacy-projected result: all implementation checks completed.')).toBeInTheDocument());
-            expect(panel.getByText('Implementation report')).toBeInTheDocument();
-            expect(panel.getByText('Test results')).toBeInTheDocument();
+            expect(await panel.findByText('Implementation report')).toBeInTheDocument();
+            expect(await panel.findByText('Test results')).toBeInTheDocument();
             expect(resolveAction).toHaveBeenCalledWith('moment-1', 'review');
         },
     );
@@ -985,8 +985,8 @@ describe('main chat proactive messages', () => {
             fireEvent.click(screen.getByRole('button', { name: en.mainChat.action.review }));
             await waitFor(() => expect(within(screen.getByTestId('main-chat-item-panel')).getByText('Full privacy-projected result: all implementation checks completed.')).toBeInTheDocument());
             const panel = screen.getByTestId('main-chat-item-panel');
-            expect(within(panel).getByText('Implementation report')).toBeInTheDocument();
-            expect(within(panel).getByText('Test results')).toBeInTheDocument();
+            expect(await within(panel).findByText('Implementation report')).toBeInTheDocument();
+            expect(await within(panel).findByText('Test results')).toBeInTheDocument();
             expect(resolveAction).toHaveBeenCalledWith('moment-1', 'review');
         },
     );

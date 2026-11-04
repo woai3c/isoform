@@ -36,6 +36,7 @@ func TestMobileBriefWatchingRechecksStoredBrowserSources(t *testing.T) {
 			brief.Audio = &MobileBriefAudio{Status: mobileBriefAudioStatusOK}
 			t.Setenv("YANSU_MOBILE_STATE_DIR", t.TempDir())
 			svc := newMobileBriefService(app)
+			t.Cleanup(svc.Stop)
 			svc.now = func() time.Time { return now }
 			svc.location = time.UTC
 			app.mobileBriefSvc = svc

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
 import type { YourAgentPageData, YourAgentReservation } from "@/lib/wails-shim-app";
@@ -28,9 +28,8 @@ vi.mock("@/lib/wails-shim-app", () => ({
     ChooseYourAgentPage: mocks.choose,
     CancelYourAgentRequest: mocks.cancel,
     NativeClipboardSetText: mocks.copy,
+    OpenExternalURL: mocks.open,
 }));
-
-vi.mock("@/lib/wails-shim-runtime", () => ({ BrowserOpenURL: mocks.open }));
 
 const learned: YourAgentPageData = {
     specialties: [
@@ -48,7 +47,7 @@ const learned: YourAgentPageData = {
     reservation: null,
     online: true,
     computed: true,
-} as YourAgentPageData;
+} as unknown as YourAgentPageData;
 
 const sentReservation: YourAgentReservation = {
     name: "alex.rivera",
@@ -97,7 +96,21 @@ describe("YourAgentPage", () => {
         mocks.choose.mockReset();
         mocks.cancel.mockReset();
         mocks.copy.mockReset().mockResolvedValue(undefined);
-        mocks.open.mockReset();
+        mocks.open.mockReset().mockResolvedValue(undefined);
+    });
+
+    it.each([
+        ["en", "To find a free name, Isoform checks this name and forms of your full name when you leave the name field. When you press Reserve, it sends the name and your email, and we email a code to confirm it's you.", "Your memory, Mail and Messages never go into it."],
+        ["zh-CN", "为了找到可用的名字，Isoform 会在你离开名字输入框时查询这个名字和你全名的几种写法。按下“预留”后，它会发送这个名字和你的邮箱，我们会发验证码到你的邮箱确认是你本人。", "你的记忆、邮件和信息永远不会放进去。"],
+    ])("describes the name check without an unverified future privacy promise in %s", async (language, note, unsupported) => {
+        await i18n.changeLanguage(language);
+        try {
+            await renderWith(learned);
+            expect(await screen.findByText(note)).toBeInTheDocument();
+            expect(screen.queryByText(unsupported)).not.toBeInTheDocument();
+        } finally {
+            await i18n.changeLanguage("en");
+        }
     });
 
     it("copies the page link and opens X with the learned specialties", async () => {
@@ -119,7 +132,7 @@ describe("YourAgentPage", () => {
         await renderWith(pageWith({ reservation: sentReservation }));
         await screen.findByTestId("your-agent-sent");
         fireEvent.keyDown(screen.getByRole("button", { name: "Share…" }), { key: "ArrowDown" });
-        fireEvent.click(await screen.findByRole("menuitem", { name: "Share on LinkedIn" }));
+        fireEvent.click(await screen.findByRole("menuitem", { name: "Copy post and open LinkedIn" }));
         await waitFor(() => expect(mocks.open).toHaveBeenCalled());
         expect(mocks.copy.mock.calls[0][0]).toContain("Mine will handle Weekly updates, Client SOWs and Hiring plans.");
         expect(mocks.copy.mock.invocationCallOrder[0]).toBeLessThan(mocks.open.mock.invocationCallOrder[0]);
@@ -154,7 +167,7 @@ describe("YourAgentPage", () => {
         }
     });
 
-    it("opens with the names of the top specialties, no counts, and both fields empty", async () => {
+    it("opens with the names of the top specialties, no counts, and the first worked-out name (S018)", async () => {
         await renderWith(learned);
         expect(screen.getByText("Weekly updates")).toBeTruthy();
         expect(screen.getByText("Client SOWs")).toBeTruthy();
@@ -163,7 +176,7 @@ describe("YourAgentPage", () => {
         expect(screen.queryByText(/见过/)).toBeNull();
         expect(screen.getAllByRole("listitem").length).toBeGreaterThanOrEqual(3);
         expect(screen.getByText(i18n.t("settings:yourAgent.tasteTitle"))).toBeTruthy();
-        expect(nameInput().value).toBe("");
+        expect(nameInput().value).toBe("alex.rivera");
         expect(emailInput().value).toBe("");
         expect((sendButton() as HTMLButtonElement).disabled).toBe(true);
         expect(screen.getByText(i18n.t("settings:yourAgent.comingSoon"))).toBeTruthy();
@@ -309,6 +322,128 @@ describe("YourAgentPage", () => {
         expect(screen.queryByTestId("your-agent-specialties-placeholder")).toBeNull();
     });
 
+    it("starts empty with the yourname placeholder when no name was worked out (S018)", async () => {
+        await renderWith(pageWith({ nameCandidates: [] }));
+        expect(nameInput().value).toBe("");
+        expect(nameInput().placeholder).toBe("yourname");
+    });
+
+    it("Change adds Keep, which closes the form with no call (S018)", async () => {
+        await renderWith(pageWith({ reservation: sentReservation }));
+        await screen.findByTestId("your-agent-sent");
+        fireEvent.click(screen.getByRole("button", { name: "Change" }));
+        expect(nameInput().value).toBe("alex.rivera");
+        expect(emailInput().value).toBe("alex@example.com");
+        fireEvent.click(screen.getByRole("button", { name: "Keep isoform.ai/agents/alex.rivera" }));
+        expect(await screen.findByTestId("your-agent-sent")).toBeTruthy();
+        expect(mocks.reserve).not.toHaveBeenCalled();
+        expect(mocks.check).not.toHaveBeenCalled();
+    });
+
+    it("says it couldn't work out the specialties after 30 seconds, hides the taste, and Try again computes again (S019)", async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+            const pending = pageWith({ computed: false, specialties: [], taste: [], stillLearning: false });
+            mocks.getPage.mockResolvedValue(pending);
+            mocks.getReservation.mockResolvedValue({ online: true, reservation: null });
+            render(<YourAgentPage />);
+            await screen.findByTestId("your-agent-specialties-placeholder");
+            await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
+            expect(screen.getByText("Isoform couldn't work out your specialties.")).toBeTruthy();
+            expect(screen.queryByTestId("your-agent-specialties-placeholder")).toBeNull();
+            expect(screen.queryByText(i18n.t("settings:yourAgent.tasteTitle"))).toBeNull();
+            mocks.getPage.mockResolvedValue(learned);
+            const calls = mocks.getPage.mock.calls.length;
+            fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+            await waitFor(() => expect(screen.getByText("Weekly updates")).toBeTruthy());
+            expect(mocks.getPage.mock.calls.length).toBeGreaterThan(calls);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("says it couldn't work out the specialties when the read fails (S019)", async () => {
+        mocks.getPage.mockRejectedValue(new Error("boom"));
+        mocks.getReservation.mockResolvedValue({ online: true, reservation: null });
+        render(<YourAgentPage />);
+        expect(await screen.findByText("Isoform couldn't work out your specialties.")).toBeTruthy();
+        expect(screen.queryByText(i18n.t("settings:yourAgent.tasteTitle"))).toBeNull();
+    });
+
+    it("reads again when the window comes back into focus (S019)", async () => {
+        mocks.getPage.mockResolvedValueOnce(pageWith({ computed: false, specialties: [], taste: [], stillLearning: false }));
+        mocks.getPage.mockResolvedValue(learned);
+        mocks.getReservation.mockResolvedValue({ online: true, reservation: null });
+        render(<YourAgentPage />);
+        await screen.findByTestId("your-agent-specialties-placeholder");
+        await act(async () => { window.dispatchEvent(new Event("focus")); });
+        await waitFor(() => expect(screen.getByText("Weekly updates")).toBeTruthy());
+    });
+
+    it("shows a copper line with Try again when the link copy fails (S020)", async () => {
+        await renderWith(pageWith({ reservation: sentReservation }));
+        await screen.findByTestId("your-agent-sent");
+        mocks.copy.mockRejectedValueOnce(new Error("no clipboard"));
+        fireEvent.click(screen.getByRole("button", { name: "Copy your link" }));
+        const line = await screen.findByText("Couldn't copy your link.");
+        expect(line.className).toContain("text-copper");
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(screen.getByRole("button", { name: "Copied" })).toBeTruthy());
+        expect(screen.queryByText("Couldn't copy your link.")).toBeNull();
+    });
+
+    it("doesn't open LinkedIn when the post can't be copied (S020)", async () => {
+        await renderWith(pageWith({ reservation: sentReservation }));
+        await screen.findByTestId("your-agent-sent");
+        mocks.copy.mockRejectedValueOnce(new Error("no clipboard"));
+        fireEvent.keyDown(screen.getByRole("button", { name: "Share…" }), { key: "ArrowDown" });
+        fireEvent.click(await screen.findByRole("menuitem", { name: "Copy post and open LinkedIn" }));
+        expect(await screen.findByText("Couldn't copy your post, so LinkedIn didn't open.")).toBeTruthy();
+        expect(mocks.open).not.toHaveBeenCalled();
+        expect(screen.queryByText("Your post is copied. Paste it into LinkedIn.")).toBeNull();
+    });
+
+    it("keeps the LinkedIn line in ink until you leave (S020)", async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+            await renderWith(pageWith({ reservation: sentReservation }));
+            await screen.findByTestId("your-agent-sent");
+            fireEvent.keyDown(screen.getByRole("button", { name: "Share…" }), { key: "ArrowDown" });
+            fireEvent.click(await screen.findByRole("menuitem", { name: "Copy post and open LinkedIn" }));
+            const line = await screen.findByText("Your post is copied. Paste it into LinkedIn.");
+            expect(line.className).toContain("text-ink");
+            await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+            expect(screen.getByText("Your post is copied. Paste it into LinkedIn.")).toBeTruthy();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("lists X, Threads, then LinkedIn, and says so when the browser doesn't open (S021)", async () => {
+        await renderWith(pageWith({ reservation: sentReservation }));
+        await screen.findByTestId("your-agent-sent");
+        fireEvent.keyDown(screen.getByRole("button", { name: "Share…" }), { key: "ArrowDown" });
+        const items = await screen.findAllByRole("menuitem");
+        expect(items.map((item) => item.textContent)).toEqual(["Post on X", "Post on Threads", "Copy post and open LinkedIn"]);
+        mocks.open.mockRejectedValueOnce(new Error("no browser"));
+        fireEvent.click(items[1]);
+        expect(await screen.findByText("Couldn't open your browser.")).toBeTruthy();
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.open).toHaveBeenCalledTimes(2));
+        expect(new URL(mocks.open.mock.calls[1][0]).origin).toBe("https://www.threads.com");
+        await waitFor(() => expect(screen.queryByText("Couldn't open your browser.")).toBeNull());
+    });
+
+    it("opens a mail draft to Bo with the page in the subject, and says so when no mail app opens (S022)", async () => {
+        await renderWith(pageWith({ reservation: sentReservation }));
+        await screen.findByTestId("your-agent-sent");
+        expect(screen.getByText(/Ideas, or want in early\? Email Bo at/)).toBeTruthy();
+        mocks.open.mockRejectedValueOnce(new Error("no mail app"));
+        fireEvent.click(screen.getByRole("link", { name: "bo@isoform.ai" }));
+        expect(mocks.open).toHaveBeenCalledWith(`mailto:bo@isoform.ai?subject=${encodeURIComponent("My agent: isoform.ai/agents/alex.rivera")}`);
+        expect(await screen.findByText("Couldn't open your email app. Write to bo@isoform.ai.")).toBeTruthy();
+    });
+
     it("keeps Still learning when the Mac's copy says so", async () => {
         await renderWith(pageWith({ specialties: [], taste: [], stillLearning: true, computed: true }));
         expect(screen.getByText(i18n.t("settings:yourAgent.stillLearning"))).toBeTruthy();
@@ -373,7 +508,7 @@ describe("YourAgentPage", () => {
         expect(screen.getByText("isoform.ai/agents/alex.rivera is yours.")).toBeTruthy();
         expect(screen.getByText(/We'll email alex@example.com when it opens/)).toBeTruthy();
         expect(screen.getByRole("button", { name: "Change" })).toBeTruthy();
-        expect(screen.getByText(i18n.t("settings:yourAgent.leadRest"))).toBeTruthy();
+        expect(screen.getByText(`${i18n.t("settings:yourAgent.leadRest")} ${i18n.t("settings:yourAgent.reserveLead")}`)).toBeTruthy();
     });
     const pending = { ...sentReservation, status: "pending", expiresAt: "2099-01-01T00:00:00Z" };
     const choice = { ...pending, status: "choice", oldName: "old.name" };

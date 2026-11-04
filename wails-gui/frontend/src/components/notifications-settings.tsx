@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useSettingsDevTools } from "@/components/settings/settings-dev-tools";
 import { AlertCircle, ChevronDown, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -40,7 +41,6 @@ const LEVELS: readonly Exclude<EngagementLevel, "custom">[] = ["off", "fewer", "
 // Where "Quiet hours and limits" (under Advanced) is scrolled to.
 export const QUIET_HOURS_ANCHOR = "quiet-hours";
 // The one check-in kind that exists today: its notice carries answer buttons.
-const CHECK_IN_KIND = "waiting_on_reply";
 // Destinations in the 30-day stats (PROTOCOL.md 16.1), in display order.
 const DESTINATIONS = ["computer", "phone", "text", "email"] as const;
 
@@ -391,6 +391,7 @@ function Disclosure({ label, children }: { label: string; children: ReactNode })
 
 function LastThirtyDays({ view, state }: { view: EngagementSettingsView; state: EngagementSettingsState }) {
     const { t } = useTranslation("settings");
+    const devTools = useSettingsDevTools();
     const kinds = view.kinds ?? [];
     // Ranked by interruptions; the catalog order breaks ties.
     const ranked = kinds
@@ -440,13 +441,15 @@ function LastThirtyDays({ view, state }: { view: EngagementSettingsView; state: 
                         </Disclosure>
                     </div>
                 )}
-                <div className="border-t border-border-divider">
-                    <Disclosure label={t("proactiveNotifications.ranked.weekDisclosure")}>
-                        <div className="px-[18px] pb-3">
-                            <EngagementWeekSummary week={week} />
-                        </div>
-                    </Disclosure>
-                </div>
+                {devTools && (
+                    <div className="border-t border-border-divider">
+                        <Disclosure label={t("proactiveNotifications.ranked.weekDisclosure")}>
+                            <div className="px-[18px] pb-3">
+                                <EngagementWeekSummary week={week} />
+                            </div>
+                        </Disclosure>
+                    </div>
+                )}
             </div>
         </section>
     );
@@ -491,33 +494,13 @@ function LevelCard({ view, state }: { view: EngagementSettingsView; state: Engag
                     </div>
                 </div>
             </div>
-            <p className="text-[13px] text-muted">
-                {view.level === "custom"
-                    ? t("proactiveNotifications.level.customHint")
-                    : t(`proactiveNotifications.level.options.${view.level}.description`)}
-            </p>
+            {/* settings-review ST72: never two lines saying the same thing. */}
+            {view.level !== "custom" && (
+                <p className="text-[13px] text-muted">
+                    {t(`proactiveNotifications.level.options.${view.level}.description`)}
+                </p>
+            )}
             <p className="text-xs text-muted">{t("proactiveNotifications.level.description")}</p>
-        </section>
-    );
-}
-
-function CheckInsCard() {
-    const { t } = useTranslation("settings");
-    return (
-        <section aria-labelledby="notifications-check-ins" className="settings-card settings-card--padded flex flex-col gap-2.5">
-            <h2 id="notifications-check-ins" className="settings-card-title">
-                {t("proactiveNotifications.checkIns.title")}
-            </h2>
-            <p className="text-[13px] text-muted">{t("proactiveNotifications.checkIns.description")}</p>
-            <div className="flex flex-col gap-0.5 rounded-lg bg-panel-warm px-3 py-2.5">
-                <span className="text-[13.5px] font-semibold text-ink">
-                    {t(`proactiveNotifications.kinds.${CHECK_IN_KIND}.label`)}
-                </span>
-                <span className="text-[12.5px] text-muted">
-                    {t(`proactiveNotifications.kinds.${CHECK_IN_KIND}.description`)}
-                </span>
-            </div>
-            <p className="text-xs text-muted">{t("proactiveNotifications.checkIns.later")}</p>
         </section>
     );
 }
@@ -596,7 +579,6 @@ export function NotificationsSettings({
         <>
             <LevelCard view={view} state={state} />
             <LastThirtyDays view={view} state={state} />
-            <CheckInsCard />
             <WhereNoticesGo onOpenPage={onOpenPage} />
         </>
     );

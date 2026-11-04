@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
-import { MagpieProfileCard } from "./magpie-profile";
+import { ANSWERING_PICKED_EVENT, MagpieProfileCard, modelName } from "./magpie-profile";
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), set: vi.fn(), background: vi.fn() }));
 vi.mock("@/lib/wails-shim-app", () => ({ GetMagpieProfile: mocks.get, SetMagpieProfile: mocks.set, SetBackgroundUsesChoice: mocks.background }));
@@ -28,7 +28,7 @@ describe("Isoform magpie profile", () => {
         await waitFor(() => expect(mocks.set).toHaveBeenLastCalledWith([initial.members[1], initial.members[0]]));
         const model = await screen.findByRole("combobox", { name: "Claude Code model" });
         fireEvent.keyDown(model, { key: "ArrowDown" });
-        fireEvent.click(screen.getByRole("option", { name: "claude/opus" }));
+        fireEvent.click(screen.getByRole("option", { name: "Opus" }));
         await waitFor(() => expect(mocks.set).toHaveBeenLastCalledWith([initial.members[1], { model: "claude/opus", effort: "high" }]));
         const effort = screen.getByRole("radiogroup", { name: "Claude Code effort" });
         await waitFor(() => expect(within(effort).getByRole("radio", { name: "Max" })).toBeEnabled());
@@ -55,10 +55,43 @@ describe("Isoform magpie profile", () => {
         expect(await screen.findByRole("alert")).toHaveTextContent("Isoform could not save that choice");
     });
 
+    it("is titled Models Isoform uses, with no magpie sentences", async () => {
+        render(<MagpieProfileCard />);
+        expect(await screen.findByRole("heading", { name: "Models Isoform uses" })).toBeInTheDocument();
+        expect(screen.getByText("In order. Isoform uses the first one that has usage left.")).toBeInTheDocument();
+        await screen.findByRole("button", { name: "Move Codex up" });
+        expect(screen.queryByText(/magpie/)).not.toBeInTheDocument();
+    });
+
+    it("names models, not ids", () => {
+        expect(modelName("claude/claude-sonnet-5-5")).toBe("Sonnet 5.5");
+        expect(modelName("codex/gpt-5.5")).toBe("GPT-5.5");
+        expect(modelName("claude/opus")).toBe("Opus");
+    });
+
+    it("says in copper when the models can't be read, and reads again", async () => {
+        mocks.get.mockRejectedValueOnce(new Error("down"));
+        render(<MagpieProfileCard />);
+        const line = await screen.findByText("Couldn't read these models.");
+        expect(line).toHaveClass("text-copper");
+        fireEvent.click(within(line).getByRole("button", { name: "Try again" }));
+        expect(await screen.findByRole("button", { name: "Move Codex up" })).toBeInTheDocument();
+    });
+
+    it("moves the assistant picked in Who answers to the top", async () => {
+        render(<MagpieProfileCard />);
+        await screen.findByRole("button", { name: "Move Codex up" });
+        window.dispatchEvent(new CustomEvent(ANSWERING_PICKED_EVENT, { detail: "codex" }));
+        await waitFor(() => expect(mocks.set).toHaveBeenLastCalledWith([initial.members[1], initial.members[0]]));
+        mocks.set.mockClear();
+        window.dispatchEvent(new CustomEvent(ANSWERING_PICKED_EVENT, { detail: "isoform" }));
+        expect(mocks.set).not.toHaveBeenCalled();
+    });
+
     it("uses Chinese labels", async () => {
         await i18n.changeLanguage("zh-CN");
         render(<MagpieProfileCard />);
-        expect(await screen.findByRole("heading", { name: "Isoform 模型配置" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: "Isoform 使用的模型" })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "将 Codex 上移" })).toBeInTheDocument();
     });
 });

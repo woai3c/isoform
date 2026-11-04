@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { notifyHoldSettingsChanged } from "@/lib/hold-settings-events";
-import { RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { activeInterval } from "@/lib/app-activity";
-import { toast } from "sonner";
+import { SettingsFailureLine, useSettingsFailure, type SettingsFailure } from "@/components/settings/settings-failure";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -117,6 +117,8 @@ interface ObservationPauseState {
     loadFailed: boolean;
     saving: boolean;
     setPaused: (next: boolean) => Promise<void>;
+    changeFailure: SettingsFailure | null;
+    reload: () => void;
 }
 
 /** The temporary pause shared with the menu bar's Pause Observation item, the
@@ -124,6 +126,7 @@ interface ObservationPauseState {
  *  them, so the switch follows whichever surface changed it. */
 function useObservationPause(): ObservationPauseState {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [paused, setPausedState] = useState<boolean | null>(null);
     const [loadFailed, setLoadFailed] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -158,7 +161,7 @@ function useObservationPause(): ObservationPauseState {
                 await SetClosedEyesModeEnabled(next);
             } catch {
                 setPausedState(!next);
-                toast.error(t("observation.pause.toggleFailed"));
+                failChange(t("observation.pause.toggleFailed"), () => void setPaused(next));
             } finally {
                 setSaving(false);
             }
@@ -166,7 +169,7 @@ function useObservationPause(): ObservationPauseState {
         [t],
     );
 
-    return { paused, loadFailed, saving, setPaused };
+    return { paused, loadFailed, saving, setPaused, changeFailure, reload };
 }
 
 function KeyChord({ combo }: { combo: KeyCombo }) {
@@ -193,7 +196,8 @@ function PauseObservingCard({ pause }: { pause: ObservationPauseState }) {
                 />
             }
         >
-            {pause.loadFailed && <SettingsReason>{t("observation.pause.loadFailed")}</SettingsReason>}
+            {pause.loadFailed && <SettingsFailureLine failure={{ text: t("observation.pause.loadFailed"), retry: pause.reload }} />}
+            <SettingsFailureLine failure={pause.changeFailure} />
             {pause.paused === true && <SettingsReason>{t("observation.pause.paused")}</SettingsReason>}
             {PAUSE_OBSERVING_COMBO && (
                 <SettingsRow
@@ -220,6 +224,7 @@ function WatchScreenCard({
     onChanged: () => Promise<unknown>;
 }) {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const items = useMemo(() => screenPermissionItems(permissions), [permissions]);
     // The value being written, shown until the refreshed permissions arrive.
     const [pending, setPending] = useState<boolean | null>(null);
@@ -241,7 +246,7 @@ function WatchScreenCard({
                 }
             }
         } catch {
-            toast.error(t("observation.watch.toggleFailed"));
+            failChange(t("observation.watch.toggleFailed"), () => void handleChange(next));
         } finally {
             await onChanged();
             setPending(null);
@@ -270,6 +275,7 @@ function WatchScreenCard({
                 missing.map((item) => (
                     <MissingPermissionRow key={item.key} item={item} onGrant={onGrant} />
                 ))}
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsControlCard>
     );
 }
@@ -288,6 +294,7 @@ function MicrophoneSourceRow({
     onChanged: () => Promise<unknown>;
 }) {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [pending, setPending] = useState<boolean | null>(null);
     const title = t("observation.listen.microphone.title");
 
@@ -296,7 +303,7 @@ function MicrophoneSourceRow({
         try {
             await SetPermissionEnabled("microphone", next);
         } catch {
-            toast.error(t("observation.listen.microphone.toggleFailed"));
+            failChange(t("observation.listen.microphone.toggleFailed"), () => void handleChange(next));
         } finally {
             await onChanged();
             setPending(null);
@@ -306,6 +313,7 @@ function MicrophoneSourceRow({
     return (
         <SettingsRow
             title={title}
+            failure={changeFailure}
             description={t("observation.listen.microphone.description")}
             control={
                 <Switch
@@ -324,6 +332,7 @@ function MicrophoneSourceRow({
  *  listening, like meetings. */
 export function SystemAudioOutsideCallsRow({ listeningOn }: { listeningOn: boolean }) {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [enabled, setEnabled] = useState<boolean | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadFailed, setLoadFailed] = useState(false);
@@ -346,7 +355,7 @@ export function SystemAudioOutsideCallsRow({ listeningOn }: { listeningOn: boole
         SetSystemAudioOutsideCallsEnabled(next)
             .catch(() => {
                 setEnabled(!next);
-                toast.error(t("observation.listen.systemAudioOutsideCalls.toggleFailed"));
+                failChange(t("observation.listen.systemAudioOutsideCalls.toggleFailed"), () => void handleToggle());
             })
             .finally(() => setLoading(false));
     };
@@ -359,6 +368,7 @@ export function SystemAudioOutsideCallsRow({ listeningOn }: { listeningOn: boole
     return (
         <SettingsRow
             title={title}
+            failure={changeFailure}
             description={description}
             control={
                 <Switch
@@ -377,6 +387,7 @@ export function SystemAudioOutsideCallsRow({ listeningOn }: { listeningOn: boole
  *  it stands and its last error, and turns it off or removes it. */
 export function SpeechModelRow() {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [view, setView] = useState<AfterCallSpeechModelView | null>(null);
     const [loadFailed, setLoadFailed] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -424,7 +435,7 @@ export function SpeechModelRow() {
         try {
             await action();
         } catch {
-            toast.error(t("observation.listen.speechModel.changeFailed"));
+            failChange(t("observation.listen.speechModel.changeFailed"), () => void change(action));
         } finally {
             await load();
             setBusy(false);
@@ -434,6 +445,7 @@ export function SpeechModelRow() {
     return (
         <SettingsRow
             title={title}
+            failure={changeFailure}
             description={description}
             control={
                 <div className="flex items-center gap-2">
@@ -463,6 +475,7 @@ export function SpeechModelRow() {
  *  a reason while Listen is off. */
 export function MeetingRecordingRow({ listeningOn }: { listeningOn: boolean }) {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [enabled, setEnabled] = useState<boolean | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadFailed, setLoadFailed] = useState(false);
@@ -496,7 +509,7 @@ export function MeetingRecordingRow({ listeningOn }: { listeningOn: boolean }) {
         SetAutomaticMeetingRecordingEnabled(next)
             .catch(() => {
                 setEnabled(!next);
-                toast.error(t("meetingRecording.toggleFailed"));
+                failChange(t("meetingRecording.toggleFailed"), () => void handleToggle());
             })
             .finally(() => setLoading(false));
     };
@@ -509,6 +522,7 @@ export function MeetingRecordingRow({ listeningOn }: { listeningOn: boolean }) {
     return (
         <SettingsRow
             title={title}
+            failure={changeFailure}
             description={description}
             control={
                 <Switch
@@ -548,8 +562,7 @@ function ListenCard({
             : [];
 
     let reason: string | null = null;
-    if (listening.loadFailed) reason = t("observation.listen.loadFailed");
-    else if (paused) reason = t("observation.pausedReason");
+    if (paused && !listening.loadFailed) reason = t("observation.pausedReason");
 
     // On macOS the microphone item's switch is the microphone source alone;
     // on Windows the same item is the Listen switch itself.
@@ -577,6 +590,10 @@ function ListenCard({
             }
         >
             {reason && <SettingsReason>{reason}</SettingsReason>}
+            {listening.loadFailed && (
+                <SettingsFailureLine failure={{ text: t("observation.listen.loadFailed"), retry: listening.reload }} />
+            )}
+            <SettingsFailureLine failure={listening.changeFailure} />
             {missing.map((item) => (
                 <MissingPermissionRow key={item.key} item={item} onGrant={onGrant} />
             ))}
@@ -602,6 +619,7 @@ function ClipboardCard({
     onChanged: () => Promise<unknown>;
 }) {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [pending, setPending] = useState<boolean | null>(null);
     const item = (permissions?.items ?? []).find((entry) => entry.key === CLIPBOARD_PERMISSION_KEY) ?? null;
     if (!item) return null;
@@ -612,7 +630,7 @@ function ClipboardCard({
         try {
             await SetPermissionEnabled(CLIPBOARD_PERMISSION_KEY, next);
         } catch {
-            toast.error(t("observation.clipboard.toggleFailed"));
+            failChange(t("observation.clipboard.toggleFailed"), () => void handleChange(next));
         } finally {
             await onChanged();
             setPending(null);
@@ -633,6 +651,7 @@ function ClipboardCard({
             }
         >
             {paused && <SettingsReason>{t("observation.pausedReason")}</SettingsReason>}
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsControlCard>
     );
 }
@@ -662,6 +681,7 @@ function FilesCard({
     onChanged: () => Promise<unknown>;
 }) {
     const { t, i18n } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [overview, setOverview] = useState<FilesOverview | null>(null);
     const [loadFailed, setLoadFailed] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -696,7 +716,7 @@ function FilesCard({
         try {
             await SetPermissionEnabled(FILES_PERMISSION_KEY, next);
         } catch {
-            toast.error(t("observation.files.toggleFailed"));
+            failChange(t("observation.files.toggleFailed"), () => void handleRead(next));
         } finally {
             await onChanged();
             setPendingRead(null);
@@ -708,9 +728,8 @@ function FilesCard({
         setRefreshing(true);
         try {
             await SyncFilesNow();
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            toast.error(t("observation.files.refreshFailed", { error: message }));
+        } catch {
+            failChange(t("observation.files.refreshFailed"), () => void handleRefresh());
         } finally {
             setRefreshing(false);
             reload();
@@ -722,7 +741,7 @@ function FilesCard({
         try {
             await AddFilesPrivateFolder(t("observation.files.private.pickerTitle"));
         } catch {
-            toast.error(t("observation.files.private.changeFailed"));
+            failChange(t("observation.files.private.changeFailed"), () => void handleAddPrivate());
         } finally {
             setChangingFolders(false);
             reload();
@@ -734,7 +753,7 @@ function FilesCard({
         try {
             await RemoveFilesPrivateFolder(id);
         } catch {
-            toast.error(t("observation.files.private.changeFailed"));
+            failChange(t("observation.files.private.changeFailed"), () => void handleRemovePrivate(id));
         } finally {
             setChangingFolders(false);
             reload();
@@ -770,7 +789,7 @@ function FilesCard({
                 </Button>
             }
         >
-            {loadFailed && <SettingsReason>{t("observation.files.loadFailed")}</SettingsReason>}
+            {loadFailed && <SettingsFailureLine failure={{ text: t("observation.files.loadFailed"), retry: reload }} />}
             {paused && <SettingsReason>{t("observation.pausedReason")}</SettingsReason>}
             <SettingsRow
                 title={readingTitle}
@@ -816,6 +835,7 @@ function FilesCard({
                     }
                 />
             ))}
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsCard>
     );
 }
@@ -880,6 +900,7 @@ function CalendarsCard({
     onChanged: () => Promise<unknown>;
 }) {
     const { t, i18n } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [overview, setOverview] = useState<CalendarOverview | null>(null);
     const [holds, setHolds] = useState<HoldSettings | null>(null);
     const [holdPending, setHoldPending] = useState(false);
@@ -917,7 +938,7 @@ function CalendarsCard({
         try {
             await SetPermissionEnabled(CALENDARS_PERMISSION_KEY, next);
         } catch {
-            toast.error(t("observation.calendars.toggleFailed"));
+            failChange(t("observation.calendars.toggleFailed"), () => void handleRead(next));
         } finally {
             await onChanged();
             setPendingRead(null);
@@ -931,7 +952,7 @@ function CalendarsCard({
             await SetCalendarPeekEnabled(next);
             setOverview((prev) => (prev ? { ...prev, peekEnabled: next } : prev));
         } catch {
-            toast.error(t("observation.calendars.peek.toggleFailed"));
+            failChange(t("observation.calendars.peek.toggleFailed"), () => void handlePeek(next));
         } finally {
             setPendingPeek(null);
         }
@@ -944,7 +965,7 @@ function CalendarsCard({
             notifyHoldSettingsChanged();
             setHolds((previous) => previous ? { ...previous, offerHolds: next } : previous);
         } catch {
-            toast.error(t("observation.calendars.holds.changeFailed"));
+            failChange(t("observation.calendars.holds.changeFailed"), () => void handleOfferHolds(next));
         } finally {
             setHoldPending(false);
         }
@@ -957,7 +978,7 @@ function CalendarsCard({
             notifyHoldSettingsChanged();
             setHolds((previous) => previous ? { ...previous, calendarId: id } : previous);
         } catch {
-            toast.error(t("observation.calendars.holds.changeFailed"));
+            failChange(t("observation.calendars.holds.changeFailed"), () => void handleHoldCalendar(id));
         } finally {
             setHoldPending(false);
         }
@@ -967,9 +988,8 @@ function CalendarsCard({
         setRefreshing(true);
         try {
             await SyncCalendarsNow();
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            toast.error(t("observation.calendars.refreshFailed", { error: message }));
+        } catch {
+            failChange(t("observation.calendars.refreshFailed"), () => void handleRefresh());
         } finally {
             setRefreshing(false);
             reload();
@@ -1006,7 +1026,7 @@ function CalendarsCard({
                 </Button>
             }
         >
-            {loadFailed && <SettingsReason>{t("observation.calendars.loadFailed")}</SettingsReason>}
+            {loadFailed && <SettingsFailureLine failure={{ text: t("observation.calendars.loadFailed"), retry: reload }} />}
             {item && !granted && (
                 <>
                     <SettingsReason>{t("observation.calendars.needsAccess")}</SettingsReason>
@@ -1077,6 +1097,7 @@ function CalendarsCard({
                     />
                 }
             />
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsCard>
     );
 }
@@ -1109,6 +1130,7 @@ function RemindersCard({
     onChanged: () => Promise<unknown>;
 }) {
     const { t, i18n } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [overview, setOverview] = useState<RemindersOverview | null>(null);
     const [loadFailed, setLoadFailed] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -1142,7 +1164,7 @@ function RemindersCard({
         try {
             await SetPermissionEnabled(REMINDERS_PERMISSION_KEY, next);
         } catch {
-            toast.error(t("observation.reminders.toggleFailed"));
+            failChange(t("observation.reminders.toggleFailed"), () => void handleRead(next));
         } finally {
             await onChanged();
             setPendingRead(null);
@@ -1154,9 +1176,8 @@ function RemindersCard({
         setRefreshing(true);
         try {
             await SyncRemindersNow();
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            toast.error(t("observation.reminders.refreshFailed", { error: message }));
+        } catch {
+            failChange(t("observation.reminders.refreshFailed"), () => void handleRefresh());
         } finally {
             setRefreshing(false);
             reload();
@@ -1198,7 +1219,7 @@ function RemindersCard({
                 </Button>
             }
         >
-            {loadFailed && <SettingsReason>{t("observation.reminders.loadFailed")}</SettingsReason>}
+            {loadFailed && <SettingsFailureLine failure={{ text: t("observation.reminders.loadFailed"), retry: reload }} />}
             {item && !granted && (
                 <>
                     <SettingsReason>{t("observation.reminders.needsAccess")}</SettingsReason>
@@ -1223,6 +1244,7 @@ function RemindersCard({
             {granted && reading && overview && lists.length === 0 && (
                 <SettingsReason>{t("observation.reminders.empty")}</SettingsReason>
             )}
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsCard>
     );
 }
@@ -1244,6 +1266,7 @@ function MailCard({
     onChanged: () => Promise<unknown>;
 }) {
     const { t, i18n } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [overview, setOverview] = useState<MailOverview | null>(null);
     const [loadFailed, setLoadFailed] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -1278,7 +1301,7 @@ function MailCard({
         try {
             await SetPermissionEnabled(MAIL_PERMISSION_KEY, next);
         } catch {
-            toast.error(t("observation.mail.toggleFailed"));
+            failChange(t("observation.mail.toggleFailed"), () => void handleRead(next));
         } finally {
             await onChanged();
             setPendingRead(null);
@@ -1290,9 +1313,8 @@ function MailCard({
         setRefreshing(true);
         try {
             await SyncMailNow();
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            toast.error(t("observation.mail.refreshFailed", { error: message }));
+        } catch {
+            failChange(t("observation.mail.refreshFailed"), () => void handleRefresh());
         } finally {
             setRefreshing(false);
             reload();
@@ -1332,7 +1354,7 @@ function MailCard({
                 </Button>
             }
         >
-            {loadFailed && <SettingsReason>{t("observation.mail.loadFailed")}</SettingsReason>}
+            {loadFailed && <SettingsFailureLine failure={{ text: t("observation.mail.loadFailed"), retry: reload }} />}
             {paused && item && granted && <SettingsReason>{t("observation.pausedReason")}</SettingsReason>}
             {item && granted && reading && overview?.stalled && (
                 <SettingsReason>{t("observation.mail.stalled")}</SettingsReason>
@@ -1358,6 +1380,7 @@ function MailCard({
                     }
                 />
             )}
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsCard>
     );
 }
@@ -1422,14 +1445,23 @@ function CaptureStatusCard({
     const { t } = useTranslation("settings");
     const [audio, setAudio] = useState<main.BackgroundAudioStatus | null>(null);
     const [screenRunning, setScreenRunning] = useState<boolean | null>(null);
+    const [failed, setFailed] = useState(false);
+    const [reading, setReading] = useState(false);
 
     const reload = useCallback(() => {
-        GetBackgroundAudioStatus()
-            .then(setAudio)
-            .catch(() => setAudio(null));
-        GetActivityMonitorStatus()
-            .then((status) => setScreenRunning(Boolean(status?.monitoring)))
-            .catch(() => setScreenRunning(null));
+        setReading(true);
+        void Promise.all([GetBackgroundAudioStatus(), GetActivityMonitorStatus()])
+            .then(([audioStatus, screenStatus]) => {
+                setAudio(audioStatus);
+                setScreenRunning(Boolean(screenStatus?.monitoring));
+                setFailed(false);
+            })
+            .catch(() => {
+                setAudio(null);
+                setScreenRunning(null);
+                setFailed(true);
+            })
+            .finally(() => setReading(false));
     }, []);
 
     useEffect(() => {
@@ -1468,31 +1500,41 @@ function CaptureStatusCard({
             title={t("observation.capture.title")}
             description={t("observation.capture.description")}
             headerRight={
-                <Button size="sm" variant="outline" onClick={reload}>
-                    <RefreshCw className="h-3.5 w-3.5" />
+                <Button size="sm" variant="outline" onClick={reload} disabled={reading}>
+                    {reading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" data-testid="capture-reading" />
+                    ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                    )}
                     {t("observation.capture.refresh")}
                 </Button>
             }
         >
-            <SettingsRow
-                title={t("observation.capture.screen")}
-                description={screenReason}
-                control={<CaptureStateLabel state={screenState} />}
-            />
-            <SettingsRow
-                title={t("observation.capture.microphone")}
-                description={
-                    audio?.microphonePaused && !AUDIO_SUSPENSION_REASONS.has(suspendedReason)
-                        ? t("observation.capture.reason.microphone_paused")
-                        : (audioReason ?? undefined)
-                }
-                control={<CaptureStateLabel state={audioCaptureState(audio, "microphone")} />}
-            />
-            {systemAudioSupported && (
-                <SettingsRow
-                    title={t("observation.capture.systemAudio")}
-                    control={<CaptureStateLabel state={audioCaptureState(audio, "system_audio")} />}
-                />
+            {failed ? (
+                <SettingsFailureLine failure={{ text: t("observation.capture.loadFailed"), retry: reload }} />
+            ) : (
+                <>
+                    <SettingsRow
+                        title={t("observation.capture.screen")}
+                        description={screenReason}
+                        control={<CaptureStateLabel state={screenState} />}
+                    />
+                    <SettingsRow
+                        title={t("observation.capture.microphone")}
+                        description={
+                            audio?.microphonePaused && !AUDIO_SUSPENSION_REASONS.has(suspendedReason)
+                                ? t("observation.capture.reason.microphone_paused")
+                                : (audioReason ?? undefined)
+                        }
+                        control={<CaptureStateLabel state={audioCaptureState(audio, "microphone")} />}
+                    />
+                    {systemAudioSupported && (
+                        <SettingsRow
+                            title={t("observation.capture.systemAudio")}
+                            control={<CaptureStateLabel state={audioCaptureState(audio, "system_audio")} />}
+                        />
+                    )}
+                </>
             )}
         </SettingsCard>
     );

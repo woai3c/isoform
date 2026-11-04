@@ -67,12 +67,31 @@ func (a *App) mainChatBriefDisplayProjector() func(string, string) string {
 		var enrich func(map[string]json.RawMessage)
 		enrich = func(item map[string]json.RawMessage) {
 			var briefID, kind string
-			var evidence []json.RawMessage
+			var evidence []mainChatEvidenceRef
 			var target mainChatTarget
 			_ = json.Unmarshal(item["briefId"], &briefID)
 			_ = json.Unmarshal(item["kind"], &kind)
 			_ = json.Unmarshal(item["evidence"], &evidence)
 			_ = json.Unmarshal(item["target"], &target)
+			// Older first-week brief cards stored their brief locator in evidence,
+			// before briefId was added. Resolve only an existing saved brief.
+			if kind == "first_week" && briefID == "" {
+				for _, ref := range evidence {
+					if mobileValidBriefID(ref.ID) {
+						if !serviceChecked {
+							service, _ = a.ensureMobileBriefService().(*mobileBriefService)
+							serviceChecked = true
+						}
+						if service != nil && service.store != nil {
+							if _, found := service.store.load(ref.ID); found {
+								briefID = ref.ID
+								item["briefId"], _ = json.Marshal(briefID)
+								break
+							}
+						}
+					}
+				}
+			}
 			// A withdrawn ordinary card loses its evidence. A weekly recap's
 			// sanitized Today target may retain only its own brief locator.
 			allowed := len(evidence) > 0 || (kind == "weekly_recap" && target.Kind == "today" && target.ID == briefID)

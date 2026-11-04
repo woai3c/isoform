@@ -82,7 +82,7 @@ export function memoryPoints(content: string): MemoryPoint[] {
 // Mirrors beliefInSecondPerson in about_you_second_person.go: a belief reads
 // in second person (about-you v1.0.1 Y28), so "Uses design reviews…" and
 // "I use design reviews…" both read "You use design reviews…".
-const SELF_VERBS = new Set(('block decline get give guard make protect put say set take think try wake answer ask attend avoid batch build call care check choose code commit debug delegate deploy design dictate draft drink edit email enjoy exercise expect favor favour find fix follow gather group handle keep lead learn like listen live log love manage meet merge monitor need open organize plan prefer prioritize push read record refactor rely reply report review run schedule send share ship sign skip sleep speak split start study talk teach tend test track travel treat trust type use value walk want watch work write').split(' '));
+const SELF_VERBS = new Set(('block decline get give guard make protect put say set take think try wake answer ask attend avoid batch build call care check choose code commit debug delegate deploy design dictate draft drink edit email enjoy exercise expect favor favour find fix follow gather group hand handle coordinate keep lead learn like listen live log love manage meet merge monitor need open organize plan prefer prioritize push read record refactor rely reply report review run schedule send share ship sign skip sleep speak split start study talk teach tend test track travel treat trust type use value walk want watch work write').split(' '));
 const IRREGULAR_VERBS: Record<string, string> = { is: 'are', was: 'were', has: 'have', does: 'do', goes: 'go' };
 
 function baseVerb(word: string, capitalized = true): string | null {
@@ -107,7 +107,7 @@ function baseVerb(word: string, capitalized = true): string | null {
 function agreeWithYou(sentence: string): string {
     if (!/^You /.test(sentence)) return sentence;
     return sentence.replace(/(\S+)(\s+(?:and|or|but|then)\s+)(\p{Ll}[\p{L}-]*)/gu, (match, before: string, joint: string, word: string) => {
-        if (!IRREGULAR_VERBS[word] && !before.endsWith(',') && /s$/i.test(before)) return match;
+        if (!IRREGULAR_VERBS[word] && !before.endsWith(',') && /s$/i.test(before) && !new RegExp(`\\b${word}\\s+(?:them|it|him|her)\\b`, 'i').test(sentence)) return match;
         const base = baseVerb(word, false);
         return base ? `${before}${joint}${base}` : match;
     });

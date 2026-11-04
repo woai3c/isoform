@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import i18n from "@/i18n";
+import { SettingsFailureLine, SettingsPlaceholderRows, useSettingsFailure } from "@/components/settings/settings-failure";
 import { Trans, useTranslation } from "react-i18next";
 import {
     ChevronDown,
@@ -13,7 +15,6 @@ import {
     Search,
     Trash2,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -91,17 +92,33 @@ function isFlagged(key: SecurityKey): boolean {
     return key === "suspicious" || key === "malicious" || key === "unknown";
 }
 
-function errorMessage(err: unknown): string {
-    return err instanceof Error ? err.message : String(err);
-}
-
 function upsertSkill(current: InstalledSkill[], skill: InstalledSkill): InstalledSkill[] {
     const next = current.filter((item) => item.id !== skill.id);
     return [...next, skill].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+
+// settings-review ST65: one line a person reads. A skill's description is
+// written for the AI; show its first sentence only when it reads as a
+// summary in the app's language, else the name stands alone. Never cut.
+const SKILL_SUMMARY_MAX = 120;
+export function skillSummaryLine(description: string | undefined, language: string): string | null {
+    const text = (description ?? "").replace(/\s+/g, " ").trim();
+    if (!text) return null;
+    const first = (text.match(/^.+?[.!?。！？](?=\s|$)/)?.[0] ?? text).trim();
+    if (first.length > SKILL_SUMMARY_MAX) return null;
+    if (/\b(IMPORTANT|MUST|ALWAYS|NEVER|NOTE)\b/.test(text)) return null;
+    if (/^(use|invoke|call|trigger|run)\b/i.test(first)) return null;
+    if (/\b(the (ai|agent|assistant|model|llm)|you should|when the user)\b/i.test(first)) return null;
+    const cjk = /[\u3400-\u9fff]/.test(first);
+    if (!language.startsWith("zh") && cjk) return null;
+    return first;
+}
+
 export function SkillHubSettings() {
     const { t } = useTranslation('settings');
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
+    const [loadFailed, setLoadFailed] = useState(false);
     const [activeTab, setActiveTab] = useState<SkillTab>("installed");
     const [installed, setInstalled] = useState<InstalledSkill[]>([]);
     const [results, setResults] = useState<CatalogSkill[]>([]);
@@ -139,37 +156,40 @@ export function SkillHubSettings() {
         setLoading(true);
         try {
             const skills = await ListSkillHubInstalledSkills();
-            setInstalled(skills);
-        } catch (err) {
-            toast.error(t('skillHub.toasts.loadFailed', { error: errorMessage(err) }));
+            setInstalled(skills ?? []);
+            setLoadFailed(false);
+        } catch {
+            setLoadFailed(true);
         } finally {
             setLoading(false);
         }
-    }, [t]);
+    }, []);
 
     useEffect(() => {
         let mounted = true;
         setLoading(true);
         ListSkillHubInstalledSkills()
             .then((skills) => {
-                if (mounted) setInstalled(skills);
+                if (mounted) setInstalled(skills ?? []);
             })
-            .catch((err) => toast.error(t('skillHub.toasts.loadFailed', { error: errorMessage(err) })))
+            .catch(() => {
+                if (mounted) setLoadFailed(true);
+            })
             .finally(() => {
                 if (mounted) setLoading(false);
             });
         return () => {
             mounted = false;
         };
-    }, [t]);
+    }, []);
 
     const handleSearch = useCallback(async () => {
         setSearching(true);
         try {
             const skills = await SearchClawHubSkills(query.trim());
             setResults(skills);
-        } catch (err) {
-            toast.error(t('skillHub.toasts.searchFailed', { error: errorMessage(err) }));
+        } catch {
+            failChange(t('skillHub.toasts.searchFailed'), () => void handleSearch());
         } finally {
             setSearching(false);
         }
@@ -184,10 +204,9 @@ export function SkillHubSettings() {
                 const skill = await InstallClawHubSkill(target);
                 setInstalled((current) => upsertSkill(current, skill));
                 setExpanded((current) => ({ ...current, [skill.id]: false }));
-                toast.success(t('skillHub.toasts.installed', { name: skill.name }));
                 if (!query.trim()) setQuery(skill.slug);
-            } catch (err) {
-                toast.error(t('skillHub.toasts.installFailed', { error: errorMessage(err) }));
+            } catch {
+                failChange(t('skillHub.toasts.installFailed', { name: target }), () => void handleInstall(target));
             } finally {
                 setInstalling(null);
             }
@@ -203,10 +222,9 @@ export function SkillHubSettings() {
             const skill = await InstallSkillFromGitHub(target);
             setInstalled((current) => upsertSkill(current, skill));
             setExpanded((current) => ({ ...current, [skill.id]: false }));
-            toast.success(t('skillHub.toasts.installedFromGitHub', { name: skill.name }));
             setGithubRef("");
-        } catch (err) {
-            toast.error(t('skillHub.toasts.githubInstallFailed', { error: errorMessage(err) }));
+        } catch {
+            failChange(t('skillHub.toasts.githubInstallFailed', { name: target }), () => void handleInstallFromGitHub());
         } finally {
             setInstallingGitHub(false);
         }
@@ -220,9 +238,8 @@ export function SkillHubSettings() {
             const skill = await InstallSkillFromLocal(dir);
             setInstalled((current) => upsertSkill(current, skill));
             setExpanded((current) => ({ ...current, [skill.id]: false }));
-            toast.success(t('skillHub.toasts.installedFromFolder', { name: skill.name }));
-        } catch (err) {
-            toast.error(t('skillHub.toasts.localInstallFailed', { error: errorMessage(err) }));
+        } catch {
+            failChange(t('skillHub.toasts.localInstallFailed'), () => void handleInstallFromLocal());
         } finally {
             setInstallingLocal(false);
         }
@@ -236,8 +253,8 @@ export function SkillHubSettings() {
                 : await DiscoverAgentSkills();
             setDiscovered(skills);
             setDidDiscover(true);
-        } catch (err) {
-            toast.error(t('skillHub.discover.discoveryFailed', { error: errorMessage(err) }));
+        } catch {
+            failChange(t('skillHub.discover.discoveryFailed'), () => void handleDiscoverAgentSkills());
         } finally {
             setDiscovering(false);
         }
@@ -256,9 +273,8 @@ export function SkillHubSettings() {
                 ),
             );
             setExpanded((current) => ({ ...current, [installedSkill.id]: false }));
-            toast.success(t('skillHub.discover.installedFrom', { name: installedSkill.name, source: skill.agent_name }));
-        } catch (err) {
-            toast.error(t('skillHub.discover.installFailed', { error: errorMessage(err) }));
+        } catch {
+            failChange(t('skillHub.discover.installFailed', { name: skill.name }), () => void handleInstallDiscovered(skill));
         } finally {
             setInstallingDiscovered(null);
         }
@@ -274,8 +290,8 @@ export function SkillHubSettings() {
             try {
                 const updated = await SetSkillHubSkillEnabled(skill.id, enabled);
                 replaceInstalled(updated);
-            } catch (err) {
-                toast.error(t('skillHub.toasts.updateFailed', { error: errorMessage(err) }));
+            } catch {
+                failChange(t('skillHub.toasts.updateFailed', { name: skill.name }), () => void handleEnabledChange(skill, enabled));
             } finally {
                 setUpdating(null);
             }
@@ -290,8 +306,8 @@ export function SkillHubSettings() {
             try {
                 const updated = await SetSkillHubSkillDomains(skill.id, domains);
                 replaceInstalled(updated);
-            } catch (err) {
-                toast.error(t('skillHub.toasts.updateAreasFailed', { error: errorMessage(err) }));
+            } catch {
+                failChange(t('skillHub.toasts.updateAreasFailed', { name: skill.name }), () => void handleDomainChange(skill, domain, enabled));
             } finally {
                 setUpdating(null);
             }
@@ -310,9 +326,8 @@ export function SkillHubSettings() {
                     delete next[skill.id];
                     return next;
                 });
-                toast.success(t('skillHub.toasts.uninstalled', { name: skill.name }));
-            } catch (err) {
-                toast.error(t('skillHub.toasts.uninstallFailed', { error: errorMessage(err) }));
+            } catch {
+                failChange(t('skillHub.toasts.uninstallFailed', { name: skill.name }), () => void handleUninstall(skill));
             } finally {
                 setUpdating(null);
             }
@@ -323,8 +338,8 @@ export function SkillHubSettings() {
     const handleOpenFolder = useCallback(async (skill: InstalledSkill) => {
         try {
             await OpenSkillHubSkillFolder(skill.id);
-        } catch (err) {
-            toast.error(t('skillHub.toasts.openFolderFailed', { error: errorMessage(err) }));
+        } catch {
+            failChange(t('skillHub.toasts.openFolderFailed'), () => void handleOpenFolder(skill));
         }
     }, [t]);
 
@@ -360,11 +375,13 @@ export function SkillHubSettings() {
                         </Button>
                     }
                 >
-                    {loading ? (
-                        <div className="py-8 flex items-center justify-center text-sm text-muted">
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            {t('skillHub.installed.loading')}
-                        </div>
+                    {loadFailed && installed.length === 0 ? (
+                        <SettingsFailureLine
+                            className="py-4"
+                            failure={{ text: t('skillHub.toasts.loadFailed'), retry: () => void refreshInstalled() }}
+                        />
+                    ) : loading ? (
+                        <SettingsPlaceholderRows rows={3} />
                     ) : installed.length === 0 ? (
                         <div className="py-6 flex flex-col items-start gap-3">
                             <p className="text-sm text-muted">{t('skillHub.installed.empty')}</p>
@@ -480,9 +497,9 @@ export function SkillHubSettings() {
                                                     </span>
                                                 )}
                                             </div>
-                                            {skill.description && (
-                                                <p className="settings-row-desc line-clamp-2">{skill.description}</p>
-                                            )}
+                                            {skillSummaryLine(skill.description, i18n.language) && (
+<p className="settings-row-desc">{skillSummaryLine(skill.description, i18n.language)}</p>
+)}
                                         </div>
                                         <Button
                                             type="button"
@@ -556,9 +573,9 @@ export function SkillHubSettings() {
                                                 <span className="settings-row-title truncate" title={skill.path}>{skill.name}</span>
                                                 <span className="text-[11px] text-muted shrink-0">{skill.agent_name}</span>
                                             </div>
-                                            {skill.description && (
-                                                <p className="settings-row-desc line-clamp-2">{skill.description}</p>
-                                            )}
+                                            {skillSummaryLine(skill.description, i18n.language) && (
+<p className="settings-row-desc">{skillSummaryLine(skill.description, i18n.language)}</p>
+)}
                                         </div>
                                         <Button
                                             type="button"
@@ -672,6 +689,7 @@ export function SkillHubSettings() {
                     if (pendingUninstall) void handleUninstall(pendingUninstall);
                 }}
             />
+            <SettingsFailureLine failure={changeFailure} />
         </div>
     );
 }
@@ -708,9 +726,9 @@ function InstalledSkillRow({
                                 </span>
                             )}
                         </div>
-                        {skill.description && (
-                            <p className="settings-row-desc line-clamp-2">{skill.description}</p>
-                        )}
+                        {skillSummaryLine(skill.description, i18n.language) && (
+<p className="settings-row-desc">{skillSummaryLine(skill.description, i18n.language)}</p>
+)}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                         {updating && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" />}

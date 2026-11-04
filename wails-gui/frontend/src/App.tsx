@@ -3056,6 +3056,7 @@ export default function App() {
     const [pendingQuickChatPrompt, setPendingQuickChatPrompt] = useState<{
         prompt: string;
         bundleId: string;
+        display?: string;
     } | null>(null);
     // Stable refs for the latest projects/composer/appMode callbacks, so
     // the EventsOn handler (registered once at mount) always calls the
@@ -3145,8 +3146,9 @@ export default function App() {
     // the same waiter effect below sends it once the session settles.
     useEffect(() => {
         const onInstall = (event: Event) => {
-            const detail = (event as CustomEvent<{ prompt?: string }>).detail;
+            const detail = (event as CustomEvent<{ prompt?: string; display?: string }>).detail;
             const prompt = (detail?.prompt ?? "").trim();
+            const display = detail?.display?.trim() || undefined;
             if (!prompt) return;
             settings.setSettingsOpen(false);
             const proj = projectsRefForQuickChat.current;
@@ -3158,7 +3160,7 @@ export default function App() {
                 } catch {
                     // fall through — the watcher will retry on later renders.
                 }
-                setPendingQuickChatPrompt({ prompt, bundleId: "" });
+                setPendingQuickChatPrompt({ prompt, bundleId: "", display });
             })();
         };
         window.addEventListener("mcp:install-via-ai", onInstall);
@@ -3215,7 +3217,7 @@ export default function App() {
         const sess = projects.activeSession;
         if (!sess) return;
         if (sess.streaming) return;
-        const { prompt, bundleId } = pendingQuickChatPrompt;
+        const { prompt, bundleId, display } = pendingQuickChatPrompt;
         setPendingQuickChatPrompt(null);
         const sessionLocalId = sess.localId;
         void (async () => {
@@ -3226,7 +3228,7 @@ export default function App() {
                     // Non-fatal — prompt still sends, just without context.
                 }
             }
-            await composerSendImmediateRef.current(prompt);
+            await composerSendImmediateRef.current(prompt, display);
         })();
     }, [
         pendingQuickChatPrompt,

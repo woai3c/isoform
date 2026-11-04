@@ -696,6 +696,8 @@ export function useComposerInput({
         restoreComposer?: { prompt: string; revision: number },
         draftPreview?: TodayChatPreview,
         retryTurn?: { item: StreamItem; traceID: string },
+        // The words the chat shows when they differ from what the AI is sent.
+        displayText?: string,
     ): Promise<void> => {
         if (!activeProject || !activeSession) return;
 
@@ -747,7 +749,7 @@ export function useComposerInput({
         const userItem: StreamItem = retryTurn?.item ?? {
             id: buildId(),
             kind: 'user',
-            content: sendPromptText,
+            content: displayText ?? sendPromptText,
             images: sendImages.length > 0 ? sendImages : undefined,
             files: filesForPersist,
         };
@@ -780,7 +782,7 @@ export function useComposerInput({
         const isDefaultLabel = /^Session \d{1,2}:\d{2}\s[AP]M$/.test(activeSession.label);
         let newLabel: string | null = null;
         if (!retryTurn && (isFirstMessage || isDefaultLabel) && !isMainChatSession(activeSession)) {
-            const firstLine = sendPromptText.split('\n')[0];
+            const firstLine = (displayText ?? sendPromptText).split('\n')[0];
             newLabel =
                 firstLine.length > 40
                     ? firstLine.slice(0, 40) + "\u2026"
@@ -815,7 +817,7 @@ export function useComposerInput({
         if (!retryTurn && isFirstMessage && activeWorkspace && !activeWorkspace.isDefault && activeWorkspace.worktreeBranch) {
             const branchSuffix = activeWorkspace.worktreeBranch.split('/').pop();
             const isStillAutoNamed = branchSuffix === activeWorkspace.id;
-            const wsLabel = sendPromptText.split('\n')[0].slice(0, 40).trim();
+            const wsLabel = (displayText ?? sendPromptText).split('\n')[0].slice(0, 40).trim();
             if (isStillAutoNamed && wsLabel) {
                 try {
                     const result = await RenameWorkspaceBranch(activeProject.path, activeWorkspace.id, wsLabel);
@@ -1013,7 +1015,7 @@ export function useComposerInput({
             if (todayTurnCanceled()) return;
             if (todayContextUnavailable) restoreFailedTodayDraft(tag, originalTodayDraft!, restoreComposer?.revision);
             if (!todayContext && !forgottenSessionsRef.current.has(tag)) {
-                failedSendsRef.current.set(userItem.id, { tag, prompt: sendPromptText, inFlight: false, retry: () => executeSend(sendPromptText, sendImages, sendFiles, undefined, undefined, undefined, { item: userItem, traceID }) });
+                failedSendsRef.current.set(userItem.id, { tag, prompt: sendPromptText, inFlight: false, retry: () => executeSend(sendPromptText, sendImages, sendFiles, undefined, undefined, undefined, { item: userItem, traceID }, displayText) });
                 prevStreamingRef.current.set(tag, false);
                 updateProject(activeProject.id, (p) => mapSession(p, tag, (s) => ({
                     // no_assistant is Go's own code for a send it kept because no AI is configured.
@@ -1248,7 +1250,7 @@ export function useComposerInput({
      * closure. If the session is streaming, the text is queued; otherwise it
      * is sent immediately via the same `executeSend` path as the normal flow.
      */
-    const sendImmediate = useCallback(async (text: string): Promise<boolean> => {
+    const sendImmediate = useCallback(async (text: string, display?: string): Promise<boolean> => {
         if (isTodayBriefOpening()) return false;
         const trimmed = text.trim();
         if (!trimmed) return false;
@@ -1267,7 +1269,7 @@ export function useComposerInput({
             syncQueueState();
             return true;
         }
-        await executeSend(trimmed, []);
+        await executeSend(trimmed, [], [], undefined, undefined, undefined, undefined, display);
         return true;
     }, [activeProject, activeSession, executeSend, setError]);
 

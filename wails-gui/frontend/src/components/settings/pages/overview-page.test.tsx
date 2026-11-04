@@ -1,6 +1,6 @@
 import i18n from "@/i18n";
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MobileBriefSchedule, SettingsOverviewView } from "@/lib/wails-shim-app";
 import type { PermissionItem, PlatformPermissions } from "@/types";
@@ -212,9 +212,9 @@ describe("OverviewPage", () => {
         vi.useRealTimers();
     });
 
-    it('mentions future channels once without offering dead controls', async () => {
+    it('does not promise channels that are on the way (ST14)', async () => {
         await renderPage();
-        expect(screen.getByText('Text messages and phone calls are on the way.')).toBeInTheDocument();
+        expect(screen.queryByText(/on the way/)).toBeNull();
         expect(screen.queryByRole('button', { name: /Text messages|Phone calls/ })).not.toBeInTheDocument();
     });
 
@@ -226,17 +226,17 @@ describe("OverviewPage", () => {
         expect(within(row("Sees")).getByRole("button", { name: "Pause for 1 hour" })).toBeInTheDocument();
         expect(screen.getByRole("combobox", { name: "How much Isoform speaks up" })).toHaveValue("normal");
         expect(row("Speaks up")).toHaveTextContent(
-            /^Speaks upIt speaks up.*— up to 6 times a day, quiet 22:00 to 08:00, and can reach you on this computer and your phone\.Notifications$/,
+            /^Speaks upIt speaks up.*— up to 6 times a day, quiet 10:00 PM to 8:00 AM, and can reach you on this computer and your phone\.Notifications$/,
         );
         expect(row("Thinks with")).toHaveTextContent(
-            "Claude Code answers first, then Codex. Claude Code has 95% left of its 5 hours limit.",
+            "Claude Code answers first, then Codex. Claude Code has 95% of its 5-hour limit left.",
         );
         expect(row("Remembers")).toHaveTextContent(
             "It learns your activity, things about you, reusable know-how and playbooks. Nothing starts work on its own. 3 things it learned are waiting for you to confirm.",
         );
         expect(within(row("Remembers")).getByRole("button", { name: "Review" })).toBeInTheDocument();
         expect(screen.getByRole("combobox", { name: "Keep recordings for" })).toHaveValue("0");
-        expect(row("Keeps")).toHaveTextContent("on this computer, within a 10 GB limit. 2.4 GB used.");
+        expect(row("Keeps")).toHaveTextContent(", up to 10 GB in all, 2.4 GB used.");
         expect(within(row("Keeps")).getByRole("progressbar", { name: "2.4 GB of 10 GB used" })).toHaveAttribute("aria-valuenow", "24");
         expect(row("Briefs")).toHaveTextContent(
             /Your brief comes around 7:00\sAM and 6:00\sPM, timed to when you start and finish\. It reaches iPhone 17, last seen 1 minute ago\./,
@@ -263,6 +263,16 @@ describe("OverviewPage", () => {
         );
         expect(within(row("Remembers")).getByRole("button", { name: "Learning and memory" })).toBeInTheDocument();
         expect(row("Ignores")).toHaveTextContent("Isoform ignores Slack, Notes, Signal and 2 more. Password managers are always hidden.");
+    });
+
+    it("counts the screen only when it's on and allowed, with Allow to Observation (ST14)", async () => {
+        mocks.permissions.mockResolvedValue(macPermissions({ screen_recording: { granted: false } }));
+        mocks.listening.mockResolvedValue(false);
+        const { onOpenPage } = await renderPage();
+        expect(row("Sees")).toHaveTextContent("Isoform can't see your screen until your computer allows it.");
+        expect(row("Sees")).not.toHaveTextContent("watching your screen");
+        fireEvent.click(within(row("Sees")).getByRole("button", { name: "Allow" }));
+        expect(onOpenPage).toHaveBeenCalledWith("activity", { anchor: "sees-screen" });
     });
 
     it("says so when nothing is watched, the brief is off and the level has no limits", async () => {
@@ -306,7 +316,7 @@ describe("OverviewPage", () => {
         );
         fireEvent.change(screen.getByRole("combobox", { name: "How much Isoform speaks up" }), { target: { value: "more" } });
         await waitFor(() => expect(mocks.setLevel).toHaveBeenCalledWith("more"));
-        await waitFor(() => expect(row("Speaks up")).toHaveTextContent("up to 10 times a day, quiet 23:00 to 07:00"));
+        await waitFor(() => expect(row("Speaks up")).toHaveTextContent("up to 10 times a day, quiet 11:00 PM to 7:00 AM"));
         expect(mocks.overview.mock.calls.length).toBeGreaterThan(reads);
     });
 
@@ -314,7 +324,8 @@ describe("OverviewPage", () => {
         mocks.setLevel.mockRejectedValue(new Error("boom"));
         await renderPage();
         fireEvent.change(screen.getByRole("combobox", { name: "How much Isoform speaks up" }), { target: { value: "off" } });
-        await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith("Could not change this setting. Try again."));
+        expect(await screen.findByText("Couldn't change this.")).toBeInTheDocument();
+        expect(mocks.toast.error).not.toHaveBeenCalled();
         expect(screen.getByRole("combobox", { name: "How much Isoform speaks up" })).toHaveValue("normal");
     });
 
@@ -374,12 +385,12 @@ describe("OverviewPage", () => {
     it("lists up to three fixes, each with its fix and Leave it", async () => {
         mocks.overview.mockResolvedValue(makeOverview({ worthALook: ISSUES }));
         const { onOpenPage } = await renderPage();
-        expect(screen.getByRole("heading", { name: "Worth a look · 3" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Worth a look" })).toBeInTheDocument();
         const noisy = document.querySelector('[data-overview-issue="noisy_kind"]') as HTMLElement;
         expect(noisy).toHaveTextContent("“Observing paused” was sent 36 times in 30 days, and you acted on none");
         expect(noisy).toHaveTextContent("Show it as a quiet line on Today instead of a notification.");
         const assistant = document.querySelector('[data-overview-issue="assistant_out_of_usage"]') as HTMLElement;
-        expect(assistant).toHaveTextContent("Codex has 0% of its 7 days limit left");
+        expect(assistant).toHaveTextContent("Codex has used all of its weekly limit");
         expect(assistant).toHaveTextContent("It resets in 16 hours. Claude Code keeps answering until then.");
 
         fireEvent.click(within(noisy).getByRole("button", { name: "Make it quiet" }));
@@ -387,14 +398,16 @@ describe("OverviewPage", () => {
         // The issue no longer qualifies once quiet; its result stays on screen.
         mocks.overview.mockResolvedValue(makeOverview({ worthALook: ISSUES.slice(0, 2) }));
         await waitFor(() => expect(noisy).toHaveTextContent("Moved to a quiet line on Today."));
-        await waitFor(() => expect(screen.getByRole("heading", { name: "Worth a look · 2" })).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByRole("heading", { name: "Worth a look" })).toBeInTheDocument());
 
         const phone = document.querySelector('[data-overview-issue="phone_same_network_only"]') as HTMLElement;
         expect(phone).toHaveTextContent(
             "Remote access is off, so your phone can only reach this computer on the same network",
         );
         expect(phone).toHaveTextContent(
-            "The connection uses 192.168.1.4. Open Phone settings and choose Use remote access.",
+            "Open Phone settings and choose Use remote access.",
+        );
+        expect(phone).not.toHaveTextContent("192.168.1.4"
         );
         fireEvent.click(within(phone).getByRole("button", { name: "Fix the connection" }));
         expect(onOpenPage).toHaveBeenCalledWith("iphone");
@@ -440,7 +453,7 @@ describe("OverviewPage", () => {
         fireEvent(window, new Event("focus"));
         await waitFor(() => expect(screen.getByRole("button", { name: "Make it quiet" })).toBeInTheDocument());
         expect(screen.queryByText("Left as it is.")).toBeNull();
-        expect(screen.getByRole("heading", { name: "Worth a look · 1" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Worth a look" })).toBeInTheDocument();
         expect(screen.getByText("“Observing paused” was sent 41 times in 30 days, and you acted on none")).toBeInTheDocument();
     });
 
@@ -460,7 +473,7 @@ describe("OverviewPage", () => {
         );
         await renderPage();
         const issue = document.querySelector('[data-overview-issue="assistant_out_of_usage"]') as HTMLElement;
-        expect(issue).toHaveTextContent("Claude Code has 0% of its 5 hours limit left");
+        expect(issue).toHaveTextContent("Claude Code has used all of its 5-hour limit");
         expect(issue).toHaveTextContent("It resets in 3 hours.");
         expect(issue).not.toHaveTextContent(/keeps? answering/);
     });
@@ -480,7 +493,8 @@ describe("OverviewPage", () => {
         mocks.dismiss.mockRejectedValue(new Error("overview_store_unavailable"));
         await renderPage();
         fireEvent.click(screen.getByRole("button", { name: "Leave it" }));
-        await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith("Could not change this setting. Try again."));
+        expect(await screen.findByText("Couldn't change this.")).toBeInTheDocument();
+        expect(mocks.toast.error).not.toHaveBeenCalled();
         expect(screen.getByRole("button", { name: "Fix the connection" })).toBeInTheDocument();
     });
 
@@ -489,8 +503,8 @@ describe("OverviewPage", () => {
         mocks.schedule.mockRejectedValue(new Error("brief unavailable"));
         render(<OverviewPage />);
         await screen.findByText("Sees");
-        await waitFor(() => expect(row("Thinks with")).toHaveTextContent("Could not read this setting. Reopen Settings to try again."));
-        expect(row("Briefs")).toHaveTextContent("Could not read this setting. Reopen Settings to try again.");
+        await waitFor(() => expect(row("Thinks with")).toHaveTextContent("Couldn't read this setting."));
+        expect(row("Briefs")).toHaveTextContent("Couldn't read this setting.");
         expect(within(row("Thinks with")).getByRole("button", { name: "Assistant" })).toBeInTheDocument();
         expect(row("Sees")).toHaveTextContent("Isoform is watching your screen");
         expect(row("Speaks up")).toHaveTextContent("up to 6 times a day");
@@ -512,7 +526,7 @@ describe("OverviewPage", () => {
             ["Ignores", "Add a private app"],
         ];
         for (const [label, link] of pages) {
-            expect(row(label)).toHaveTextContent("Could not read this setting. Reopen Settings to try again.");
+            expect(row(label)).toHaveTextContent("Couldn't read this setting.");
             // Each failed sentence still leads to the page that owns the setting.
             expect(within(row(label)).getByRole("button", { name: link })).toBeInTheDocument();
         }
@@ -522,13 +536,38 @@ describe("OverviewPage", () => {
     it("shows the busy state while the overview is read", async () => {
         mocks.overview.mockReturnValue(new Promise(() => {}));
         render(<OverviewPage />);
-        expect(screen.getByText("Checking your setup...")).toBeInTheDocument();
+        expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+        expect(screen.queryByText("Checking your setup...")).toBeNull();
     });
 
     it("shows the aria-busy skeleton on a true first load", async () => {
         render(<OverviewPage />);
         expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument();
         await act(async () => {});
+    });
+
+    it("says the usage window as people say it, never the raw label or the model (ST61)", async () => {
+        mocks.overview.mockResolvedValue(makeOverview({
+            thinksWith: { order: [{ assistant: "claude", percentLeft: 98, windowLabel: "7 days · Fable", resetsAt: "" }] },
+        }));
+        await renderPage();
+        expect(row("Thinks with")).toHaveTextContent("Claude Code has 98% of its weekly limit left.");
+        expect(row("Thinks with")).not.toHaveTextContent(/Fable|7 days/);
+        cleanup();
+        resetPageQueries();
+        await i18n.changeLanguage("zh-CN");
+        try {
+            mocks.overview.mockResolvedValue(makeOverview({
+                thinksWith: { order: [{ assistant: "claude", percentLeft: 98, windowLabel: "1 day · Fable", resetsAt: "" }] },
+            }));
+            render(<OverviewPage />);
+            await screen.findByText("观察");
+            await waitFor(() => expect(row("思考")).toHaveTextContent("98%"));
+            expect(row("思考")).toHaveTextContent("Claude Code 的每日额度还剩 98%。");
+            expect(row("思考")).not.toHaveTextContent(/Fable/);
+        } finally {
+            await i18n.changeLanguage("en");
+        }
     });
 
     it("paints a cached overview at once, without the skeleton", async () => {
@@ -555,7 +594,7 @@ describe("OverviewPage", () => {
         await renderPage();
         expect(row("Sees")).toHaveTextContent("Isoform is watching your screen, your microphone and your calls.");
         expect(row("Briefs")).toHaveTextContent(/Your brief comes around 7:00/);
-        expect(screen.getByRole("heading", { name: "Worth a look · 3" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Worth a look" })).toBeInTheDocument();
 
         // The sweep's re-reads never answer; the withdrawal must not wait on them.
         for (const fn of [mocks.overview, mocks.permissions, mocks.listening, mocks.meetings, mocks.uiState, mocks.schedule]) {
@@ -564,7 +603,8 @@ describe("OverviewPage", () => {
         act(() => {
             for (const handler of mocks.handlers.get("closed-eyes:changed") ?? []) handler(true);
         });
-        expect(screen.getByText("Checking your setup...")).toBeInTheDocument();
+        expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+        expect(screen.queryByText("Checking your setup...")).toBeNull();
         expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument();
         expect(screen.queryByText(/Isoform is watching your screen/)).toBeNull();
         expect(screen.queryByText(/Your brief comes/)).toBeNull();
@@ -605,9 +645,9 @@ describe("OverviewPage", () => {
         await screen.findByText("观察");
         await waitFor(() => expect(row("简报")).toHaveTextContent("你的简报大约在"));
         expect(row("观察")).toHaveTextContent("Isoform 正在观察你的屏幕、你的麦克风和你的通话。");
-        expect(row("提醒")).toHaveTextContent("——每天最多 6 次，22:00 至 08:00 保持安静，目前可以发到这台电脑和你的手机。");
-        expect(row("保留")).toHaveTextContent("录制内容在这台电脑上保留");
-        expect(row("保留")).toHaveTextContent("，上限为 10 GB。已使用 2.4 GB。");
-        expect(row("思考")).toHaveTextContent("先由 Claude Code 回答，然后是 Codex。Claude Code 的5 hours额度还剩 95%。");
+        expect(row("提醒")).toHaveTextContent("——每天最多 6 次，22:00 至 8:00 保持安静，目前可以发到这台电脑和你的手机。");
+        expect(row("保留")).toHaveTextContent("录制内容存储在这台电脑上，保留");
+        expect(row("保留")).toHaveTextContent("，总共最多 10 GB，已使用 2.4 GB。");
+        expect(row("思考")).toHaveTextContent("先由 Claude Code 回答，然后是 Codex。Claude Code 的5 小时额度还剩 95%。");
     });
 });

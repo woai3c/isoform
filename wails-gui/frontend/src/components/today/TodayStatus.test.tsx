@@ -15,32 +15,60 @@ const at = (dayOffset: number, hour: number) =>
     new Date(2026, 9, 14 + dayOffset, hour, 2, 0).toISOString();
 
 describe("TodayStatus", () => {
-    it("keeps the date, not the tries line or the missed line, while Isoform is still trying (today-review v1.1.20 R45)", () => {
+    it("shows the retry sentence while the slot is still trying (R55)", () => {
         const pendingAt = new Date(Date.now() - 6 * 3600_000).toISOString();
         const retryAt = new Date(Date.now() + 3600_000).toISOString();
         render(<TodayStatus brief={{ enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: "", nextSlot: "", missedRuns: 0, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt, retryAt, pendingAttempts: 9, pendingCause: "timeout" }} date="Tuesday, November 3" />);
-        expect(screen.getByTestId("today-status-date").textContent).toBe("Tuesday, November 3");
-        expect(screen.getByTestId("today-status")).not.toHaveTextContent(/Tried|tries again/);
+        expect(screen.getByTestId("today-status")).toHaveTextContent("Tried 9 times. It timed out. Isoform tries again at");
         expect(screen.queryByText(/didn't come/)).toBeNull();
+    });
+
+    it.each([["en", "Thursday, November 5 · next brief at 7:00 AM"], ["zh-CN", "11月5日星期四 · 下次简报在 7:00"]])("keeps the date and next brief while retrying in %s", async (language, expected) => {
+        await i18n.changeLanguage(language);
+        const now = new Date(2026, 10, 5, 6, 0);
+        const brief = { enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: new Date(2026, 10, 5, 7).toISOString(), nextSlot: "morning", missedRuns: 0, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt: new Date(2026, 10, 5, 5).toISOString(), retryAt: new Date(2026, 10, 5, 6, 15).toISOString(), pendingAttempts: 3, pendingCause: "signed_out" };
+        const date = language === "en" ? "Thursday, November 5" : "11月5日星期四";
+        const { rerender, unmount } = render(<TodayStatus brief={brief} now={now} date={date} />);
+        expect(screen.getByTestId("today-status-date")).toHaveTextContent(expected);
+        rerender(<TodayStatus brief={brief} now={now} date={date} building />);
+        expect(screen.getByTestId("today-status-date")).toHaveTextContent(expected);
+        unmount();
+        await i18n.changeLanguage("en");
     });
 
     it("does not say the brief missed its time while a try is running", () => {
         render(<TodayStatus date="DATE" building brief={{ enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: at(0, 18), nextSlot: "evening", missedRuns: 0, failingSlot: "morning", failedAttempts: 3, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt: at(0, 7), pendingAttempts: 3 }} />);
         expect(screen.getByTestId("today-status")).toHaveTextContent("DATE");
-        expect(screen.getByTestId("today-status")).not.toHaveTextContent(/didn't come|next brief/);
+        expect(screen.getByTestId("today-status")).not.toHaveTextContent(/didn't come/);
+        expect(screen.getByTestId("today-status")).toHaveTextContent("next brief at 6:02 PM");
+    });
+
+    it.each(["en", "zh-CN"])("shows the running state only during a build in %s", async (language) => {
+        await i18n.changeLanguage(language);
+        const clock = new Date(2026, 10, 4, 8, 30);
+        const brief = { enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: "", nextSlot: "", missedRuns: 0, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt: new Date(2026, 10, 4, 7).toISOString(), pendingAttempts: 6, pendingCause: "timeout", retryAt: new Date(2026, 10, 4, 8, 45).toISOString() };
+        const { rerender } = render(<TodayStatus brief={brief} now={clock} building />);
+        expect(screen.getByTestId("today-status")).toHaveTextContent(language === "en" ? "Making your morning brief now." : "正在生成你的早间简报。");
+        rerender(<TodayStatus brief={brief} now={clock} />);
+        expect(screen.getByTestId("today-status")).toHaveTextContent(language === "en" ? "Tried 6 times. It timed out. Isoform tries again at 8:45 AM." : "试了 6 次。超时了。Isoform 会在8:45再试。");
+        rerender(<TodayStatus brief={{ ...brief, pendingCause: "signed_out" }} now={clock} />);
+        expect(screen.getByTestId("today-status")).toHaveTextContent(language === "en" ? "Tried 6 times. Your AI is signed out. Isoform tries again at 8:45 AM." : "已尝试 6 次。你的 AI 已退出登录。Isoform 会在 8:45 再试一次。");
+        rerender(<TodayStatus brief={{ ...brief, retryAt: "" }} now={clock} />);
+        expect(screen.getByTestId("today-status")).not.toHaveTextContent(/didn't come|没有在|Making|正在生成/);
+        await i18n.changeLanguage("en");
+
     });
 
     it.each(["en", "zh-CN"])("says what comes next once the slot has given way (today-review v1.1.22 R51) in %s", async (language) => {
         await i18n.changeLanguage(language);
-        const now = new Date(2026, 10, 4, 11, 50);
+        const now = new Date(2026, 10, 4, 12, 0);
         const nextRunAt = new Date(2026, 10, 4, 18, 0).toISOString();
         const base = { enabled: true, lastRunAt: "", lastSlot: "", nextRunAt, nextSlot: "evening", missedRuns: 0, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "morning", pendingAt: new Date(2026, 10, 4, 7, 0).toISOString(), pendingAttempts: 5, pendingCause: "timeout" };
         const { rerender } = render(<TodayStatus brief={{ ...base, retryAt: "" }} now={now} />);
-        expect(screen.queryByTestId("today-status-next")).toBeNull();
-        expect(screen.queryByText(/didn't come|没有在/)).toBeNull();
+        expect(screen.getByTestId("today-status-next")).toHaveTextContent(i18n.t("today:status.nextEveningAt", { time: language === "en" ? "6:00 PM" : "18:00" }));
         rerender(<TodayStatus brief={{ ...base, nextRunAt: new Date(2026, 10, 5, 7, 0).toISOString(), nextSlot: "morning", retryAt: "" }} now={new Date(2026, 10, 4, 23, 40)} />);
         expect(screen.getByTestId("today-status-next")).toHaveTextContent(i18n.t("today:status.nextMorningTomorrowAt", { time: "7:00" + (language === "en" ? " AM" : "") }));
-        rerender(<TodayStatus brief={{ ...base, retryAt: new Date(2026, 10, 4, 11, 58).toISOString() }} now={now} />);
+        rerender(<TodayStatus brief={{ ...base, retryAt: new Date(2026, 10, 4, 12, 8).toISOString() }} now={now} />);
         expect(screen.queryByTestId("today-status-next")).toBeNull();
         await i18n.changeLanguage("en");
     });
@@ -54,7 +82,7 @@ describe("TodayStatus", () => {
     it("opens the missed brief's own detail from Why (K3)", async () => {
         await i18n.changeLanguage("en");
         const why = vi.fn();
-        render(<TodayStatus brief={{ enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: "", nextSlot: "", missedRuns: 1, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "evening", pendingAt: at(0, 18) }} now={now} onMissedWhy={why} />);
+        render(<TodayStatus brief={{ enabled: true, lastRunAt: "", lastSlot: "", nextRunAt: "", nextSlot: "", missedRuns: 1, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "evening", pendingAt: at(0, 18) }} now={new Date(2026, 9, 15, 0, 30)} onMissedWhy={why} />);
         expect(screen.getByTestId("today-status")).toHaveTextContent("Your evening brief didn't come at 6:02 PM. · Why");
         fireEvent.click(screen.getByRole("button", { name: "Why" }));
         expect(why).toHaveBeenCalledWith("evening");
@@ -159,7 +187,7 @@ describe("TodayStatus", () => {
 });
 it.each(['en', 'zh-CN'])('shows the current missed slot in %s without historical counts', async (language) => {
     await i18n.changeLanguage(language);
-    render(<TodayStatus date="DATE" now={new Date(2026, 9, 14, 13)} brief={{ enabled: true, lastRunAt: at(0, 7), lastSlot: 'morning', nextRunAt: at(0, 18), nextSlot: 'evening', missedRuns: 4, failingSlot: '', failedAttempts: 0, latestBriefId: '', currentBriefId: '', pendingSlot: 'morning', pendingAt: at(0, 7) }} />);
+    render(<TodayStatus date="DATE" brief={{ enabled: true, lastRunAt: at(0, 7), lastSlot: 'morning', nextRunAt: at(0, 18), nextSlot: 'evening', missedRuns: 4, failingSlot: '', failedAttempts: 0, latestBriefId: '', currentBriefId: '', pendingSlot: 'morning', pendingAt: at(0, 7) }} now={now} />);
     const status = screen.getByTestId('today-status');
     expect(status).toHaveTextContent(language === 'en' ? "Your morning brief didn't come at" : '早间简报没有在');
     expect(status).not.toHaveTextContent(/DATE|Last brief|7 days/);

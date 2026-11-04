@@ -187,3 +187,24 @@ func TestGetNeedsYouKeepsTasksTheSystemStoppedAndLeavesOutYours(t *testing.T) {
 		t.Fatalf("causes = %v", causes)
 	}
 }
+
+func TestLeftOffOnlyWaitsWhenItAsksAQuestion(t *testing.T) {
+	now := time.Now()
+	card := mainChatProactive{MomentID: "left-off", Kind: "decision_due", State: "pending", Target: mainChatTarget{Kind: mainChatTargetThread}, Body: "You researched a launch."}
+	row := StreamItemData{ID: "row", ToolName: mainChatProactiveTool}
+	for _, tc := range []struct {
+		body    string
+		waiting bool
+	}{{"You researched a launch.", false}, {"Would you like to continue?", true}} {
+		card.Body = tc.body
+		raw, err := json.Marshal(card)
+		if err != nil {
+			t.Fatal(err)
+		}
+		row.ToolInput = string(raw)
+		_, _, got := todayNeedFromChatItem(row, "main", now)
+		if got != tc.waiting || (mainChatProactiveRowClass(card, now) == MainChatRowWaiting) != tc.waiting {
+			t.Fatalf("%q: needs=%v class=%v", tc.body, got, mainChatProactiveRowClass(card, now))
+		}
+	}
+}

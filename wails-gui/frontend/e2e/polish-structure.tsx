@@ -57,6 +57,11 @@ if (params.has('tomorrow')) {
     reads.GetLatestBrief = { ...(reads.GetLatestBrief as object), brief: { ...todayNextBrief, slot: 'evening' } };
     reads.GetTodayDayShape = { ...JSON.parse(JSON.stringify(dayShapeFixture).replaceAll('2026-10-23T', '2026-10-24T')), now: dayShapeFixture.now };
 }
+if (params.has('brief-retry')) {
+    const pending = { pendingSlot: 'morning', pendingAt: '2026-10-23T07:00:00-07:00', retryAt: '2026-10-23T08:45:00-07:00', pendingAttempts: 6, pendingCause: 'timeout' };
+    reads.GetLatestBrief = { brief: null, building: params.has('building'), enabled: true, empty: false, missing: [], ...pending };
+    reads.GetMobileBriefHealth = { enabled: true, nextRunAt: '2026-10-23T18:00:00-07:00', nextSlot: 'evening', ...pending };
+}
 if (params.has('late')) reads.GetTodayDayShape = { ...dayShapeFixture, now: '2026-10-23T22:00:00-07:00' };
 if (params.has('overnight')) reads.GetTodayDayShape = { ...dayShapeFixture, rangeStart: '2026-10-22T22:00:00-07:00' };
 if (params.has('paused-capture')) reads.GetCaptureCounts = { paused: true, sources: [] };

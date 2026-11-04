@@ -199,6 +199,8 @@ export function McpHubSettings() {
     const [updating, setUpdating] = useState<string | null>(null);
     const [expanded, setExpanded] = useState<Record<string, boolean>>({});
     const [form, setForm] = useState<NewServerForm>(blankForm);
+    const [fieldErrors, setFieldErrors] = useState<ManualFieldErrors>({});
+    useEffect(() => setFieldErrors({}), [form.id, form.command, form.url, form.transport]);
     const [pendingUninstall, setPendingUninstall] = useState<McpServer | null>(null);
 
     const refresh = useCallback(async () => {
@@ -239,16 +241,13 @@ export function McpHubSettings() {
         const trimmedID = form.id.trim();
         const trimmedCmd = form.command.trim();
         const trimmedURL = form.url.trim();
-        if (!trimmedID) {
-            toast.error(t("mcp.manual.idRequired"));
-            return;
-        }
-        if (form.transport === "stdio" && !trimmedCmd) {
-            toast.error(t("mcp.manual.idAndCommandRequired"));
-            return;
-        }
-        if (form.transport === "http" && !trimmedURL) {
-            toast.error(t("mcp.manual.idAndUrlRequired"));
+        const errors: ManualFieldErrors = {
+            id: trimmedID ? undefined : t("mcp.manual.nameRequired"),
+            command: form.transport === "stdio" && !trimmedCmd ? t("mcp.manual.commandRequired") : undefined,
+            url: form.transport === "http" && !trimmedURL ? t("mcp.manual.urlRequired") : undefined,
+        };
+        if (errors.id || errors.command || errors.url) {
+            setFieldErrors(errors);
             return;
         }
         setAdding(true);
@@ -463,7 +462,9 @@ export function McpHubSettings() {
             t("mcp.installPrompt.closing"),
         ].join("\n");
         window.dispatchEvent(
-            new CustomEvent("mcp:install-via-ai", { detail: { prompt } }),
+            new CustomEvent("mcp:install-via-ai", {
+                detail: { prompt, display: t("mcp.installPrompt.visible", { name: entry.name, url: entry.source_url }) },
+            }),
         );
     }, [t]);
 
@@ -518,6 +519,7 @@ export function McpHubSettings() {
             <SettingsAdvanced pageId="mcp" hint={t("mcp.advancedHint")}>
                 <ManualAddCard
                     form={form}
+                    errors={fieldErrors}
                     setForm={setForm}
                     adding={adding}
                     onAdd={handleAdd}
@@ -876,7 +878,10 @@ function DiscoverServersCard({ installedIds, onImported }: DiscoverServersCardPr
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {Array.from(grouped.values()).map(({ source, rows }) => (
+                    {report && !Array.from(grouped.values()).some(({ rows }) => rows.length > 0) && (
+                        <p className="py-6 text-center text-sm text-muted">{t("mcp.discover.noneFound")}</p>
+                    )}
+                    {Array.from(grouped.values()).filter(({ rows }) => rows.length > 0).map(({ source, rows }) => (
                         <DiscoverySourceBlock
                             key={source.id}
                             source={source}
@@ -1270,19 +1275,23 @@ function FoldedSection({ title, hint, children }: { title: string; hint?: string
     );
 }
 
+interface ManualFieldErrors {
+    id?: string;
+    command?: string;
+    url?: string;
+}
+
 interface ManualAddCardProps {
     form: NewServerForm;
+    errors: ManualFieldErrors;
     setForm: (next: NewServerForm | ((prev: NewServerForm) => NewServerForm)) => void;
     adding: boolean;
     onAdd: () => void;
 }
 
-function ManualAddCard({ form, setForm, adding, onAdd }: ManualAddCardProps) {
+function ManualAddCard({ form, errors, setForm, adding, onAdd }: ManualAddCardProps) {
     const { t } = useTranslation("settings");
     const isHTTP = form.transport === "http";
-    const canAdd = Boolean(
-        form.id.trim() && (isHTTP ? form.url.trim() : form.command.trim()),
-    );
     return (
         <SettingsCard title={t("mcp.manual.title")} description={t("mcp.manual.description")}>
             <div className="mb-4">
@@ -1320,6 +1329,7 @@ function ManualAddCard({ form, setForm, adding, onAdd }: ManualAddCardProps) {
                     value={form.id}
                     onChange={(value) => setForm((f) => ({ ...f, id: value }))}
                     helper={t("mcp.manual.idHelper")}
+                    error={errors.id}
                 />
                 <ManualField
                     label={t("mcp.manual.displayNameLabel")}
@@ -1335,6 +1345,7 @@ function ManualAddCard({ form, setForm, adding, onAdd }: ManualAddCardProps) {
                         value={form.url}
                         onChange={(value) => setForm((f) => ({ ...f, url: value }))}
                         helper={t("mcp.manual.urlHelper")}
+                        error={errors.url}
                     />
                 ) : (
                     <>
@@ -1344,6 +1355,7 @@ function ManualAddCard({ form, setForm, adding, onAdd }: ManualAddCardProps) {
                             value={form.command}
                             onChange={(value) => setForm((f) => ({ ...f, command: value }))}
                             helper={t("mcp.manual.commandHelper")}
+                            error={errors.command}
                         />
                         <ManualField
                             label={t("mcp.manual.argsLabel")}
@@ -1486,7 +1498,7 @@ function ManualAddCard({ form, setForm, adding, onAdd }: ManualAddCardProps) {
                     type="button"
                     size="sm"
                     onClick={onAdd}
-                    disabled={adding || !canAdd}
+                    disabled={adding}
                 >
                     {adding ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1506,10 +1518,11 @@ interface ManualFieldProps {
     value?: string;
     onChange?: (value: string) => void;
     helper?: string;
+    error?: string;
     custom?: React.ReactNode;
 }
 
-function ManualField({ label, placeholder, value, onChange, helper, custom }: ManualFieldProps) {
+function ManualField({ label, placeholder, value, onChange, helper, error, custom }: ManualFieldProps) {
     return (
         <div>
             {custom ? (
@@ -1529,7 +1542,11 @@ function ManualField({ label, placeholder, value, onChange, helper, custom }: Ma
                     />
                 </label>
             )}
-            {helper && <p className="text-[11px] text-muted mt-1">{helper}</p>}
+            {error ? (
+                <p role="alert" className="text-[11px] text-copper mt-1">{error}</p>
+            ) : (
+                helper && <p className="text-[11px] text-muted mt-1">{helper}</p>
+            )}
         </div>
     );
 }

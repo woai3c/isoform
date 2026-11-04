@@ -151,6 +151,10 @@ func (s *mobileBriefService) finishedReadKey(ctx context.Context, source MobileB
 // finishedRead is source as Today opens it: the saved finished read when its
 // key still matches, or else worked out once and saved.
 func (s *mobileBriefService) finishedRead(source MobileBriefV1) (MobileBriefV1, error) {
+	if !s.beginWork() {
+		return MobileBriefV1{}, errMobileBriefUnavailable
+	}
+	defer s.wg.Done()
 	ctx := context.Background()
 	key := s.finishedReadKey(ctx, source)
 	saved, found, err := s.store.loadFinishedRead(source.BriefID)

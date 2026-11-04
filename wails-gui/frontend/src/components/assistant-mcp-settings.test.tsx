@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
 import type { MCPReadConnection } from "@/lib/wails-shim-app";
 import { AssistantMCPSettings } from "./assistant-mcp-settings";
+import { SettingsDevToolsContext } from "./settings/settings-dev-tools";
 
 const mocks = vi.hoisted(() => ({
     list: vi.fn(),
@@ -43,8 +44,29 @@ describe("AssistantMCPSettings", () => {
         mocks.revoke.mockResolvedValue(claude);
     });
 
-    it("shows each exact command and only connects after the user's click", async () => {
+    it("keeps the registration command for Developer tools only", async () => {
         render(<AssistantMCPSettings />);
+        await screen.findByRole("article", { name: "Claude Code" });
+        expect(screen.queryByText(claude.command)).not.toBeInTheDocument();
+        expect(screen.queryByText("Registration command")).not.toBeInTheDocument();
+        expect(screen.queryByText(/Checking/)).not.toBeInTheDocument();
+    });
+
+    it("shows a failed connect as a copper line whose Try again connects again", async () => {
+        mocks.connect.mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce({ ...claude, connected: true, authorized: true });
+        render(<AssistantMCPSettings />);
+        const claudeCard = await screen.findByRole("article", { name: "Claude Code" });
+        fireEvent.click(within(claudeCard).getByRole("button", { name: "Connect" }));
+        const alert = await within(claudeCard).findByRole("alert");
+        expect(alert).toHaveClass("text-copper");
+        expect(alert.className).not.toMatch(/text-error/);
+        fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.connect).toHaveBeenCalledTimes(2));
+        await waitFor(() => expect(within(claudeCard).getByRole("status")).toHaveTextContent(/^Connected$/));
+    });
+
+    it("shows each exact command and only connects after the user's click", async () => {
+        render(<SettingsDevToolsContext.Provider value={true}><AssistantMCPSettings /></SettingsDevToolsContext.Provider>);
         const claudeCard = await screen.findByRole("article", { name: "Claude Code" });
         const codexCard = screen.getByRole("article", { name: "Codex" });
 
@@ -107,7 +129,7 @@ describe("AssistantMCPSettings", () => {
         fireEvent.click(await screen.findByRole("button", { name: "Connect" }));
 
         expect(await screen.findByText("Claude Code already uses the name isoform for env. Rename or remove that server in Claude Code, then try again.")).toHaveAttribute("role", "alert");
-        expect(await screen.findByText("Could not connect. Check that the assistant's command-line app is installed and try again.")).toHaveAttribute("role", "alert");
+        expect(await screen.findByText("Couldn't connect. Check that the assistant's command-line app is installed.")).toHaveAttribute("role", "alert");
         expect(screen.getByRole("button", { name: "Connect" })).toBeDisabled();
         expect(mocks.list).toHaveBeenCalledTimes(2);
         expect(mocks.connect).toHaveBeenCalledTimes(1);
@@ -115,8 +137,8 @@ describe("AssistantMCPSettings", () => {
     });
 
     it.each([
-        { language: "en", connect: "Connect", revoke: "Revoke", failure: "Could not finish revoking access and removing the MCP entry. Try again." },
-        { language: "zh-CN", connect: "连接", revoke: "撤销", failure: "无法完成撤销访问权限和移除 MCP 条目的操作，请重试。" },
+        { language: "en", connect: "Connect", revoke: "Revoke", failure: "Couldn't finish revoking access." },
+        { language: "zh-CN", connect: "连接", revoke: "撤销", failure: "无法完成撤销访问。" },
     ])("keeps failed revocation visible beside a conflict in $language", async ({ language, connect, revoke, failure }) => {
         await i18n.changeLanguage(language);
         mocks.list.mockResolvedValue([{ ...claude, authorized: true, issue: "name_conflict", conflictCommand: "env" }]);
@@ -138,8 +160,8 @@ describe("AssistantMCPSettings", () => {
     });
 
     it.each([
-        { language: "en", revoke: "Revoke", status: "Not connected", failure: "Could not finish revoking access and removing the MCP entry. Try again." },
-        { language: "zh-CN", revoke: "撤销", status: "未连接", failure: "无法完成撤销访问权限和移除 MCP 条目的操作，请重试。" },
+        { language: "en", revoke: "Revoke", status: "Not connected", failure: "Couldn't finish revoking access." },
+        { language: "zh-CN", revoke: "撤销", status: "未连接", failure: "无法完成撤销访问。" },
     ])("refreshes revoked access and lets cleanup retry in $language", async ({ language, revoke, status, failure }) => {
         await i18n.changeLanguage(language);
         mocks.list.mockResolvedValueOnce([{ ...claude, authorized: true, connected: true }]).mockResolvedValue([claude]);
@@ -226,7 +248,7 @@ describe("AssistantMCPSettings", () => {
     it("retries a failed status read without registering either assistant", async () => {
         mocks.list.mockRejectedValueOnce(new Error("unavailable"));
         render(<AssistantMCPSettings />);
-        expect(await screen.findByRole("alert")).toHaveTextContent("Could not check connections. Try again.");
+        expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't check your connections.");
         fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
         expect(await screen.findByRole("article", { name: "Claude Code" })).toBeInTheDocument();
@@ -242,10 +264,10 @@ describe("AssistantMCPSettings", () => {
         const claudeCard = await screen.findByRole("article", { name: "Claude Code" });
         const codexCard = screen.getByRole("article", { name: "Codex" });
         fireEvent.click(within(claudeCard).getByRole("button", { name: "Connect" }));
-        expect(await within(claudeCard).findByRole("alert")).toHaveTextContent("Could not connect.");
+        expect(await within(claudeCard).findByRole("alert")).toHaveTextContent("Couldn't connect.");
         expect(within(claudeCard).getByRole("button", { name: "Connect" })).toBeEnabled();
         fireEvent.click(within(codexCard).getByRole("button", { name: "Revoke" }));
-        expect(await within(codexCard).findByRole("alert")).toHaveTextContent("Could not finish revoking access and removing the MCP entry. Try again.");
+        expect(await within(codexCard).findByRole("alert")).toHaveTextContent("Couldn't finish revoking access.");
         expect(within(codexCard).getByRole("status")).toHaveTextContent(/^Connected$/);
         expect(within(codexCard).getByRole("button", { name: "Revoke" })).toBeEnabled();
         expect(screen.queryByText(/private command output|private token path/)).not.toBeInTheDocument();
@@ -254,13 +276,13 @@ describe("AssistantMCPSettings", () => {
     it("renders connection controls and errors in Chinese", async () => {
         await i18n.changeLanguage("zh-CN");
         mocks.connect.mockRejectedValueOnce(new Error("unavailable"));
-        render(<AssistantMCPSettings />);
+        render(<SettingsDevToolsContext.Provider value={true}><AssistantMCPSettings /></SettingsDevToolsContext.Provider>);
         const claudeCard = await screen.findByRole("article", { name: "Claude Code" });
 
-        expect(screen.getByRole("heading", { name: "将 Isoform 连接到 Claude Code / Codex" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Claude Code 和 Codex" })).toBeInTheDocument();
         expect(within(claudeCard).getByRole("status")).toHaveTextContent("未连接");
         expect(within(claudeCard).getByText("注册命令")).toBeInTheDocument();
         fireEvent.click(within(claudeCard).getByRole("button", { name: "连接" }));
-        expect(await within(claudeCard).findByRole("alert")).toHaveTextContent("无法连接。请确认已安装助手的命令行应用，然后重试。");
+        expect(await within(claudeCard).findByRole("alert")).toHaveTextContent("无法连接。请确认已安装该助手的命令行应用。");
     });
 });

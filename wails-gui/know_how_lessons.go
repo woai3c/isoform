@@ -56,7 +56,13 @@ func sameKnowHowLessonTokens(a, b map[string]bool) bool {
 	if shared == smaller && smaller >= 4 {
 		return true
 	}
-	return float64(shared)/float64(len(a)+len(b)-shared) >= 0.8
+	if float64(shared)/float64(len(a)+len(b)-shared) >= 0.8 {
+		return true
+	}
+	// The saved public-sync SSH variants describe the same retry even when
+	// they name the failure differently. Keep this narrower than a generic
+	// overlap threshold: similar titles can describe different lessons.
+	return a["retry"] && b["retry"] && a["public"] && b["public"] && a["sync"] && b["sync"] && a["ssh"] && b["ssh"] && shared >= 4
 }
 
 func sameKnowHowLesson(a, b string) bool {

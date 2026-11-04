@@ -756,8 +756,8 @@ export function TodayPage({
                         </h1>
                         <TodayStatus
                             date={todayLabel(i18n.language)}
-                            brief={status.brief}
-                            building={latest.view?.building || latest.make === "making"}
+                            brief={status.brief && latest.view ? { ...status.brief, pendingSlot: latest.view.pendingSlot, pendingAt: latest.view.pendingAt, retryAt: latest.view.retryAt, pendingAttempts: latest.view.pendingAttempts, pendingCause: latest.view.pendingCause } : status.brief}
+                            building={!!latest.view?.building || latest.make === "making"}
                             onMissedWhy={handlers.onOpenBriefDetail}
                         />
                     </header>

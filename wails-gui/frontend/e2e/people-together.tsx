@@ -9,6 +9,7 @@ import { PeoplePage } from '@/components/people-page';
 const params = new URLSearchParams(location.search);
 const theme = params.get('theme') ?? 'paper';
 const chinese = params.get('lang') === 'zh-CN';
+const failure = params.get('failure') === '1';
 const name = chinese ? '王晓雨' : 'Mira Castell';
 const now = Date.now();
 localStorage.setItem('yansu.theme', theme);
@@ -22,7 +23,7 @@ const detail = { id: 'mira', name, relationship: '', notes: '', researchSummary:
 const reads: Record<string, unknown> = {
     GetThemePreference: theme, GetFirstWeekDay: -1, GetAssistantHistory: null, GetCalendarFirstDay: null,
     ListPeopleOverview: { headline: { repliesOwed: 0, thingsOwed: 0, peopleWaitingOnYou: 0 }, knownCount: 1, duplicates: [], open: [], everyone: [card] },
-    ListPrincipalsWithStats: [], GetPersonDetail: detail, ListPrincipalActivitySessions: [], GetContactsAccessStatus: null,
+    ListPrincipalsWithStats: [], GetPersonDetail: failure ? { ...detail, together: [], togetherFailed: true } : detail, ListPrincipalActivitySessions: [], GetContactsAccessStatus: null,
     IsClosedEyesModeEnabled: false, GetPersonResearch: null, GetVoiceStatus: null,
 };
 const host = window as unknown as Record<string, any>;

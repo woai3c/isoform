@@ -34,7 +34,6 @@ const (
 	mobileBriefCooldown       = 10 * time.Minute
 	mobileBriefDefaultWindow  = 24 * time.Hour
 	mobileBriefMaxWindow      = 7 * 24 * time.Hour
-	mobileBriefStopWait       = 3 * time.Second
 	mobileBriefReasonPhone    = "phone"
 	mobileBriefReasonSettings = "settings"
 	mobileBriefReasonSchedule = "scheduled"
@@ -89,6 +88,7 @@ type mobileBriefService struct {
 	// before it is one Isoform wasn't open for.
 	startedAt     time.Time
 	stopped       bool
+	stopDone      chan struct{}
 	running       bool
 	runningSince  time.Time
 	runFinished   chan struct{}
@@ -204,8 +204,9 @@ func (s *mobileBriefService) Start(parent context.Context) {
 	s.startedAt = s.now()
 	s.cancel = cancel
 	s.runCtx = ctx
-	s.wg.Add(2)
+	s.wg.Add(3)
 	s.mu.Unlock()
+	defer s.wg.Done()
 	if s.config.load().Feed {
 		s.applyFeed(true)
 	}
@@ -233,16 +234,18 @@ func (s *mobileBriefService) applyFeed(on bool) {
 	}
 }
 
-// Stop cancels the loop and any generation in flight, then waits a short time
-// for them to finish. A model call that is still running is abandoned: its
-// result is discarded because the generation context is already done.
+// Stop cancels service work and waits for it to finish before returning.
 func (s *mobileBriefService) Stop() {
 	s.mu.Lock()
 	if s.stopped {
+		done := s.stopDone
 		s.mu.Unlock()
+		<-done
 		return
 	}
 	s.stopped = true
+	s.stopDone = make(chan struct{})
+	done := s.stopDone
 	cancel := s.cancel
 	queueCancel := s.queueCancel
 	audioCancel := s.audioUploadCancel
@@ -256,19 +259,22 @@ func (s *mobileBriefService) Stop() {
 	if audioCancel != nil {
 		audioCancel()
 	}
+	s.wg.Wait()
 	if s.feed != nil {
 		s.feed.Stop()
 	}
-	done := make(chan struct{})
-	go func() {
-		s.wg.Wait()
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(mobileBriefStopWait):
-		log.Printf("[mobile-brief] a brief is still finishing in the background")
+	close(done)
+}
+
+// beginWork admits a write-capable operation before shutdown starts.
+func (s *mobileBriefService) beginWork() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.stopped {
+		return false
 	}
+	s.wg.Add(1)
+	return true
 }
 
 func (s *mobileBriefService) loop(ctx context.Context) {
@@ -533,6 +539,10 @@ func (s *mobileBriefService) Building() bool {
 // PatchLatestMobileBrief changes the newest stored brief through fn and
 // stores it again when fn says so.
 func (s *mobileBriefService) PatchLatestMobileBrief(fn func(MobileBriefV1) (MobileBriefV1, bool), after func(MobileBriefV1)) (MobileBriefV1, bool) {
+	if !s.beginWork() {
+		return MobileBriefV1{}, false
+	}
+	defer s.wg.Done()
 	s.patchMu.Lock()
 	latest, ok := s.store.latest()
 	if !ok {
@@ -607,14 +617,19 @@ func (s *mobileBriefService) recordFailure(occurrence mobileBriefSlotOccurrence,
 		key = kind
 	}
 	cause := ""
+	assistant := ""
 	switch true {
 	case errors.Is(err, context.DeadlineExceeded):
 		cause = "timeout"
 	case handoffRunAuthFailed(err):
 		cause = "signed_out"
+		var routed *mobileBriefAssistantError
+		if errors.As(err, &routed) {
+			assistant = routed.assistant
+		}
 	}
 	stored := s.recordRun(mobileBriefRun{BriefID: occurrence.BriefID, Slot: occurrence.Slot,
-		ScheduledAt: formatMobileBriefTime(occurrence.ScheduledAt), Status: mobileBriefRunFailed, At: formatMobileBriefTime(s.now()), FailureKey: key, FailureCause: cause})
+		ScheduledAt: formatMobileBriefTime(occurrence.ScheduledAt), Status: mobileBriefRunFailed, At: formatMobileBriefTime(s.now()), FailureKey: key, FailureCause: cause, FailureAssistant: assistant})
 	s.retryLater(occurrence.BriefID, occurrence.Slot, stored.Attempts, err)
 }
 
@@ -1156,7 +1171,13 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 	// The spoken version follows in a second step, so the text brief and its
 	// notice never wait for synthesis, the encode or the upload. Stop cancels
 	// a step still running; the text brief stays as stored.
+	s.mu.Lock()
+	if s.stopped {
+		s.mu.Unlock()
+		return brief, nil
+	}
 	s.wg.Add(1)
+	s.mu.Unlock()
 	go func() {
 		defer s.wg.Done()
 		s.addAudio(ctx, brief, asOf)
@@ -1732,6 +1753,10 @@ func (s *mobileBriefService) Schedule() (MobileBriefSchedule, error) {
 
 // SetSchedule validates and saves the schedule, then returns the new view.
 func (s *mobileBriefService) SetSchedule(schedule MobileBriefSchedule) (MobileBriefSchedule, error) {
+	if !s.beginWork() {
+		return MobileBriefSchedule{}, errMobileBriefUnavailable
+	}
+	defer s.wg.Done()
 	previous := s.config.load()
 	settings := mobileBriefSettings{
 		Enabled:   schedule.Enabled,

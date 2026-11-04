@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Loader2 } from "lucide-react";
+import { SettingsFailureLine, SettingsPlaceholderRows, useReadDeadline } from "@/components/settings/settings-failure";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import {
@@ -18,6 +19,7 @@ import { EventsOn } from "../../../wailsjs/runtime/runtime";
 import { Button } from "../ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
+import { ANSWERING_PICKED_EVENT } from "./magpie-profile";
 import { canRetryHealth, healthStatusText, useAssistantHealth } from "./assistant-health";
 import { SettingsCard, SettingsRow } from "./settings-primitives";
 
@@ -126,6 +128,7 @@ export function AssistantChoiceCard({ footer, profileModels = false }: { footer?
     const [saved, setSaved] = useState(false);
     const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const health = useAssistantHealth();
+    const readExpired = useReadDeadline(!view && !failed);
 
     const load = useCallback(() => {
         GetAssistantChoice()
@@ -169,10 +172,10 @@ export function AssistantChoiceCard({ footer, profileModels = false }: { footer?
     if (!view) {
         return (
             <SettingsCard title={t("assistantChoice.title")}>
-                {failed ? (
-                    <p role="alert" className="text-xs text-muted">{t("assistantChoice.loadFailed")}</p>
+                {failed || readExpired ? (
+                    <SettingsFailureLine failure={{ text: t("assistantChoice.loadFailed"), retry: () => { setFailed(false); load(); } }} />
                 ) : (
-                    <p role="status" className="settings-row-desc">{t("assistantChoice.loading")}</p>
+                    <SettingsPlaceholderRows rows={3} />
                 )}
                 {footer}
             </SettingsCard>
@@ -222,7 +225,11 @@ export function AssistantChoiceCard({ footer, profileModels = false }: { footer?
                         checked={selected}
                         disabled={busy || (!state.pickable && !selected)}
                         onChange={() => {
-                            if (state.pickable) apply(SetAnsweringAgent(choice.agent));
+                            if (!state.pickable) return;
+                            apply(SetAnsweringAgent(choice.agent).then((next) => {
+                                window.dispatchEvent(new CustomEvent(ANSWERING_PICKED_EVENT, { detail: choice.agent }));
+                                return next;
+                            }));
                         }}
                         className="mt-1 accent-accent-2"
                     />
@@ -250,10 +257,10 @@ export function AssistantChoiceCard({ footer, profileModels = false }: { footer?
         >
             <div className="flex flex-col gap-2" data-testid="assistant-choice">
                 <div className="flex flex-col gap-2" role="radiogroup" aria-label={t("assistantChoice.title")}>
-                    {view.agents.map(row)}
+                    {/* Only the assistants that can answer, plus Isoform. */}
+                    {view.agents.filter((choice) => choice.canAnswer || choice.agent === "isoform" || choice.agent === view.answering).map(row)}
                 </div>
                 <p className="text-xs text-muted">{t("assistantChoice.backupNote")}</p>
-                {profileModels && <p className="text-xs text-muted">{t("magpieProfile.executorOrder")}</p>}
                 {picked && (
                     <div className="flex flex-col">
                         {!profileModels && <SettingsRow

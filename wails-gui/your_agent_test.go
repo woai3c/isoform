@@ -109,6 +109,16 @@ func yourAgentTestEntry(id, title, apps string, sessions []string, takeaway stri
 	}
 }
 
+// yourAgentOverWeeks adds, for each entry, an earlier sighting three weeks
+// before with no takeaway, so the group spans the weeks a specialty needs.
+func yourAgentOverWeeks(entries []KnowledgeEntry) []KnowledgeEntry {
+	out := append([]KnowledgeEntry{}, entries...)
+	for _, entry := range entries {
+		out = append(out, KnowledgeEntry{ID: entry.ID + "-early", Title: entry.Title, Apps: entry.Apps, Date: "2026-09-29", SessionIDs: entry.SessionIDs[:1]})
+	}
+	return out
+}
+
 func yourAgentSessions(prefix string, count int) []string {
 	ids := make([]string, 0, count)
 	for i := 0; i < count; i++ {
@@ -224,7 +234,7 @@ func TestYourAgentSpecialtiesCountThresholdAndTopThree(t *testing.T) {
 		yourAgentTestEntry("offsites", "Team offsites", "Docs", yourAgentSessions("t", 5), "Plan the offsite agenda early."),
 		yourAgentTestEntry("four", "Four things", "Docs", yourAgentSessions("f", 4), "Do the four things in order."),
 	}
-	got := computeYourAgentInsights(entries, "Alex Rivera")
+	got := computeYourAgentInsights(yourAgentOverWeeks(entries), "Alex Rivera")
 	if got.StillLearning {
 		t.Fatal("qualified specialties must not show still learning")
 	}
@@ -247,7 +257,7 @@ func TestYourAgentSpecialtyThresholdIsFive(t *testing.T) {
 		t.Fatalf("four sightings must stay still learning: %+v", got)
 	}
 	five := []KnowledgeEntry{yourAgentTestEntry("a", "Client SOW", "Docs", yourAgentSessions("c", 5), "Put the price first.")}
-	if got := computeYourAgentInsights(five, ""); len(got.Specialties) != 1 || got.Specialties[0].Seen != 5 {
+	if got := computeYourAgentInsights(yourAgentOverWeeks(five), ""); len(got.Specialties) != 1 || got.Specialties[0].Seen != 5 {
 		t.Fatalf("five sightings must qualify: %+v", got)
 	}
 }
@@ -294,15 +304,15 @@ func TestYourAgentTasteRedactsNamesAndNumbers(t *testing.T) {
 }
 
 func TestYourAgentTasteFromTopSpecialtyThenNextSpecialties(t *testing.T) {
-	weeklyA := yourAgentTestEntry("wa", "Weekly updates", "Docs", yourAgentSessions("w", 6), "Lead the weekly update with what changed, not what happened.")
-	weeklyB := yourAgentTestEntry("wb", "Weekly update", "Docs", []string{"w-6", "w-7", "w-8", "w-9"}, "Send Alex Rivera the 2019 numbers before the weekly call")
-	sow := yourAgentTestEntry("sow", "Client SOW", "Docs", yourAgentSessions("c", 7), "Put the price and the date in the first paragraph of an SOW.")
-	sow2 := yourAgentTestEntry("sow2", "Client SOW", "Docs", []string{"c-0"}, "Name one owner for every open item.")
-	got := computeYourAgentInsights([]KnowledgeEntry{weeklyA, weeklyB, sow, sow2}, "Alex Rivera")
+	weeklyA := yourAgentTestEntry("wa", "Weekly updates", "Docs", yourAgentSessions("w", 6), "You lead a weekly update with what changed, not what happened.")
+	weeklyB := yourAgentTestEntry("wb", "Weekly update", "Docs", []string{"w-6", "w-7", "w-8", "w-9"}, "You send Alex Rivera the 2019 numbers before the weekly call")
+	sow := yourAgentTestEntry("sow", "Client SOW", "Docs", yourAgentSessions("c", 7), "You put the price and the date in the first paragraph of an SOW.")
+	sow2 := yourAgentTestEntry("sow2", "Client SOW", "Docs", []string{"c-0"}, "You name one owner for every open item.")
+	got := computeYourAgentInsights(yourAgentOverWeeks([]KnowledgeEntry{weeklyA, weeklyB, sow, sow2}), "Alex Rivera")
 	want := []string{
-		"Lead the weekly update with what changed, not what happened.",
-		"Send the numbers before the weekly call",
-		"Put the price and the date in the first paragraph of an SOW.",
+		"You lead a weekly update with what changed, not what happened.",
+		"You send the numbers before the weekly call",
+		"You put the price and the date in the first paragraph of an SOW.",
 	}
 	if len(got.Taste) != len(want) {
 		t.Fatalf("taste = %q, want %q", got.Taste, want)
@@ -310,6 +320,64 @@ func TestYourAgentTasteFromTopSpecialtyThenNextSpecialties(t *testing.T) {
 	for i := range want {
 		if got.Taste[i] != want[i] {
 			t.Fatalf("taste %d = %q, want %q", i, got.Taste[i], want[i])
+		}
+	}
+}
+
+// ST59 (settings-review v1.0.1): one session's tool names never become a
+// specialty, and a taste line is a skill said to the person, never a log line.
+func TestYourAgentSpecialtiesNeedWeeksAndPlainWords(t *testing.T) {
+	oneSession := []KnowledgeEntry{
+		yourAgentTestEntry("lmh", "Lumen Harness lmh", "Lumen Harness", yourAgentSessions("l", 6), "You can get a new command-line agent running on a Mac."),
+	}
+	if got := computeYourAgentInsights(oneSession, ""); len(got.Specialties) != 0 || !got.StillLearning {
+		t.Fatalf("sightings within days must stay still learning: %+v", got)
+	}
+	if got := computeYourAgentInsights(yourAgentOverWeeks(oneSession), ""); len(got.Specialties) != 0 || !got.StillLearning {
+		t.Fatalf("a product and its command are never a specialty: %+v", got)
+	}
+	brand := []KnowledgeEntry{yourAgentTestEntry("b", "LumenHub setup", "Terminal", yourAgentSessions("b", 6), "You set up a new tool.")}
+	if got := computeYourAgentInsights(yourAgentOverWeeks(brand), ""); len(got.Specialties) != 0 {
+		t.Fatalf("a CamelCase product name is not a specialty: %+v", got.Specialties)
+	}
+	appOnly := []KnowledgeEntry{yourAgentTestEntry("k", "Keynote", "Keynote", yourAgentSessions("k", 6), "You build a deck.")}
+	if got := computeYourAgentInsights(yourAgentOverWeeks(appOnly), ""); len(got.Specialties) != 0 {
+		t.Fatalf("an app's name alone is not a specialty: %+v", got.Specialties)
+	}
+	plain := []KnowledgeEntry{yourAgentTestEntry("m", "Designing Mac apps", "Xcode", yourAgentSessions("m", 6), "You can get a new command-line agent running on a Mac, including fixing a broken first launch.")}
+	got := computeYourAgentInsights(yourAgentOverWeeks(plain), "")
+	if len(got.Specialties) != 1 || got.Specialties[0].Name != "Designing Mac apps" {
+		t.Fatalf("plain words over weeks qualify: %+v", got.Specialties)
+	}
+	if len(got.Taste) != 1 || got.Taste[0] != "You can get a new command-line agent running on a Mac, including fixing a broken first launch." {
+		t.Fatalf("a second-person skill line is the taste: %q", got.Taste)
+	}
+}
+
+func TestYourAgentTasteIsASkillSaidToYou(t *testing.T) {
+	for _, line := range []string{
+		"Observed while a user troubleshot a missing lmh tui profile error in the Lumen Harness app",
+		"The user installed the lmh terminal command and a bare tui then crashed",
+		"You fixed it by running `lmh init` first",
+		"You can set the LUMEN_API_KEY before launch",
+		"You created a platform API key for the agent",
+		"You keep the token in the shell profile",
+		"You call loadProfile() before the first launch",
+		"You edit ~/.lumen/config.toml by hand",
+		"You pass --profile default on every run",
+		"Put the price in the first paragraph of an SOW.",
+	} {
+		if yourAgentTasteSkill(line) {
+			t.Errorf("must not be a taste line: %q", line)
+		}
+	}
+	for _, line := range []string{
+		"You can get a new command-line agent running on a Mac, including fixing a broken first launch.",
+		"You put the price and the date in the first paragraph of an SOW.",
+		"你会把价格写在工作说明书的第一段。",
+	} {
+		if !yourAgentTasteSkill(line) {
+			t.Errorf("must be a taste line: %q", line)
 		}
 	}
 }
@@ -658,7 +726,7 @@ func TestYourAgentRouteScopeAndShape(t *testing.T) {
 		t.Fatalf("brief:read must reach the route, got %d", allowed.Code)
 	}
 
-	entries := []KnowledgeEntry{yourAgentTestEntry("a", "Client SOW", "Docs", yourAgentSessions("c", 5), "Put the price first in the SOW.")}
+	entries := yourAgentOverWeeks([]KnowledgeEntry{yourAgentTestEntry("a", "Client SOW", "Docs", yourAgentSessions("c", 5), "Put the price first in the SOW.")})
 	fake := newYourAgentFakeServer(t)
 	fake.get = func(w http.ResponseWriter, r *http.Request) {
 		yourAgentWriteJSON(w, http.StatusNotFound, `{"error":"none"}`)
@@ -714,7 +782,7 @@ func TestYourAgentFirstPaintDoesNotWaitForNetwork(t *testing.T) {
 		case <-r.Context().Done():
 		}
 	}
-	entries := []KnowledgeEntry{yourAgentTestEntry("a", "Client SOW", "Docs", yourAgentSessions("c", 5), "Put the price first in the SOW.")}
+	entries := yourAgentOverWeeks([]KnowledgeEntry{yourAgentTestEntry("a", "Client SOW", "Docs", yourAgentSessions("c", 5), "Put the price first in the SOW.")})
 	env := yourAgentTestEnv(t, fake.server.URL, "Alex Rivera", entries)
 	if err := refreshYourAgentInsights(env); err != nil {
 		t.Fatal(err)
@@ -832,7 +900,7 @@ func TestYourAgentRefusedTokenTwiceShowsTheTokenStatus(t *testing.T) {
 // Before the first compute the page says nothing about specialties: no
 // Still learning claim, and Computed is false so the page shows placeholders.
 func TestYourAgentComputedFlagFollowsTheFirstCompute(t *testing.T) {
-	entries := []KnowledgeEntry{yourAgentTestEntry("a", "Client SOW", "Docs", yourAgentSessions("c", 5), "Put the price first in the SOW.")}
+	entries := yourAgentOverWeeks([]KnowledgeEntry{yourAgentTestEntry("a", "Client SOW", "Docs", yourAgentSessions("c", 5), "Put the price first in the SOW.")})
 	env := yourAgentTestEnv(t, "http://127.0.0.1:1", "Alex Rivera", entries)
 	before, err := yourAgentCachedPage(env)
 	if err != nil {

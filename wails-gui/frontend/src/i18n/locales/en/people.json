@@ -248,6 +248,7 @@
         "draft": "Draft a reply",
         "openLoops": "Open between you",
         "together": "Together",
+        "togetherFailed": "Couldn't load your moments together.",
         "sharedTopics": "Shared topics",
         "seenIn": "Seen in {{apps}}",
         "recentMessages": "Recent messages",

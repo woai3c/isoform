@@ -1,3 +1,4 @@
+import { SettingsFailureLine } from "@/components/settings/settings-failure";
 import { useTranslation } from "react-i18next";
 import type { CaptureCountSource } from "@/lib/wails-shim-app";
 import { useCaptureCounts } from "@/hooks/useCaptureCounts";
@@ -29,14 +30,17 @@ const KNOWN_SOURCES = new Set<CaptureCountSource>([
  */
 export function CapturedCountsCard() {
     const { t, i18n } = useTranslation("settings");
-    const { counts, loadFailed } = useCaptureCounts();
+    const { counts, loadFailed, refresh } = useCaptureCounts();
     const format = new Intl.NumberFormat(i18n.language);
-    const rows = (counts?.sources ?? []).filter((row) => KNOWN_SOURCES.has(row.source));
+    // A source with nothing this week has nothing to say yet.
+    const rows = (counts?.sources ?? []).filter((row) => KNOWN_SOURCES.has(row.source) && row.week > 0);
+
+    if (counts && !counts.paused && !counts.notReady && rows.length === 0 && !loadFailed) return null;
 
     return (
         <div {...settingsAnchor(CAPTURED_COUNTS_ANCHOR)}>
             <SettingsCard title={t("observation.captured.title")} description={t("observation.captured.description")}>
-                {loadFailed && <SettingsReason>{t("observation.captured.loadFailed")}</SettingsReason>}
+                {loadFailed && <SettingsFailureLine failure={{ text: t("observation.captured.loadFailed"), retry: () => void refresh() }} />}
                 {counts?.paused && <SettingsReason>{t("observation.captured.paused")}</SettingsReason>}
                 {counts && !counts.paused && !counts.notReady && rows.length > 0 && (
                     <table className="w-full text-[13px] leading-[1.4]" data-testid="captured-counts">

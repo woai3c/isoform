@@ -14,7 +14,7 @@ import {
     type KeyCombo,
     type useKeybindings,
 } from '@/hooks/useKeybindings';
-import { toast } from 'sonner';
+import { SettingsFailureLine, useSettingsFailure } from '@/components/settings/settings-failure';
 import {
     GetQuickChatHotkey,
     SetQuickChatHotkey,
@@ -44,6 +44,7 @@ type Keybindings = ReturnType<typeof useKeybindings>;
 function useShortcutEditor(keybindings: Keybindings) {
     const { t } = useTranslation('settings');
     const [recordingId, setRecordingId] = useState<string | null>(null);
+    const { failure, fail, clear } = useSettingsFailure();
 
     const startRecording = useCallback((actionId: string) => {
         setRecordingId(actionId);
@@ -57,7 +58,7 @@ function useShortcutEditor(keybindings: Keybindings) {
         (actionId: string, combo: KeyCombo) => {
             const conflict = keybindings.findConflict(combo, actionId);
             if (conflict) {
-                toast.error(
+                fail(
                     t('keybindings.toasts.conflict', {
                         action: keybindings.actions.find((entry) => entry.id === conflict)?.label,
                     }),
@@ -71,30 +72,26 @@ function useShortcutEditor(keybindings: Keybindings) {
             // clearer message than the binding error.
             if (actionId === QUICK_CHAT_GLOBAL_ID) {
                 if (!combo.meta && !combo.ctrl && !combo.alt && !combo.shift) {
-                    toast.error(t('keybindings.toasts.modifierRequired'));
+                    fail(t('keybindings.toasts.modifierRequired'));
                     return;
                 }
-                SetQuickChatHotkey(combo).then(
-                    () => {
-                        keybindings.updateBinding(actionId, combo);
-                        setRecordingId(null);
-                        toast.success(t('keybindings.toasts.shortcutUpdated'));
-                    },
-                    (err) => {
-                        toast.error(
-                            t('keybindings.toasts.applyFailed', {
-                                error: String(err?.message ?? err ?? ''),
-                            }),
-                        );
-                    },
-                );
+                const apply = () =>
+                    SetQuickChatHotkey(combo).then(
+                        () => {
+                            keybindings.updateBinding(actionId, combo);
+                            setRecordingId(null);
+                            clear();
+                        },
+                        () => fail(t('settingChange.failed'), () => void apply()),
+                    );
+                void apply();
                 return;
             }
             keybindings.updateBinding(actionId, combo);
             setRecordingId(null);
-            toast.success(t('keybindings.toasts.shortcutUpdated'));
+            clear();
         },
-        [keybindings, t],
+        [keybindings, t, fail, clear],
     );
 
     const quickChatDefault = keybindings.actions.find(
@@ -106,17 +103,24 @@ function useShortcutEditor(keybindings: Keybindings) {
             if (actionId === QUICK_CHAT_GLOBAL_ID && quickChatDefault) {
                 // Push the default down to Go FIRST so the OS hook is
                 // already retuned by the time the UI flips back.
-                void SetQuickChatHotkey(quickChatDefault).finally(() => {
-                    keybindings.resetBinding(actionId);
-                });
+                const reset = () =>
+                    SetQuickChatHotkey(quickChatDefault).then(
+                        () => {
+                            keybindings.resetBinding(actionId);
+                            clear();
+                        },
+                        () => fail(t('settingChange.failed'), () => void reset()),
+                    );
+                void reset();
                 return;
             }
             keybindings.resetBinding(actionId);
+            clear();
         },
-        [keybindings, quickChatDefault],
+        [keybindings, quickChatDefault, t, fail, clear],
     );
 
-    return { recordingId, startRecording, cancelRecording, saveCombo, resetBinding };
+    return { recordingId, startRecording, cancelRecording, saveCombo, resetBinding, failure };
 }
 
 // ── Quick Chat shortcut (General, everyday) ──
@@ -133,6 +137,7 @@ export function QuickChatShortcutCard({ keybindings }: QuickChatShortcutCardProp
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const savingRef = useRef(false);
+    const { failure, fail, clear } = useSettingsFailure();
 
     // Hydrate the OS-level Quick Chat hotkey from Go on mount. The Go
     // side persists this binding to ~/.yansu-agent/quick_chat_hotkey.json
@@ -175,7 +180,7 @@ export function QuickChatShortcutCard({ keybindings }: QuickChatShortcutCardProp
         if (!next || savingRef.current) return;
         const conflict = keybindings.findConflict(next.combo, action.id);
         if (conflict) {
-            toast.error(t('keybindings.toasts.conflict', {
+            fail(t('keybindings.toasts.conflict', {
                 action: keybindings.actions.find((entry) => entry.id === conflict)?.label,
             }));
             return;
@@ -185,9 +190,9 @@ export function QuickChatShortcutCard({ keybindings }: QuickChatShortcutCardProp
         try {
             await SetQuickChatHotkey(next.combo);
             keybindings.updateBinding(action.id, next.combo);
-            toast.success(t('keybindings.toasts.shortcutUpdated'));
-        } catch (err) {
-            toast.error(t('keybindings.toasts.applyFailed', { error: String(err) }));
+            clear();
+        } catch {
+            fail(t('settingChange.failed'), () => void savePreset(id));
         } finally {
             savingRef.current = false;
             setSaving(false);
@@ -199,6 +204,7 @@ export function QuickChatShortcutCard({ keybindings }: QuickChatShortcutCardProp
             <SettingsRow
                 title={t('keybindings.quickChat.title')}
                 description={t('keybindings.quickChat.description')}
+                failure={failure}
                 control={
                     <Select value={preset?.id ?? ''} onValueChange={(id) => void savePreset(id)} disabled={loading || saving}>
                         <SelectTrigger className="w-[240px] text-xs" aria-label={t('keybindings.quickChat.title')}>
@@ -256,7 +262,6 @@ export function KeybindingsSettings({
         for (const action of customized) {
             editor.resetBinding(action.id);
         }
-        toast.success(t('keybindings.toasts.shortcutResetAll'));
     };
 
     return (
@@ -280,6 +285,7 @@ export function KeybindingsSettings({
                         onReset={editor.resetBinding}
                     />
                 ))}
+                <SettingsFailureLine failure={editor.failure} className="py-1" />
                 <SettingsRow
                     title={t('keybindings.vim.title')}
                     description={t('keybindings.vim.description')}
@@ -499,7 +505,6 @@ function ShortcutRow({
                         type="button"
                         onClick={() => {
                             onReset(action.id);
-                            toast.success(t('keybindings.toasts.shortcutResetSingle'));
                         }}
                         className="p-1 rounded-md text-muted hover:text-ink hover:bg-ink/[0.03] transition-colors"
                         title={t('keybindings.resetTooltip')}

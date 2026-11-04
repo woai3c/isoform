@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import { Switch } from "@/components/ui/switch";
 import { LoadUIState, SaveUIState } from "../../../../wailsjs/go/main/App";
 import {
@@ -33,6 +33,7 @@ const EVERYDAY_ROWS = ACTIVITY_LEARNING_FEATURE_ROWS.filter((row) => row.key !==
  */
 function useLearningSwitch(stateKey: string) {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [enabled, setEnabled] = useState<boolean | null>(null);
     const [readFailed, setReadFailed] = useState(false);
     const read = useCallback(() => {
@@ -48,10 +49,10 @@ function useLearningSwitch(stateKey: string) {
         setEnabled(next);
         SaveUIState(stateKey, next ? "true" : "false").catch(() => {
             read();
-            toast.error(t("activityTriage.saveFailed"));
+            failChange(t("activityTriage.saveFailed"), () => void update(next));
         });
     }, [stateKey, t, read]);
-    return { enabled, update, readFailed, read };
+    return { enabled, update, readFailed, read, changeFailure };
 }
 
 function LearningControl({ setting, title, disabled = false }: {
@@ -76,6 +77,7 @@ function LearningSwitchRow({
         <SettingsRow
             title={title}
             description={description}
+            failure={setting.changeFailure}
             control={<LearningControl setting={setting} title={title} />}
         />
     );
@@ -123,6 +125,7 @@ export function LearnByComparisonSettings() {
             description={t("activityTriage.shadowDescription")}
             control={<LearningControl setting={comparison} title={comparisonTitle} />}
         >
+            <SettingsFailureLine failure={comparison.changeFailure} />
             <SettingsRow
                 title={confidenceTitle}
                 description={
@@ -130,6 +133,7 @@ export function LearnByComparisonSettings() {
                         ? t("activityTriage.confidenceAdjustmentDescription")
                         : t("learningMemory.comparison.confidenceNeedsComparison")
                 }
+                failure={confidence.changeFailure}
                 control={<LearningControl setting={confidence} title={confidenceTitle} disabled={comparison.enabled !== true} />}
             />
         </SettingsControlCard>

@@ -1430,13 +1430,21 @@ describe('About you communication', () => {
         expect(mocks.confirm).toHaveBeenCalledWith('communication');
     });
 
+    it('omits the reason heading for a communication belief without specific evidence', async () => {
+        mocks.getEvidence.mockResolvedValue([]);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="communication" />);
+        const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
+        await waitFor(() => expect(mocks.getEvidence).toHaveBeenCalled());
+        await waitFor(() => expect(within(detail).queryByRole('heading', { name: 'Why Isoform believes this' })).not.toBeInTheDocument());
+    });
+
     it('shows sent evidence and draft examples, hides the Activity jump and keeps Change on the inspected belief when another ID comes first', async () => {
         mocks.getExamples.mockResolvedValue([example]);
         render(<MemoryPage devToolsUnlocked initialSelectedId="communication" onOpenActivitySession={vi.fn()} />);
         const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         expect(within(detail).getByText('How you communicate')).toBeInTheDocument();
-        expect(within(detail).getByText(/14 messages you sent/)).toHaveTextContent('WeChat and Mail');
-        expect(within(detail).getByText(/never guesses your tone/)).toBeInTheDocument();
+        expect(await within(detail).findByText('From your WeChat: Sent a reply.')).toBeInTheDocument();
+        expect(within(detail).queryByText(/never guesses your tone/)).not.toBeInTheDocument();
         expect(within(detail).queryByRole('button', { name: 'See these moments in Activity' })).not.toBeInTheDocument();
         expect(within(detail).queryByRole('button', { name: 'Open where this was learned in Activity' })).not.toBeInTheDocument();
         expect(await within(detail).findByText('How a draft shows it')).toBeInTheDocument();

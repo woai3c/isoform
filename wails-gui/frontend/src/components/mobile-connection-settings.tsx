@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Check, Copy, Loader2, RefreshCw } from "lucide-react";
 import { activeInterval } from "@/lib/app-activity";
 import { QRCodeSVG } from "qrcode.react";
+import { SettingsFailureLine } from "@/components/settings/settings-failure";
 import { useTranslation } from "react-i18next";
 import { NativeClipboardSetText } from "../../wailsjs/go/main/App";
 import { BrowserOpenURL, ClipboardSetText, EventsOn } from "../../wailsjs/runtime/runtime";
 import { IPHONE_APP_LINK } from "@/lib/iphone-app-link";
 import { GetMobileBriefHealth } from "@/lib/page-queries";
-import { notifyToast } from "@/lib/notify";
 // The shim declares the iPhone bindings with the PROTOCOL.md section 12 types,
 // so the calls and the state below agree on one shape.
 import {
@@ -50,6 +50,24 @@ const IDLE_TICK_MS = 30_000;
 // Go zero time ("0001-01-01T00:00:00Z") marks "never"; anything before 2000 is treated as unset.
 const EARLIEST_TIMESTAMP = Date.UTC(2000, 0, 1);
 const CLOCK_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// settings-review ST69: brief times read "7:00 AM", never the time field's "07:00 AM".
+export function clockOptions(current: string): string[] {
+    const clocks: string[] = [];
+    for (let minutes = 0; minutes < 24 * 60; minutes += 15) {
+        clocks.push(`${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`);
+    }
+    if (CLOCK_PATTERN.test(current) && !clocks.includes(current)) {
+        clocks.push(current);
+        clocks.sort();
+    }
+    return clocks;
+}
+
+export function clockLabel(clock: string, locale: string): string {
+    const [hours, minutes] = clock.split(":").map(Number);
+    return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", hour12: true });
+}
 const REMOTE_ACCESS_STATE_DETAIL_TRANSLATION_PREFIX = "mobileConnection.remoteAccessStateDetail";
 const REMOTE_ACCESS_OFF_TRANSLATION_PREFIX = "mobileConnection.remoteAccessOff";
 const TIME_INPUT_CLASS =
@@ -260,7 +278,7 @@ function LoadState({
     }
     return (
         <div className="flex flex-wrap items-center gap-3 py-2">
-            <p role="alert" className="text-xs text-error">
+            <p role="alert" className="text-xs text-copper">
                 {failedText}
             </p>
             <Button type="button" variant="outline" size="sm" onClick={onRetry}>
@@ -299,6 +317,7 @@ export function MobileConnectionSettings({
     const [errors, setErrors] = useState<Partial<Record<ErrorScope, string>>>({});
     const [action, setAction] = useState<StatusAction | null>(null);
     const [briefBusy, setBriefBusy] = useState(false);
+    const [briefNotice, setBriefNotice] = useState<string | null>(null);
     const [feedCopied, setFeedCopied] = useState(false);
     // null means "show the saved value"; a string or draft is the user's edit.
     const [relayDraft, setRelayDraft] = useState<string | null>(null);
@@ -742,26 +761,16 @@ export function MobileConnectionSettings({
     const announceBrief = (result: MobileBriefRequestResult) => {
         switch (result.status) {
             case "started":
-                notifyToast(
-                    t("mobileConnection.briefStartedTitle"),
-                    t("mobileConnection.briefStartedBody"),
-                    "success",
-                );
+                setBriefNotice(t("mobileConnection.briefWriting"));
                 return;
             case "running":
-                notifyToast(
-                    t("mobileConnection.briefRunningTitle"),
-                    t("mobileConnection.briefRunningBody"),
-                    "info",
-                );
+                setBriefNotice(t("mobileConnection.briefRunningTitle"));
                 return;
             case "cooldown":
-                notifyToast(
-                    t("mobileConnection.briefCooldownTitle"),
+                setBriefNotice(
                     t("mobileConnection.briefCooldownBody", {
                         time: formatClock(result.nextAllowedAt, locale) ?? t("mobileConnection.unknownTime"),
                     }),
-                    "info",
                 );
                 return;
         }
@@ -771,6 +780,7 @@ export function MobileConnectionSettings({
         if (briefRef.current) return;
         briefRef.current = true;
         setBriefBusy(true);
+        setBriefNotice(null);
         setError("brief");
         try {
             const result = await GenerateMobileBriefNow();
@@ -834,6 +844,32 @@ export function MobileConnectionSettings({
     const describePrediction = (current: MobileBriefSchedule | null): string | null => {
         if (!current?.enabled) return null;
         const reason = describeTimingReason(current.timingReason);
+        const at = current.nextPredictedAt ? new Date(current.nextPredictedAt) : null;
+        if (at && !Number.isNaN(at.getTime())) {
+            // settings-review ST67: the slot follows the time, and "your
+            // chosen time" only when it is that time.
+            const evening = at.getHours() >= 12;
+            const now = new Date();
+            const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+            const days = Math.round((day(at) - day(now)) / 86_400_000);
+            const weekday = at.toLocaleDateString(locale, { weekday: "long" });
+            const when = days <= 0
+                ? (evening ? t("mobileConnection.briefWhenThisEvening") : t("mobileConnection.briefWhenThisMorning"))
+                : days === 1
+                    ? (evening ? t("mobileConnection.briefWhenTomorrowEvening") : t("mobileConnection.briefWhenTomorrowMorning"))
+                    : evening
+                        ? t("mobileConnection.briefWhenLaterEvening", { day: weekday })
+                        : t("mobileConnection.briefWhenLaterMorning", { day: weekday });
+            const hhmm = `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+            const chosen = evening ? current.evening : current.morning;
+            const timing = current.timingReason === "fixed_slot"
+                ? (chosen === hhmm ? reason : t("mobileConnection.briefTimingFinish"))
+                : current.timingReason === "work_settled"
+                    ? t("mobileConnection.briefTimingFinish")
+                    : reason;
+            const time = at.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+            return t("mobileConnection.briefPredictedWhen", { when, time, reason: timing });
+        }
         const time = formatDateTime(current.nextPredictedAt ?? "", locale);
         const slot = slotLabel(current.nextPredictedSlot ?? "");
         if (time !== null && slot !== null) {
@@ -972,7 +1008,7 @@ export function MobileConnectionSettings({
                             <p role="status" className="pb-2 text-xs text-warning">{connectionWarning}</p>
                         )}
                         {errors.relay && (
-                            <p role="alert" className="pb-2 text-xs text-error">
+                            <p role="alert" className="pb-2 text-xs text-copper">
                                 {errors.relay}
                             </p>
                         )}
@@ -1029,9 +1065,15 @@ export function MobileConnectionSettings({
                         {status.remoteAccess &&
                             (status.remoteAccess.state === "failed" ||
                                 status.remoteAccess.state === "restarting") && (
-                            <p role="status" className="text-xs text-warning">
-                                {t("mobileConnection.remoteAccessUnavailable")}
-                            </p>
+                            <>
+                                <SettingsFailureLine
+                                    failure={{
+                                        text: t("mobileConnection.remoteAccessUnavailable"),
+                                        retry: () => void refreshStatus(),
+                                    }}
+                                />
+                                <p className="text-xs text-muted">{t("mobileConnection.remoteAccessUnavailableDetail")}</p>
+                            </>
                             )}
                     </SettingRow>
                 </SettingsCard>
@@ -1069,7 +1111,7 @@ export function MobileConnectionSettings({
                                 }
                             >
                                 {errors.keepAwake && (
-                                    <p role="alert" className="text-xs text-error">
+                                    <p role="alert" className="text-xs text-copper">
                                         {errors.keepAwake}
                                     </p>
                                 )}
@@ -1156,7 +1198,7 @@ export function MobileConnectionSettings({
                                     {t("mobileConnection.linkHint")}
                                 </p>
                                 {errors.copy && (
-                                    <p role="alert" className="text-xs text-error">
+                                    <p role="alert" className="text-xs text-copper">
                                         {errors.copy}
                                     </p>
                                 )}
@@ -1198,7 +1240,7 @@ export function MobileConnectionSettings({
                                       : t("mobileConnection.showCode")}
                             </Button>
                             {errors.code && (
-                                <p role="alert" className="text-xs text-error">
+                                <p role="alert" className="text-xs text-copper">
                                     {errors.code}
                                 </p>
                             )}
@@ -1248,29 +1290,39 @@ export function MobileConnectionSettings({
                         <SettingRow
                             title={t("mobileConnection.briefMorning")}
                             control={
-                                <input
-                                    type="time"
+                                <select
                                     aria-label={t("mobileConnection.briefMorning")}
                                     value={shownSchedule.morning}
                                     disabled={!shownSchedule.enabled}
                                     aria-invalid={!morningValid}
                                     onChange={(event) => patchSchedule({ morning: event.target.value })}
                                     className={TIME_INPUT_CLASS}
-                                />
+                                >
+                                    {clockOptions(shownSchedule.morning).map((clock) => (
+                                        <option key={clock} value={clock}>
+                                            {clockLabel(clock, locale)}
+                                        </option>
+                                    ))}
+                                </select>
                             }
                         />
                         <SettingRow
                             title={t("mobileConnection.briefEvening")}
                             control={
-                                <input
-                                    type="time"
+                                <select
                                     aria-label={t("mobileConnection.briefEvening")}
                                     value={shownSchedule.evening}
                                     disabled={!shownSchedule.enabled}
                                     aria-invalid={!eveningValid}
                                     onChange={(event) => patchSchedule({ evening: event.target.value })}
                                     className={TIME_INPUT_CLASS}
-                                />
+                                >
+                                    {clockOptions(shownSchedule.evening).map((clock) => (
+                                        <option key={clock} value={clock}>
+                                            {clockLabel(clock, locale)}
+                                        </option>
+                                    ))}
+                                </select>
                             }
                         />
                         <p className="settings-row-desc pt-3">
@@ -1282,12 +1334,12 @@ export function MobileConnectionSettings({
                             <p className="pt-2 text-xs text-muted">{prediction}</p>
                         )}
                         {shownSchedule.enabled && (!morningValid || !eveningValid) && (
-                            <p role="alert" className="pt-2 text-xs text-error">
+                            <p role="alert" className="pt-2 text-xs text-copper">
                                 {t("mobileConnection.briefTimeInvalid")}
                             </p>
                         )}
                         {errors.schedule && (
-                            <p role="alert" className="pt-2 text-xs text-error">
+                            <p role="alert" className="pt-2 text-xs text-copper">
                                 {errors.schedule}
                             </p>
                         )}
@@ -1356,10 +1408,16 @@ export function MobileConnectionSettings({
                             </div>
                         )}
                         </SettingRow>
-                        {errors.brief && (
-                            <p role="alert" className="pt-2 text-xs text-error">
-                                {errors.brief}
+                        {briefNotice && (
+                            <p role="status" className="pt-2 text-xs text-ink">
+                                {briefNotice}
                             </p>
+                        )}
+                        {errors.brief && (
+                            <SettingsFailureLine
+                                className="pt-2"
+                                failure={{ text: errors.brief, retry: () => void generateBrief() }}
+                            />
                         )}
                     </div>
                 )}
@@ -1468,7 +1526,7 @@ export function MobileConnectionSettings({
                                     {t("mobileConnection.keepAwakeLastStep")}
                                 </p>
                                 {errors.approval && (
-                                    <p role="alert" className="mt-3 text-xs text-error">
+                                    <p role="alert" className="mt-3 text-xs text-copper">
                                         {errors.approval}
                                     </p>
                                 )}
@@ -1506,7 +1564,7 @@ export function MobileConnectionSettings({
                             {t("mobileConnection.disconnectDescription", { name: revokeName })}
                         </DialogDescription>
                         {errors.revoke && (
-                            <p role="alert" className="mt-3 text-xs text-error">
+                            <p role="alert" className="mt-3 text-xs text-copper">
                                 {errors.revoke}
                             </p>
                         )}
@@ -1538,7 +1596,7 @@ export function MobileConnectionSettings({
                             {t("mobileConnection.remoteResetDescription")}
                         </DialogDescription>
                         {errors.remoteReset && (
-                            <p role="alert" className="mt-3 text-xs text-error">
+                            <p role="alert" className="mt-3 text-xs text-copper">
                                 {errors.remoteReset}
                             </p>
                         )}
@@ -1572,7 +1630,7 @@ export function MobileConnectionSettings({
                             })}
                         </DialogDescription>
                         {errors.remoteSwitch && (
-                            <p role="alert" className="mt-3 text-xs text-error">
+                            <p role="alert" className="mt-3 text-xs text-copper">
                                 {errors.remoteSwitch}
                             </p>
                         )}

@@ -86,7 +86,8 @@ it('keeps the privacy line at the foot of its brief while retaining chips when o
 });
 
 it('joins date and statuses on one meta line, with Make it now only in the card', () => {
-    render(<TodayStatus date="Friday, October 23" now={new Date('2026-10-23T13:00:00-07:00')} brief={{ enabled: true, lastRunAt: '', lastSlot: '', nextRunAt: '', nextSlot: '', pendingSlot: 'morning', pendingAt: '2026-10-23T07:00:00-07:00', latestBriefId: '', currentBriefId: '', missedRuns: 2, failingSlot: '', failedAttempts: 0 }} />);
+    vi.setSystemTime(new Date(2026, 9, 23, 13));
+    render(<TodayStatus date="Friday, October 23" brief={{ enabled: true, lastRunAt: '', lastSlot: '', nextRunAt: '', nextSlot: '', pendingSlot: 'morning', pendingAt: '2026-10-23T07:00:00-07:00', latestBriefId: '', currentBriefId: '', missedRuns: 2, failingSlot: '', failedAttempts: 0 }} />);
     expect(screen.getByTestId('today-status')).toHaveClass('flex-wrap');
     expect(screen.getByTestId('today-status')).toHaveTextContent("Your morning brief didn't come at 7:00 AM.");
     expect(screen.queryByRole('button', { name: 'Make it now' })).not.toBeInTheDocument();
@@ -131,7 +132,8 @@ it('keeps an accessible topic action when evidence links a differently named top
     expect(handlers.onOpenTopic).toHaveBeenCalledWith('halcyon');
 });
 it('keeps the missed-brief link in the shared accent color', () => {
-    render(<TodayStatus onMissedWhy={vi.fn()} now={new Date('2026-10-23T13:00:00-07:00')} brief={{ enabled: true, lastRunAt: '', lastSlot: '', nextRunAt: '', nextSlot: '', pendingSlot: 'morning', pendingAt: '2026-10-23T07:00:00-07:00', latestBriefId: '', currentBriefId: '', missedRuns: 2, failingSlot: '', failedAttempts: 0 }} />);
+    vi.setSystemTime(new Date(2026, 9, 23, 13));
+    render(<TodayStatus onMissedWhy={vi.fn()} brief={{ enabled: true, lastRunAt: '', lastSlot: '', nextRunAt: '', nextSlot: '', pendingSlot: 'morning', pendingAt: '2026-10-23T07:00:00-07:00', latestBriefId: '', currentBriefId: '', missedRuns: 2, failingSlot: '', failedAttempts: 0 }} />);
     const link = screen.getByRole('button', { name: 'Why' });
     expect(link).toHaveClass('text-accent');
     expect(link).not.toHaveClass('text-ink');

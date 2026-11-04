@@ -1,4 +1,4 @@
-import "@/i18n";
+import i18n from "@/i18n";
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,6 +34,8 @@ const mocks = vi.hoisted(() => ({
     getRiskyCommands: vi.fn(),
     setRiskyCommands: vi.fn(),
     getReadHistory: vi.fn(),
+    loadUIState: vi.fn((_key: string) => Promise.resolve("")),
+    saveUIState: vi.fn(() => Promise.resolve()),
     setReadHistory: vi.fn(),
     emit: vi.fn(),
     listeners: new Map<string, Set<(...args: unknown[]) => void>>(),
@@ -68,6 +70,8 @@ vi.mock("@/lib/wails-shim-app", () => ({
     SetAskBeforeRiskyCommands: mocks.setRiskyCommands,
     GetReadAssistantHistory: mocks.getReadHistory,
     SetReadAssistantHistory: mocks.setReadHistory,
+    LoadUIState: mocks.loadUIState,
+    SaveUIState: mocks.saveUIState,
 }));
 
 vi.mock("../../../../wailsjs/runtime/runtime", () => ({
@@ -228,17 +232,32 @@ describe("PrivacyPage", () => {
         expect(mocks.requestPermission).not.toHaveBeenCalled();
     });
 
-    it("opens with the four lines of what stays on this computer, as setup shows them", async () => {
+    it("opens with the four lines of On this computer, as setup shows them (ST1)", async () => {
         await renderPage();
         const first = document.querySelector(".settings-card") as HTMLElement;
-        expect(within(first).getByRole("heading", { name: "What stays on this computer" })).toBeInTheDocument();
+        expect(within(first).getByRole("heading", { name: "On this computer" })).toBeInTheDocument();
         const lines = within(first).getAllByRole("listitem");
         expect(lines.map((li) => li.textContent)).toEqual([
-            "Screenshots, audio and recordings are read by models on this computer. They never leave it.",
-            "Your AI gets only the text a task needs, on your own plan.",
-            "Your iPhone gets only what it shows, sealed between your devices.",
-            "Usage counts are anonymous and never include your content.",
+            "Memory, screenshots and audio are stored on this computer, and models here read them.",
+            "Your AI gets only what a task needs, on your own plan: the text, or for WeChat, a cropped screenshot.",
+            "Your phone gets only what it shows, encrypted end to end.",
+            "Usage counts, if you share them, carry a random number, never your name or your content.",
         ]);
+    });
+
+    it("says usage counts carry a random number and the phone line, in Chinese (ST60)", async () => {
+        await i18n.changeLanguage("zh-CN");
+        try {
+            render(<PrivacyPage />);
+            await waitFor(() => expect(document.querySelector(".settings-card li")).not.toBeNull());
+            const first = document.querySelector(".settings-card") as HTMLElement;
+            const lines = within(first).getAllByRole("listitem").map((li) => li.textContent);
+            expect(lines).toContain("你的手机只拿到它要显示的内容，端到端加密。");
+            expect(lines).toContain("使用统计（如果你选择分享）只带一个随机编号，不含你的名字和内容。");
+            expect(first).not.toHaveTextContent("匿名");
+        } finally {
+            await i18n.changeLanguage("en");
+        }
     });
 
     it("keeps both per-app lists together in Apps Isoform ignores", async () => {
@@ -333,6 +352,25 @@ describe("PrivacyPage", () => {
         expect(screen.queryByText("Keep recordings for 90 days?")).not.toBeInTheDocument();
     });
 
+    it("puts the time limit back and shows a copper line with Try again when saving fails (ST9)", async () => {
+        mocks.setRetention.mockRejectedValueOnce(new Error("disk busy"));
+        await renderPage();
+        const select = await screen.findByRole("combobox", { name: "Keep recordings for" });
+        const before = (select as HTMLSelectElement).value;
+
+        fireEvent.change(select, { target: { value: "90" } });
+
+        const line = await screen.findByText("Couldn't change this.", { exact: false });
+        expect(line.closest("[data-settings-failure]")).toHaveClass("text-copper");
+        expect(line.textContent).not.toContain("disk busy");
+        await waitFor(() => expect((select as HTMLSelectElement).value).toBe(before));
+        expect(mocks.toast.error).not.toHaveBeenCalled();
+
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.setRetention).toHaveBeenCalledTimes(2));
+        await waitFor(() => expect(screen.queryByText("Couldn't change this.", { exact: false })).not.toBeInTheDocument());
+    });
+
     it("asks before a shorter time limit while usage is unknown", async () => {
         mocks.storageStats.mockRejectedValue(new Error("busy"));
         await renderPage();
@@ -416,7 +454,10 @@ describe("PrivacyPage", () => {
         fireEvent.click(share);
 
         await waitFor(() => expect(mocks.setTelemetry).toHaveBeenCalledWith(tier === "off" ? "detailed" : "off"));
-        await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith(en.privacy.diagnostics.saveFailed));
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent(en.privacy.diagnostics.saveFailed);
+        expect(alert.className).toContain("text-copper");
+        expect(mocks.toast.error).not.toHaveBeenCalled();
         expect(share).toHaveAttribute("aria-checked", String(tier !== "off"));
         expect(share).not.toBeDisabled();
     });
@@ -448,7 +489,7 @@ describe("PrivacyPage", () => {
         const getter = kind === "risky" ? mocks.getRiskyCommands : mocks.getReadHistory;
         getter.mockRejectedValueOnce(new Error("offline"));
         await renderPage();
-        expect(await screen.findByText("Could not read this setting.")).toBeInTheDocument();
+        expect(await screen.findByText("Couldn't read this setting.")).toBeInTheDocument();
         expect(screen.queryByRole("switch", { name: title })).toBeNull();
         getter.mockResolvedValue(true);
         fireEvent.click(screen.getByRole("button", { name: "Try again" }));
@@ -460,10 +501,25 @@ describe("PrivacyPage", () => {
         const read = screen.getByRole("switch", { name: "Read my Claude Code and Codex history" });
         mocks.setReadHistory.mockRejectedValueOnce(new Error("forget failed"));
         fireEvent.click(read);
-        // Unmounting flushes the pending request.
+        mocks.getReadHistory.mockResolvedValue(false);
+        // Unmounting runs the pending change at once; the failure is kept for next time.
         const { cleanup } = await import("@testing-library/react");
         cleanup();
-        await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith(en.privacy.assistantHistory.forgetFailed, { duration: Infinity }));
+        await waitFor(() => expect(mocks.saveUIState).toHaveBeenCalledWith("settings.assistantHistory.failure", "forget"));
+        expect(mocks.toast.error).not.toHaveBeenCalled();
+        expect(mocks.toast).not.toHaveBeenCalled();
+
+        // S032: the next time Privacy opens, the card says what failed, and Try again repeats the forget.
+        mocks.loadUIState.mockImplementation((key: string) =>
+            Promise.resolve(key === "settings.assistantHistory.failure" ? "forget" : ""));
+        mocks.setReadHistory.mockResolvedValue(undefined);
+        await renderPage();
+        const alert = await screen.findByText(en.privacy.assistantHistory.forgetFailed);
+        expect(alert.className).toContain("text-copper");
+        fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.setReadHistory).toHaveBeenLastCalledWith(false));
+        await waitFor(() => expect(mocks.saveUIState).toHaveBeenLastCalledWith("settings.assistantHistory.failure", ""));
+        expect(screen.queryByText(en.privacy.assistantHistory.forgetFailed)).toBeNull();
     });
 
     it("keeps risky command questions off by default and turns them on from its card", async () => {
@@ -501,7 +557,8 @@ describe("PrivacyPage", () => {
         try {
             fireEvent.click(read);
             expect(read).not.toBeChecked();
-            expect(mocks.toast).toHaveBeenCalledWith("Forgetting what came from your Claude Code and Codex history", expect.anything());
+            expect(screen.getByText(/Stopping in 5 seconds\. Isoform will forget what came from this history\./)).toBeInTheDocument();
+            expect(mocks.toast).not.toHaveBeenCalled();
             expect(mocks.setReadHistory).not.toHaveBeenCalled();
             act(() => vi.advanceTimersByTime(5000));
             expect(mocks.setReadHistory).toHaveBeenCalledWith(false);
@@ -518,15 +575,36 @@ describe("PrivacyPage", () => {
         vi.useFakeTimers();
         try {
             fireEvent.click(read);
-            const [, options] = mocks.toast.mock.calls.at(-1) as [string, { action: { label: string; onClick: () => void } }];
-            expect(options.action.label).toBe("Undo");
-            act(() => options.action.onClick());
+            fireEvent.click(screen.getByRole("button", { name: "Undo" }));
             act(() => vi.advanceTimersByTime(6000));
+            expect(screen.queryByText(/Stopping in 5 seconds/)).toBeNull();
             expect(mocks.setReadHistory).not.toHaveBeenCalled();
             expect(read).toBeChecked();
         } finally {
             vi.useRealTimers();
         }
+    });
+
+    it("puts the history switch back on and says so when stopping fails (S032)", async () => {
+        await renderPage();
+        const read = screen.getByRole("switch", { name: "Read my Claude Code and Codex history" });
+        await waitFor(() => expect(read).toBeChecked());
+        mocks.setReadHistory.mockRejectedValueOnce(new Error("offline"));
+        mocks.getReadHistory.mockResolvedValue(true);
+
+        vi.useFakeTimers();
+        try {
+            fireEvent.click(read);
+            await act(async () => {
+                vi.advanceTimersByTime(5000);
+                await Promise.resolve();
+                await Promise.resolve();
+            });
+        } finally {
+            vi.useRealTimers();
+        }
+        expect(await screen.findByText(en.privacy.assistantHistory.stopFailed)).toBeInTheDocument();
+        expect(read).toBeChecked();
     });
 
     it("turns the history read on at once when it was off", async () => {
@@ -557,7 +635,8 @@ describe("PrivacyPage", () => {
                 await Promise.resolve();
             });
             expect(read).not.toBeChecked();
-            expect(mocks.toast.error).toHaveBeenCalledWith(en.privacy.assistantHistory.forgetFailed, { duration: Infinity });
+            expect(screen.getByText(en.privacy.assistantHistory.forgetFailed).className).toContain("text-copper");
+            expect(mocks.toast.error).not.toHaveBeenCalled();
         } finally {
             vi.useRealTimers();
         }

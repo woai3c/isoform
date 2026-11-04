@@ -29,7 +29,7 @@ const emptySMS: SMSChannelStatus = {
 
 async function renderPage() {
     render(<ExistingTextChannels />);
-    await waitFor(() => expect(screen.queryAllByText(i18n.t("settings:textMessages.loading"))).toHaveLength(0));
+    await waitFor(() => expect(screen.queryAllByText("Checking text messages...")).toHaveLength(0));
 }
 
 describe("Existing text channels on Overview", () => {
@@ -126,10 +126,12 @@ describe("Existing text channels on Overview", () => {
         expect(bindings.startText).toHaveBeenCalledTimes(1);
     });
 
-    it("offers a retry instead of hiding saved management after a read failure", async () => {
-        bindings.getText.mockRejectedValueOnce(new Error("unavailable")).mockResolvedValue(verifiedText);
+    it("shows nothing for a first read that fails, with no saved number to show (ST15)", async () => {
+        bindings.getText.mockRejectedValue(new Error("unavailable"));
         await renderPage();
-        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-        expect(await screen.findByRole("button", { name: "Turn off" })).toBeEnabled();
+        await waitFor(() => expect(bindings.getText).toHaveBeenCalled());
+        expect(screen.queryByText(i18n.t("settings:textMessages.title"))).not.toBeInTheDocument();
+        expect(screen.queryByText("Could not check text messages.")).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Turn off" })).not.toBeInTheDocument();
     });
 });

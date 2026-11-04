@@ -1,6 +1,6 @@
 import { Children, useCallback, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { useSettingsFailure, type SettingsFailure } from "@/components/settings/settings-failure";
 import type { TFunction } from "i18next";
 import {
     IsSystemAudioBackgroundListeningSupported,
@@ -85,13 +85,10 @@ export interface ListeningState {
     saving: boolean;
     systemAudioSupported: boolean;
     setEnabled: (next: boolean) => Promise<void>;
+    changeFailure: SettingsFailure | null;
+    reload: () => void;
 }
 
-function errorMessage(err: unknown): string {
-    if (typeof err === "string") return err;
-    if (err instanceof Error) return err.message;
-    return String(err);
-}
 
 /**
  * Whether Isoform listens in the background. Observation shows the switch;
@@ -105,6 +102,12 @@ export function useListening(): ListeningState {
     const [loadFailed, setLoadFailed] = useState(false);
     const [saving, setSaving] = useState(false);
     const [systemAudioSupported, setSystemAudioSupported] = useState(false);
+    const [readCount, setReadCount] = useState(0);
+    const { failure: changeFailure, fail: failChange, clear: clearChange } = useSettingsFailure();
+    const reload = useCallback(() => {
+        setLoadFailed(false);
+        setReadCount((n) => n + 1);
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -126,10 +129,11 @@ export function useListening(): ListeningState {
             cancelled = true;
             off();
         };
-    }, []);
+    }, [readCount]);
 
     const setEnabled = useCallback(
-        async (next: boolean) => {
+        async function change(next: boolean) {
+            clearChange();
             setEnabledState(next);
             setSaving(true);
             try {
@@ -138,17 +142,17 @@ export function useListening(): ListeningState {
                 } else {
                     await SetBackgroundListening(next);
                 }
-            } catch (err) {
+            } catch {
                 setEnabledState(!next);
-                toast.error(t("observation.listen.toggleFailed", { error: errorMessage(err) }));
+                failChange(t("observation.listen.toggleFailed"), () => void change(next));
             } finally {
                 setSaving(false);
             }
         },
-        [t],
+        [t, clearChange, failChange],
     );
 
-    return { enabled, loadFailed, saving, systemAudioSupported, setEnabled };
+    return { enabled, loadFailed, saving, systemAudioSupported, setEnabled, changeFailure, reload };
 }
 
 // ── Computer permissions ──

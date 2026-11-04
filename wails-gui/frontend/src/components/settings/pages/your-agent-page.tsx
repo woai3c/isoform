@@ -3,8 +3,8 @@ import { Share2, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { BrowserOpenURL } from "@/lib/wails-shim-runtime";
 import { SettingsCard } from "@/components/settings/settings-primitives";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import {
     CheckYourAgentName,
     VerifyYourAgentCode,
@@ -13,6 +13,7 @@ import {
     CancelYourAgentRequest,
     GetYourAgentPage,
     NativeClipboardSetText,
+    OpenExternalURL,
     GetYourAgentReservation,
     ReserveYourAgent,
     type YourAgentPageData,
@@ -34,7 +35,8 @@ import {
 const LINK_MARK = "";
 const NAME_PREFIX = "isoform.ai/agents/";
 const BO_ADDRESS = "bo@isoform.ai";
-/** While the first computation runs, the page re-reads the cache this often, this many times. */
+/** While the first computation runs, the page re-reads the cache this often, this many
+ *  times (30 seconds), then says it couldn't work out the specialties (S019). */
 const POLL_MS = 500;
 const POLL_LIMIT = 60;
 
@@ -92,6 +94,12 @@ export function YourAgentPage() {
     const [codeError, setCodeError] = useState<"wrong_code" | "expired" | null>(null);
     const [sentAgain, setSentAgain] = useState(false);
     const [ranOut, setRanOut] = useState(false);
+    /** The first computation gave up after POLL_LIMIT reads, or the page read failed. */
+    const [stalled, setStalled] = useState(false);
+    /** Bumped to start the computation's reads again (Try again, window focus). */
+    const [computeRun, setComputeRun] = useState(0);
+    const share = useSettingsFailure();
+    const mail = useSettingsFailure();
     const codeInput = useRef<HTMLInputElement>(null);
 
     // First paint: the cached page. Then the reservation read updates in place.
@@ -102,6 +110,8 @@ export function YourAgentPage() {
                 if (cancelled) return;
                 setPage(data);
                 setReservation(data.reservation ?? null);
+                // The empty form starts with the first form of the name this computer worked out (S018).
+                if (!data.reservation && data.nameCandidates?.[0]) setName((current) => current || data.nameCandidates[0]);
                 GetYourAgentReservation()
                     .then((read) => {
                         if (cancelled) return;
@@ -121,8 +131,9 @@ export function YourAgentPage() {
             })
             .catch(() => {
                 if (cancelled) return;
-                setPage({ specialties: [], taste: [], stillLearning: false, nameCandidates: [], reservation: null, online: false, computed: false });
+                setPage({ specialties: [], taste: [], stillLearning: false, nameCandidates: [], online: false, computed: false } as unknown as YourAgentPageData);
                 setOnline(false);
+                setStalled(true);
             });
         return () => {
             cancelled = true;
@@ -132,13 +143,14 @@ export function YourAgentPage() {
     // The first computation runs in the background. Until it lands, re-read the cache.
     const pendingCompute = page !== null && !page.computed;
     useEffect(() => {
-        if (!pendingCompute) return;
+        if (!pendingCompute || stalled) return;
         let cancelled = false;
         let attempts = 0;
         const timer = window.setInterval(() => {
             attempts += 1;
             if (attempts > POLL_LIMIT) {
                 window.clearInterval(timer);
+                setStalled(true);
                 return;
             }
             GetYourAgentPage()
@@ -153,6 +165,26 @@ export function YourAgentPage() {
             cancelled = true;
             window.clearInterval(timer);
         };
+    }, [pendingCompute, stalled, computeRun]);
+
+    /** Reads the page again, which starts the computation again, and waits up to 30 seconds more. */
+    const computeAgain = () => {
+        setStalled(false);
+        GetYourAgentPage()
+            .then((next) => {
+                setPage((current) => (next.computed || !current ? next : current));
+                setComputeRun((run) => run + 1);
+            })
+            .catch(() => setStalled(true));
+    };
+    // Coming back to the window reads again while the specialties aren't worked out.
+    const computeAgainRef = useRef(computeAgain);
+    computeAgainRef.current = computeAgain;
+    useEffect(() => {
+        if (!pendingCompute) return;
+        const onFocus = () => computeAgainRef.current();
+        window.addEventListener("focus", onFocus);
+        return () => window.removeEventListener("focus", onFocus);
     }, [pendingCompute]);
 
     // Send comes back when the too-many-tries time passes.
@@ -340,16 +372,27 @@ export function YourAgentPage() {
         .replace(/[\p{P}\s]+$/gu, "").slice(0, isChinese ? 30 : 60);
     const post = (network: "x" | "threads" | "linkedin") => t(`yourAgent.sharePost.${network}${work ? "With" : "Without"}` as const, { work });
     const onCopyLink = async () => {
-        try { await NativeClipboardSetText(shareUrl); setCopiedLink(true); window.setTimeout(() => setCopiedLink(false), 1600); } catch { setCopiedLink(false); }
+        share.clear();
+        try { await NativeClipboardSetText(shareUrl); setCopiedLink(true); window.setTimeout(() => setCopiedLink(false), 1600); }
+        catch { setCopiedLink(false); share.fail(t("yourAgent.copyLinkFailed"), () => void onCopyLink()); }
+    };
+    const openBrowser = async (url: string, retry: () => void) => {
+        try { await OpenExternalURL(url); return true; }
+        catch { share.fail(t("yourAgent.browserFailed"), retry); return false; }
     };
     const onShare = async (network: "x" | "threads" | "linkedin") => {
+        share.clear();
         const url = encodeURIComponent(shareUrl);
+        const retry = () => void onShare(network);
         if (network === "linkedin") {
-            try { await NativeClipboardSetText(post(network)); BrowserOpenURL(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`); setLinkedInCopied(true); window.setTimeout(() => setLinkedInCopied(false), 8000); } catch { setLinkedInCopied(false); }
+            setLinkedInCopied(false);
+            try { await NativeClipboardSetText(post(network)); }
+            catch { share.fail(t("yourAgent.linkedinCopyFailed"), retry); return; }
+            if (await openBrowser(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, retry)) setLinkedInCopied(true);
             return;
         }
         const base = network === "x" ? "https://x.com/intent/tweet" : "https://www.threads.com/intent/post";
-        BrowserOpenURL(`${base}?text=${encodeURIComponent(post(network))}&url=${url}`);
+        await openBrowser(`${base}?text=${encodeURIComponent(post(network))}&url=${url}`, retry);
     };
 
     const subject = reservation
@@ -361,17 +404,32 @@ export function YourAgentPage() {
     const writeLine = (
         <p className={LINE_CLASS}>
             {writeBefore}
-            <a className={LINK_BUTTON_CLASS} href={mailto}>
+            <a
+                className={LINK_BUTTON_CLASS}
+                href={mailto}
+                onClick={(event) => {
+                    event.preventDefault();
+                    mail.clear();
+                    OpenExternalURL(mailto).catch(() => mail.fail(t("yourAgent.mailFailed")));
+                }}
+            >
                 {BO_ADDRESS}
             </a>
             {writeAfter}
         </p>
+    );
+    const writeLines = (
+        <>
+            {writeLine}
+            <SettingsFailureLine failure={mail.failure} />
+        </>
     );
 
     /** The line under the field: the rules line, Taken with its suggestion, or Not allowed. */
     const nameMessage = ((): ReactNode => {
         switch (nameStatus) {
             case "taken": {
+                if (!suggestion) return <p className={LINE_CLASS}>{t("yourAgent.takenNoSuggestion")}</p>;
                 const [before, after] = splitAroundLink(t("yourAgent.taken", { suggestion: LINK_MARK }));
                 return (
                     <p className={LINE_CLASS}>
@@ -409,11 +467,13 @@ export function YourAgentPage() {
             <div className="flex flex-col gap-2">
                 <span className={CHIP_CLASS}>{t("yourAgent.comingSoon")}</span>
                 {/* The header carries the first sentence of the lead; the rest sits here. */}
-                <p className="text-sm leading-relaxed text-ink/55">{t("yourAgent.leadRest")}</p>
+                <p className="text-sm leading-relaxed text-ink/55">{t("yourAgent.leadRest")} {t("yourAgent.reserveLead")}</p>
             </div>
 
             <SettingsCard title={t("yourAgent.specialtiesTitle")} description={t("yourAgent.specialtiesFrom")}>
-                {!page || !page.computed ? (
+                {stalled && (!page || !page.computed) ? (
+                    <SettingsFailureLine failure={{ text: t("yourAgent.specialtiesFailed"), retry: computeAgain }} />
+                ) : !page || !page.computed ? (
                     <PlaceholderRows
                         count={3}
                         rowClass="h-9 rounded-md bg-ink/[0.04]"
@@ -433,7 +493,7 @@ export function YourAgentPage() {
                 )}
             </SettingsCard>
 
-            {(!page || !page.computed) && (
+            {(!page || !page.computed) && !stalled && (
                 <SettingsCard title={t("yourAgent.tasteTitle")}>
                     <PlaceholderRows
                         count={3}
@@ -492,15 +552,23 @@ export function YourAgentPage() {
                                 {t("yourAgent.sendButton")}
                             </Button>
                         </div>
+                        {editing && reservation && (
+                            <p className={LINE_CLASS}>
+                                <button type="button" className={LINK_BUTTON_CLASS} onClick={() => { setEditing(false); setNameStatus("idle"); setSendFailed(false); }}>
+                                    {t("yourAgent.keepCurrent", { name: reservation.name })}
+                                </button>
+                            </p>
+                        )}
                         {ranOut && <p className={LINE_CLASS}>{t("yourAgent.ranOut")}</p>}
                         {nameMessage}
                         {email.trim() !== "" && (!emailValid || emailRejected) && (
                             <p className={LINE_CLASS}>{t("yourAgent.invalidEmail")}</p>
                         )}
                         {!online && <p className={LINE_CLASS}>{t("yourAgent.offline")}</p>}
+                        <p className={LINE_CLASS}>{t("yourAgent.freeNote")}</p>
                         <p className={LINE_CLASS}>{t("yourAgent.reserveNote")}</p>
                         {sendLine}
-                        {writeLine}
+                        {writeLines}
                     </div>
                 ) : reservation && codeStep ? (
                     <div className="flex flex-col gap-2">
@@ -516,25 +584,25 @@ export function YourAgentPage() {
                                 if (value.length === 6) void onVerify(value);
                             }} />
                         </div>
-                        {codeError && <p className="text-xs text-error">{t(codeError === "wrong_code" ? "yourAgent.wrongCode" : "yourAgent.expiredCode")}</p>}
+                        {codeError && <p className="text-xs text-copper">{t(codeError === "wrong_code" ? "yourAgent.wrongCode" : "yourAgent.expiredCode")}</p>}
                         {sendLine}
                         {!online && <p className={LINE_CLASS}>{t("yourAgent.offline")}</p>}
                         <p className={LINE_CLASS}>{t("yourAgent.noCode")} <button type="button" disabled={busy || rateWaiting} className={LINK_BUTTON_CLASS} onClick={() => void onResend()}>{t(sentAgain ? "yourAgent.sent" : "yourAgent.sendAgain")}</button> · <button type="button" disabled={busy} className={LINK_BUTTON_CLASS} onClick={() => void onCancel()}>{t("yourAgent.changeDetails")}</button></p>
-                        {writeLine}
+                        {writeLines}
                     </div>
                 ) : reservation && reservation.status === "choice" ? (
                     <div className="flex flex-col gap-2">
                         <p className="text-sm font-semibold text-ink">{t("yourAgent.choiceTitle", { email: reservation.email, old: reservation.oldName })}</p>
                         <p className="text-sm text-muted">{t("yourAgent.choiceLine", { old: reservation.oldName, new: reservation.name })}</p>
                         <div className="flex gap-2"><Button variant="secondary" size="sm" disabled={busy} onClick={() => void onChoose(true)}>{t("yourAgent.keep", { old: reservation.oldName })}</Button><Button size="sm" disabled={busy} onClick={() => void onChoose(false)}>{t("yourAgent.switch", { new: reservation.name })}</Button></div>
-                        {sendLine}{writeLine}
+                        {sendLine}{writeLines}
                     </div>
                 ) : reservation && reservation.status === "unconfirmed" ? (
                     <div className="flex flex-col gap-2">
                         <p className="text-sm font-semibold text-ink">{t("yourAgent.confirmTitle")}</p>
                         <p className="text-sm text-muted">{t("yourAgent.confirmLine", { name: reservation.name, email: reservation.email })}</p>
                         <div className="flex items-center gap-2"><Button size="sm" disabled={busy || rateWaiting} onClick={() => void onResend()}>{t("yourAgent.sendCode")}</Button><button type="button" className={`text-xs ${LINK_BUTTON_CLASS}`} onClick={onChange}>{t("yourAgent.changeButton")}</button></div>
-                        {sendLine}{writeLine}
+                        {sendLine}{writeLines}
                     </div>
                 ) : reservation && (
                     <div className="flex flex-col gap-2" data-testid="your-agent-sent">
@@ -548,12 +616,13 @@ export function YourAgentPage() {
                                 <Button size="sm" onClick={() => void onCopyLink()}>{t(copiedLink ? "yourAgent.copiedLink" : "yourAgent.copyLink")}</Button>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild><Button variant="secondary" size="sm"><Share2 aria-hidden className="h-4 w-4" />{t("yourAgent.shareMenu")}</Button></DropdownMenuTrigger>
-                                    <DropdownMenuContent align="start">{(["x", "linkedin", "threads"] as const).map((network) => <DropdownMenuItem key={network} onSelect={() => void onShare(network)}><ExternalLink aria-hidden />{t(`yourAgent.shareAction.${network}`)}</DropdownMenuItem>)}</DropdownMenuContent>
+                                    <DropdownMenuContent align="start">{(["x", "threads", "linkedin"] as const).map((network) => <DropdownMenuItem key={network} onSelect={() => void onShare(network)}><ExternalLink aria-hidden />{t(`yourAgent.shareAction.${network}`)}</DropdownMenuItem>)}</DropdownMenuContent>
                                 </DropdownMenu>
-                                {linkedInCopied && <p className="text-xs text-success" role="status">{t("yourAgent.linkedinCopied")}</p>}
+                                {linkedInCopied && <p className="text-xs text-ink" role="status">{t("yourAgent.linkedinCopied")}</p>}
                             </div>
+                            <SettingsFailureLine failure={share.failure} />
                         </div>
-                        {!online && <p className={LINE_CLASS}>{t("yourAgent.offline")}</p>}{writeLine}
+                        {!online && <p className={LINE_CLASS}>{t("yourAgent.offline")}</p>}{writeLines}
                     </div>
                 )}
             </SettingsCard>
@@ -561,7 +630,6 @@ export function YourAgentPage() {
             <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm text-ink/60">
                 <li>{t("yourAgent.howClients")}</li>
                 <li>{t("yourAgent.howRate")}</li>
-                <li>{t("yourAgent.howPrivate")}</li>
             </ul>
         </div>
     );

@@ -491,6 +491,72 @@ func TestMobileBriefStopCancelsGenerationAndRejectsRequests(t *testing.T) {
 	svc.Stop()
 }
 
+func TestMobileBriefStopWaitsForTodayRefresh(t *testing.T) {
+	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(6, 0)}
+	svc, _ := newTestMobileBriefService(t, clock)
+	svc.todayMu.Lock()
+	svc.refreshTodaySoon()
+	stopped := make(chan struct{})
+	go func() {
+		svc.Stop()
+		close(stopped)
+	}()
+	deadline := time.After(2 * time.Second)
+	for {
+		svc.mu.Lock()
+		stopping := svc.stopped
+		svc.mu.Unlock()
+		if stopping {
+			break
+		}
+		select {
+		case <-deadline:
+			svc.todayMu.Unlock()
+			t.Fatal("Stop did not begin")
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+	secondStop := make(chan struct{})
+	go func() { svc.Stop(); close(secondStop) }()
+	select {
+	case <-stopped:
+		svc.todayMu.Unlock()
+		t.Fatal("Stop returned while the refresh was blocked")
+	case <-secondStop:
+		svc.todayMu.Unlock()
+		t.Fatal("concurrent Stop returned while the refresh was blocked")
+	case <-time.After(50 * time.Millisecond):
+	}
+	svc.todayMu.Unlock()
+	for _, done := range []<-chan struct{}{stopped, secondStop} {
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("Stop did not finish after the refresh")
+		}
+	}
+	svc.refreshTodaySoon()
+	svc.todayRefreshMu.Lock()
+	refreshing := svc.todayRefreshing
+	svc.todayRefreshMu.Unlock()
+	if refreshing {
+		t.Fatal("a refresh started after Stop")
+	}
+	if _, err := svc.finishedRead(MobileBriefV1{}); !errors.Is(err, errMobileBriefUnavailable) {
+		t.Fatalf("finished read after Stop: %v", err)
+	}
+	if _, ok := svc.BriefPackage("2026-10-09-morning"); ok {
+		t.Fatal("a package was accepted after Stop")
+	}
+	if _, changed := svc.PatchLatestMobileBrief(func(b MobileBriefV1) (MobileBriefV1, bool) {
+		t.Error("patch ran after Stop")
+		return b, true
+	}, nil); changed {
+		t.Fatal("a patch was accepted after Stop")
+	}
+}
+
 func TestMobileBriefWindowStart(t *testing.T) {
 	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(14, 0)}
 	svc, _ := newTestMobileBriefService(t, clock)

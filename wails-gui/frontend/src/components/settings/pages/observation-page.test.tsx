@@ -323,6 +323,16 @@ describe("ObservationPage", () => {
         await waitFor(() => expect(screen.getByText("Kept for 30 days now.")).toBeInTheDocument());
     });
 
+    it("says what Watch my screen keeps, typed text and Chromium history included (ST2 v1.0.1)", async () => {
+        render(<ObservationPage />);
+        await screen.findByText("Watch my screen");
+        expect(
+            screen.getByText(
+                "Isoform looks at the apps and windows you use, and keeps the text you type in them, so it can learn how you work and help at the right moment. It also reads the history of Chrome and other Chromium browsers on this computer (not Safari, never private windows), so the sites you visit most and what you searched for can appear in your brief. Password fields, private windows and the apps you ignore stay out. Turn this off if you would rather it never sees your screen.",
+            ),
+        ).toBeInTheDocument();
+    });
+
     it("shows the call transcription model and removes it", async () => {
         render(<ObservationPage />);
         expect(
@@ -456,6 +466,28 @@ describe("ObservationPage", () => {
         fireEvent.click(peek);
         await waitFor(() => expect(mocks.setCalendarPeek).toHaveBeenCalledWith(false));
         await waitFor(() => expect(peek).not.toBeChecked());
+    });
+
+    it("keeps Watch my screen on and says so in copper with a working Try again when the change fails (ST9)", async () => {
+        mocks.setPermission.mockRejectedValueOnce(new Error("denied"));
+        render(<ObservationPage />);
+        const watch = screen.getByRole("switch", { name: "Watch my screen" });
+        await waitFor(() => expect(watch).not.toBeDisabled());
+
+        fireEvent.click(watch);
+
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("Couldn't change this.");
+        expect(alert.className).toContain("text-copper");
+        expect(alert.className).not.toContain("text-error");
+        expect(mocks.toast.error).not.toHaveBeenCalled();
+        await waitFor(() => expect(watch).toBeChecked());
+
+        const calls = mocks.setPermission.mock.calls.length;
+        fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.setPermission.mock.calls.length).toBeGreaterThan(calls));
+        expect(mocks.setPermission).toHaveBeenLastCalledWith(expect.any(String), false);
+        await waitFor(() => expect(screen.queryByText("Couldn't change this.")).not.toBeInTheDocument());
     });
 
     it("switches calendar reading off through the permission toggle", async () => {
@@ -861,6 +893,30 @@ describe("ObservationPage", () => {
             .closest(".settings-row") as HTMLElement;
         expect(within(row).getByText("Microphone")).toBeInTheDocument();
         expect(within(row).getByText("Off")).toBeInTheDocument();
+    });
+
+    it("shows no capture state when the read fails, says so in copper and reads again", async () => {
+        mocks.audioStatus.mockRejectedValueOnce(new Error("bridge down"));
+        render(<ObservationPage />);
+        fireEvent.click(screen.getByRole("button", { name: /Advanced/ }));
+
+        const line = await screen.findByText("Couldn't read what Isoform is capturing.");
+        expect(line.closest("[data-settings-failure]")).toHaveClass("text-copper");
+        expect(screen.queryByText("Stopped")).not.toBeInTheDocument();
+
+        fireEvent.click(within(line.closest("[data-settings-failure]") as HTMLElement).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(screen.queryByText("Couldn't read what Isoform is capturing.")).not.toBeInTheDocument());
+        expect(screen.getByText("Screen")).toBeInTheDocument();
+    });
+
+    it("shows a spinner on Refresh while capture status reads", async () => {
+        let finish: (value: unknown) => void = () => {};
+        mocks.audioStatus.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)));
+        render(<ObservationPage />);
+        fireEvent.click(screen.getByRole("button", { name: /Advanced/ }));
+        expect(await screen.findByTestId("capture-reading")).toBeInTheDocument();
+        finish({ running: true, activeSources: ["microphone"], screenLocked: false });
+        await waitFor(() => expect(screen.queryByTestId("capture-reading")).not.toBeInTheDocument());
     });
 
     it("shows no microphone switch until the Mac has given access", async () => {

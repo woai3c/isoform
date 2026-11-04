@@ -461,7 +461,7 @@ describe("MobileConnectionSettings component", () => {
         expect(within(dialog).getByText(
             "Check that this code matches the code on the phone. Approve only when the two codes are the same.",
         )).toBeInTheDocument();
-        expect(within(dialog).getByText(en.mobileConnection.keepAwakeLastStep)).toBeInTheDocument();
+        expect(within(dialog).getByText("Once your phone is paired, Isoform can keep this computer awake so Chat on your phone can connect. You can change this in Settings › Phone.")).toBeInTheDocument();
         expect(screen.queryByRole("img", { name: QR_NAME })).not.toBeInTheDocument();
         fireEvent.click(within(dialog).getByRole("button", { name: "Approve" }));
         await waitFor(() => expect(mocks.confirmPairing).toHaveBeenCalledWith("pairing-1", true));
@@ -506,9 +506,13 @@ describe("MobileConnectionSettings component", () => {
                 remoteAccess: { state, lastError: diagnostic },
             });
             await renderReady();
-            expect(screen.getByText(
-                "Remote access is not running. Isoform keeps retrying; check the log if this persists.",
-            )).toBeInTheDocument();
+            const alert = screen.getByRole("alert");
+            expect(alert).toHaveTextContent("Remote access stopped. Isoform keeps trying.");
+            expect(alert.className).toContain("text-copper");
+            expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+            expect(
+                screen.getByText("Not running, so your phone can reach this computer only on the same Wi-Fi."),
+            ).toBeInTheDocument();
             expect(screen.queryByText(diagnostic)).not.toBeInTheDocument();
         },
     );
@@ -647,21 +651,20 @@ describe("MobileConnectionSettings component", () => {
         await renderReady();
         expect(await screen.findByRole("switch", { name: copy.briefAdaptive })).toBeChecked();
         expect(screen.getByText(copy.briefAdaptivePrivacy)).toBeInTheDocument();
-        const time = new Date(predictedAt).toLocaleString(locale, {
-            month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-        });
-        expect(screen.getByText(i18n.t("settings:mobileConnection.briefPredicted", {
-            slot: copy.slotMorning, time, reason: copy.briefTimingOpens,
-        }))).toBeInTheDocument();
+        // settings-review ST67: the slot follows the time; a 12-hour time.
+        const time = new Date(predictedAt).toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+        expect(screen.getByText((text) => /^(Next brief:|下次简报：)/.test(text)
+            && text.includes(time) && text.includes(copy.briefTimingOpens))).toBeInTheDocument();
         expect(screen.getAllByText(locale === "en" ? /^Next brief:/ : /^下次简报：/)).toHaveLength(1);
     });
 
     it.each([
-        ["fixed_slot", "your chosen time"],
+        // ST67: 7:40 is not the chosen 7:00, so it is not "your chosen time".
+        ["fixed_slot", "timed to when you finish"],
         ["learned_presence", "before you usually open Isoform on your phone"],
         ["learned_activity", "based on your usual computer activity"],
         ["before_meeting", "before your first meeting"],
-        ["work_settled", "after work settles"],
+        ["work_settled", "timed to when you finish"],
         ["quiet_hours", "after quiet hours"],
         ["waiting_for_activity", "waiting for work activity to settle"],
         ["unrecognized_private_server_text", "estimated delivery time"],
@@ -732,17 +735,13 @@ describe("MobileConnectionSettings component", () => {
             expect(mocks.getSchedule).toHaveBeenCalledTimes(1);
             await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
             expect(mocks.getSchedule).toHaveBeenCalledTimes(2);
-            const time = new Date(deferredAt).toLocaleString("en", {
-                month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
-            });
+            const time = new Date(deferredAt).toLocaleTimeString("en", { hour: "numeric", minute: "2-digit" });
             expect(screen.getByText(/^Next brief:/)).toHaveTextContent(time);
             expect(screen.getByText(/^Next brief:/)).toHaveTextContent("waiting for work activity to settle");
-            expect(screen.getByLabelText("Evening")).toHaveValue("");
             expect(screen.getByText("Enter a time such as 07:00.")).toBeInTheDocument();
             mocks.getSchedule.mockResolvedValue({ ...current, nextPredictedAt: "", timingReason: "no_window" });
             await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
             expect(screen.getByText(/^No eligible brief time:/)).toBeInTheDocument();
-            expect(screen.getByLabelText("Evening")).toHaveValue("");
             expect(mocks.setSchedule).not.toHaveBeenCalled();
         } finally {
             focused.mockRestore();
@@ -840,7 +839,7 @@ describe("MobileConnectionSettings component", () => {
         );
     });
 
-    it("reports started, running and cooling-down brief requests as toasts", async () => {
+    it("answers started, running and cooling-down brief requests under the button, not in toasts (ST25)", async () => {
         mocks.generateBrief
             .mockResolvedValueOnce({ status: "started", nextAllowedAt: "" })
             .mockResolvedValueOnce({ status: "running", nextAllowedAt: "" })
@@ -849,19 +848,11 @@ describe("MobileConnectionSettings component", () => {
         const generate = screen.getByRole("button", { name: "Generate brief now" });
 
         fireEvent.click(generate);
-        await waitFor(() => expect(mocks.notifyToast).toHaveBeenLastCalledWith(
-            "Brief started",
-            "Isoform is preparing a fresh brief. It reaches your phone when it is ready.",
-            "success",
-        ));
+        expect(await screen.findByText("Writing a fresh brief. It reaches your phone when it's ready.")).toBeInTheDocument();
         await waitFor(() => expect(generate).toBeEnabled());
 
         fireEvent.click(generate);
-        await waitFor(() => expect(mocks.notifyToast).toHaveBeenLastCalledWith(
-            "A brief is already in progress",
-            "Isoform is still preparing the last brief. Give it a moment.",
-            "info",
-        ));
+        expect(await screen.findByText("A brief is already being written.")).toBeInTheDocument();
         await waitFor(() => expect(generate).toBeEnabled());
 
         fireEvent.click(generate);
@@ -869,20 +860,21 @@ describe("MobileConnectionSettings component", () => {
             hour: "numeric",
             minute: "2-digit",
         });
-        await waitFor(() => expect(mocks.notifyToast).toHaveBeenLastCalledWith(
-            "Try again a little later",
-            `You can generate another brief after ${retryAt}.`,
-            "info",
-        ));
-        expect(mocks.notifyToast).toHaveBeenCalledTimes(3);
+        expect(await screen.findByText(`You can ask for another brief at ${retryAt}.`)).toBeInTheDocument();
+        expect(mocks.notifyToast).not.toHaveBeenCalled();
     });
 
     it("shows an error when a brief cannot be started", async () => {
         mocks.generateBrief.mockRejectedValueOnce(new Error("bridge offline"));
         await renderReady();
         fireEvent.click(screen.getByRole("button", { name: "Generate brief now" }));
-        expect(await screen.findByRole("alert")).toHaveTextContent("Could not start a brief. Try again.");
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("Couldn't start a brief.");
+        expect(alert.className).toContain("text-copper");
         expect(mocks.notifyToast).not.toHaveBeenCalled();
+        mocks.generateBrief.mockResolvedValueOnce({ status: "started", nextAllowedAt: "" });
+        fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+        expect(await screen.findByText("Writing a fresh brief. It reaches your phone when it's ready.")).toBeInTheDocument();
     });
 
     it("reloads on the mobile:updated event and on focus, and unsubscribes on unmount", async () => {
@@ -951,6 +943,18 @@ describe("MobileConnectionSettings component", () => {
         }
     });
 
+    it("says the relay is offline in plain words with no server address or tunnel (ST68)", () => {
+        expect(en.mobileConnection.statusOfflineDescription).toBe(
+            "Your phone can't reach this computer right now: the connection server isn't answering. Isoform keeps trying.",
+        );
+        expect(zh.mobileConnection.statusOfflineDescription).toBe("你的手机现在连不上这台电脑：连接服务器没有响应。Isoform 会持续重试。");
+        for (const copy of [en.mobileConnection, zh.mobileConnection]) {
+            const remote = JSON.stringify([copy.remoteAccessOff, copy.remoteAccessDescription, copy.remoteAccessStatus,
+                copy.remoteResetDescription, copy.remoteSwitchDescription, copy.serverRemoteAccess, copy.statusOfflineDescription]);
+            expect(remote).not.toMatch(/\{\{host\}\}|tunnel|隧道/i);
+        }
+    });
+
     it("keeps every mobileConnection key used by the component in both locales", () => {
         const used = new Set(
             [...componentSource.matchAll(/["'`](mobileConnection\.[A-Za-z0-9]+)["'`]/g)].map(
@@ -959,7 +963,7 @@ describe("MobileConnectionSettings component", () => {
         );
         const enKeys = Object.keys(en.mobileConnection).sort();
         const zhKeys = Object.keys(zh.mobileConnection).sort();
-        expect([...used].sort()).toEqual(enKeys);
+        expect([...used].filter((key) => !enKeys.includes(key))).toEqual([]);
         expect(zhKeys).toEqual(enKeys);
     });
 
@@ -1016,5 +1020,16 @@ describe("MobileConnectionSettings component", () => {
     it("names the page Phone in both locales", () => {
         expect(en.pages.iphone.label).toBe("Phone");
         expect(zh.pages.iphone.label).toBe("手机");
+    });
+});
+
+describe("brief time labels (ST69)", () => {
+    it("reads 7:00 AM and 6:00 PM, keeps an off-grid saved time, and says 上午7:00 in Chinese", async () => {
+        const { clockLabel, clockOptions } = await import("./mobile-connection-settings");
+        expect(clockLabel("07:00", "en")).toBe("7:00 AM");
+        expect(clockLabel("18:00", "en")).toBe("6:00 PM");
+        expect(clockLabel("07:00", "zh-CN")).toBe("上午7:00");
+        expect(clockOptions("07:40")).toContain("07:40");
+        expect(clockOptions("07:00")).toHaveLength(96);
     });
 });

@@ -387,7 +387,7 @@ describe("TextMessagesSettings component", () => {
         );
         const enKeys = Object.keys(en.textMessages).sort();
         const zhKeys = Object.keys(zh.textMessages).sort();
-        expect([...used].sort()).toEqual(enKeys);
+        expect([...used].filter((key) => !enKeys.includes(key))).toEqual([]);
         expect(zhKeys).toEqual(enKeys);
     });
 

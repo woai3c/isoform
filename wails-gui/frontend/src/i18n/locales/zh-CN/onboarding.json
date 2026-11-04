@@ -133,7 +133,7 @@
     },
     "telemetry": {
         "title": "帮助改进 Isoform",
-        "description": "分享匿名的功能使用次数和主动使用 Isoform 的时长。绝不包含你的内容、姓名、邮箱或设备身份信息。这些统计通过随机生成的安装 ID 关联。",
+        "description": "分享功能使用次数和主动使用 Isoform 的时长。随机生成的安装 ID 用于关联这些统计；统计不含你的内容、姓名、邮箱或设备身份信息。",
         "choiceHint": "默认开启。你可以在这里关闭，也可以随时在「设置 > 隐私」中关闭。",
         "detailsLink": "阅读完整说明",
         "saveFailed": "未能保存你的选择，请重试。"
@@ -294,8 +294,8 @@
         "checked": "Isoform 启动时已检查。各提供商的条款适用；macOS 可能会询问一次，是否允许从钥匙串读取 Claude Code 的登录信息。",
         "applyFailed": "无法保存助手选择。你可以稍后在「设置 › 助手」中选择。",
         "installFailed": "无法安装助手。请重试或在终端中安装。",
-        "telemetryOn": "已开启匿名使用统计。",
-        "telemetryOff": "已关闭匿名使用统计。",
+        "telemetryOn": "已开启使用统计。",
+        "telemetryOff": "已关闭使用统计。",
         "telemetryDescription": "通过随机安装 ID 记录功能使用和活跃时间。绝不收集内容、姓名或邮箱。可在「设置 › 隐私」中关闭。",
         "installedPlan": "已安装 · {{version}} · {{plan}}"
     },
@@ -312,7 +312,7 @@
             },
             "brief": {
                 "title": "用于简报",
-                "description": "可选。仅保留在这台电脑上。"
+                "description": "可选。"
             }
         },
         "items": {
@@ -366,7 +366,7 @@
     },
     "models": {
         "heading": "在这台电脑上运行什么",
-        "settingsTitle": "模型",
+        "settingsTitle": "这台电脑上的模型",
         "description": "这些模型在本机读取屏幕和音频；只有任务需要的内容才会离开这台电脑。Isoform 已为每项工作选好模型。可以更改，也可以直接继续。",
         "jobs": {
             "live": "说话时实时转写",
@@ -375,7 +375,7 @@
             "always": "始终开启"
         },
         "alwaysName": "隐私过滤和记忆搜索",
-        "alwaysDescription": "从离开这台电脑的内容中移除姓名、号码和密码；查找 Isoform 的记忆。",
+        "alwaysDescription": "在文字发送给你的 AI 之前，移除姓名、号码和密码。",
         "none": "无",
         "noneDescription": "保留实时转写原文。",
         "recommended": "推荐",
@@ -438,7 +438,7 @@
                 "description": "支持中文和英语，各一种声音。"
             },
             "privacy": {
-                "description": "从离开这台电脑的内容中移除姓名、号码和密码。",
+                "description": "在文字发送给你的 AI 之前，移除姓名、号码和密码。",
                 "name": "隐私过滤"
             },
             "memory": {
@@ -549,7 +549,10 @@
         "resume": "继续下载",
         "resumeFailed": "无法继续下载 {{name}}。请重试。",
         "queued": "{{name}} 已排队等待后台下载。",
-        "waitingPowerIdle": "等待接上电源并空闲"
+        "waitingPowerIdle": "等待接上电源并空闲",
+        "settingsDescription": "这些模型在这台电脑上读取你的屏幕和音频。",
+        "settingsLoadFailed": "无法读取你的模型。",
+        "tryAgain": "重试"
     },
     "tools": {
         "sheetTitle": "安装 {{name}}",
@@ -572,12 +575,12 @@
         "progress": "设置进度",
         "local": {
             "pill": "在这台电脑上",
-            "title": "哪些留在这台电脑上",
+            "title": "在这台电脑上",
             "lines": {
-                "recordings": "<b>截图、音频和录音</b>由这台电脑上的模型读取，从不离开这台电脑。",
-                "ai": "<b>你的 AI</b> 只拿到任务需要的文字，用的是你自己的套餐。",
-                "phone": "<b>你的 iPhone</b> 只拿到它要显示的内容，在你的设备之间加密传送。",
-                "usage": "<b>使用统计</b>是匿名的，从不包含你的内容。"
+                "recordings": "<b>记忆、截图和音频</b>存储在这台电脑上，由这里的模型读取。",
+                "ai": "<b>你的 AI</b> 只拿到任务需要的内容，用的是你自己的套餐：文字，或者微信的裁剪截图。",
+                "phone": "<b>你的手机</b>只拿到它要显示的内容，端到端加密。",
+                "usage": "<b>使用统计</b>（如果你选择分享）只带一个随机编号，不含你的名字和内容。"
             }
         },
         "stepCount": "第 {{current}} 步，共 {{total}} 步",
@@ -601,9 +604,9 @@
             },
             "ready": "已就绪",
             "needsYou": "需要你",
-            "usage": "Isoform 会分享匿名的使用次数，绝不包含你的内容。",
+            "usage": "使用统计（如果你选择分享）只带一个随机编号，不含你的名字和内容。",
             "change": "更改",
-            "usageSwitch": "分享匿名使用次数",
+            "usageSwitch": "分享使用次数",
             "usageSaveFailed": "没能保存，请再试一次。"
         },
         "ai": {
@@ -672,8 +675,8 @@
             "assistantsBoth": "Claude Code 和 Codex"
         },
         "sees": {
-            "title": "看见你的工作，留在这台电脑上。",
-            "line": "这台电脑上的模型读取你的屏幕和通话。截图和音频从不离开这台电脑。",
+            "title": "看见你的工作，就在这台电脑上。",
+            "line": "这台电脑上的模型读取你的屏幕和通话。截图和音频存储在这台电脑上。",
             "deckTab": "Halcyon deck",
             "bankTab": "银行 · 账户",
             "deckTitle": "Halcyon deck · v3",
@@ -700,7 +703,7 @@
         },
         "runs": {
             "title": "在这台电脑上运行",
-            "line": "它们在本机读取你的屏幕和通话。截图和音频从不离开这台电脑。",
+            "line": "它们在本机读取你的屏幕和通话。截图和音频存储在这台电脑上。",
             "rows": {
                 "calls": {
                     "name": "听你的通话",

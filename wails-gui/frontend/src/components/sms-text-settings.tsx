@@ -65,7 +65,7 @@ export function SmsTextSettings({ existingOnly = false }: { existingOnly?: boole
         // A reopen paints the saved status at once; refresh() revalidates it.
         () => pageQueryCache.peek<SMSChannelStatus>("GetSMSChannelStatus") ?? null,
     );
-    const [loadFailed, setLoadFailed] = useState(false);
+    const [, setLoadFailed] = useState(false);
     const [numberDraft, setNumberDraft] = useState("");
     const [codeDraft, setCodeDraft] = useState("");
     // True while the user enters a different number beside an active one, or
@@ -226,22 +226,7 @@ export function SmsTextSettings({ existingOnly = false }: { existingOnly?: boole
     );
 
     const body = (() => {
-        if (status === null) {
-            return loadFailed ? (
-                <div className="flex flex-wrap items-center gap-3 py-2">
-                    <p role="alert" className="text-xs text-error">
-                        {t("smsTexts.loadFailed")}
-                    </p>
-                    <Button type="button" variant="outline" size="sm" onClick={() => void refresh()}>
-                        {t("smsTexts.retry")}
-                    </Button>
-                </div>
-            ) : (
-                <p role="status" className="settings-row-desc py-2">
-                    {t("smsTexts.loading")}
-                </p>
-            );
-        }
+        if (status === null) return null;
         if (existingOnly && !status.number) return null;
         if (!existingOnly && !status.available) {
             return <p className="settings-row-desc py-2">{t("smsTexts.unavailableOff")}</p>;
@@ -369,6 +354,7 @@ export function SmsTextSettings({ existingOnly = false }: { existingOnly?: boole
 
     if (existingOnly && status && !status.number) return null;
 
+    if (body === null) return null;
     return (
         <SettingsCard title={t("smsTexts.title")} description={existingOnly ? undefined : t("smsTexts.description")}>
             <div className="flex flex-col gap-3">

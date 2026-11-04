@@ -178,3 +178,69 @@ describe("SkillHubSettings", () => {
         expect(componentSource).not.toMatch(/as never/);
     });
 });
+
+describe("SkillHubSettings failures (ST27)", () => {
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        window.localStorage.clear();
+        await i18n.changeLanguage("en");
+        mocks.uninstall.mockResolvedValue(undefined);
+    });
+
+    it("says it couldn't read the skills instead of the empty state, and Try again reads them", async () => {
+        mocks.list.mockRejectedValueOnce(new Error("offline")).mockResolvedValue(SKILLS);
+        render(<SkillHubSettings />);
+
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("Couldn't read your skills.");
+        expect(alert.className).toContain("text-copper");
+        expect(screen.queryByText(/You have no skills yet/)).not.toBeInTheDocument();
+        expect(mocks.toastError).not.toHaveBeenCalled();
+
+        fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+        expect(await screen.findByText("Calendar helper")).toBeInTheDocument();
+        expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("names the skill in copper when a change fails, and Try again repeats it", async () => {
+        mocks.list.mockResolvedValue(SKILLS);
+        mocks.setEnabled.mockRejectedValueOnce(new Error("busy")).mockResolvedValue({ ...SKILLS[0], enabled: false });
+        render(<SkillHubSettings />);
+        fireEvent.click(await screen.findByRole("switch", { name: "Use Calendar helper" }));
+
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("Couldn't change Calendar helper.");
+        expect(mocks.toastError).not.toHaveBeenCalled();
+        fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.setEnabled).toHaveBeenCalledTimes(2));
+        expect(mocks.setEnabled).toHaveBeenLastCalledWith("calendar", false);
+    });
+
+    it("has the ST27 words in both languages", async () => {
+        const en = (await import("@/i18n/locales/en/settings.json")).default.skillHub.toasts;
+        const zh = (await import("@/i18n/locales/zh-CN/settings.json")).default.skillHub.toasts;
+        expect(en.loadFailed).toBe("Couldn't read your skills.");
+        expect(en.installFailed).toBe("Couldn't install {{name}}.");
+        expect(en.searchFailed).toBe("Couldn't search ClawHub. Check your internet connection.");
+        expect(en.uninstallFailed).toBe("Couldn't uninstall {{name}}.");
+        expect(en.openFolderFailed).toBe("Couldn't open the folder.");
+        for (const key of Object.keys(en) as (keyof typeof en)[]) expect(zh[key]).toBeTruthy();
+    });
+});
+
+describe("skillSummaryLine (ST65)", () => {
+    it("keeps a short human summary", async () => {
+        const { skillSummaryLine } = await import("./skill-hub-settings");
+        expect(skillSummaryLine("Turns meeting notes into a tidy summary. Extra detail here.", "en"))
+            .toBe("Turns meeting notes into a tidy summary.");
+    });
+    it("drops AI-facing instructions, long text and the wrong language so the name stands alone", async () => {
+        const { skillSummaryLine } = await import("./skill-hub-settings");
+        expect(skillSummaryLine("Use when the user asks to export a spreadsheet.", "en")).toBeNull();
+        expect(skillSummaryLine("IMPORTANT: always call this tool first.", "en")).toBeNull();
+        expect(skillSummaryLine("x".repeat(130), "en")).toBeNull();
+        expect(skillSummaryLine("整理会议纪要。", "en")).toBeNull();
+        expect(skillSummaryLine("整理会议纪要。", "zh-CN")).toBe("整理会议纪要。");
+        expect(skillSummaryLine("", "en")).toBeNull();
+    });
+});

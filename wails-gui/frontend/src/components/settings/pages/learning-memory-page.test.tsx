@@ -82,6 +82,15 @@ function openAdvanced() {
     fireEvent.click(screen.getByRole("button", { name: /Advanced/ }));
 }
 
+const devTools = vi.hoisted(() => ({ on: true }));
+vi.mock("@/components/settings/settings-dev-tools", async (original) => ({
+    ...(await original<typeof import("@/components/settings/settings-dev-tools")>()),
+    useSettingsDevTools: () => devTools.on,
+}));
+beforeEach(() => {
+    devTools.on = true;
+});
+
 describe("LearningMemoryPage", () => {
     beforeEach(async () => {
         vi.clearAllMocks();
@@ -111,9 +120,9 @@ describe("LearningMemoryPage", () => {
     it("shows a failed learning read and retries without guessing", async () => {
         mocks.loadUIState.mockRejectedValueOnce(new Error("offline"));
         renderPage();
-        expect(await screen.findByText("Could not read this setting.")).toBeInTheDocument();
+        expect(await screen.findByText("Couldn't read this setting.")).toBeInTheDocument();
         fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-        await waitFor(() => expect(screen.queryByText("Could not read this setting.")).toBeNull());
+        await waitFor(() => expect(screen.queryByText("Couldn't read this setting.")).toBeNull());
     });
 
     it("opens with four everyday cards and keeps the rest under Advanced", async () => {
@@ -124,7 +133,7 @@ describe("LearningMemoryPage", () => {
         expect(
             screen.getByRole("heading", { name: "Import memories from your other AI tools" }),
         ).toBeInTheDocument();
-        expect(screen.getByRole("heading", { name: "See what Isoform knows" })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "What Isoform knows" })).toBeInTheDocument();
 
         const advanced = screen.getByRole("button", { name: /Advanced/ });
         expect(advanced).toHaveTextContent("Learn by comparison, chat context preview, search index");
@@ -160,7 +169,7 @@ describe("LearningMemoryPage", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Open About you" }));
         fireEvent.click(screen.getByRole("button", { name: "Open Who you know" }));
-        fireEvent.click(screen.getByRole("button", { name: "Open your profile" }));
+        fireEvent.click(screen.getByRole("button", { name: "Open your card" }));
 
         expect(handlers.onOpenMemory).toHaveBeenCalledTimes(1);
         expect(handlers.onOpenPeople).toHaveBeenCalledTimes(1);
@@ -247,5 +256,17 @@ describe("LearningMemoryPage", () => {
             expect(source).not.toMatch(/\bt\(\s*["'`][^"'`]+["'`]\s*,\s*["'`]/);
             expect(source).not.toMatch(/defaultValue/);
         }
+    });
+});
+
+// ST13: Search index and Preview chat context are developer-only.
+describe("LearningMemoryPage without Developer tools", () => {
+    it("keeps only Learn by comparison under Advanced", async () => {
+        devTools.on = false;
+        renderPage();
+        expect(await screen.findByText(en.learningMemory.advancedHintPlain)).toBeInTheDocument();
+        expect(screen.queryByText(en.learningMemory.advancedHint)).not.toBeInTheDocument();
+        expect(screen.queryByText(en.debug.memoryContext.title)).not.toBeInTheDocument();
+        expect(screen.queryByText(en.embedding.title)).not.toBeInTheDocument();
     });
 });

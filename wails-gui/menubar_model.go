@@ -82,10 +82,9 @@ var menuBarCopy = map[string]map[string]string{
 		"read":    "Read your brief",
 		"dayTime": "{day}, {time}", "today": "Today", "yesterday": "Yesterday",
 		"tried": "Tried {n} times without finishing. Isoform tries again at {time}.", "triedOnce": "Tried once without finishing. Isoform tries again at {time}.",
-		"triedTimeout": "Tried {n} times. It timed out. Isoform tries again at {time}.", "triedTimeoutOnce": "Tried 1 time. It timed out. Isoform tries again at {time}.",
 		"triedSignedOut": "Tried {n} times. Your AI is signed out. Isoform tries again at {time}.", "triedSignedOutOnce": "Tried 1 time. Your AI is signed out. Isoform tries again at {time}.",
 		"retry": "Isoform tries again at {time}.", "none": "No brief yet today", "next": "Next brief tomorrow at {time}", "nextToday": "Next brief today at {time}",
-		"making": "Making your brief…", "playing": "{elapsed} of {length}",
+		"making": "Making your brief now.", "makingMorning": "Making your morning brief now.", "makingEvening": "Making your evening brief now.", "triedTimeout": "Tried {n} times. It timed out. Isoform tries again at {time}.", "triedTimeoutOnce": "Tried once. It timed out. Isoform tries again at {time}.", "playing": "{elapsed} of {length}",
 		"waiting": "Waiting on you", "seeAll": "See all {n} in Chat", "empty": "Nothing is waiting on you.",
 		"failed": "Could not load what is waiting on you. Your chat still has everything.",
 		"update": "Isoform {version} is ready", "restart": "Restart",
@@ -102,11 +101,10 @@ var menuBarCopy = map[string]map[string]string{
 		"morning": "收听早间简报", "evening": "收听晚间简报", "brief": "收听简报", "week": "收听你的一周",
 		"read":    "阅读简报",
 		"dayTime": "{day} {time}", "today": "今天", "yesterday": "昨天",
-		"tried": "试了 {n} 次都没完成。Isoform 会在 {time} 再试。", "triedOnce": "试了 1 次都没完成。Isoform 会在 {time} 再试。",
-		"triedTimeout": "试了 {n} 次。超时了。Isoform 会在{time}再试。", "triedTimeoutOnce": "试了 1 次。超时了。Isoform 会在{time}再试。",
+		"tried": "试了 {n} 次都没完成。Isoform 会在{time}再试。", "triedOnce": "试了 1 次都没完成。Isoform 会在{time}再试。",
 		"triedSignedOut": "已尝试 {n} 次。你的 AI 已退出登录。Isoform 会在 {time} 再试一次。", "triedSignedOutOnce": "已尝试 1 次。你的 AI 已退出登录。Isoform 会在 {time} 再试一次。",
-		"retry": "Isoform 会在 {time} 再试。", "none": "今天还没有简报", "next": "下一份在明天 {time}", "nextToday": "下一份在今天 {time}",
-		"making": "正在生成简报…", "playing": "{elapsed} / {length}",
+		"retry": "Isoform 会在{time}再试。", "none": "今天还没有简报", "next": "下一份在明天 {time}", "nextToday": "下一份在今天 {time}",
+		"making": "正在生成简报。", "makingMorning": "正在生成你的早间简报。", "makingEvening": "正在生成你的晚间简报。", "triedTimeout": "试了 {n} 次。超时了。Isoform 会在{time}再试。", "triedTimeoutOnce": "试了 1 次。超时了。Isoform 会在{time}再试。", "playing": "{elapsed} / {length}",
 		"waiting": "等你处理", "seeAll": "在聊天中查看全部 {n} 项", "empty": "没有等你处理的事。",
 		"failed": "没能读取等你处理的事。聊天里的内容都还在。",
 		"update": "Isoform {version} 已就绪", "restart": "重新启动",
@@ -386,7 +384,13 @@ func menuBarDay(w map[string]string, lang string, when, now time.Time) string {
 // the row is Today's tries line; otherwise it is the latest brief with its day.
 func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, hasLatest, building bool, health MobileBriefHealth, now time.Time) menuBarBrief {
 	if building {
-		return menuBarBrief{Kind: "making", Title: w["making"]}
+		key := "making"
+		if health.PendingSlot == mobileBriefSlotMorning {
+			key = "makingMorning"
+		} else if health.PendingSlot == mobileBriefSlotEvening {
+			key = "makingEvening"
+		}
+		return menuBarBrief{Kind: "making", Title: w[key]}
 	}
 	today := now.Local().Format("2006-01-02")
 	if retry, err := time.Parse(time.RFC3339, health.RetryAt); health.PendingSlot != "" && err == nil && retry.After(now) {

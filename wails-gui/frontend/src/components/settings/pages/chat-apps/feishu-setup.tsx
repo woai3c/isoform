@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import { QRCodeSVG } from "qrcode.react";
 import { activeInterval } from "@/lib/app-activity";
 import { Info, RefreshCw, Loader2, Check, Globe } from "lucide-react";
@@ -27,7 +28,6 @@ import {
 import { BrowserOpenURL } from "../../../../../wailsjs/runtime/runtime";
 import type { main } from "../../../../../wailsjs/go/models";
 import { FeishuIcon } from "@/components/icons/app-icons";
-import { toast } from "sonner";
 import { notifyImportant } from "@/lib/notify";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SettingsCard, SettingsRow } from "@/components/settings/settings-primitives";
@@ -206,7 +206,7 @@ function ReceiverErrorHint() {
     const { t } = useTranslation('settings');
     return (
         <span className="group relative ml-auto flex-shrink-0 cursor-default">
-            <Info className="h-3.5 w-3.5 text-error" />
+            <Info className="h-3.5 w-3.5 text-copper" />
             <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 w-64 rounded-md bg-ink px-2.5 py-2 text-[11px] leading-relaxed text-background opacity-0 shadow-md transition-opacity group-hover:opacity-100">
                 <Trans
                     i18nKey="connectors.feishu.receiverErrorHint"
@@ -220,6 +220,9 @@ function ReceiverErrorHint() {
 
 export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "lark"; onStatusChange: (status: ChatAppStatus) => void }) {
     const { t } = useTranslation('settings');
+    const { failure, fail, clear } = useSettingsFailure();
+    const { failure: permissionFailure, fail: failPermission, clear: clearPermission } = useSettingsFailure();
+    const [permissionNote, setPermissionNote] = useState<string | null>(null);
     const isLark = brand === "lark";
     const brandTitle = isLark ? t('connectors.feishu.larkTitle') : t('connectors.feishu.title');
     // Brand-aware translator: injects {{brand}} so shared Feishu strings render
@@ -425,7 +428,7 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
                     if (result === "expired" || result === "error") {
                         setRegistration(null);
                         setPolling(false);
-                        toast.error(t("connectors.feishu.deviceAuth.failed"));
+                        fail(t('connectors.common.couldntConnect', { app: brandTitle }), handleConnect);
                         return;
                     }
                 } catch (err) {
@@ -461,27 +464,28 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
             );
             setRegistration(null);
             setPolling(false);
-            toast.error(t("connectors.feishu.deviceAuth.startFailedWithError", { error: String(err) }));
+            fail(t('connectors.common.couldntConnect', { app: brandTitle }), handleConnect);
         }
     };
 
     const handleConnect = () => {
+        clear();
         startConnectFlow();
     };
 
     const handleReuseApp = async () => {
+        clear();
         setReuseLoading(true);
         statusEpochRef.current += 1;
         try {
             await ReuseArchivedFeishuApp(brand);
             setArchivedApp(null);
             await fetchStatus();
-            toast.success(tb('connectors.feishu.reuse.successToast'));
         } catch (err) {
             // The archived app is gone (e.g. deleted in Feishu) — fall back to
             // creating a new one.
             setForceNewApp(true);
-            toast.error(tb('connectors.feishu.reuse.failedToast', { error: String(err) }));
+            fail(t('connectors.common.couldntConnect', { app: brandTitle }));
         } finally {
             setReuseLoading(false);
         }
@@ -493,6 +497,7 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
     };
 
     const handleDisconnect = async () => {
+        clear();
         // Invalidate any in-flight status poll BEFORE awaiting the backend so a
         // poll that already read connected=true can't write it back.
         statusEpochRef.current += 1;
@@ -517,26 +522,27 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
         setStatus({ connected: false, daemon_online: false });
         try {
             await DisconnectFeishu(brand);
-            toast.success(tb('connectors.feishu.disconnectedToast'));
         } catch (err) {
             // Disconnect failed — re-sync the real state.
             await fetchStatus();
-            toast.error(tb('connectors.feishu.errors.disconnectFailed', { error: String(err) }));
+            fail(t('connectors.common.couldntDisconnect', { app: brandTitle }), handleDisconnect);
         }
     };
 
     const handleRetry = async () => {
+        clear();
         try {
             await RestartFeishuReceiver(brand);
             await fetchStatus();
-            toast.success(tb('connectors.feishu.receiverRestartingToast'));
         } catch (err) {
-            toast.error(tb('connectors.feishu.errors.restartReceiverFailed', { error: String(err) }));
+            fail(t('connectors.common.couldntRestartReceiver'), handleRetry);
         }
     };
 
     const handleRefreshPermissions = async () => {
         setPermissionRefreshing(true);
+        clearPermission();
+        setPermissionNote(null);
         try {
             const next = await withFeishuTimeout(
                 RefreshFeishuPermissions(brand),
@@ -548,16 +554,16 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
             const check = next.full_permissions;
             if (check?.ready) {
                 setPermissionReady(true);
-                toast.success(tb('connectors.feishu.account.permissionReadyToast'));
+                setPermissionNote(tb('connectors.feishu.account.permissionReadyToast'));
                 return;
             }
-            toast.info(tb('connectors.feishu.account.permissionMissingToast', {
+            setPermissionNote(tb('connectors.feishu.account.permissionMissingToast', {
                 count: check?.missing?.length ?? 0,
                 required: check?.required_count ?? 0,
                 granted: check?.granted_count ?? 0,
             }));
         } catch (err) {
-            toast.error(tb('connectors.feishu.account.permissionRefreshFailedToast', { error: String(err) }));
+            failPermission(t('connectors.common.couldntCheckPermissions'), handleRefreshPermissions);
         } finally {
             setPermissionRefreshing(false);
         }
@@ -567,6 +573,7 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
         return (
             <SettingsCard title={brandTitle}>
                 <p className="text-sm text-muted">{t('connectors.common.loading')}</p>
+                <SettingsFailureLine failure={failure} />
             </SettingsCard>
         );
     }
@@ -619,7 +626,7 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
                             <div
                                 className={`rounded-md border px-3 py-2 text-xs ${
                                     debouncedReceiverStatus.status === "error"
-                                        ? "border-error-border bg-error-bg text-error"
+                                        ? "border-copper/30 bg-copper/5 text-copper"
                                         : "border-border bg-background text-muted"
                                 }`}
                             >
@@ -649,6 +656,7 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
                                 </Button>
                             )}
                         </div>
+                        <SettingsFailureLine failure={failure} />
                     </div>
                 ) : (
                     <div className="flex flex-col gap-3">
@@ -772,6 +780,7 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
                                 {tb('connectors.feishu.connectButton')}
                             </Button>
                         )}
+                        <SettingsFailureLine failure={failure} />
                           </>
                         )}
                     </div>
@@ -855,6 +864,8 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
                                 </div>
                             )
                         )}
+                        <SettingsFailureLine failure={permissionFailure} />
+                        {permissionNote && <p className="text-[12px] text-muted">{permissionNote}</p>}
                     </SettingsCard>
                     <LarkUserIdentityPanel brand={brand} brandTitle={brandTitle} />
                     {!isLark && <FeishuChatsPanel daemonOnline={status.daemon_online} />}
@@ -872,6 +883,8 @@ export function FeishuSettings({ brand, onStatusChange }: { brand: "feishu" | "l
 // that upgrade for the connected brand.
 function LarkUserIdentityPanel({ brand, brandTitle }: { brand: "feishu" | "lark"; brandTitle: string }) {
     const { t } = useTranslation('settings');
+    const { failure, fail, clear } = useSettingsFailure();
+    const [note, setNote] = useState<string | null>(null);
     const tb = (key: string, opts?: Record<string, unknown>): string =>
         String(t(key as never, { brand: brandTitle, ...(opts ?? {}) } as never));
     const [authed, setAuthed] = useState(false);
@@ -898,6 +911,8 @@ function LarkUserIdentityPanel({ brand, brandTitle }: { brand: "feishu" | "lark"
 
     const startLogin = async () => {
         setBusy(true);
+        clear();
+        setNote(null);
         try {
             const payload = await LarkCliUserLoginStart(brand);
             setLogin(payload);
@@ -910,13 +925,13 @@ function LarkUserIdentityPanel({ brand, brandTitle }: { brand: "feishu" | "lark"
                         pollRef.current = false;
                         setLogin(null);
                         await refresh();
-                        toast.success(tb('connectors.feishu.userIdentity.successToast'));
+                        setNote(tb('connectors.feishu.userIdentity.successToast'));
                         return;
                     }
                     if (result === "expired" || result === "error") {
                         pollRef.current = false;
                         setLogin(null);
-                        toast.error(tb('connectors.feishu.userIdentity.failedToast'));
+                        fail(t('connectors.common.couldntConnect', { app: brandTitle }), startLogin);
                         return;
                     }
                 } catch {
@@ -926,7 +941,7 @@ function LarkUserIdentityPanel({ brand, brandTitle }: { brand: "feishu" | "lark"
             };
             window.setTimeout(tick, 1500);
         } catch (err) {
-            toast.error(tb('connectors.feishu.userIdentity.failedWithErrorToast', { error: String(err) }));
+            fail(t('connectors.common.couldntConnect', { app: brandTitle }), startLogin);
         } finally {
             setBusy(false);
         }
@@ -994,6 +1009,8 @@ function LarkUserIdentityPanel({ brand, brandTitle }: { brand: "feishu" | "lark"
                     </Button>
                 </div>
             )}
+            <SettingsFailureLine failure={failure} />
+            {note && <p className="text-[12px] text-muted">{note}</p>}
         </SettingsCard>
     );
 }
@@ -1176,7 +1193,7 @@ function FeishuChatsPanel({ daemonOnline }: { daemonOnline: boolean }) {
             {loading ? (
                 <p className="text-sm text-muted">{t('connectors.channels.loadingChats')}</p>
             ) : error ? (
-                <p className="text-sm text-error">{error}</p>
+                <p className="text-sm text-copper">{error}</p>
             ) : chats.length === 0 ? (
                 <p className="text-sm text-muted">
                     {t('connectors.channels.noChatsYetFeishu')}

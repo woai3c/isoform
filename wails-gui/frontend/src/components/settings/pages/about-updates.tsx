@@ -1,16 +1,11 @@
 import { LogoIcon } from "@/assets/icons/LogoIcon";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-} from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { SettingsPlaceholderRows } from "@/components/settings/settings-failure";
+import { formatBytes } from "@/components/settings/settings-format";
 import { Switch } from "@/components/ui/switch";
 import { useAboutInfo } from "@/hooks/use-about-info";
 import { briefClockTime, briefDateTime, briefDateAtTime } from "@/lib/brief-time";
@@ -25,11 +20,13 @@ import {
     OpenExternalURL,
 } from "@/lib/wails-shim-app";
 
+const LICENSE_URL = "https://github.com/yubozhao/isoform/blob/main/LICENSE.md";
+const PRIVACY_URL = "https://github.com/yubozhao/isoform#privacy";
+
 export function AboutUpdates() {
     const { t, i18n } = useTranslation("settings");
     const { t: clock } = useTranslation("today");
     const { info, failed, refresh } = useAboutInfo();
-    const [legalOpen, setLegalOpen] = useState(false);
     const [error, setError] = useState(false);
     const [busy, setBusy] = useState(false);
     // Shown from the click until the app quits; cleared only on failure.
@@ -55,6 +52,7 @@ export function AboutUpdates() {
             setBusy(false);
         }
     }
+    if (!info && !failed) return <SettingsPlaceholderRows rows={2} />;
     if (!info)
         return (
             <div role="status">
@@ -227,7 +225,7 @@ export function AboutUpdates() {
                 </label>
             </section>
             {error && (
-                <p role="alert" className="text-sm text-error">
+                <p role="alert" className="text-sm text-copper">
                     {t("aboutPolish.actionFailed")}
                 </p>
             )}
@@ -319,10 +317,7 @@ export function AboutUpdates() {
                 <AboutRow
                     title={t("aboutPolish.data")}
                     description={t("aboutPolish.dataDescription", {
-                        size: (info.dataBytes / 1e9).toLocaleString(
-                            i18n.language,
-                            { maximumFractionDigits: 1 },
-                        ),
+                        size: formatBytes(info.dataBytes),
                     })}
                     control={
                         <Button
@@ -352,34 +347,17 @@ export function AboutUpdates() {
                     title={t("aboutPolish.legal")}
                     description={t("aboutPolish.legalDescription")}
                     control={
-                        <Button
-                            size="sm"
-                            variant="link"
-                            onClick={() => setLegalOpen(true)}
-                        >
-                            {t("aboutPolish.read")}
-                        </Button>
+                        <>
+                            <Button size="sm" variant="link" onClick={() => void perform(() => OpenExternalURL(LICENSE_URL))}>
+                                {t("aboutPolish.license")}
+                            </Button>
+                            <Button size="sm" variant="link" onClick={() => void perform(() => OpenExternalURL(PRIVACY_URL))}>
+                                {t("aboutPolish.privacy")}
+                            </Button>
+                        </>
                     }
                 />
             </div>
-            <Dialog open={legalOpen} onOpenChange={setLegalOpen}>
-                <DialogContent>
-                    <DialogHeader className="flex-col items-start gap-2">
-                        <DialogTitle>{t("aboutPolish.legal")}</DialogTitle>
-                        <DialogDescription>
-                            {t("aboutPolish.legalUnavailable")}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="m-4 self-end"
-                        onClick={() => setLegalOpen(false)}
-                    >
-                        {t("aboutPolish.close")}
-                    </Button>
-                </DialogContent>
-            </Dialog>
         </>
     );
 }

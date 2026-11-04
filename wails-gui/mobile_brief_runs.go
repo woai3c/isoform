@@ -40,13 +40,14 @@ type mobileBriefRun struct {
 	ScheduledAt string `json:"scheduledAt"`
 	// ScheduledReady distinguishes a configured slot from legacy adaptive
 	// preparation timestamps when the schedule changes later.
-	ScheduledReady bool   `json:"scheduledReady,omitempty"`
-	Status         string `json:"status"`
-	At             string `json:"at"`
-	Attempts       int    `json:"attempts,omitempty"`
-	FailureKey     string `json:"failureKey,omitempty"`
-	FailureCause   string `json:"failureCause,omitempty"`
-	SameFailures   int    `json:"sameFailures,omitempty"`
+	ScheduledReady   bool   `json:"scheduledReady,omitempty"`
+	Status           string `json:"status"`
+	At               string `json:"at"`
+	Attempts         int    `json:"attempts,omitempty"`
+	FailureKey       string `json:"failureKey,omitempty"`
+	FailureCause     string `json:"failureCause,omitempty"`
+	FailureAssistant string `json:"failureAssistant,omitempty"`
+	SameFailures     int    `json:"sameFailures,omitempty"`
 	// Reason says why a missed slot didn't run, only when Isoform observed
 	// it (mobileBriefService.missedReason): asleep or closed. Empty when the
 	// record can't say.
@@ -187,7 +188,7 @@ func (s *mobileBriefRunStore) record(run mobileBriefRun) (mobileBriefRun, error)
 		case mobileBriefRunMissed:
 			// The failed attempts stay on the record once the window closed.
 			run.Attempts = existing.Attempts
-			run.FailureKey, run.FailureCause, run.SameFailures = existing.FailureKey, existing.FailureCause, existing.SameFailures
+			run.FailureKey, run.FailureCause, run.FailureAssistant, run.SameFailures = existing.FailureKey, existing.FailureCause, existing.FailureAssistant, existing.SameFailures
 			if run.Attempts > 0 {
 				run.Reason = ""
 			}

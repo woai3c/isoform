@@ -71,6 +71,15 @@ function config(overrides: Partial<AIProviderConfig> = {}): AIProviderConfig {
     };
 }
 
+const devTools = vi.hoisted(() => ({ on: true }));
+vi.mock("@/components/settings/settings-dev-tools", async (original) => ({
+    ...(await original<typeof import("@/components/settings/settings-dev-tools")>()),
+    useSettingsDevTools: () => devTools.on,
+}));
+beforeEach(() => {
+    devTools.on = true;
+});
+
 describe("AIProviderSettingsCard", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -128,8 +137,23 @@ describe("AIProviderSettingsCard", () => {
         await screen.findByText("API key");
         fireEvent.click(screen.getByRole("button", { name: "Save and apply" }));
         await vi.waitFor(() => expect(mocks.saveConfig).toHaveBeenCalledWith(expect.objectContaining({ provider: "openai" })));
-        await vi.waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledTimes(1));
+        await vi.waitFor(() => expect(screen.getByRole("button", { name: "Save and apply" })).toBeEnabled());
+        expect(mocks.toastSuccess).not.toHaveBeenCalled();
         expect(mocks.toastError).not.toHaveBeenCalled();
+    });
+
+    it("shows a failed save in place in copper with Try again, never a toast (ST9, ST11)", async () => {
+        mocks.saveConfig.mockRejectedValueOnce(new Error("Error: raw failure"));
+        render(<AIProviderSettingsCard flat />);
+        await screen.findByText("API key");
+        fireEvent.click(screen.getByRole("button", { name: "Save and apply" }));
+        const line = await screen.findByText("Couldn't change this.");
+        expect(line.closest("[data-settings-failure]")?.className).toContain("text-copper");
+        expect(screen.queryByText(/raw failure/)).toBeNull();
+        expect(mocks.toastError).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        await vi.waitFor(() => expect(mocks.saveConfig).toHaveBeenCalledTimes(2));
+        await vi.waitFor(() => expect(screen.queryByText("Couldn't change this.")).toBeNull());
     });
 
     it.each(["claude-code", "codex"])("saves the %s assistant with its command settings", async (provider) => {
@@ -139,7 +163,7 @@ describe("AIProviderSettingsCard", () => {
         await vi.waitFor(() => expect(save).toBeEnabled());
         fireEvent.click(save);
         await vi.waitFor(() => expect(mocks.saveConfig).toHaveBeenCalledWith(expect.objectContaining({ provider })));
-        await vi.waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledTimes(1));
+        expect(mocks.toastSuccess).not.toHaveBeenCalled();
         expect(mocks.toastError).not.toHaveBeenCalled();
     });
 });
@@ -161,8 +185,21 @@ describe("AssistantPage", () => {
         expect(screen.queryByText("How Isoform works with you")).not.toBeInTheDocument();
         expect(screen.queryByRole("textbox", { name: /talk to you/i })).not.toBeInTheDocument();
         expect(screen.getByTestId("model-accounts").querySelector(".settings-card")).toBeNull();
-        expect(container.querySelectorAll(".settings-card")).toHaveLength(1);
-        expect(screen.getByRole("heading", { name: "Connect Isoform to Claude Code / Codex" })).toBeInTheDocument();
+        expect(container.querySelectorAll(".settings-card")).toHaveLength(0);
+        // S052: Connect moved to Other AI apps; one line points there.
+        expect(screen.getByText("Connect Isoform to Claude Code or Codex in Settings › Other AI apps.")).toBeInTheDocument();
+        expect(screen.queryByRole("heading", { name: /Claude Code/ })).not.toBeInTheDocument();
     });
 
+});
+
+// ST13: Copy curl command is developer-only, even under More options.
+describe("AIProviderSettingsCard without Developer tools", () => {
+    it("never offers Copy curl command", async () => {
+        devTools.on = false;
+        render(<AIProviderSettingsCard flat />);
+        await screen.findByText("API key");
+        fireEvent.click(screen.getByRole("button", { name: "More options" }));
+        expect(screen.queryByRole("button", { name: "Copy curl command" })).not.toBeInTheDocument();
+    });
 });

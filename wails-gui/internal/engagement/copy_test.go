@@ -362,20 +362,42 @@ func TestBriefReadyCopyOmitsUnknownSlot(t *testing.T) {
 	}
 }
 
+// settings-review ST66: only a stop nobody chose is announced, with its cause.
+func TestCapturePausedCopyNamesTheCause(t *testing.T) {
+	for _, tc := range []struct{ lang, cause, want string }{
+		{"en", "permission", "Screen capture has been off for 20 minutes: its permission was turned off in System Settings. Turn it back on?"},
+		{"en", "stopped", "Screen capture has been off for 20 minutes: it stopped on its own. Turn it back on?"},
+		{"zh-CN", "permission", "屏幕捕获已经停了20 分钟：系统设置里关闭了它的权限。要重新打开吗？"},
+	} {
+		p := map[string]string{"what": map[string]string{"en": "Screen capture", "zh-CN": "屏幕捕获"}[tc.lang], "duration": "20 minutes", "cause": tc.cause}
+		if tc.lang == "zh-CN" {
+			p["duration"] = "20 分钟"
+		}
+		set, ok := Copy(KindCapturePaused, tc.lang, p)
+		if !ok {
+			t.Fatalf("no %s copy", tc.lang)
+		}
+		if got := Render(set.Sealed, p); got != tc.want {
+			t.Errorf("%s %s: got %q, want %q", tc.lang, tc.cause, got, tc.want)
+		}
+	}
+}
+
 func TestBriefMissedCopyNamesOnlyARecordedReason(t *testing.T) {
 	cases := []struct {
 		lang   string
 		params map[string]string
 		want   string
 	}{
-		{"en", map[string]string{"slot": "morning", "reason": "failed", "time": "07:30"}, "Your morning brief didn't run: it couldn't be made."},
-		{"en", map[string]string{"slot": "morning", "time": "07:30"}, "Your morning brief didn't run at 07:30."},
-		{"en", map[string]string{"slot": "morning", "reason": "asleep", "time": "07:30"}, "Your morning brief didn't run: your computer was asleep."},
-		{"en", map[string]string{"slot": "evening", "reason": "closed"}, "Your evening brief didn't run: Isoform was closed."},
-		{"zh-CN", map[string]string{"slot": "早间", "reason": "asleep"}, "你的早间简报没有运行：当时电脑在睡眠。"},
-		{"en", map[string]string{"slot": "morning", "reason": "guessed"}, "Your morning brief didn't run."},
-		{"zh-CN", map[string]string{"slot": "早间", "reason": "failed"}, "你的早间简报没有运行：没能生成。"},
-		{"zh-CN", map[string]string{"slot": "早间", "time": "07:30"}, "你的早间简报在07:30没有运行。"},
+		{"en", map[string]string{"slot": "morning", "reason": "failed", "time": "07:30"}, "Your morning brief didn't come at 7:30 AM: it couldn't be made."},
+		{"en", map[string]string{"slot": "morning", "time": "07:30"}, "Your morning brief didn't come at 7:30 AM."},
+		{"en", map[string]string{"slot": "morning", "reason": "asleep", "time": "07:30"}, "Your morning brief didn't come at 7:30 AM: your computer was asleep."},
+		{"en", map[string]string{"slot": "evening", "reason": "closed"}, "Your evening brief didn't come: Isoform was closed."},
+		{"zh-CN", map[string]string{"slot": "早间", "reason": "asleep"}, "你的早间简报没有来：当时电脑在睡眠。"},
+		{"en", map[string]string{"slot": "morning", "reason": "guessed"}, "Your morning brief didn't come."},
+		{"zh-CN", map[string]string{"slot": "早间", "reason": "failed"}, "你的早间简报没有来：没能生成。"},
+		{"zh-CN", map[string]string{"slot": "早间", "time": "07:30"}, "你的早间简报在7:30没有来。"},
+		{"zh-CN", map[string]string{"slot": "晚间", "time": "18:00"}, "你的晚间简报在18:00没有来。"},
 	}
 	for _, tc := range cases {
 		set, ok := Copy(KindBriefMissed, tc.lang, tc.params)

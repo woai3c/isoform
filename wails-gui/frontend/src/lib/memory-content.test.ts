@@ -126,6 +126,7 @@ describe('memory content projection', () => {
 
 describe('beliefInSecondPerson (about-you v1.0.1 Y28)', () => {
     it.each([
+        ['Hands work to other agents and coordinates them through a hub', 'You hand work to other agents and coordinate them through a hub'],
         ['Uses design reviews to find launch blockers before release', 'You use design reviews to find launch blockers before release'],
         ['Wants public repo commits to carry the real fix messages', 'You want public repo commits to carry the real fix messages'],
         ['Fast-merges urgent fixes after focused checks pass', 'You fast-merge urgent fixes after focused checks pass'],

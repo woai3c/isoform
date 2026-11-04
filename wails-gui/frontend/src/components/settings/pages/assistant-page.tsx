@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSettingsDevTools } from "@/components/settings/settings-dev-tools";
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, ChevronDown, Play, AlertCircle, Save, Copy } from "lucide-react";
 import {
@@ -28,8 +29,8 @@ import {
 } from "@/lib/wails-shim-app";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ModelAccountsSettings } from "@/components/model-accounts-card";
-import { AssistantMCPSettings } from "@/components/assistant-mcp-settings";
 import { SettingsCard, SettingsSectionHeader } from "@/components/settings/settings-primitives";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 
 // Non-preset picker entries: the two external-agent backends. The Isoform
 // gateway has been retired, so it is no longer selectable. API providers
@@ -77,6 +78,7 @@ export function AIProviderSettingsCard({
     flat?: boolean;
 }) {
     const { t } = useTranslation('settings');
+    const devTools = useSettingsDevTools();
     const headerDescription = t('aiProvider.description');
     // `selection` is the picker value: a preset id ("openai", "deepseek",
     // "custom", ...) or an external agent ("claude-code" / "codex"). The Isoform
@@ -103,6 +105,10 @@ export function AIProviderSettingsCard({
     // Model dropdown options fetched from the provider's listing endpoint.
     const [models, setModels] = useState<string[]>([]);
     const [loadingModels, setLoadingModels] = useState(false);
+    /** In place of toasts (settings-review ST9): one line under the model field, one under Save and Test. */
+    const modelsFailure = useSettingsFailure();
+    const formFailure = useSettingsFailure();
+    const [modelsNone, setModelsNone] = useState(false);
     // The less common fields (CLI path, sandbox, curl) sit behind "More options".
     const [moreOpen, setMoreOpen] = useState(false);
 
@@ -209,11 +215,11 @@ export function AIProviderSettingsCard({
         if (saving) return;
         setSaving(true);
         setTestResult(null);
+        formFailure.clear();
         try {
             await SaveAIProviderConfig(buildConfig());
-            toast.success(t('aiProvider.saveSuccessToast'));
-        } catch (err) {
-            toast.error(t('aiProvider.saveFailedToast', { error: String(err) }));
+        } catch {
+            formFailure.fail(t('settingChange.failed'), () => void handleSave());
         } finally {
             setSaving(false);
         }
@@ -221,12 +227,14 @@ export function AIProviderSettingsCard({
 
     const handleFetchModels = () => {
         setLoadingModels(true);
+        modelsFailure.clear();
+        setModelsNone(false);
         ListAIProviderModels(buildConfig())
             .then((list) => {
                 const next = list ?? [];
                 setModels(next);
                 if (next.length === 0) {
-                    toast.message(t('aiProvider.modelsNone'));
+                    setModelsNone(true);
                 } else {
                     // Persist the moment the fetch succeeds (no Save needed) so
                     // the dropdowns repopulate on reopen instead of forcing a
@@ -235,9 +243,7 @@ export function AIProviderSettingsCard({
                     SetCachedAIProviderModels(next).catch(() => {});
                 }
             })
-            .catch((err) =>
-                toast.message(t('aiProvider.modelsFetchFailed', { error: String(err) })),
-            )
+            .catch(() => modelsFailure.fail(t('aiProvider.modelsFetchFailed'), handleFetchModels))
             .finally(() => setLoadingModels(false));
     };
 
@@ -245,6 +251,7 @@ export function AIProviderSettingsCard({
         setTesting(true);
         setTestResult(null);
         setCurlCmd("");
+        formFailure.clear();
         TestAIProvider(buildConfig())
             .then((result) => {
                 // The inline result banner below the buttons is the single
@@ -258,9 +265,7 @@ export function AIProviderSettingsCard({
                         .catch(() => {});
                 }
             })
-            .catch((err) =>
-                toast.error(t('aiProvider.testErrorToast', { error: String(err) })),
-            )
+            .catch(() => formFailure.fail(t('aiProvider.testErrorToast'), handleTest))
             .finally(() => setTesting(false));
     };
 
@@ -425,6 +430,8 @@ export function AIProviderSettingsCard({
                                 {t('aiProvider.modelsFound', { count: models.length })}
                             </p>
                         )}
+                        {modelsNone && <p className="text-[12px] text-muted">{t('aiProvider.modelsNone')}</p>}
+                        <SettingsFailureLine failure={modelsFailure.failure} />
                         <p className="text-[10px] text-muted">
                             {t('aiProvider.modelHint')}
                         </p>
@@ -549,7 +556,7 @@ export function AIProviderSettingsCard({
                                 </label>
                             </>
                         )}
-                        {isAPI && (
+                        {devTools && isAPI && (
                             <div className="flex flex-col gap-1.5">
                                 <button
                                     className="inline-flex items-center gap-1.5 self-start px-4 py-2 rounded-md text-xs font-medium border border-border bg-panel text-ink hover:bg-ink/5 transition-colors disabled:opacity-50"
@@ -601,21 +608,23 @@ export function AIProviderSettingsCard({
                 )}
             </div>
 
+            <SettingsFailureLine failure={formFailure.failure} />
+
             {testResult && (
                 <div
-                    className={`flex flex-col self-start rounded-md border px-3 py-2 space-y-1 text-[11px] ${testResult.success ? "border-accent-2/40 bg-accent-2/5" : "border-error-border bg-error-bg/50"}`}
+                    className={`flex flex-col self-start rounded-md border px-3 py-2 space-y-1 text-[11px] ${testResult.success ? "border-accent-2/40 bg-accent-2/5" : "border-copper/30 bg-copper/5"}`}
                 >
                     <div className="flex items-center gap-1.5 font-medium">
                         {testResult.success ? (
                             <CheckCircle2 className="h-3.5 w-3.5 text-accent-2" />
                         ) : (
-                            <AlertCircle className="h-3.5 w-3.5 text-error" />
+                            <AlertCircle className="h-3.5 w-3.5 text-copper" />
                         )}
                         <span
                             className={
                                 testResult.success
                                     ? "text-accent-2"
-                                    : "text-error"
+                                    : "text-copper"
                             }
                         >
                             {testResult.success
@@ -636,7 +645,7 @@ export function AIProviderSettingsCard({
                 </div>
             )}
 
-            {curlCmd && (
+            {devTools && curlCmd && (
                 <div className="rounded-md border border-border bg-panel p-3 space-y-2 text-[11px]">
                     <p className="text-muted">
                         {t('aiProvider.curlHint')}
@@ -686,10 +695,11 @@ export function AIProviderSettingsCard({
  * editable here. The "subscription" id resolves here.
  */
 export function AssistantPage() {
+    const { t } = useTranslation("settings");
     return (
         <div className="flex flex-col gap-6">
             <ModelAccountsSettings ownKeyForm={<AIProviderSettingsCard flat />} />
-            <AssistantMCPSettings />
+            <p className="settings-row-desc">{t("assistantMcp.otherAppsPointer")}</p>
         </div>
     );
 }

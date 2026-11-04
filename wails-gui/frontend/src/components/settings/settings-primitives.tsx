@@ -1,3 +1,4 @@
+import { SettingsFailureLine, type SettingsFailure } from "./settings-failure";
 // Card, row and section-header primitives shared by every Settings page.
 // settings-page.tsx re-exports them so existing imports keep working.
 
@@ -45,11 +46,14 @@ export function SettingsRow({
     description,
     control,
     children,
+    failure,
 }: {
     title: string;
     description?: React.ReactNode;
     control?: React.ReactNode;
     children?: React.ReactNode;
+    /** An in-place failure under the row's words (settings review ST9). */
+    failure?: SettingsFailure | null;
 }) {
     return (
         <div className="settings-row">
@@ -58,6 +62,7 @@ export function SettingsRow({
                 {description && (
                     <span className="settings-row-desc">{description}</span>
                 )}
+                <SettingsFailureLine failure={failure ?? null} />
             </div>
             <div className="shrink-0 flex items-center gap-2">
                 {control ?? children}

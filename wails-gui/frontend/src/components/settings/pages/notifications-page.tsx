@@ -135,7 +135,7 @@ function MacPermissionCard({ recheck }: { recheck: () => Promise<boolean | null>
                 </p>
             )}
             {message === "failed" && (
-                <p role="alert" className="pt-2 text-xs text-error">
+                <p role="alert" className="pt-2 text-xs text-copper">
                     {t("proactiveNotifications.macPermission.failed")}
                 </p>
             )}

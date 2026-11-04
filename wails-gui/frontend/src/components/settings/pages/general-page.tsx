@@ -22,7 +22,7 @@ import {
     GetTtsModelStatus,
 } from "../../../../wailsjs/go/main/App";
 import { EventsOn } from "../../../../wailsjs/runtime/runtime";
-import { toast } from "sonner";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import {
     getLanguagePreference,
     setLanguagePreference,
@@ -43,6 +43,7 @@ import { SettingsAdvanced } from "@/components/settings/settings-advanced";
  *  and the rest of the page still renders. */
 function StartAtLoginSettings() {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const isWindows = navigator.platform.toLowerCase().includes("win");
     const isSupported = isMac || isWindows;
@@ -70,7 +71,7 @@ function StartAtLoginSettings() {
         setStartAtLoginState(next);
         SetStartAtLogin(next).catch(() => {
             read();
-            toast.error(t("general.startAtLogin.saveFailed"));
+            failChange(t("general.startAtLogin.saveFailed"), () => void handleLoginToggle());
         });
     };
 
@@ -99,6 +100,7 @@ function StartAtLoginSettings() {
                     )
                 }
             />
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsCard>
     );
 }
@@ -204,7 +206,7 @@ function LanguageSettings() {
 
 // One independent read-aloud category toggle. Each category persists through
 // its own Get/Set binding; toggles are isolated so flipping one never touches
-// the others. Optimistic update with rollback + toast on failure.
+// the others. Optimistic update with rollback + an in-place failure line.
 function AutoSpeakCategoryRow({
     title,
     description,
@@ -217,6 +219,7 @@ function AutoSpeakCategoryRow({
     set: (v: boolean) => Promise<void>;
 }) {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [enabled, setEnabledState] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -236,7 +239,7 @@ function AutoSpeakCategoryRow({
         set(next)
             .catch(() => {
                 setEnabledState(!next);
-                toast.error(t("autoSpeak.toggleFailed"));
+                failChange(t("autoSpeak.toggleFailed"), () => void handleToggle());
             })
             .finally(() => {
                 setLoading(false);
@@ -246,6 +249,7 @@ function AutoSpeakCategoryRow({
     return (
         <SettingsRow
             title={title}
+            failure={changeFailure}
             description={description}
             control={
                 <Switch

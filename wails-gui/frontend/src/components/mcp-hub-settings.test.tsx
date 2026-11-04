@@ -194,4 +194,50 @@ describe("McpHubSettings", () => {
         expect(componentSource).not.toMatch(/defaultValue/);
         expect(componentSource).not.toMatch(/dangerouslySetInnerHTML/);
     });
+
+    it("posts one visible line for Install with AI and keeps the steps for the run", async () => {
+        mocks.searchRegistry.mockResolvedValue([{
+            slug: "tp-lumen-notes", name: "Lumen Notes", description: "Notes for a fictional team.",
+            source_url: "https://github.com/example/lumen-notes", installable: false, kind: "third-party", tags: [],
+        }]);
+        const sent: { prompt?: string; display?: string }[] = [];
+        const onInstall = (event: Event) => sent.push((event as CustomEvent).detail);
+        window.addEventListener("mcp:install-via-ai", onInstall);
+        try {
+            render(<McpHubSettings />);
+            fireEvent.click(screen.getByRole("tab", { name: "Add" }));
+            fireEvent.click(await screen.findByRole("button", { name: "Install with AI" }));
+        } finally {
+            window.removeEventListener("mcp:install-via-ai", onInstall);
+        }
+        expect(sent).toHaveLength(1);
+        expect(sent[0].display).toBe("Install the Lumen Notes tool server from https://github.com/example/lumen-notes.");
+        expect(sent[0].prompt).toContain("yansu mcp install");
+    });
+
+    it("lists only apps that have tool servers, and says so when none do", async () => {
+        mocks.discover.mockResolvedValue({
+            sources: [{ id: "cursor", name: "Cursor", found: false, count: 0, path: "" }, { id: "zed", name: "Zed", found: true, count: 0, path: "/x" }],
+            servers: [],
+        });
+        render(<McpHubSettings />);
+        fireEvent.click(screen.getByRole("tab", { name: "Add" }));
+        expect(await screen.findByText("No tool servers found in your other apps.")).toBeInTheDocument();
+        expect(screen.queryByText("Not found")).not.toBeInTheDocument();
+        expect(screen.queryByText("Cursor")).not.toBeInTheDocument();
+        expect(screen.queryByText("0 servers")).not.toBeInTheDocument();
+    });
+
+    it("says under the field to enter a name, not in a toast", async () => {
+        render(<McpHubSettings />);
+        await screen.findByText("Files");
+        fireEvent.click(screen.getByRole("button", { name: /Advanced/ }));
+        fireEvent.click(screen.getByRole("button", { name: "Add server" }));
+        const line = await screen.findByText("Enter a name for this server.");
+        expect(line).toHaveClass("text-copper");
+        expect(screen.getByText("Enter a command.")).toBeInTheDocument();
+        expect(mocks.toastError).not.toHaveBeenCalled();
+        fireEvent.change(screen.getByLabelText("ID"), { target: { value: "lumen" } });
+        expect(screen.queryByText("Enter a name for this server.")).not.toBeInTheDocument();
+    });
 });

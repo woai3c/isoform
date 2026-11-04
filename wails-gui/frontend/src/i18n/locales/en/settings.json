@@ -1,16 +1,14 @@
 {
     "settingRead": {
-        "failed": "Could not read this setting.",
+        "failed": "Couldn't read this setting.",
         "retry": "Try again"
     },
     "assistantMcp": {
-        "title": "Connect Isoform to Claude Code / Codex",
+        "title": "Claude Code and Codex",
         "description": "Let your assistants read short context from Isoform: activity, memory, people, calendar, briefs and run status. Keep Isoform running while they use it.",
         "claudeCode": "Claude Code",
         "codex": "Codex",
-        "loading": "Checking connections...",
-        "loadFailed": "Could not check connections. Try again.",
-        "retry": "Try again",
+        "loadFailed": "Couldn't check your connections.",
         "connected": "Connected",
         "notConnected": "Not connected",
         "connect": "Connect",
@@ -22,9 +20,12 @@
         "isoformMissing": "The Isoform command-line app is missing. Reinstall Isoform, then reopen this page to connect.",
         "nameConflict": "Claude Code already uses the name isoform for {{command}}. Rename or remove that server in Claude Code, then try again.",
         "otherCommand": "another command",
-        "connectFailed": "Could not connect. Check that the assistant's command-line app is installed and try again.",
-        "revokeFailed": "Could not finish revoking access and removing the MCP entry. Try again.",
-        "privacy": "Connect registers the command above and gives that assistant its own read-only access. It replaces any earlier Isoform registration. Isoform's privacy settings apply to every request. Revoke stops access immediately."
+        "connectFailed": "Couldn't connect. Check that the assistant's command-line app is installed.",
+        "revokeFailed": "Couldn't finish revoking access.",
+        "privacy": "Connect registers the command above and gives that assistant its own read-only access. It replaces any earlier Isoform registration. Isoform's privacy settings apply to every request. Revoke stops access immediately.",
+        "otherAppsPointer": "Connect Isoform to Claude Code or Codex in Settings › Other AI apps.",
+        "loading": "Checking connections...",
+        "retry": "Try again"
     },
     "modelAccounts": {
         "modeFailed": "Could not change this setting. Try again.",
@@ -39,7 +40,7 @@
         "consentLead": "Isoform can use the Claude Code and Codex subscriptions already signed in on this computer.",
         "consentTerms": "Each provider's terms govern that use, and they may not allow it. Isoform cannot change those terms.",
         "consentKeychain": "macOS will ask once for permission to read the Claude Code sign-in from the Keychain.",
-        "consentPrivacy": "Nothing from these accounts is shared with Isoform.",
+        "consentPrivacy": "Isoform uses these sign-ins only on this computer, to send your requests.",
         "consentAccept": "Use my signed-in accounts",
         "consentDecline": "Not now",
         "consentAccepted": "You agreed that Isoform may use the Claude Code and Codex subscriptions signed in on this computer, under each provider's terms.",
@@ -115,8 +116,8 @@
     "mobileConnection": {
         "loopbackWarning": "A phone on another network cannot reach {{host}}.",
         "remoteAccessTitle": "Remote access",
-        "remoteAccessDescription": "A secure tunnel lets your phone connect when it is away from this Wi-Fi network.",
-        "remoteAccessStatus": "Tunnel status",
+        "remoteAccessDescription": "Remote access lets your phone connect when it is away from this Wi-Fi network.",
+        "remoteAccessStatus": "Remote access",
         "remoteAccessStateDetail": {
             "off": "Off. It starts when you turn on the connection above.",
             "starting": "Starting. Your phone can connect from any network once it is ready.",
@@ -125,20 +126,20 @@
             "failed": "Not running."
         },
         "remoteAccessOff": {
-            "saved_relay": "Off, because the connection uses the server address {{host}}. Switch to remote access so your phone can reach this computer from any network.",
-            "environment_relay": "Off, because the ISOFORM_RELAY_URL setting points to {{host}}. Quit Isoform and open it again without that setting.",
-            "build_relay": "Off, because this build of Isoform uses the fixed server {{host}}.",
-            "disabled": "Off, because ISOFORM_MOBILE_REMOTE_ACCESS is set to 0 or this build turns it off. Quit Isoform and open it again without that setting."
+            "saved_relay": "Off. Switch to remote access so your phone can reach this computer from any network.",
+            "environment_relay": "Off. A setting on this computer points Isoform to another connection server. Quit Isoform and open it again without it.",
+            "build_relay": "Off. This version of Isoform always uses its own connection server.",
+            "disabled": "Off. A setting on this computer turns remote access off. Quit Isoform and open it again without it."
         },
-        "remoteAccessUnavailable": "Remote access is not running. Isoform keeps retrying; check the log if this persists.",
+        "remoteAccessUnavailable": "Remote access stopped. Isoform keeps trying.",
         "remoteAccessReset": "Reset remote access",
         "remoteResetTitle": "Reset remote access?",
-        "remoteResetDescription": "This changes the tunnel key, closes any open pairing code, and disconnects every paired phone. Each phone must be paired again.",
+        "remoteResetDescription": "This changes the remote access key, closes any open pairing code, and disconnects every paired phone. Each phone must be paired again.",
         "remoteResetConfirm": "Reset and disconnect phones",
         "remoteResetFailed": "Could not reset remote access. Try again.",
         "remoteAccessUseButton": "Use remote access",
         "remoteSwitchTitle": "Switch to remote access?",
-        "remoteSwitchDescription": "Isoform stops using {{host}} and starts its own secure tunnel. Phones paired through {{host}} must be paired again.",
+        "remoteSwitchDescription": "Isoform stops using the current connection server and sets up its own remote access. Phones paired through that server must be paired again.",
         "remoteSwitchConfirm": "Switch to remote access",
         "remoteSwitchFailed": "Could not switch to remote access. Try again.",
         "getApp": "Get Isoform on the App Store",
@@ -169,7 +170,7 @@
         "keepAwakeTitle": "Keep this computer awake for your phone",
         "keepAwakeDescription": "So your phone can reach Isoform any time. The screen still turns off. On battery, it sleeps below 20% or in Low Power Mode. A closed laptop still sleeps.",
         "keepAwakeDescriptionDesktop": "So your phone can reach Isoform any time. The screen still turns off.",
-        "keepAwakeLastStep": "This computer stays awake while your phone is paired, so Chat on your phone can always reach Isoform. You can change this in Settings › Phone.",
+        "keepAwakeLastStep": "Once your phone is paired, Isoform can keep this computer awake so Chat on your phone can connect. You can change this in Settings › Phone.",
         "keepAwakeFailed": "Could not change this setting. Try again.",
         "devicesTitle": "Your phones",
         "devicesDescription": "These phones get your daily brief and can reach this computer. Disconnect one to stop that.",
@@ -222,13 +223,9 @@
         "slotEvening": "Evening",
         "slotOnRequest": "On request",
         "narrativeUnavailable": "When Isoform uses Claude Code or Codex as its assistant, briefs leave out the short written summary at the top. They still list what moved, what needs you and what is coming up. To get the summary, turn on Use your own API key or model under Advanced on the Assistant page.",
-        "briefStartedTitle": "Brief started",
-        "briefStartedBody": "Isoform is preparing a fresh brief. It reaches your phone when it is ready.",
-        "briefRunningTitle": "A brief is already in progress",
-        "briefRunningBody": "Isoform is still preparing the last brief. Give it a moment.",
-        "briefCooldownTitle": "Try again a little later",
-        "briefCooldownBody": "You can generate another brief after {{time}}.",
-        "briefFailed": "Could not start a brief. Try again.",
+        "briefRunningTitle": "A brief is already being written.",
+        "briefCooldownBody": "You can ask for another brief at {{time}}.",
+        "briefFailed": "Couldn't start a brief.",
         "scheduleSaveFailed": "Could not save the brief schedule. Try again.",
         "scheduleLoadFailed": "Could not load the brief settings. Try again.",
         "statusFailed": "Could not check phone connections. Try again.",
@@ -249,14 +246,14 @@
         "statusConnectedLocalOnly": "Remote access is off, so your phone cannot reach this computer from other networks. Linked {{time}}.",
         "statusConnectedLocalOnlyNoTime": "Remote access is off, so your phone cannot reach this computer from other networks.",
         "statusOffline": "Offline",
-        "statusOfflineDescription": "This computer cannot reach the server that links it to your phone right now. Isoform keeps trying.",
+        "statusOfflineDescription": "Your phone can't reach this computer right now: the connection server isn't answering. Isoform keeps trying.",
         "turnOn": "Turn on",
         "turnOff": "Turn off",
         "turnOnFailed": "Could not turn on the connection. Check the server address and try again.",
         "turnOffFailed": "Could not turn off the connection. Try again.",
         "serverTitle": "Server address",
         "serverDescription": "Your computer and phone talk through a relay server. It passes encrypted messages along and cannot read them. Change the address only if you run your own server.",
-        "serverRemoteAccess": "This computer's own relay, reached through the remote-access tunnel.",
+        "serverRemoteAccess": "This computer's own connection, reached through remote access.",
         "serverPlaceholder": "https://relay.example.com",
         "serverNotSet": "Not set",
         "serverLockedHint": "Turn off the connection to change the address.",
@@ -284,19 +281,30 @@
         "briefMissedWeek": "Missed in the last 7 days: {{count}}",
         "briefFailing": "The {{slot}} brief has failed {{count}} times and is being retried.",
         "briefFeedTitle": "Podcast feed on this computer",
-        "briefFeedDescription": "Serve your spoken briefs as a private podcast feed from this computer, so Apple Podcasts here can follow it. The feed never leaves this computer and lists the last 14 briefs.",
+        "briefFeedDescription": "Serve your spoken briefs as a private podcast feed for Apple Podcasts on this computer. Only apps on this computer can reach it. It lists your last 14 briefs.",
         "briefFeedHint": "Follow this address in Apple Podcasts (File > Follow a Show by URL). Anyone with the address on this computer can hear your briefs.",
         "briefFeedCopy": "Copy feed address",
         "briefFeedCopied": "Copied",
-        "briefFeedStarting": "The feed is starting."
+        "briefFeedStarting": "The feed is starting.",
+        "remoteAccessUnavailableDetail": "Not running, so your phone can reach this computer only on the same Wi-Fi.",
+        "briefWriting": "Writing a fresh brief. It reaches your phone when it's ready.",
+        "briefPredictedWhen": "Next brief: {{when}} at {{time}}, {{reason}}.",
+        "briefTimingFinish": "timed to when you finish",
+        "briefWhenThisMorning": "this morning",
+        "briefWhenThisEvening": "this evening",
+        "briefWhenTomorrowMorning": "tomorrow morning",
+        "briefWhenTomorrowEvening": "tomorrow evening",
+        "briefWhenLaterMorning": "{{day}} morning",
+        "briefWhenLaterEvening": "{{day}} evening",
+        "briefStartedTitle": "Brief started",
+        "briefStartedBody": "Isoform is preparing a fresh brief. It reaches your phone when it is ready.",
+        "briefRunningBody": "Isoform is still preparing the last brief. Give it a moment.",
+        "briefCooldownTitle": "Try again a little later"
     },
     "textMessages": {
         "title": "Texts through Messages",
         "description": "No phone app needed. When something needs you soon and your phone is out of reach, this computer texts your verified number through Messages.",
         "unsupported": "Texts are only sent from a computer with Messages.",
-        "loading": "Checking text messages...",
-        "loadFailed": "Could not check text messages. Try again.",
-        "retry": "Try again",
         "numberLabel": "Your phone number",
         "numberPlaceholder": "+1 555 010 0000",
         "numberHint": "Start with + and the country code, then 8 to 15 digits.",
@@ -350,7 +358,10 @@
         "errorPaused": "Texts are paused. Send a test here when Messages is ready.",
         "sendCode": "Text me a code",
         "codeLabel": "Verification code",
-        "confirmCode": "Confirm number"
+        "confirmCode": "Confirm number",
+        "loading": "Checking text messages...",
+        "loadFailed": "Could not check text messages. Try again.",
+        "retry": "Try again"
     },
     "smsTexts": {
         "title": "Get Isoform by text message",
@@ -446,7 +457,7 @@
         "retry": "Try again",
         "saveFailed": "Could not change this setting. Try again.",
         "pausedChip": "Paused",
-        "pausedHint": "Isoform paused {{kind}} because you dismissed most of them.",
+        "pausedHint": "Isoform paused {{kind}} because you closed most of them without acting.",
         "kinds": {
             "decision_due": {
                 "label": "Permission requests",
@@ -502,7 +513,7 @@
             },
             "waiting_on_reply": {
                 "label": "Waiting on your reply",
-                "description": "Someone you know wrote to you directly more than a day ago and has no answer yet."
+                "description": "Someone you know wrote to you directly more than a day ago and has no answer yet. You can answer from the notice."
             },
             "meeting_followup": {
                 "label": "Meeting follow-ups",
@@ -549,7 +560,7 @@
         "quietEndLabel": "Quiet hours end",
         "budgetLabel": "Interruptions a day",
         "rulesFailed": "Could not change the rules. Try again.",
-        "kindsDescription": "Turn on what you want to hear about. If you keep dismissing one kind, it pauses itself until you turn it back on.",
+        "kindsDescription": "Turn on what you want to hear about. If you keep closing one kind, it pauses itself until you turn it back on.",
         "timingTitle": "Quiet hours and limits",
         "timingDescription": "Choose when Isoform stays quiet and how often it may interrupt you. Change these if notifications arrive at bad times or too often.",
         "quietTitle": "Quiet hours",
@@ -590,7 +601,7 @@
         },
         "level": {
             "title": "How much Isoform speaks up",
-            "description": "One dial for everything below. Pick a level, then fine-tune any switch or time; that turns the dial to Custom.",
+            "description": "Pick a level, then fine-tune any kind below.",
             "custom": "Custom",
             "customHint": "You changed a switch or a time by hand. Pick a level to reset everything in one step.",
             "saveFailed": "Could not change the level. Try again.",
@@ -601,15 +612,15 @@
                 },
                 "fewer": {
                     "label": "Fewer",
-                    "description": "Only things that need you, finished work and your brief. Up to 3 interruptions a day, quiet 21:00 to 09:00."
+                    "description": "Only things that need you, finished work and your brief. Up to 3 interruptions a day, quiet 9:00 PM to 9:00 AM."
                 },
                 "normal": {
                     "label": "Normal",
-                    "description": "The usual mix, with one suggestion a week. Up to 6 interruptions a day, quiet 22:00 to 08:00."
+                    "description": "The usual mix, with one suggestion a week. Up to 6 interruptions a day, quiet 10:00 PM to 8:00 AM."
                 },
                 "more": {
                     "label": "More",
-                    "description": "Everything, including people who came back, goal check-ins and what Isoform learned. Up to 10 a day, quiet 23:00 to 07:00."
+                    "description": "Everything, including people who came back, goal check-ins and what Isoform learned. Up to 10 a day, quiet 11:00 PM to 7:00 AM."
                 }
             }
         },
@@ -646,13 +657,13 @@
             "weekQuiet": "Isoform did not speak up this week.",
             "stat": "{{sent}} sent · {{useful}} useful",
             "statLabel": "{{sent}} sent, {{useful}} useful",
-            "dismissed": "{{count}} dismissed",
+            "dismissed": "{{count}} closed",
             "muted": "{{count}} muted",
             "quietStat_one": "{{count}} quiet line on Today",
             "quietStat_other": "{{count}} quiet lines on Today",
             "sample": "“{{text}}”",
             "fold_one": "{{count}} more kind, nothing sent in the last {{days}} days",
-            "fold_other": "{{count}} more kinds, nothing sent in the last {{days}} days",
+            "fold_other": "{{count}} kinds that sent nothing in {{days}} days",
             "showOnToday": "Show on Today instead",
             "notifyAgain": "Notify me again",
             "quietHint": "Shows as a quiet line on Today. No notices on your computer or phone.",
@@ -670,7 +681,8 @@
                 "rare": "Rare",
                 "quiet": "Quiet"
             },
-            "weekDisclosure": "The last 7 days in detail"
+            "weekDisclosure": "The last 7 days in detail",
+            "titleNew": "What Isoform tells you about"
         },
         "checkIns": {
             "title": "Check-ins that start a conversation",
@@ -694,7 +706,7 @@
             "work_finished": "Work finished.",
             "work_blocked": "Work is waiting on you.",
             "brief_ready": "Your brief is ready.",
-            "brief_missed": "Your brief did not arrive.",
+            "brief_missed": "Your brief didn't come.",
             "schedule_missed": "A schedule did not run.",
             "suggestion": "Isoform has a suggestion.",
             "topic_finds": "Something new on a topic you follow.",
@@ -759,7 +771,7 @@
         "saveCorrection": "Save correction",
         "cancel": "Cancel",
         "keptCorrection": "Your correction, kept so you can copy it",
-        "dismiss": "Dismiss",
+        "dismiss": "OK",
         "saveFailed": "Could not save your decision. Try again.",
         "stale": "What Isoform understands about you changed after this was proposed, so it no longer applies. A later review will reconsider it."
     },
@@ -779,7 +791,7 @@
                 "heading": "Coming soon"
             }
         },
-        "soon": "Soon"
+        "soon": "Reservations open"
     },
     "pages": {
         "overview": {
@@ -850,8 +862,8 @@
         },
         "use-yansu-anywhere": {
             "label": "Other AI apps",
-            "subtitle": "Let the other AI assistants you use recall what Isoform has learned about your work.",
-            "keywords": "Claude, Claude Code, ChatGPT, Cursor, Codex, other assistants, copy prompt, install prompt, what the install prompt does, what other assistants can recall, examples, use anywhere, recall, GitHub"
+            "subtitle": "Let Claude Code and Codex recall what Isoform has learned about your work.",
+            "keywords": "Claude, Claude Code, Codex, other assistants, connect, revoke, what other assistants can recall, recall, GitHub, set it up by hand"
         },
         "about": {
             "label": "About",
@@ -875,15 +887,15 @@
         },
         "your-agent": {
             "label": "Agent of You",
-            "subtitle": "Soon, people can hire an agent of you.",
+            "subtitle": "Soon, anyone can hire an agent that does things the way you do.",
             "keywords": "agent of you, agent, rent, request, page, name, specialties, taste, know-how, how you do things, coming soon",
             "title": "Rent out an agent of you"
         }
     },
     "overview": {
         "loading": "Checking your setup...",
-        "rowFailed": "Could not read this setting. Reopen Settings to try again.",
-        "changeFailed": "Could not change this setting. Try again.",
+        "rowFailed": "Couldn't read this setting.",
+        "changeFailed": "Couldn't change this.",
         "listSeparator": ", ",
         "listLastSeparator": " and ",
         "sentences": "{{first}} <second/>",
@@ -897,7 +909,7 @@
             "ignores": "Ignores"
         },
         "worth": {
-            "title": "Worth a look · {{count}}",
+            "title": "Worth a look",
             "titleDone": "Worth a look",
             "leave": "Leave it",
             "left": "Left as it is.",
@@ -913,10 +925,10 @@
                 "detail": "The connection uses a local address. Away from home, briefs wait until you are back.",
                 "titleRemoteOff": "Remote access is off, so your phone can only reach this computer on the same network",
                 "detailRemoteOff": {
-                    "saved_relay": "The connection uses {{host}}. Open Phone settings and choose Use remote access.",
-                    "environment_relay": "ISOFORM_RELAY_URL points to {{host}}. Quit Isoform and open it again without that setting.",
-                    "build_relay": "This build uses the fixed server {{host}}.",
-                    "disabled": "ISOFORM_MOBILE_REMOTE_ACCESS turns it off. Quit Isoform and open it again without that setting."
+                    "saved_relay": "Open Phone settings and choose Use remote access.",
+                    "environment_relay": "A setting on this computer points Isoform to another connection server. Quit Isoform and open it again without it.",
+                    "build_relay": "This version of Isoform always uses its own connection server.",
+                    "disabled": "A setting on this computer turns remote access off. Quit Isoform and open it again without it."
                 },
                 "action": "Fix the connection",
                 "done": "Opened Phone settings."
@@ -928,7 +940,7 @@
                 "done": "Opened Phone settings."
             },
             "assistant": {
-                "title": "{{assistant}} has 0% of its {{window}} limit left",
+                "title": "{{assistant}} has used all of its {{window}}",
                 "titleNoWindow": "{{assistant}} has no usage left",
                 "resets": "It resets {{when}}.",
                 "others_one": "{{others}} keeps answering until then.",
@@ -940,6 +952,8 @@
         "sees": {
             "watching": "Isoform is <b>watching</b> {{sources}}. Private browser windows and ignored apps stay out.",
             "nothing": "Isoform is <b>not watching or listening</b>: Watch my screen and Listen are off.",
+            "screenBlocked": "Isoform <b>can't see your screen</b> until your computer allows it.",
+            "allow": "Allow",
             "pausedUntil": "Isoform is <b>paused until {{time}}</b>, not watching or listening.",
             "paused": "Isoform is <b>paused</b>, not watching or listening until you resume.",
             "sources": {
@@ -975,8 +989,8 @@
             "one": "{{first}} answers.",
             "many": "{{first}} answers first, then {{rest}}.",
             "thenSeparator": ", then ",
-            "left": "{{assistant}} has <b>{{percent}}% left</b> of its {{window}} limit.",
-            "leftNoWindow": "{{assistant}} has <b>{{percent}}% left</b> of its usage limit.",
+            "left": "{{assistant}} has <b>{{percent}}%</b> of its {{window}} left.",
+            "leftNoWindow": "{{assistant}} has <b>{{percent}}%</b> of its usage limit left.",
             "none": "No assistant is set up yet.",
             "link": "Assistant"
         },
@@ -996,10 +1010,12 @@
             "link": "Learning and memory"
         },
         "keeps": {
-            "lead": "Recordings stay",
-            "detail": "on this computer, within a {{limit}} limit. {{used}} used.",
+            "lead": "Recordings are stored on this computer for",
+            "detail": ", up to {{limit}} in all, {{used}} used.",
             "usage": "{{used}} of {{limit}} used",
-            "link": "Storage"
+            "link": "Storage",
+            "detailNothingUsed": ", up to {{limit}} in all.",
+            "detailNoLimit": ", as long as space allows."
         },
         "briefs": {
             "adaptive": "Your brief comes around {{morning}} and {{evening}}, timed to when you start and finish.",
@@ -1126,6 +1142,13 @@
             "context": "Contextual knowledge from past work"
         },
         "boundaryNote": "Read-only: an assistant only recalls what Isoform has already recorded. It never records or writes anything itself.",
+        "advancedHint": "What other assistants can recall",
+        "manual": {
+            "title": "Set it up by hand",
+            "description": "The steps and commands are in Isoform's public repository.",
+            "open": "Open on GitHub",
+            "openFailed": "Couldn't open your browser."
+        },
         "useCasesTitle": "Examples",
         "useCases": {
             "claudeCode": {
@@ -1149,8 +1172,7 @@
         "copyPrompt": "Copy install prompt",
         "copiedPrompt": "Copied",
         "promptTitle": "What the install prompt does",
-        "promptDescription": "It asks the assistant to download Isoform's instructions from GitHub and save them where it keeps its skills. This is the full text:",
-        "advancedHint": "What other assistants can recall, examples and the full install prompt"
+        "promptDescription": "It asks the assistant to download Isoform's instructions from GitHub and save them where it keeps its skills. This is the full text:"
     },
     "contacts": {
         "selfTitle": "Name yourself",
@@ -1357,7 +1379,7 @@
             "title": "Support report",
             "description": "Copies a short report on how Isoform is running. Paste it into your email or Discord message so the team can find the problem faster.",
             "copy": "Copy report",
-            "copiedToast": "Support report copied to clipboard",
+            "copiedToast": "Copied. Paste it into your email or Discord message.",
             "errorToast": "Could not create the support report: {{error}}",
             "details": {
                 "title": "What the support report includes",
@@ -1366,7 +1388,13 @@
                 "included": "The Isoform version and build, your operating system, how long Isoform has been running, its memory and processor use, counts and timings from screen and audio capture, the helper processes it runs with their model names and short session IDs, and any warnings.",
                 "excludedTitle": "Never included",
                 "excluded": "What was on your screen or in your audio, your chats, memories and files, and the command lines of helper processes."
-            }
+            },
+            "copyFailed": "Couldn't copy the support report."
+        },
+        "emailSupport": {
+            "title": "Email support",
+            "description": "Write to bo@isoform.ai. Your mail app opens a draft with your version.",
+            "openFailed": "Couldn't open your email app. Write to bo@isoform.ai."
         }
     },
     "onboarding": {
@@ -1377,7 +1405,7 @@
     "activityTriage": {
         "cardDescription": "Choose what Isoform may learn or save from observed work. Observing never starts work on its own: tasks and automations run only after you start or turn them on.",
         "eventsTitle": "Activity timeline",
-        "eventsDescription": "Groups what you do across apps into moments on your Activity timeline. To understand chat apps it may look at their screenshots. When off, no new moments are added.",
+        "eventsDescription": "Groups what you do across apps into moments on your Activity timeline. To read WeChat, it sends a cropped screenshot of the open chat to your AI. When off, no new moments are added.",
         "memoryTitle": "About you",
         "memoryDescription": "Learns what you are focused on, the tools you use and how you like to work. When off, About you stops changing from what Isoform sees.",
         "knowledgeTitle": "How you do things",
@@ -1419,8 +1447,8 @@
         "fetchModels": "Fetch models",
         "fetchingModels": "Fetching...",
         "modelsFound": "{{count}} models available — click the field to pick one",
-        "modelsNone": "No model list returned — enter the model name manually",
-        "modelsFetchFailed": "This endpoint doesn't support listing models — enter the model name manually. ({{error}})",
+        "modelsNone": "This endpoint listed no models. Enter the model name.",
+        "modelsFetchFailed": "Couldn't list this endpoint's models. Enter the model name.",
         "baseUrlLabel": "Base URL",
         "baseUrlHint": "Leave empty to use the provider default.",
         "commandLabel": "CLI command",
@@ -1438,7 +1466,7 @@
         "saveFailedToast": "Failed to save: {{error}}",
         "testPassed": "Connection succeeded",
         "testFailed": "Connection failed",
-        "testErrorToast": "Test error: {{error}}",
+        "testErrorToast": "Couldn't run the test.",
         "copyCurl": "Copy curl command",
         "curlCopied": "curl command copied",
         "curlHint": "Run this in a terminal to see the full response when the test fails. It reads your key from $API_KEY, so set that first: export API_KEY=your-key",
@@ -1590,15 +1618,15 @@
         },
         "diagnostics": {
             "title": "Share diagnostic data",
-            "description": "Shares anonymous feature counts and time spent actively using Isoform to help us improve it. Nothing you write, say or see is included. When this is off, nothing is sent.",
-            "saveFailed": "Could not save your diagnostic data choice. Please try again.",
+            "description": "Shares feature counts and time spent actively using Isoform to help us improve it. A random install ID links the counts; nothing you write, say or see is included. When this is off, no diagnostic data is sent.",
+            "saveFailed": "Couldn't change this.",
             "detailsTitle": "What diagnostic data includes",
             "detailsDescription": "When sharing is on, Isoform records app opens, active foreground time, the first brief viewed, chat turns sent (count only), playbook runs, phone pairings and a daily active ping. A random install ID links these events without an account, name or email. Events include app version, flavor, OS version, language and telemetry tier; activity also includes a random session ID and duration. Five minutes without input ends active time. Never sent: screen text, audio, file names, URLs, people, memory, chat text or tool inputs and outputs. When sharing is off, nothing is queued or sent."
         },
         "riskyCommands": {
             "title": "Ask before running risky commands",
             "description": "When on, Isoform asks before running commands that change things outside the project, send data, or that it cannot check. When off, commands run without asking. Private keys, password stores and Isoform's own data stay blocked either way.",
-            "saveFailed": "Could not save this setting. Please try again."
+            "saveFailed": "Couldn't change this."
         },
         "permissions": {
             "title": "System permissions",
@@ -1609,18 +1637,25 @@
         "voices": {
             "title": "Voice memory",
             "remembered": "Remembered voices",
-            "description": "When you name a call speaker, their voice signature stays on this computer. It never goes to a model, your phone or sync. Forget voices removes all saved voice signatures, including voice enrollment. Names already written in call notes stay. Deleting a call also removes signatures learned only from that call.",
+            "description": "When you name a call speaker, their voice signature is stored on this computer and never sent to your AI or your phone. Forget voices removes all saved voice signatures, including voice enrollment. Names already written in call notes stay. Deleting a call also removes signatures learned only from that call.",
             "forget": "Forget voices",
             "forgotten": "Saved voices forgotten.",
-            "failed": "Voices could not be forgotten. Please try again."
+            "failed": "Couldn't forget your saved voices.",
+            "confirm": {
+                "title": "Forget every saved voice?",
+                "description": "Isoform stops recognizing speakers by voice. Names already in call notes stay. This cannot be undone."
+            }
         },
         "assistantHistory": {
-            "forgetFailed": "Could not forget assistant history. Check this setting and try again.",
+            "forgetFailed": "Reading is off, but Isoform couldn't forget what came from this history.",
             "title": "Read my Claude Code and Codex history",
             "description": "Isoform reads the last 30 days of sessions on this computer, so it knows your projects from the start. Turning it off forgets what came from it.",
             "forgetting": "Forgetting what came from your Claude Code and Codex history",
             "undo": "Undo",
-            "saveFailed": "Could not save this setting. Please try again."
+            "saveFailed": "Couldn't change this.",
+            "stopping": "Stopping in 5 seconds. Isoform will forget what came from this history.",
+            "stopFailed": "Isoform couldn't stop reading this history. Reading is still on.",
+            "startFailed": "Isoform couldn't turn this on."
         }
     },
     "storage": {
@@ -1639,7 +1674,8 @@
             "other": "Other",
             "otherDetail": "Older video recordings and temporary files",
             "empty": "Nothing stored yet.",
-            "overLimit": "Over the limit. Isoform first stores older screenshots and recordings smaller in the background, and removes the oldest only if that is not enough."
+            "overLimit": "Over the limit. Isoform first stores older screenshots and recordings smaller in the background, and removes the oldest only if that is not enough.",
+            "failed": "Couldn't measure the space used."
         },
         "budget": {
             "confirmText_one": "Isoform now counts everything it keeps on disk, and that is over your limit. To get under it, Isoform would remove the oldest screenshots and call recordings: {{n}} file, {{size}}, {{from}} to {{to}}. What Isoform read from them stays. Nothing is removed until you say yes here, raise the limit or use Free up space.",
@@ -1648,7 +1684,7 @@
             "confirmDialogTitle": "Remove {{size}} of the oldest screenshots and recordings?",
             "confirmDialogDescription": "They cannot be brought back; what Isoform read from them stays. From now on Isoform removes the oldest files whenever the total is over the limit.",
             "confirmDialogAction": "Remove and keep the limit",
-            "confirmFailed": "Could not save your choice: {{error}}",
+            "confirmFailed": "Couldn't save your choice.",
             "unreachable": "The limit is lower than what Isoform keeps no matter what: {{kept}} for the database, the last day, recordings still waiting for their transcript and screenshots still being read. Nothing is removed for the limit. Raise it to more than {{kept}}."
         },
         "limit": {
@@ -1663,14 +1699,15 @@
         "screenshots": {
             "title": "Keep screenshots for",
             "description": "Older screenshots are stored at a smaller size, and screenshots past this time are removed. The text Isoform read from them stays. Shrinking and removing cannot be undone.",
-            "withRecordings": "With recordings ({{period}})",
-            "withRecordingsDescription": "No screenshot time is chosen, so screenshots go with their recordings: after {{period}} the whole recording, its text included, is removed. Older screenshots are stored at a smaller size, which cannot be undone.",
-            "withRecordingsUnlimitedDescription": "No screenshot time is chosen, so screenshots stay with their recordings until the storage limit needs the space. Older screenshots are stored at a smaller size, which cannot be undone.",
+            "withRecordings": "As long as their recordings",
+            "withRecordingsDescription": "Screenshots are kept as long as their recordings: after {{period}} the whole recording, its text included, is removed.",
+            "withRecordingsUnlimitedDescription": "Screenshots are kept as long as their recordings, until the storage limit needs the space.",
             "confirmTitle": "Keep screenshots for {{period}}?",
             "confirmDescription": "Screenshots older than {{period}} will be removed from this computer. The text Isoform read from them stays. This cannot be undone.",
             "confirmAction": "Remove older screenshots",
             "updatedToast": "Screenshot time limit updated",
-            "failedToast": "Could not update the screenshot time limit: {{error}}"
+            "failedToast": "Couldn't change how long screenshots are kept.",
+            "readFailed": "Couldn't read how long screenshots are kept."
         },
         "cleanup": {
             "title": "Free up space",
@@ -1718,8 +1755,8 @@
             "runningNote": "You can keep using Isoform while this runs.",
             "done": "Freed {{size}}. Isoform now uses {{after}}.",
             "doneDatabase": "The database gives back its unused space the next time this computer is locked.",
-            "checkFailed": "Could not check: {{error}}",
-            "startFailed": "Could not start: {{error}}"
+            "checkFailed": "Couldn't check what can be freed.",
+            "startFailed": "Couldn't start freeing up space."
         }
     },
     "permissions": {
@@ -1809,8 +1846,8 @@
         }
     },
     "meetingRecording": {
-        "loadFailed": "Meeting recording setting is unavailable. Reopen Settings to try again.",
-        "toggleFailed": "Failed to update meeting recording setting"
+        "loadFailed": "Couldn't read this setting.",
+        "toggleFailed": "Couldn't change this."
     },
     "notifications": {
         "title": "Do notifications work on this computer?",
@@ -2253,20 +2290,20 @@
     },
     "sensitiveApps": {
         "toasts": {
-            "loadFailed": "Failed to load sensitive apps",
-            "addFailed": "Failed to add application",
+            "loadFailed": "Couldn't read the apps Isoform ignores.",
+            "addFailed": "Couldn't add {{name}}.",
             "added": "Added {{name}}",
             "removed": "App removed",
-            "removeFailed": "Failed to remove app"
+            "removeFailed": "Couldn't remove {{name}}."
         }
     },
     "voiceInputApps": {
         "toasts": {
-            "loadFailed": "Failed to load voice-input apps",
-            "addFailed": "Failed to add application",
+            "loadFailed": "Couldn't read the apps Isoform ignores.",
+            "addFailed": "Couldn't add {{name}}.",
             "added": "Added {{name}}",
             "removed": "App removed",
-            "removeFailed": "Failed to remove app"
+            "removeFailed": "Couldn't remove {{name}}."
         }
     },
     "audioCapture": {
@@ -2400,19 +2437,19 @@
             "agentDirs": "Other AI tool"
         },
         "toasts": {
-            "loadFailed": "Failed to load skills: {{error}}",
-            "searchFailed": "ClawHub search failed: {{error}}",
+            "loadFailed": "Couldn't read your skills.",
+            "searchFailed": "Couldn't search ClawHub. Check your internet connection.",
             "installed": "{{name}} installed and enabled",
             "installedFromGitHub": "{{name}} installed from GitHub",
             "installedFromFolder": "{{name}} installed from folder",
-            "installFailed": "Install failed: {{error}}",
-            "githubInstallFailed": "GitHub install failed: {{error}}",
-            "localInstallFailed": "Local install failed: {{error}}",
+            "installFailed": "Couldn't install {{name}}.",
+            "githubInstallFailed": "Couldn't install {{name}}.",
+            "localInstallFailed": "Couldn't install this skill.",
             "uninstalled": "{{name}} uninstalled",
-            "uninstallFailed": "Uninstall failed: {{error}}",
-            "updateFailed": "Failed to update skill: {{error}}",
-            "updateAreasFailed": "Could not change where the skill is used: {{error}}",
-            "openFolderFailed": "Failed to open folder: {{error}}"
+            "uninstallFailed": "Couldn't uninstall {{name}}.",
+            "updateFailed": "Couldn't change {{name}}.",
+            "updateAreasFailed": "Couldn't change {{name}}.",
+            "openFolderFailed": "Couldn't open the folder."
         },
         "discover": {
             "title": "Found in your other AI tools",
@@ -2423,9 +2460,9 @@
             "noMatch": "No skills found in your other AI tools.",
             "install": "Install",
             "installed": "Installed",
-            "discoveryFailed": "Could not look for skills in your other AI tools: {{error}}",
+            "discoveryFailed": "Couldn't read skills from your other AI tools.",
             "installedFrom": "{{name}} installed from {{source}}",
-            "installFailed": "Install failed: {{error}}"
+            "installFailed": "Couldn't install {{name}}."
         },
         "advancedHint": "Install from GitHub or a folder, and where each skill is stored",
         "tabs": {
@@ -2470,7 +2507,13 @@
             "pairing": {
                 "title": "Finish pairing",
                 "paired": "Paired. Only the account that sent the pairing code can use this connection."
-            }
+            },
+            "tokenWorks": "The token works for {{team}}. Save and connect to finish.",
+            "tokenDidntWork": "The token didn't work. Check it and try again.",
+            "couldntConnect": "Couldn't connect {{app}}.",
+            "couldntDisconnect": "Couldn't disconnect {{app}}.",
+            "couldntRestartReceiver": "Couldn't restart receiving messages.",
+            "couldntCheckPermissions": "Couldn't check the permissions."
         },
         "slack": {
             "standalone": {
@@ -2841,7 +2884,8 @@
             "import": "Import",
             "importedToast": "Imported {{name}} from {{source}}",
             "importFailed": "Import failed: {{error}}",
-            "discoveryFailed": "Could not look for tool servers: {{error}}"
+            "discoveryFailed": "Could not look for tool servers: {{error}}",
+            "noneFound": "No tool servers found in your other apps."
         },
         "registry": {
             "title": "Browse the server list",
@@ -2906,9 +2950,6 @@
             "addServer": "Add server",
             "addedToast": "Tool server {{id}} added",
             "addFailed": "Add failed: {{error}}",
-            "idRequired": "Enter an ID",
-            "idAndCommandRequired": "Enter an ID and a command",
-            "idAndUrlRequired": "Enter an ID and a server URL",
             "idPlaceholderLocal": "filesystem",
             "idPlaceholderRemote": "remote-google",
             "namePlaceholderLocal": "Filesystem",
@@ -2922,7 +2963,13 @@
             "moreOptionsTitle": "More options",
             "moreOptionsHintLocal": "Working directory, environment and start-up",
             "moreOptionsHintRemote": "Start-up",
-            "envPlaceholder": "DEBUG=1"
+            "envPlaceholder": "DEBUG=1",
+            "nameRequired": "Enter a name for this server.",
+            "commandRequired": "Enter a command.",
+            "urlRequired": "Enter the server's URL.",
+            "idRequired": "Enter an ID",
+            "idAndCommandRequired": "Enter an ID and a command",
+            "idAndUrlRequired": "Enter an ID and a server URL"
         },
         "errors": {
             "loadFailed": "Could not load tool servers: {{error}}",
@@ -2946,7 +2993,8 @@
             "step2": "2. Default to the minimal no-credential install path. Pass NO `--env` flags unless the README explicitly states the server will not start or all tools fail without a specific credential. Optional keys (e.g. for higher rate limits, hosted-mode endpoints, private/paid resources, or telemetry) do NOT count as required — install without them.",
             "step3": "3. Run `yansu mcp install --source manual --id {{id}} --command <bin> --args \"<comma-separated-args>\"`.",
             "step4": "4. Verify with `yansu mcp list` that the server reaches healthy state. If it crashed, run `yansu mcp tail {{id}}` — only if the stderr clearly says a required credential is missing should you then stop and ask me for the value, and reinstall with `--env \"KEY=VALUE\"`.",
-            "closing": "Never invent credential values. Do not ask me for credentials up front based on the README alone — only ask after a no-credential install has actually failed for that reason."
+            "closing": "Never invent credential values. Do not ask me for credentials up front based on the README alone — only ask after a no-credential install has actually failed for that reason.",
+            "visible": "Install the {{name}} tool server from {{url}}."
         },
         "details": {
             "title": "Server details",
@@ -2973,18 +3021,18 @@
             "button": "Choose what to import"
         },
         "knows": {
-            "title": "See what Isoform knows",
-            "description": "Read and correct what Isoform has learned about you and the people you work with. Opening one of these closes Settings.",
+            "title": "What Isoform knows",
+            "description": "Read, correct or delete anything Isoform learned. Each opens in the main window.",
             "open": "Open",
             "memoryTitle": "About you",
-            "memoryDescription": "Everything Isoform remembers about you and your work. You can edit or delete any of it.",
+            "memoryDescription": "What Isoform remembers about you and your work.",
             "openMemory": "Open About you",
             "peopleTitle": "Who you know",
-            "peopleDescription": "The people Isoform has recognized in your messages and meetings.",
+            "peopleDescription": "People Isoform recognized in your messages, meetings and calls.",
             "openPeople": "Open Who you know",
-            "profileTitle": "Your profile",
-            "profileDescription": "The name Isoform shows for you and how it recognizes your own messages and voice.",
-            "openProfile": "Open your profile"
+            "profileTitle": "Your card",
+            "profileDescription": "Your name, and how Isoform recognizes your own messages and voice.",
+            "openProfile": "Open your card"
         },
         "contacts": {
             "title": "Recognize people from your Contacts",
@@ -2995,7 +3043,8 @@
             "notGranted": "Contacts access is still off. Turn it on for Isoform in System Settings, then come back here.",
             "failed": "Could not ask for Contacts access. Try again."
         },
-        "advancedHint": "Learn by comparison, chat context preview, search index"
+        "advancedHint": "Learn by comparison, chat context preview, search index",
+        "advancedHintPlain": "Learn by comparison"
     },
     "usingApps": {
         "access": {
@@ -3034,7 +3083,7 @@
         },
         "setUp": "Set up",
         "reviewPermissions": "Review permissions",
-        "loadFailedToast": "Could not check app access: {{error}}",
+        "loadFailedToast": "Couldn't check app access. Isoform couldn't read its permissions on this computer.",
         "advancedHint": "Apps Isoform knows how to use",
         "apps": {
             "title": "Apps Isoform knows how to use",
@@ -3048,7 +3097,9 @@
                 "planning": "Planning",
                 "documents": "Documents",
                 "development": "Development",
-                "other": "Other"
+                "other": "Other",
+                "messages": "Messages",
+                "email": "Email"
             }
         },
         "setupDialog": {
@@ -3132,30 +3183,30 @@
             "paused": "Paused. Isoform is not watching or listening right now.",
             "shortcutTitle": "Keyboard shortcut",
             "shortcutDescription": "Pause or resume observing from any app on this computer. See Keyboard shortcuts for the pause duration.",
-            "loadFailed": "Could not check whether observing is paused. Reopen Settings to try again.",
-            "toggleFailed": "Could not change Pause observing. Please try again."
+            "loadFailed": "Couldn't read this setting.",
+            "toggleFailed": "Couldn't change this."
         },
         "watch": {
             "title": "Watch my screen",
-            "description": "Isoform looks at the apps and windows you use so it can learn how you work and help at the right moment. It also reads the history of Chrome and other Chromium browsers on this computer (not Safari, never private windows), so the sites you visit most and what you searched for can appear in your brief. Turn this off if you would rather it never sees your screen.",
+            "description": "Isoform looks at the apps and windows you use, and keeps the text you type in them, so it can learn how you work and help at the right moment. It also reads the history of Chrome and other Chromium browsers on this computer (not Safari, never private windows), so the sites you visit most and what you searched for can appear in your brief. Password fields, private windows and the apps you ignore stay out. Turn this off if you would rather it never sees your screen.",
             "needsAccess": "Your computer has not given Isoform access yet. Allow it below.",
-            "toggleFailed": "Could not change Watch my screen. Please try again."
+            "toggleFailed": "Couldn't change this."
         },
         "listen": {
             "title": "Listen",
             "descriptionWithSystemAudio": "Isoform turns what you say into text all day, on this computer, and remembers what matters. Speech you dictate into another app, such as Claude or ChatGPT, is kept as dictation to that app (in a browser, while Record meetings automatically is on). With Record meetings automatically on, during a call it also hears the other side and keeps the call's audio. Outside calls no audio is kept, and the sound your computer plays is left out unless you turn it on below. Nothing said while a private browser window is in front becomes text, except in Safari, which does not mark its private windows.",
             "descriptionMicOnly": "Isoform turns what you say into text all day, on this computer, and remembers what matters. Speech you dictate into another app, such as Claude or ChatGPT, is kept as dictation to that app (in a browser, while Record meetings automatically is on). Outside calls no audio is kept. Nothing said while a private browser window is in front becomes text, except in Safari, which does not mark its private windows.",
-            "loadFailed": "Could not read this setting. Reopen Settings to try again.",
-            "toggleFailed": "Could not change Listen: {{error}}",
+            "loadFailed": "Couldn't read this setting.",
+            "toggleFailed": "Couldn't change this.",
             "microphone": {
                 "title": "Use the microphone",
                 "description": "Your own voice, turned into text all day. Turn it off to hear only what the computer plays during calls, while Record meetings automatically is on. Voice typing you start yourself still works.",
-                "toggleFailed": "Could not change the microphone. Please try again."
+                "toggleFailed": "Couldn't change this."
             },
             "systemAudioOutsideCalls": {
                 "title": "Hear the computer outside calls",
                 "description": "Also turn the sound your computer plays into text when you are not in a call, such as videos and podcasts. Off by default. With Record meetings automatically on, both sides of a call are heard.",
-                "toggleFailed": "Could not change this setting. Please try again."
+                "toggleFailed": "Couldn't change this."
             },
             "speechModel": {
                 "title": "Call transcription model",
@@ -3166,16 +3217,17 @@
                 "failed": "The last download of {{name}} failed: {{error}}. It tries again after a later call.",
                 "off": "Off. Calls are transcribed with the built-in model, and {{name}} is not downloaded.",
                 "remove": "Remove",
-                "changeFailed": "Could not change the call transcription model. Please try again."
+                "changeFailed": "Couldn't change this."
             }
         },
         "meetings": {
             "title": "Record meetings automatically",
-            "description": "When a Zoom, Teams, Slack or Google Meet call starts on your computer, Isoform quietly keeps its audio, transcript and notes with the call on Activity, and learns from the notes. Nothing announces the recording on your computer or phone. Turn this off to keep listening without call recordings or notes.",
+            "description": "When a Zoom, Teams, Slack or Google Meet call starts on your computer, Isoform keeps its audio, transcript and notes with the call on Activity, and learns from the notes. Isoform doesn't announce the recording, so let the people on the call know. Turn this off to keep listening without call recordings or notes.",
             "needsListening": "Turn on Listen to use this."
         },
         "capture": {
             "title": "Capture status",
+            "loadFailed": "Couldn't read what Isoform is capturing.",
             "description": "What Isoform is capturing right now. Check here when something does not seem to be working.",
             "refresh": "Refresh",
             "screen": "Screen",
@@ -3220,7 +3272,7 @@
                 "noCalendar": "No writable calendar",
                 "chooseCalendar": "Choose a calendar",
                 "browserOnly": "Your {{account}} calendar is only in your browser. Add it in Calendar › Settings › Accounts to hold time on it.",
-                "changeFailed": "Could not change hold settings."
+                "changeFailed": "Couldn't change this."
             },
             "title": "Calendars Isoform can see",
             "description": "Isoform reads the calendars on this computer and the web calendars you open in your browser, so it can prepare you for meetings and plan your day. Events are kept on this computer; what a task needs is sent to the AI you chose and to your paired phone.",
@@ -3228,10 +3280,10 @@
             "readingOff": "Calendar reading is off. Turn it on to see upcoming meetings in your brief.",
             "readingTitle": "Read my calendars",
             "readingDescription": "Keep the events from the calendars on this computer up to date.",
-            "toggleFailed": "Could not change calendar reading. Please try again.",
+            "toggleFailed": "Couldn't change this.",
             "refresh": "Refresh",
-            "refreshFailed": "Could not read the calendars: {{error}}",
-            "loadFailed": "Could not read the calendar list. Reopen Settings to try again.",
+            "refreshFailed": "Couldn't read your calendars.",
+            "loadFailed": "Couldn't read your calendars.",
             "empty": "No calendars seen yet. They appear here once Isoform has access, or after you open a web calendar in your browser.",
             "sourceKind": {
                 "eventkit": "On this computer",
@@ -3257,7 +3309,7 @@
                 "willRead": "Will read: {{providers}}",
                 "nothingToRead": "Nothing to read right now: every web calendar you use is already on this computer.",
                 "lastPeek": "Last read {{when}}",
-                "toggleFailed": "Could not change web calendar reading. Please try again."
+                "toggleFailed": "Couldn't change this."
             },
             "providers": {
                 "google": "Google Calendar",
@@ -3271,10 +3323,10 @@
             "readingTitle": "Read my reminders",
             "readingDescription": "Keep your open reminders up to date as commitments.",
             "readingOff": "Reminders reading is off. Saved reminders and commitments stay unless you revoke macOS access.",
-            "toggleFailed": "Could not change reminders reading. Please try again.",
+            "toggleFailed": "Couldn't change this.",
             "refresh": "Refresh",
-            "refreshFailed": "Could not read the reminders: {{error}}",
-            "loadFailed": "Could not read your reminders. Reopen Settings to try again.",
+            "refreshFailed": "Couldn't read your reminders.",
+            "loadFailed": "Couldn't read your reminders.",
             "empty": "No open reminders.",
             "open_one": "{{count}} open reminder",
             "open_other": "{{count}} open reminders",
@@ -3295,10 +3347,10 @@
             "readingOff": "Mail reading is off and Isoform reads none of it.",
             "notOpen": "Mail is not open. Isoform reads only while Mail is open and never opens it.",
             "stalled": "Mail was slow to answer several times in a row, so Isoform stopped reading it to keep Mail responsive. Tap Refresh to try again.",
-            "toggleFailed": "Could not change mail reading. Please try again.",
+            "toggleFailed": "Couldn't change this.",
             "refresh": "Refresh",
-            "refreshFailed": "Could not read Mail: {{error}}",
-            "loadFailed": "Could not read your mail. Reopen Settings to try again.",
+            "refreshFailed": "Couldn't read your mail.",
+            "loadFailed": "Couldn't read your mail.",
             "received_one": "{{count}} message this week",
             "received_other": "{{count}} messages this week",
             "waiting_one": "{{count}} waiting on your reply",
@@ -3308,18 +3360,18 @@
         "clipboard": {
             "title": "Note what I copy",
             "description": "A copy is a good sign of what you are about to do. Isoform notes what kind of thing you copied and in which app and, where macOS lets it read the copy, a short preview with personal details, codes, recovery phrases, single words such as passwords and anything labelled as a secret removed. Nothing is noted from password managers, copies apps mark as passwords, private browser windows, Isoform itself or the apps you protect. Safari does not mark its private windows, so from Safari only the kind of copy is noted, never a preview.",
-            "toggleFailed": "Could not change this setting. Please try again."
+            "toggleFailed": "Couldn't change this."
         },
         "files": {
             "title": "Recent files",
-            "description": "Isoform asks Spotlight which documents you opened or edited lately in Documents, Desktop, Downloads and iCloud Drive, and keeps their names for two weeks: the brief shows what you worked on today, and a document named like one of your commitments is linked to it. Isoform never opens a file or reads what is in it. Hidden files, app data, files that hold passwords or keys, the private folders below and anything used with the apps you protect are left out. Turning this off stops new collection and keeps the records already saved. Recent files start off for now: Isoform is still confirming that Spotlight never shows it a folder macOS has not opened to it.",
+            "description": "Isoform asks Spotlight which documents you opened or edited lately in Documents, Desktop, Downloads and iCloud Drive, and keeps their names for two weeks: the brief shows what you worked on today, and a document named like one of your commitments is linked to it. Isoform never opens a file or reads what is in it. Hidden files, app data, files that hold passwords or keys, the private folders below and anything used with the apps you protect are left out. Turning this off stops new collection and keeps the records already saved.",
             "readingTitle": "Note my recent files",
             "readingDescription": "Keep the names of the documents you work on.",
             "readingOff": "Recent files are off and Isoform notes none of them.",
-            "toggleFailed": "Could not change this setting. Please try again.",
+            "toggleFailed": "Couldn't change this.",
             "refresh": "Refresh",
-            "refreshFailed": "Could not read your recent files: {{error}}",
-            "loadFailed": "Could not read your recent files. Reopen Settings to try again.",
+            "refreshFailed": "Couldn't read your recent files.",
+            "loadFailed": "Couldn't read your recent files.",
             "today_one": "{{count}} document today",
             "today_other": "{{count}} documents today",
             "linked_one": "{{count}} linked to your commitments",
@@ -3342,7 +3394,7 @@
                 "remove": "Remove",
                 "removeLabel": "Stop keeping {{folder}} private",
                 "pickerTitle": "Choose a folder to keep private",
-                "changeFailed": "Could not change the private folders. Please try again."
+                "changeFailed": "Couldn't change this."
             }
         },
         "captured": {
@@ -3352,7 +3404,7 @@
             "today": "Today",
             "week": "Last 7 days",
             "paused": "Paused. Isoform saves nothing until you resume observing.",
-            "loadFailed": "The counts could not be read. Reopen Settings to try again.",
+            "loadFailed": "Couldn't read these counts.",
             "sources": {
                 "screens": "Screens seen",
                 "textRead": "Screens read for text",
@@ -3374,9 +3426,9 @@
         "builtinSection": "Built in",
         "builtinDescription": "These features are included with Isoform. Choose which ones are on.",
         "loading": "Loading plugins...",
-        "loadFailed": "Could not load plugins.",
+        "loadFailed": "Couldn't read your plugins.",
         "retry": "Try again",
-        "toggleFailed": "Could not change this plugin. Check its settings and try again.",
+        "toggleFailed": "Couldn't change {{name}}.",
         "stateUnavailable": "State unavailable",
         "readError": "Could not read this feature's settings. Check its settings page and try again. Other features can still be changed.",
         "errors": {
@@ -3577,7 +3629,7 @@
             },
             "notify-waiting_on_reply": {
                 "name": "Notify: Waiting on your reply",
-                "description": "Someone you know wrote to you directly more than a day ago and has no answer yet."
+                "description": "Someone you know wrote to you directly more than a day ago and has no answer yet. You can answer from the notice."
             },
             "notify-meeting_followup": {
                 "name": "Notify: Meeting follow-ups",
@@ -3688,9 +3740,9 @@
         "reason": {
             "ownKey": "Your API key model is set under Advanced."
         },
-        "loading": "Loading choices",
-        "loadFailed": "Isoform could not read these choices. Open this page again in a moment.",
-        "saveFailed": "Isoform could not save that choice. Try again."
+        "loadFailed": "Couldn't read this setting.",
+        "saveFailed": "Isoform could not save that choice. Try again.",
+        "loading": "Loading choices"
     },
     "aboutPolish": {
         "notesVersion": "v{{version}}:",
@@ -3726,13 +3778,13 @@
         "paired": "paired with {{phone}}",
         "noPhone": "No phone paired",
         "data": "Data",
-        "dataDescription": "Everything stays on this computer. {{size}} GB in Isoform’s folder.",
+        "dataDescription": "Memory, screenshots and audio are stored on this computer. Isoform’s folder uses {{size}}.",
         "openFolder": "Open folder",
         "support": "Support",
         "supportDescription": "Logs for the last 7 days, with screen text and speech removed.",
         "saveLogs": "Save logs for support",
         "legal": "Legal",
-        "legalDescription": "Privacy, terms and open source licenses.",
+        "legalDescription": "Isoform's source is public under the Functional Source License.",
         "read": "Read",
         "actionFailed": "This action could not finish. Please try again.",
         "loading": "Loading version and updates…",
@@ -3752,26 +3804,28 @@
         "close": "Close",
         "releaseOnly": "Update checks are available in release builds.",
         "updateFailed": "Update could not finish",
-        "retryDescription": "Download a fresh copy, then choose when to restart."
+        "retryDescription": "Download a fresh copy, then choose when to restart.",
+        "license": "License",
+        "privacy": "Privacy"
     },
     "yourAgent": {
-        "comingSoon": "Coming soon",
+        "comingSoon": "Reservations open",
         "leadRest": "It works the way you do, makes things for them in minutes, and you get paid for every minute it works.",
         "specialtiesTitle": "What it would specialize in",
-        "specialtiesFrom": "From what Isoform learned on this computer. Nothing has left it.",
+        "specialtiesFrom": "From what Isoform learned on this computer.",
         "stillLearning": "Isoform is still learning how you work. Your specialties show here once it has seen you do something a few times.",
         "tasteTitle": "A taste of what it knows",
-        "requestTitle": "Request your page",
-        "sendButton": "Send request",
+        "requestTitle": "Reserve your name",
+        "sendButton": "Reserve",
         "nameLabel": "Page name, after isoform.ai/agents/",
         "namePlaceholder": "yourname",
         "emailPlaceholder": "Your email",
-        "reserveNote": "Only the name and this email are sent. We'll email a code to confirm it's you, and write once more when it opens.",
+        "reserveNote": "To find a free name, Isoform checks this name and forms of your full name when you leave the name field. When you press Reserve, it sends the name and your email, and we email a code to confirm it's you.",
         "taken": "Taken. Try {{suggestion}}.",
-        "notAllowed": "That name isn't available.",
+        "notAllowed": "That name is held. Try another.",
         "invalidName": "Use 3 to 30 letters, numbers or dots, not starting or ending with a dot.",
         "invalidEmail": "Check the email address.",
-        "offline": "Connect to the internet to send the request.",
+        "offline": "Connect to the internet to reserve a name.",
         "sendFailed": "Couldn't send the request. Try again.",
         "rateLimited": "Too many tries. Try again at {{time}}.",
         "copyLink": "Copy your link",
@@ -3780,16 +3834,16 @@
         "linkedinCopied": "Your post is copied. Paste it into LinkedIn.",
         "shareAction": {
             "x": "Post on X",
-            "linkedin": "Share on LinkedIn",
+            "linkedin": "Copy post and open LinkedIn",
             "threads": "Post on Threads"
         },
         "sharePost": {
-            "xWith": "I reserved my name on Agent of You. Soon anyone can hire an agent that works the way I do. Mine will handle {{work}}, and I get paid for every minute it works.\n\nNames go to whoever asks first.",
-            "xWithout": "I reserved my name on Agent of You. Soon anyone can hire an agent that works the way I do, and I get paid for every minute it works.\n\nNames go to whoever asks first.",
-            "threadsWith": "I reserved my name on Agent of You, from Isoform.\n\nIsoform learns how you do things. Soon anyone can hire an agent that does them like you, and you get paid for every minute it works. Mine will handle {{work}}.\n\nNames go to whoever asks first.",
-            "threadsWithout": "I reserved my name on Agent of You, from Isoform.\n\nIsoform learns how you do things. Soon anyone can hire an agent that does them like you, and you get paid for every minute it works.\n\nNames go to whoever asks first.",
-            "linkedinWith": "I reserved my page on Agent of You, from Isoform.\n\nIsoform learns how you do your work. Soon, anyone can hire an agent that does it your way, in minutes, and you get paid for every minute it works. Mine will handle {{work}}.\n\nPages open in the order they were requested, and names go to whoever asks first.",
-            "linkedinWithout": "I reserved my page on Agent of You, from Isoform.\n\nIsoform learns how you do your work. Soon, anyone can hire an agent that does it your way, in minutes, and you get paid for every minute it works.\n\nPages open in the order they were requested, and names go to whoever asks first."
+            "xWith": "I reserved my name on Agent of You. Soon anyone can hire an agent that works the way I do. Mine will handle {{work}}, and I get paid for every minute it works.\n\nNames go to whoever reserves first.",
+            "xWithout": "I reserved my name on Agent of You. Soon anyone can hire an agent that works the way I do, and I get paid for every minute it works.\n\nNames go to whoever reserves first.",
+            "threadsWith": "I reserved my name on Agent of You, from Isoform.\n\nIsoform learns how you do things. Soon anyone can hire an agent that does them like you, and you get paid for every minute it works. Mine will handle {{work}}.\n\nNames go to whoever reserves first.",
+            "threadsWithout": "I reserved my name on Agent of You, from Isoform.\n\nIsoform learns how you do things. Soon anyone can hire an agent that does them like you, and you get paid for every minute it works.\n\nNames go to whoever reserves first.",
+            "linkedinWith": "I reserved my name on Agent of You, from Isoform.\n\nIsoform learns how you do your work. Soon, anyone can hire an agent that does it your way, in minutes, and you get paid for every minute it works. Mine will handle {{work}}.\n\nNames go to whoever reserves first.",
+            "linkedinWithout": "I reserved my name on Agent of You, from Isoform.\n\nIsoform learns how you do your work. Soon, anyone can hire an agent that does it your way, in minutes, and you get paid for every minute it works.\n\nNames go to whoever reserves first."
         },
         "sentTitle": "Request sent",
         "sentLine": "isoform.ai/agents/{{name}} · We'll confirm at {{email}}.",
@@ -3822,18 +3876,39 @@
         "switch": "Switch to {{new}}",
         "confirmTitle": "Confirm it's you",
         "confirmLine": "Requests now need a code from your email. Send one to {{email}} to keep isoform.ai/agents/{{name}}.",
-        "sendCode": "Send code"
+        "sendCode": "Send code",
+        "reserveLead": "Reserve its name now. It's free.",
+        "freeNote": "Free to reserve. Names go to whoever reserves first; names of public figures and brands are held for them.",
+        "takenNoSuggestion": "That name is taken. Try another.",
+        "keepCurrent": "Keep isoform.ai/agents/{{name}}",
+        "specialtiesFailed": "Isoform couldn't work out your specialties.",
+        "copyLinkFailed": "Couldn't copy your link.",
+        "linkedinCopyFailed": "Couldn't copy your post, so LinkedIn didn't open.",
+        "browserFailed": "Couldn't open your browser.",
+        "mailFailed": "Couldn't open your email app. Write to bo@isoform.ai."
     },
     "magpieProfile": {
         "gemini": "Gemini",
-        "executorOrder": "When your chosen assistant is not first in the model profile, Isoform follows the profile order.",
         "background": "When this is off, background work uses its default model and effort.",
-        "title": "Isoform model profile",
-        "description": "Choose the models Isoform uses, in order. The first available model answers.",
+        "title": "Models Isoform uses",
+        "description": "In order. Isoform uses the first one that has usage left.",
+        "loadFailed": "Couldn't read these models.",
         "moveUp": "Move {{name}} up",
         "moveDown": "Move {{name}} down",
         "remove": "Remove {{name}}",
         "add": "Add an assistant",
+        "executorOrder": "When your chosen assistant is not first in the model profile, Isoform follows the profile order.",
         "scope": "These choices apply to Isoform’s magpie profile. Your other magpie groups and assistant settings stay as they are."
+    },
+    "settingChange": {
+        "failed": "Couldn't change this."
+    },
+    "usageWindow": {
+        "weekly": "weekly limit",
+        "daily": "daily limit",
+        "hours_one": "{{count}}-hour limit",
+        "hours_other": "{{count}}-hour limit",
+        "days_one": "{{count}}-day limit",
+        "days_other": "{{count}}-day limit"
     }
 }

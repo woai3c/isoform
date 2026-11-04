@@ -224,3 +224,53 @@ func TestPersonTogetherParticipantWords(t *testing.T) {
 		}
 	}
 }
+
+func TestPeopleOverviewDoesNotComputeTogether(t *testing.T) {
+	a := newTodayContextTestApp(t, true)
+	for i := 0; i < 33; i++ {
+		peopleTestContact(t, a, fmt.Sprintf("Fictional Person %02d", i))
+	}
+	called := make(chan struct{}, 1)
+	a.peopleTogetherProbe = func() error {
+		called <- struct{}{}
+		time.Sleep(3 * time.Second)
+		return nil
+	}
+	type answer struct {
+		overview PeopleOverview
+		err      error
+	}
+	result := make(chan answer, 1)
+	go func() {
+		overview, err := a.ListPeopleOverview()
+		result <- answer{overview, err}
+	}()
+	select {
+	case got := <-result:
+		if got.err != nil || got.overview.KnownCount != 33 {
+			t.Fatalf("overview count=%d err=%v", got.overview.KnownCount, got.err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("overview waited for Together evidence")
+	}
+	select {
+	case <-called:
+		t.Fatal("overview computed Together evidence")
+	default:
+	}
+}
+
+func TestPersonTogetherFailureKeepsDetail(t *testing.T) {
+	a := newTodayContextTestApp(t, true)
+	person := peopleTestContact(t, a, "Mira Castell")
+	a.peopleTogetherProbe = func() error { return fmt.Errorf("evidence unavailable") }
+	detail, err := a.GetPersonDetail(person.ID)
+	if err != nil || detail.Name != person.DisplayName || !detail.TogetherFailed || len(detail.Together) != 0 {
+		t.Fatalf("detail=%+v err=%v", detail, err)
+	}
+	a.peopleTogetherProbe = nil
+	detail, err = a.GetPersonDetail(person.ID)
+	if err != nil || detail.TogetherFailed {
+		t.Fatalf("retry detail=%+v err=%v", detail, err)
+	}
+}

@@ -85,8 +85,7 @@ describe("AssistantChoiceCard", () => {
         expect(await screen.findByRole("heading", { name: "Who answers in Isoform" })).toBeInTheDocument();
         expect(screen.getByRole("radio", { name: /^Claude Code/ })).toBeChecked();
         await waitFor(() => expect(within(rowOf("Claude Code")).getByText("Signed in and working")).toBeInTheDocument());
-        expect(within(rowOf("Codex")).getByText("Can't use Isoform's tools yet")).toBeInTheDocument();
-        expect(screen.getByRole("radio", { name: /^Codex/ })).toBeDisabled();
+        expect(screen.queryByRole("radio", { name: /^Codex/ })).not.toBeInTheDocument();
         expect(within(rowOf("Isoform")).getByText("Always available")).toBeInTheDocument();
         expect(screen.getByText("If your choice is unavailable, Isoform answers instead.")).toBeInTheDocument();
         expect(screen.getByText("Applies only to Isoform. Your own Claude Code and Codex settings stay as they are.")).toBeInTheDocument();
@@ -148,57 +147,39 @@ describe("AssistantChoiceCard", () => {
         expect(screen.queryByRole("radiogroup", { name: "Claude Code effort" })).not.toBeInTheDocument();
     });
 
-    // pr-desk round 1: Codex stays unpickable whatever its health line says,
-    // including none yet, a check in progress and a failed read.
-    it.each([
-        ["no health line", [], false],
-        ["a check in progress", [{ assistant: "codex", code: "ready", checking: true }], false],
-        ["signed out", [{ assistant: "codex", code: "signed_out", checking: false }], false],
-        ["a failed check", [{ assistant: "codex", code: "check_failed", checking: false }], false],
-        ["a ready line", [{ assistant: "codex", code: "ready", checking: false }], false],
-        ["health that fails to load", null, true],
-    ])("keeps Codex unpickable with %s", async (_name, lines, rejects) => {
-        if (rejects) mocks.getHealth.mockRejectedValue(new Error("no health"));
-        else mocks.getHealth.mockResolvedValue(lines);
+    // ST19: Who answers lists only the assistants that can answer, plus Isoform.
+    it("lists only the assistants that can answer, plus Isoform", async () => {
+        render(<AssistantChoiceCard />);
+        await screen.findByRole("radio", { name: /^Claude Code/ });
+        const radios = within(screen.getByRole("radiogroup", { name: "Who answers in Isoform" })).getAllByRole("radio");
+        expect(radios.map((radio) => (radio as HTMLInputElement).value)).toEqual(["claude-code", "isoform"]);
+        expect(screen.queryByText("DeepSeek Harness")).not.toBeInTheDocument();
+        expect(screen.queryByText("Can't use Isoform's tools yet")).not.toBeInTheDocument();
+        expect(screen.queryByText("Not installed on this computer")).not.toBeInTheDocument();
+    });
+
+    it("keeps a saved pick in the list while it can't answer, and never re-picks it", async () => {
+        mocks.getChoice.mockResolvedValue(choice({ answering: "codex" }));
         render(<AssistantChoiceCard />);
         const codex = await screen.findByRole("radio", { name: /^Codex/ });
-        expect(codex).toBeDisabled();
+        expect(codex).toBeChecked();
         expect(within(rowOf("Codex")).getByText("Can't use Isoform's tools yet")).toBeInTheDocument();
-        expect(within(rowOf("Codex")).queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
-        fireEvent.click(codex);
-        expect(mocks.setAnswering).not.toHaveBeenCalled();
+        expect(screen.queryByRole("radio", { name: /^DeepSeek Harness/ })).not.toBeInTheDocument();
     });
 
-    // DeepSeek Harness is the third choice, shown like Codex but never pickable,
-    // with no model or effort to choose.
-    it("lists DeepSeek Harness third and never picks it", async () => {
-        render(<AssistantChoiceCard />);
-        const deepseek = await screen.findByRole("radio", { name: /^DeepSeek Harness/ });
-        const radios = within(screen.getByRole("radiogroup", { name: "Who answers in Isoform" })).getAllByRole("radio");
-        expect(radios.map((radio) => (radio as HTMLInputElement).value)).toEqual(["claude-code", "codex", "deepseek", "isoform"]);
-        expect(deepseek).toBeDisabled();
-        expect(within(rowOf("DeepSeek Harness")).getByText("Can't use Isoform's tools yet")).toBeInTheDocument();
-        expect(within(rowOf("DeepSeek Harness")).queryByRole("button")).not.toBeInTheDocument();
-        expect(screen.queryByText("DeepSeek Harness settings")).not.toBeInTheDocument();
-        expect(screen.queryByRole("combobox", { name: "DeepSeek Harness model" })).not.toBeInTheDocument();
-        fireEvent.click(deepseek);
-        expect(mocks.setAnswering).not.toHaveBeenCalled();
-    });
-
-    it("says DeepSeek Harness is not installed when dsh is missing", async () => {
-        const base = choice();
-        base.agents[2] = { ...base.agents[2], notInstalled: true };
-        mocks.getChoice.mockResolvedValue(base);
-        render(<AssistantChoiceCard />);
-        await screen.findByRole("radio", { name: /^DeepSeek Harness/ });
-        expect(within(rowOf("DeepSeek Harness")).getByText("Not installed on this computer")).toBeInTheDocument();
-        expect(screen.getByRole("radio", { name: /^DeepSeek Harness/ })).toBeDisabled();
-    });
-
-    it("names DeepSeek Harness untranslated in Chinese", async () => {
-        await i18n.changeLanguage("zh-CN");
-        render(<AssistantChoiceCard />);
-        expect(await screen.findByRole("radio", { name: /^DeepSeek Harness/ })).toBeDisabled();
+    it("tells Models Isoform uses which assistant was picked", async () => {
+        mocks.setAnswering.mockResolvedValue(choice({ answering: "isoform" }));
+        const picked: string[] = [];
+        const onPicked = (event: Event) => picked.push((event as CustomEvent<string>).detail);
+        window.addEventListener("assistant-choice:answering", onPicked);
+        try {
+            render(<AssistantChoiceCard profileModels />);
+            fireEvent.click(await screen.findByRole("radio", { name: /^Isoform/ }));
+            await waitFor(() => expect(picked).toEqual(["isoform"]));
+        } finally {
+            window.removeEventListener("assistant-choice:answering", onPicked);
+        }
+        expect(screen.queryByText(/model profile/)).not.toBeInTheDocument();
     });
 
     it("allows choosing Isoform while its models start", async () => {

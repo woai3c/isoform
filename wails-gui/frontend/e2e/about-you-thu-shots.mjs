@@ -11,6 +11,9 @@ const addGoal = async (page, text = 'Finish the Ridge Loop under two hours', zh 
     await page.getByPlaceholder(zh ? '例如：三月跑一个半马' : 'For example: Run a half marathon in March').fill(text);
 };
 const shots = [
+    ['live-stored-belief', 'state=live', (p) => p.getByText(/You hand work to other agents and coordinate them/).first().scrollIntoViewIfNeeded()],
+    ['live-evidence', 'state=live&select=mornings'],
+    ['live-zh-portrait', 'state=live&lang=zh-CN'],
     // v1.0.2: Y28 every verb agrees, Y34 waiting portrait counts nothing, Y35 source in words, Y36 one date per row.
     ['41-v102-beliefs-every-verb-agrees', 'state=v102', (p) => p.getByText(/and decline meetings then/).first().scrollIntoViewIfNeeded()],
     ['42-zh-v102-beliefs-every-verb-agrees', 'state=v102&lang=zh-CN', (p) => p.getByText(/and decline meetings then/).first().scrollIntoViewIfNeeded()],

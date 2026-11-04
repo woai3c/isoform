@@ -1,5 +1,5 @@
 import "@/i18n";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MeetingRecordingRow } from "./settings/pages/observation-page";
 
@@ -43,7 +43,7 @@ describe("MeetingRecordingRow", () => {
 
         expect(
             screen.getByText(
-                "When a Zoom, Teams, Slack or Google Meet call starts on your computer, Isoform quietly keeps its audio, transcript and notes with the call on Activity, and learns from the notes. Nothing announces the recording on your computer or phone. Turn this off to keep listening without call recordings or notes.",
+                "When a Zoom, Teams, Slack or Google Meet call starts on your computer, Isoform keeps its audio, transcript and notes with the call on Activity, and learns from the notes. Isoform doesn't announce the recording, so let the people on the call know. Turn this off to keep listening without call recordings or notes.",
             ),
         ).toBeInTheDocument();
         const toggle = screen.getByRole("switch", { name: SWITCH_NAME });
@@ -68,9 +68,15 @@ describe("MeetingRecordingRow", () => {
 
         await waitFor(() => expect(mocks.setEnabled).toHaveBeenCalledWith(false));
         await waitFor(() => expect(toggle).toBeChecked());
-        expect(mocks.toastError).toHaveBeenCalledWith(
-            "Failed to update meeting recording setting",
-        );
+        // ST9/ST10: the failure stays in place, in copper, with a Try again that repeats the change.
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("Couldn't change this.");
+        expect(alert).toHaveAttribute("data-settings-failure");
+        expect(mocks.toastError).not.toHaveBeenCalled();
+        mocks.setEnabled.mockResolvedValue(undefined);
+        fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.setEnabled).toHaveBeenCalledTimes(2));
+        await waitFor(() => expect(toggle).not.toBeChecked());
     });
 
     it("keeps the setting disabled when the persisted preference cannot be read", async () => {
@@ -82,7 +88,7 @@ describe("MeetingRecordingRow", () => {
 
         expect(
             await screen.findByText(
-                "Meeting recording setting is unavailable. Reopen Settings to try again.",
+                "Couldn't read this setting.",
             ),
         ).toBeInTheDocument();
         expect(toggle).toBeDisabled();

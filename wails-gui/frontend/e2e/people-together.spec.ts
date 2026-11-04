@@ -16,3 +16,17 @@ for (const theme of ['paper', 'onedark']) {
         });
     }
 }
+
+for (const theme of ['paper', 'onedark']) {
+    for (const lang of ['en', 'zh-CN']) {
+        test(`Together failure ${lang} ${theme}`, async ({ page }) => {
+            await page.clock.setFixedTime(new Date('2026-11-04T18:00:00Z'));
+            await page.setViewportSize({ width: 1280, height: 800 });
+            await page.goto(`/e2e/people-together.html?theme=${theme}&lang=${lang}&failure=1`);
+            const failure = page.getByRole('alert').filter({ hasText: lang === 'en' ? "Couldn't load your moments together." : '没能加载你们一起的经历。' });
+            await expect(failure).toBeVisible();
+            await expect(failure.getByRole('button', { name: lang === 'en' ? 'Try again' : '重试' })).toBeVisible();
+            await page.screenshot({ path: path.join(process.env.PEOPLE_SHOTS_DIR!, `failure-${lang}-${theme}.png`) });
+        });
+    }
+}

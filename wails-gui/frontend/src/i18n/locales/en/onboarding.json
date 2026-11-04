@@ -133,7 +133,7 @@
     },
     "telemetry": {
         "title": "Help improve Isoform",
-        "description": "Share anonymous counts of feature use and time spent actively using Isoform. Never your content, name, email or device identity. A random install ID links these counts.",
+        "description": "Share counts of feature use and time spent actively using Isoform. A random install ID links these counts; they do not include your content, name, email or device identity.",
         "choiceHint": "On by default. You can turn this off here or any time in Settings > Privacy.",
         "detailsLink": "Read the full description",
         "saveFailed": "Could not save your choice. Please try again."
@@ -294,8 +294,8 @@
         "checked": "Checked while Isoform opened. Each provider’s terms apply; macOS may ask once to read the Claude Code sign-in from the Keychain.",
         "applyFailed": "Could not save the assistant choice. You can choose later in Settings › Assistant.",
         "installFailed": "Could not install the assistant. Try again or install it in Terminal.",
-        "telemetryOn": "Anonymous usage counts are on.",
-        "telemetryOff": "Anonymous usage counts are off.",
+        "telemetryOn": "Usage counts are on.",
+        "telemetryOff": "Usage counts are off.",
         "telemetryDescription": "Feature use and active time under a random install ID. Never content, names or email. Settings › Privacy turns it off.",
         "installedPlan": "Installed · {{version}} · {{plan}}"
     },
@@ -312,7 +312,7 @@
             },
             "brief": {
                 "title": "For your brief",
-                "description": "Optional. Stays on this computer."
+                "description": "Optional."
             }
         },
         "items": {
@@ -366,7 +366,7 @@
     },
     "models": {
         "heading": "What runs on this computer",
-        "settingsTitle": "Models",
+        "settingsTitle": "Models on this computer",
         "description": "These models read your screen and audio here; only what a task needs leaves this computer. Isoform picked one of each. Change any, or just continue.",
         "jobs": {
             "live": "Live, while you talk",
@@ -375,7 +375,7 @@
             "always": "Always on"
         },
         "alwaysName": "Privacy filter and memory search",
-        "alwaysDescription": "Removes names, numbers and passwords from anything that leaves this computer; finds what Isoform remembers.",
+        "alwaysDescription": "Removes names, numbers and passwords from text before it goes to your AI.",
         "none": "None",
         "noneDescription": "Keep the live transcript as it is.",
         "recommended": "Recommended",
@@ -438,7 +438,7 @@
                 "description": "Chinese and English, one voice each."
             },
             "privacy": {
-                "description": "Removes names, numbers and passwords from anything that leaves this computer.",
+                "description": "Removes names, numbers and passwords from text before it goes to your AI.",
                 "name": "Privacy filter"
             },
             "memory": {
@@ -549,7 +549,10 @@
         "resume": "Resume",
         "resumeFailed": "Could not resume {{name}}. Try again.",
         "queued": "{{name}} queued for background download.",
-        "waitingPowerIdle": "Waiting for power and idle"
+        "waitingPowerIdle": "Waiting for power and idle",
+        "settingsDescription": "These models read your screen and audio on this computer.",
+        "settingsLoadFailed": "Couldn't read your models.",
+        "tryAgain": "Try again"
     },
     "tools": {
         "sheetTitle": "Install {{name}}",
@@ -572,12 +575,12 @@
         "progress": "Setup progress",
         "local": {
             "pill": "On this computer",
-            "title": "What stays on this computer",
+            "title": "On this computer",
             "lines": {
-                "recordings": "<b>Screenshots, audio and recordings</b> are read by models on this computer. They never leave it.",
-                "ai": "<b>Your AI</b> gets only the text a task needs, on your own plan.",
-                "phone": "<b>Your iPhone</b> gets only what it shows, sealed between your devices.",
-                "usage": "<b>Usage counts</b> are anonymous and never include your content."
+                "recordings": "<b>Memory, screenshots and audio</b> are stored on this computer, and models here read them.",
+                "ai": "<b>Your AI</b> gets only what a task needs, on your own plan: the text, or for WeChat, a cropped screenshot.",
+                "phone": "<b>Your phone</b> gets only what it shows, encrypted end to end.",
+                "usage": "<b>Usage counts,</b> if you share them, carry a random number, never your name or your content."
             }
         },
         "stepCount": "Step {{current}} of {{total}}",
@@ -601,9 +604,9 @@
             },
             "ready": "Ready",
             "needsYou": "Needs you",
-            "usage": "Isoform shares anonymous counts of how it's used, never your content.",
+            "usage": "Usage counts, if you share them, carry a random number, never your name or your content.",
             "change": "Change",
-            "usageSwitch": "Share anonymous usage counts",
+            "usageSwitch": "Share usage counts",
             "usageSaveFailed": "Couldn't save that. Try again."
         },
         "ai": {
@@ -672,8 +675,8 @@
             "assistantsBoth": "Claude Code and Codex"
         },
         "sees": {
-            "title": "Sees your work. Keeps it here.",
-            "line": "Models on this computer read your screen and calls. Screenshots and audio never leave it.",
+            "title": "Sees your work, on this computer.",
+            "line": "Models on this computer read your screen and calls. Screenshots and audio are stored on this computer.",
             "deckTab": "Halcyon deck",
             "bankTab": "Bank · Accounts",
             "deckTitle": "Halcyon deck · v3",
@@ -700,7 +703,7 @@
         },
         "runs": {
             "title": "Runs on this computer",
-            "line": "These read your screen and calls here. Screenshots and audio never leave this computer.",
+            "line": "These read your screen and calls here. Screenshots and audio are stored on this computer.",
             "rows": {
                 "calls": {
                     "name": "Hear your calls",

@@ -352,18 +352,8 @@ export function useTextMessages(): TextMessagesController {
 export function TextMessagesManagement({ controller }: { controller: TextMessagesController }) {
     const { t } = useTranslation("settings");
     const { status, busy, errors, testOutcome } = controller;
-    if (!status) {
-        return (
-            <SettingsCard title={t("textMessages.title")}>
-                {controller.loadFailed ? (
-                    <div className="flex items-center justify-between gap-3">
-                        <p role="alert" className="settings-row-desc">{t("textMessages.loadFailed")}</p>
-                        <Button size="sm" variant="outline" onClick={() => void controller.refresh()}>{t("textMessages.retry")}</Button>
-                    </div>
-                ) : <p role="status" className="settings-row-desc">{t("textMessages.loading")}</p>}
-            </SettingsCard>
-        );
-    }
+    // ST15: nothing until the read answers; a failed first read shows nothing.
+    if (!status) return null;
     if (!status.number || !(status.consentAccepted || status.verified || status.enabled || status.verifying)) return null;
 
     const needsAttention = !status.verified || !status.permissionGranted || !status.supported || Boolean(status.lastError);
@@ -420,7 +410,6 @@ export function TextMessagesSettings({ controller }: { controller: TextMessagesC
     const { t } = useTranslation("settings");
     const {
         status,
-        loadFailed,
         busy,
         errors,
         shownNumber,
@@ -443,22 +432,7 @@ export function TextMessagesSettings({ controller }: { controller: TextMessagesC
         status !== null && !status.permissionGranted && status.consentAccepted && !controller.numberChanged;
 
     const body = (() => {
-        if (status === null) {
-            return loadFailed ? (
-                <div className="flex flex-wrap items-center gap-3 py-2">
-                    <p role="alert" className="text-xs text-error">
-                        {t("textMessages.loadFailed")}
-                    </p>
-                    <Button type="button" variant="outline" size="sm" onClick={() => void controller.refresh()}>
-                        {t("textMessages.retry")}
-                    </Button>
-                </div>
-            ) : (
-                <p role="status" className="settings-row-desc py-2">
-                    {t("textMessages.loading")}
-                </p>
-            );
-        }
+        if (status === null) return null;
         if (!status.supported) {
             return <p className="settings-row-desc py-2">{t("textMessages.unsupported")}</p>;
         }
@@ -484,14 +458,14 @@ export function TextMessagesSettings({ controller }: { controller: TextMessagesC
                         className={NUMBER_INPUT_CLASS}
                     />
                     {numberHint && (
-                        <p role="alert" className="text-xs text-error">
+                        <p role="alert" className="text-xs text-copper">
                             {t("textMessages.numberHint")}
                         </p>
                     )}
                     {showConsent && (
                         <div className="mt-1 flex flex-col gap-3 rounded-lg border border-border bg-background-accent/30 p-4">
                             {errors.consent && (
-                                <p role="alert" className="text-xs text-error">
+                                <p role="alert" className="text-xs text-copper">
                                     {errors.consent}
                                 </p>
                             )}
@@ -549,9 +523,9 @@ export function TextMessagesSettings({ controller }: { controller: TextMessagesC
                         </Button>
                     </div>
                 )}
-                {errors.verify && <p role="alert" className="pb-2 text-xs text-error">{errors.verify}</p>}
+                {errors.verify && <p role="alert" className="pb-2 text-xs text-copper">{errors.verify}</p>}
                 {errors.enable && (
-                    <p role="alert" className="pb-2 text-xs text-error">
+                    <p role="alert" className="pb-2 text-xs text-copper">
                         {errors.enable}
                     </p>
                 )}
@@ -575,7 +549,7 @@ export function TextMessagesSettings({ controller }: { controller: TextMessagesC
                     />
                 )}
                 {errors.grant && (
-                    <p role="alert" className="pb-2 text-xs text-error">
+                    <p role="alert" className="pb-2 text-xs text-copper">
                         {errors.grant}
                     </p>
                 )}
@@ -586,6 +560,7 @@ export function TextMessagesSettings({ controller }: { controller: TextMessagesC
         );
     })();
 
+    if (body === null) return null;
     return (
         <SettingsCard
             title={t("textMessages.title")}
@@ -636,7 +611,7 @@ export function TextMessagesDetails({ controller }: { controller: TextMessagesCo
                     }
                 />
                 {errors.names && (
-                    <p role="alert" className="pb-2 text-xs text-error">
+                    <p role="alert" className="pb-2 text-xs text-copper">
                         {errors.names}
                     </p>
                 )}

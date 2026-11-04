@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { toast } from "sonner";
+import { type SettingsFailure, useSettingsFailure } from "@/components/settings/settings-failure";
 import {
     GetActivityMaxStorageGB,
     GetActivityRetentionDays,
@@ -81,6 +81,8 @@ export interface RecordingStorage {
     refresh: () => void;
     saveDays: (days: number) => void;
     saveMaxGB: (gb: number) => void;
+    /** A retention or limit change that failed, shown in place. */
+    failure: SettingsFailure | null;
 }
 
 /** Retention days, storage limit and usage, shared by the "Keep recordings
@@ -140,6 +142,8 @@ export function useRecordingStorage(): RecordingStorage {
         }, 1500);
     }, []);
 
+    const { failure, fail, clear } = useSettingsFailure();
+
     const saveDays = useCallback(
         (next: number) => {
             const previous = days;
@@ -147,19 +151,16 @@ export function useRecordingStorage(): RecordingStorage {
             setSaving(true);
             SetActivityRetentionDays(next)
                 .then(() => {
+                    clear();
                     scheduleStatsRefresh();
                 })
-                .catch((err: unknown) => {
+                .catch(() => {
                     setDays(previous);
-                    toast.error(
-                        t("activityRetention.retentionFailedToast", {
-                            error: err instanceof Error ? err.message : String(err),
-                        }),
-                    );
+                    fail(t("settingChange.failed"), () => saveDays(next));
                 })
                 .finally(() => setSaving(false));
         },
-        [days, scheduleStatsRefresh, t],
+        [days, scheduleStatsRefresh, t, fail, clear],
     );
 
     const saveMaxGB = useCallback(
@@ -169,24 +170,21 @@ export function useRecordingStorage(): RecordingStorage {
             setSaving(true);
             SetActivityMaxStorageGB(gb)
                 .then(() => {
+                    clear();
                     scheduleStatsRefresh();
                 })
-                .catch((err: unknown) => {
+                .catch(() => {
                     // Restore the previous value so the UI doesn't lie about
                     // what's persisted.
                     setMaxGB(previous);
-                    toast.error(
-                        t("activityRetention.storageCapFailedToast", {
-                            error: err instanceof Error ? err.message : String(err),
-                        }),
-                    );
+                    fail(t("settingChange.failed"), () => saveMaxGB(gb));
                 })
                 .finally(() => setSaving(false));
         },
-        [maxGB, scheduleStatsRefresh, t],
+        [maxGB, scheduleStatsRefresh, t, fail, clear],
     );
 
     const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
-    return { loading, saving, days, maxGB, stats, refreshKey, refresh, saveDays, saveMaxGB };
+    return { loading, saving, days, maxGB, stats, refreshKey, refresh, saveDays, saveMaxGB, failure };
 }

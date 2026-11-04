@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"wails-gui/internal/pii"
@@ -185,6 +186,33 @@ Return ONLY strict JSON, no prose, in this shape:
 	}
 	fmt.Fprintf(&b, "\nBEHAVIORS: %s\n\nFACTS: %s\n\nBELIEFS: %s\n", behaviors, facts, beliefs)
 	return b.String()
+}
+
+// Chinese output must contain Chinese text in every generated sentence and line.
+// Product names and other borrowed words can still appear alongside it.
+func portraitLanguageMatches(language string, sentences []portraitSentence, lines []portraitLine) bool {
+	if language != "zh-CN" {
+		return true
+	}
+	containsHan := func(text string) bool {
+		for _, r := range text {
+			if unicode.Is(unicode.Han, r) {
+				return true
+			}
+		}
+		return false
+	}
+	for _, sentence := range sentences {
+		if !containsHan(sentence.text()) {
+			return false
+		}
+	}
+	for _, line := range lines {
+		if !containsHan(line.Text) {
+			return false
+		}
+	}
+	return true
 }
 
 func portraitLanguageName(language string) string {

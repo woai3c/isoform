@@ -110,7 +110,9 @@ describe("Using your apps: app access", () => {
         render(<Harness />);
 
         expect(await screen.findByText("Gmail")).toBeInTheDocument();
-        expect(screen.getByText("Messages and email")).toBeInTheDocument();
+        // ST73: Gmail reads "Email"; Slack and Teams read "Messages".
+        expect(screen.getByText("Email")).toBeInTheDocument();
+        expect(screen.queryByText("Messages and email")).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: "Open Gmail" }));
         expect(mocks.browserOpenURL).toHaveBeenCalledWith("https://mail.google.com/");
@@ -147,5 +149,34 @@ describe("Using your apps: app access", () => {
         );
         // Every user-facing string goes through t().
         expect(componentSource).not.toMatch(/>\s*[A-Z][a-z]+(?: [a-z]+)+\s*</);
+    });
+});
+
+describe("Using your apps: a failed read (ST21)", () => {
+    beforeEach(async () => {
+        vi.clearAllMocks();
+        mocks.listeners.clear();
+        await i18n.changeLanguage("en");
+    });
+
+    it("says so in the card in copper, with no toast and no 'Checking', and Try again reads again", async () => {
+        mocks.getSnapshot.mockRejectedValueOnce(new Error("denied")).mockResolvedValue(snapshot());
+        render(<Harness />);
+
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent(
+            "Couldn't check app access. Isoform couldn't read its permissions on this computer.",
+        );
+        expect(alert.className).toContain("text-copper");
+        expect(componentSource).not.toMatch(/toast/);
+
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        expect(await screen.findByText("Ready")).toBeInTheDocument();
+        expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("has the ST21 words in Chinese", () => {
+        expect(zh.usingApps.loadFailedToast).toBe("无法检查应用访问权限。Isoform 无法读取它在这台电脑上的权限。");
+        expect(en.usingApps.loadFailedToast).toMatch(/^Couldn't check app access\./);
     });
 });

@@ -266,6 +266,41 @@ function renderPerfReport(snap: PerfSnapshotShape): string {
     return lines.join('\n');
 }
 
+// writePerfReport copies the report through the same fallbacks as
+// copyPerfReport, without toasts, and says whether it worked.
+export async function writePerfReport(snap: PerfSnapshotShape): Promise<boolean> {
+    const text = renderPerfReport(snap);
+    const hasNativeRuntime =
+        typeof window !== 'undefined' &&
+        !!(window as unknown as { runtime?: { ClipboardSetText?: unknown } }).runtime?.ClipboardSetText;
+    if (hasNativeRuntime) {
+        try {
+            await NativeClipboardSetText(text);
+            return true;
+        } catch {
+            // Fall through to the Wails and DOM copies.
+        }
+    }
+    try {
+        if (await ClipboardSetText(text)) return true;
+    } catch {
+        // Fall through to the DOM copy.
+    }
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+    } catch {
+        return false;
+    }
+}
+
 // copyPerfReport formats a PerfSnapshot as text and copies it through the
 // same three-tier fallback the Perf Analysis panel uses (native NSPasteboard
 // → Wails pbcopy → DOM execCommand). Shared so the About-page "Copy

@@ -8,7 +8,7 @@ import {
     RefreshCw,
     ShieldAlert,
 } from "lucide-react";
-import { toast } from "sonner";
+import { SettingsFailureLine } from "@/components/settings/settings-failure";
 import { BrowserOpenURL, EventsOn } from "../../wailsjs/runtime/runtime";
 import { EnableComputerUseDialog } from "./enable-computer-use-dialog";
 import { Button } from "./ui/button";
@@ -28,20 +28,21 @@ import {
 /** Live app access state, read again on window focus and when a permission
  *  changes, so a grant made in System Settings shows up on return. */
 export function useComputerUseAppAccess() {
-    const { t } = useTranslation("settings");
     const [snapshot, setSnapshot] = useState<ComputerUseAppAccessSnapshot | null>(null);
     const [loading, setLoading] = useState(true);
+    const [failed, setFailed] = useState(false);
 
     const refresh = useCallback(async () => {
         setLoading(true);
         try {
             setSnapshot(await GetComputerUseAppAccessSnapshot());
-        } catch (error) {
-            toast.error(t("usingApps.loadFailedToast", { error: String(error) }));
+            setFailed(false);
+        } catch {
+            setFailed(true);
         } finally {
             setLoading(false);
         }
-    }, [t]);
+    }, []);
 
     useEffect(() => {
         void refresh();
@@ -54,7 +55,7 @@ export function useComputerUseAppAccess() {
         };
     }, [refresh]);
 
-    return { snapshot, loading, refresh };
+    return { snapshot, loading, failed, refresh };
 }
 
 export type ComputerUseAppAccessState = ReturnType<typeof useComputerUseAppAccess>;
@@ -83,6 +84,7 @@ export function computerUseStatusId(snapshot: ComputerUseAppAccessSnapshot): Com
 export function ComputerUseAccessCard({ access }: { access: ComputerUseAppAccessState }) {
     const { t } = useTranslation("settings");
     const { snapshot, refresh } = access;
+    const unread = access.failed && !snapshot;
     const [setupOpen, setSetupOpen] = useState(false);
 
     const ready = Boolean(
@@ -107,7 +109,12 @@ export function ComputerUseAccessCard({ access }: { access: ComputerUseAppAccess
                 title={t("usingApps.access.title")}
                 description={t("usingApps.access.description")}
             >
-                <div className="settings-row">
+                {unread && (
+                    <SettingsFailureLine
+                        failure={{ text: t("usingApps.loadFailedToast"), retry: () => void refresh() }}
+                    />
+                )}
+                <div className={unread ? "hidden" : "settings-row"}>
                     <div className="flex min-w-0 items-start gap-3">
                         {ready ? (
                             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
@@ -137,6 +144,7 @@ export function ComputerUseAccessCard({ access }: { access: ComputerUseAppAccess
 }
 
 const CATEGORY_IDS = ["communication", "planning", "documents", "development"] as const;
+const EMAIL_APP_IDS = new Set(["gmail", "outlook", "mail", "apple-mail"]);
 
 /** Advanced: the apps Isoform knows how to use, each with an Open button. */
 export function ComputerUseAppList({ access }: { access: ComputerUseAppAccessState }) {
@@ -144,8 +152,11 @@ export function ComputerUseAppList({ access }: { access: ComputerUseAppAccessSta
     const { snapshot, loading, refresh } = access;
     const apps = snapshot?.apps ?? [];
 
-    const categoryLabel = (category: string) =>
-        (CATEGORY_IDS as readonly string[]).includes(category)
+    // settings-review ST73: chat apps read "Messages"; mail apps read "Email".
+    const categoryLabel = (category: string, id = "") =>
+        category === "communication"
+            ? (EMAIL_APP_IDS.has(id) ? t("usingApps.apps.categories.email") : t("usingApps.apps.categories.messages"))
+            : (CATEGORY_IDS as readonly string[]).includes(category)
             ? t(`usingApps.apps.categories.${category as (typeof CATEGORY_IDS)[number]}`)
             : t("usingApps.apps.categories.other");
 
@@ -180,7 +191,7 @@ export function ComputerUseAppList({ access }: { access: ComputerUseAppAccessSta
                         <div key={app.id} className="settings-row">
                             <div className="flex min-w-0 flex-col">
                                 <span className="settings-row-title truncate">{app.label}</span>
-                                <span className="settings-row-desc">{categoryLabel(app.category)}</span>
+                                <span className="settings-row-desc">{categoryLabel(app.category, app.id)}</span>
                             </div>
                             {app.entryUrl && (
                                 <Button

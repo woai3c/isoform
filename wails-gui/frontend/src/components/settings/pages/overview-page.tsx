@@ -1,9 +1,10 @@
 import { ExistingTextChannels } from "./existing-text-channels";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import type { TFunction } from "i18next";
+import { usageWindowLimit } from "@/lib/usage-window";
 import { SetActivityRetentionDays } from "../../../../wailsjs/go/main/App";
 import { EventsOn } from "../../../../wailsjs/runtime/runtime";
 import {
@@ -74,7 +75,10 @@ type Translate = TFunction<"settings">;
 type ReadState<T> = { status: "loading" } | { status: "ready"; value: T } | { status: "failed" };
 
 interface SeesSources {
+    /** Watch my screen is on and the computer allows it. */
     screen: boolean;
+    /** Watch my screen is on, but the computer doesn't allow it yet. */
+    screenBlocked: boolean;
     microphone: boolean;
     calls: boolean;
 }
@@ -156,8 +160,11 @@ function seesSourcesFrom(permissions: PlatformPermissions, listening: boolean, m
                   (item) => item.key === "microphone" && item.toggleable && item.granted && item.enabled,
               )
             : true;
+    const screenOn = screenItems.length > 0 && screenItems.every((item) => item.enabled);
+    const screenAllowed = screenItems.every((item) => item.granted);
     return {
-        screen: screenItems.length > 0 && screenItems.every((item) => item.enabled),
+        screen: screenOn && screenAllowed,
+        screenBlocked: screenOn && !screenAllowed,
         microphone: listening && microphone,
         calls: listening && meetings,
     };
@@ -209,12 +216,16 @@ function OverviewRow({ label, control, children }: { label: string; control?: Re
     );
 }
 
+// Set by OverviewPage: Try again on any row re-reads the whole overview.
+const OverviewRetryContext = createContext<() => void>(() => {});
+
 function RowFailed() {
     const { t } = useTranslation("settings");
+    const retry = useContext(OverviewRetryContext);
     return (
         <span className="flex items-center gap-2 text-[13.5px] leading-snug">
-            <AlertCircle className="size-[15px] shrink-0 text-error" aria-hidden />
-            {t("overview.rowFailed")}
+            <AlertCircle className="size-[15px] shrink-0 text-copper" aria-hidden />
+            <SettingsFailureLine className="text-[13.5px]" failure={{ text: t("overview.rowFailed"), retry }} />
         </span>
     );
 }
@@ -359,7 +370,8 @@ function WorthALook({
             case "assistant_out_of_usage": {
                 const id = issue.params.assistant ?? "";
                 const name = assistantName(id, t);
-                const window = view.thinksWith.order.find((entry) => entry.assistant === id)?.windowLabel ?? "";
+                const window =
+                    usageWindowLimit(view.thinksWith.order.find((entry) => entry.assistant === id)?.windowLabel ?? "", t) ?? "";
                 const others = view.thinksWith.order
                     .filter((entry) => entry.assistant !== id && entry.percentLeft !== null && entry.percentLeft > 0)
                     .map((entry) => assistantName(entry.assistant, t));
@@ -448,6 +460,7 @@ function WorthALook({
 
 export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenSettingsPage; active?: boolean } = {}) {
     const { t, i18n } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const locale = i18n.resolvedLanguage ?? "en";
 
     // A reopen paints the last readings at once; refresh() revalidates them.
@@ -519,6 +532,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
         }
     }, []);
 
+    const retryOverview = useCallback(() => void refresh(), [refresh]);
     usePageQueryRefresh(OVERVIEW_READS, refresh);
 
     // A privacy transition withdraws the pre-transition sentences
@@ -580,7 +594,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
             await write();
             done?.();
         } catch (err) {
-            if (!expected?.(err)) toast.error(t("overview.changeFailed"));
+            if (!expected?.(err)) failChange(t("overview.changeFailed"), () => void change(target, write, { done, expected }));
         }
         // A write changes what the sentences say; never re-read it from cache.
         pageQueryCache.invalidate(OVERVIEW_READS);
@@ -594,10 +608,6 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
     if (overview.status === "loading") {
         return (
             <div aria-busy="true" className="settings-card settings-card--padded flex flex-col gap-2.5">
-                <p className="flex items-center gap-2 text-[13.5px] text-muted">
-                    <Loader2 className="size-3.5 animate-spin" />
-                    {t("overview.loading")}
-                </p>
                 <div className="flex flex-col gap-2">
                     {[95, 85, 90].map((width) => (
                         <span key={width} className="block h-3 rounded-md bg-surface-active" style={{ width: `${width}%` }} />
@@ -674,6 +684,16 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
         }
         if (sources.status === "failed") return { body: <RowFailed />, control: observation };
         if (sources.status === "loading") return { body: null };
+        if (sources.value.screenBlocked) {
+            return {
+                body: <Trans t={t} i18nKey="overview.sees.screenBlocked" components={bold} />,
+                control: (
+                    <Button variant="secondary" size="sm" onClick={() => openSettingsPage("activity", onOpenPage, { anchor: "sees-screen" })}>
+                        {t("overview.sees.allow")}
+                    </Button>
+                ),
+            };
+        }
         const on = (["screen", "microphone", "calls"] as const).filter((source) => sources.value[source]);
         if (on.length === 0) {
             return {
@@ -752,7 +772,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
                     : t("overview.speaksUp.noLimit"),
                 speaks.quietStart === speaks.quietEnd
                     ? t("overview.speaksUp.noQuiet")
-                    : t("overview.speaksUp.quiet", { start: speaks.quietStart, end: speaks.quietEnd }),
+                    : t("overview.speaksUp.quiet", { start: clockTime(speaks.quietStart, locale), end: clockTime(speaks.quietEnd, locale) }),
                 channels.length > 0 ? t("overview.speaksUp.on", { channels: joinList(channels, t) }) : null,
             ].filter((clause): clause is string => Boolean(clause));
             detail = t("overview.speaksUp.detail", { clauses: clauses.join(t("overview.speaksUp.clauseSeparator")) });
@@ -789,11 +809,12 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
                       rest: names.slice(1).join(t("overview.thinksWith.thenSeparator")),
                   });
         if (percent === null) return { body: ordered, control };
+        const window = usageWindowLimit(first.windowLabel, t);
         const left = (
             <Trans
                 t={t}
-                i18nKey={first.windowLabel ? "overview.thinksWith.left" : "overview.thinksWith.leftNoWindow"}
-                values={{ assistant: names[0], percent, window: first.windowLabel }}
+                i18nKey={window ? "overview.thinksWith.left" : "overview.thinksWith.leftNoWindow"}
+                values={{ assistant: names[0], percent, window }}
                 components={bold}
             />
         );
@@ -879,7 +900,11 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
                         ))}
                     </InlineSelect>
                     {busy === "keeps" && <Loader2 className="mr-1 inline size-3.5 animate-spin align-middle" />}
-                    {t("overview.keeps.detail", { limit, used })}
+                    {keeps.limitBytes <= 0
+                        ? t("overview.keeps.detailNoLimit")
+                        : keeps.usedBytes > 0
+                          ? t("overview.keeps.detail", { limit, used })
+                          : t("overview.keeps.detailNothingUsed", { limit })}
                 </>
             ),
             control: (
@@ -959,7 +984,8 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
     const confirmPeriod = confirmDays === null ? "" : retentionLabel(t, confirmDays);
 
     return (
-        <>
+        <OverviewRetryContext.Provider value={retryOverview}>
+            <SettingsFailureLine failure={changeFailure} />
             {view && issues.length > 0 && (
                 <WorthALook
                     issues={issues}
@@ -982,7 +1008,6 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
                     </OverviewRow>
                 ))}
             </section>
-            <p className="mt-4 text-[13px] text-muted">{t("overview.futureChannels")}</p>
             <ExistingTextChannels />
             <ConfirmDialog
                 open={confirmDays !== null}
@@ -999,6 +1024,6 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
                     void change("keeps", () => SetActivityRetentionDays(confirmDays));
                 }}
             />
-        </>
+        </OverviewRetryContext.Provider>
     );
 }

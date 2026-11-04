@@ -13,7 +13,7 @@ import {
 } from "../../../../../wailsjs/go/main/App";
 import { EventsOn } from "../../../../../wailsjs/runtime/runtime";
 import { WeChatIcon } from "@/components/icons/app-icons";
-import { toast } from "sonner";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import { SettingsCard } from "@/components/settings/settings-primitives";
 import type { ChatAppStatus } from "./chat-app-status";
 import { DisconnectButton } from "./disconnect-button";
@@ -26,6 +26,7 @@ import { PairingCodeBlock } from "./pairing-code-block";
 // service.
 export function WeChatSettings({ onStatusChange }: { onStatusChange: (status: ChatAppStatus) => void }) {
     const { t } = useTranslation('settings');
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [status, setStatus] = useState<{
         connected: boolean;
         bot_id?: string;
@@ -138,8 +139,8 @@ export function WeChatSettings({ onStatusChange }: { onStatusChange: (status: Ch
         try {
             await DisconnectWeChat();
             setStatus({ connected: false, online: false });
-        } catch (err) {
-            toast.error(t('connectors.wechat.errors.disconnectFailed', { error: err instanceof Error ? err.message : String(err) }));
+        } catch {
+            failChange(t('connectors.common.couldntDisconnect', { app: t('connectors.wechat.title') }), () => void handleDisconnect());
         }
     };
 
@@ -182,7 +183,7 @@ export function WeChatSettings({ onStatusChange }: { onStatusChange: (status: Ch
                             <span className="text-sm text-muted">{t('connectors.wechat.loadingQr')}</span>
                         </div>
                     )}
-                    {error && <p className="text-xs text-destructive">{error}</p>}
+                    {error && <p className="text-xs text-copper">{error}</p>}
                 </div>
             </SettingsCard>
         );
@@ -209,6 +210,7 @@ export function WeChatSettings({ onStatusChange }: { onStatusChange: (status: Ch
                     <DisconnectButton appName={t('connectors.wechat.title')} onConfirm={handleDisconnect} />
                 </div>
             </div>
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsCard>
     );
 }

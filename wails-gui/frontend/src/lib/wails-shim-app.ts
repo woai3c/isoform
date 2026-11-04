@@ -4718,6 +4718,7 @@ export type PersonDetail = {
     notes: string;
     researchSummary: string;
     loops: PersonLoop[];
+    togetherFailed?: boolean;
     together: { at: number; kind: "meeting" | "activity" | "message"; title: string; app: string; durationMs: number; direction?: "in" | "out" | "" }[];
     sharedTopics: { id: string; name: string }[];
     seenIn: string[];

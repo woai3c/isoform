@@ -27,7 +27,7 @@ import {
     relativeWords,
 } from '@/lib/memory-content';
 import { durationWords, USE_SURFACES } from '@/lib/about-you';
-import { communicationDraftDetails, memoryArea, sentMessageEvidence } from '@/lib/communication';
+import { communicationDraftDetails, memoryArea } from '@/lib/communication';
 import { onPrivacyReset } from '@/lib/privacy-reset';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -358,7 +358,6 @@ export function MemoryDetail({
         ? Math.min(...evidenceTimes, ...(createdAt > 0 ? [createdAt] : []))
         : createdAt);
     const apps = memoryApps(entry.apps ?? []);
-    const sentEvidence = sentMessageEvidence(t, belief, entry.apps ?? [], i18n.language);
     const appWords = new Intl.ListFormat(i18n.language, {
         style: 'long',
         type: 'conjunction',
@@ -380,7 +379,7 @@ export function MemoryDetail({
                           ? t('relativeTime.daysAgo', { count: calendarDaysAgo(lastChange) })
                           : when,
               });
-    const hasWhy = communication || evidenceError || evidence === null || evidence.length > 0;
+    const hasWhy = evidenceError || evidence === null || evidence.length > 0;
     const range = firstLearned
         ? calendarDaysAgo(firstLearned) === 0
             ? t('detail.workToday')
@@ -549,12 +548,6 @@ export function MemoryDetail({
             {hasWhy ? (
             <section aria-labelledby={`${sectionId}-why`} className="flex flex-col gap-2">
                 <h3 id={`${sectionId}-why`} className="m-0 text-[13px] font-semibold text-ink">{t('detail.why')}</h3>
-                {communication && (
-                    <div className="flex flex-col gap-1.5">
-                        {sentEvidence && <p className="m-0 text-xs leading-relaxed text-muted">{sentEvidence}</p>}
-                        <p className="m-0 text-[12.5px] leading-relaxed text-muted">{t('aboutYou.communication.evidenceNote')}</p>
-                    </div>
-                )}
                 {evidenceError ? (
                     <div role="alert" className="flex items-center gap-3 text-[13px] text-copper">
                         <span className="flex-1">{t('aboutYou.detail.evidenceFailed')}</span>

@@ -67,7 +67,7 @@ function ToolRow({
                 <span className="settings-row-title">{title}</span>
                 <span className="settings-row-desc">{description}</span>
                 {error && (
-                    <span role="alert" className="settings-row-desc break-words text-error">
+                    <span role="alert" className="settings-row-desc break-words text-copper">
                         {error}
                     </span>
                 )}
@@ -277,7 +277,7 @@ export function ToolsOnThisMacCard({
         >
             {status === null ? (
                 checkFailed ? (
-                    <p role="alert" className="py-2 text-xs text-error">
+                    <p role="alert" className="py-2 text-xs text-copper">
                         {t("toolsOnThisMac.checkFailed")}
                     </p>
                 ) : (
@@ -288,7 +288,7 @@ export function ToolsOnThisMacCard({
             ) : (
                 <div className="flex flex-col" data-testid="tools-on-this-mac">
                     {checkFailed && (
-                        <p role="alert" className="pb-2 text-xs text-error">
+                        <p role="alert" className="pb-2 text-xs text-copper">
                             {t("toolsOnThisMac.checkFailed")}
                         </p>
                     )}

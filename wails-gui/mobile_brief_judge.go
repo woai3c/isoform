@@ -173,6 +173,10 @@ func writeAndJudgeMorningBriefWithFallback(ctx context.Context, input morningBri
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, errMobileBriefSourcesChanged) {
 				return morningBriefDraft{}, false, err
 			}
+			var signedOut *mobileBriefAssistantError
+			if errors.As(err, &signedOut) {
+				return morningBriefDraft{}, false, err
+			}
 			log.Printf("[mobile-brief] morning writer failed: %s", safeLogError(morningBriefWriteJudgeError(err, "morning writer failed")))
 			critique = "The previous draft could not be written."
 			if operationalRetries < 2 {

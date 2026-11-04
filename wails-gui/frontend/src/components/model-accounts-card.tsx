@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useSettingsDevTools } from "@/components/settings/settings-dev-tools";
 import { CheckCircle2, Copy, Loader2, RefreshCw } from "lucide-react";
 import { activeInterval } from "@/lib/app-activity";
 import { useTranslation } from "react-i18next";
@@ -16,6 +17,7 @@ import {
     type ModelSidecarView,
 } from "@/lib/wails-shim-app";
 import { modelGroupDisplayName } from "@/lib/model-group-display";
+import { usageWindowLimit } from "@/lib/usage-window";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
 import { ConfirmDialog } from "./confirm-dialog";
 import { type AssistantId } from "./onboarding/components/AgentChoice";
@@ -114,9 +116,23 @@ function sidecarStateOf(sidecar: ModelSidecarView, managed: boolean): SidecarSta
     return "starting";
 }
 
-function accountDetail(account: ModelAccountView): string | null {
-    const parts = [account.plan, account.user].filter((part) => part && part.trim() !== "");
-    return parts.length > 0 ? parts.join(" · ") : null;
+/** "kimi-code" -> "Kimi Code". */
+export function titleWords(value: string): string {
+    return value.split(/[-_\s]+/).filter(Boolean).map(capitalize).join(" ");
+}
+
+const PLAN_TIERS = new Set(["free", "plus", "pro", "max", "team", "business", "enterprise"]);
+
+/** settings-review ST70: "max" -> "Max plan", "kimi-code" -> "Kimi Code"; never the raw label or the account email. */
+export function planDisplayName(plan: string, planName: (plan: string) => string): string {
+    const words = plan.trim().split(/\s+/);
+    const tier = words[0]?.toLowerCase() ?? "";
+    if (words.length === 1 && PLAN_TIERS.has(tier)) return planName(capitalize(tier));
+    return titleWords(plan.trim());
+}
+
+function accountDetail(account: ModelAccountView, planName: (plan: string) => string): string | null {
+    return account.plan && account.plan.trim() !== "" ? planDisplayName(account.plan, planName) : null;
 }
 
 /** Splits a magpie model id ("claude/claude-sonnet-5-5") into its provider prefix and model. */
@@ -235,6 +251,7 @@ function OrderedEntries({ entries }: { entries: ThinksWithEntry[] }) {
 
 export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode }) {
     const { t, i18n } = useTranslation(["settings", "onboarding"]);
+    const devTools = useSettingsDevTools();
     const locale = i18n.resolvedLanguage ?? i18n.language;
     const tOnboarding = i18n.getFixedT(locale, "onboarding");
 
@@ -392,7 +409,7 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
         accounts.find((item) => item.on && item.provider.trim().toLowerCase() === prefix);
 
     const planOf = (account: ModelAccountView | undefined): string | null =>
-        account?.plan ? t("modelAccounts.planName", { plan: capitalize(account.plan) }) : null;
+        account?.plan ? planDisplayName(account.plan, (plan) => t("modelAccounts.planName", { plan })) : null;
 
     const accountTitle = (account: ModelAccountView): string => {
         const id = account.provider.trim().toLowerCase();
@@ -407,7 +424,7 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
         if (BYOK_MEMBER_IDS.has(prefix)) return t("modelAccounts.yourKeyName");
         const account = accounts.find((item) => item.name === member || item.provider === member);
         if (account) return accountTitle(account);
-        return capitalize(prefix);
+        return titleWords(prefix);
     };
 
     const memberEntry = (member: string, index: number): ThinksWithEntry => {
@@ -468,13 +485,19 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
         return { group, members: group?.members ?? [] };
     };
 
+    const windowLabel = (name: string) => {
+        const limit = usageWindowLimit(name, t);
+        if (!limit) return name.split("·")[0].trim();
+        return limit.charAt(0).toUpperCase() + limit.slice(1);
+    };
+
     const windowRowsOf = (account: ModelAccountView): WindowRow[] =>
         (account.windows ?? []).map((quota, index) => {
             const resetAt = parseTimestamp(quota.resetsAt);
             const refreshing = resetAt !== null && resetAt <= now;
             return {
                 key: `${index}:${quota.name}`,
-                label: quota.name,
+                label: windowLabel(quota.name),
                 percent: refreshing ? null : remainingPercent(quota),
                 resets: refreshing ? null : formatReset(quota.resetsAt, now, locale),
                 refreshing,
@@ -649,8 +672,8 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
 
                     {choosesHere ? (
                         <>
-                            <MagpieProfileCard />
                             <AssistantChoiceCard footer={researchLine} profileModels />
+                            <MagpieProfileCard />
                         </>
                     ) : (
                         <SettingsCard
@@ -694,7 +717,7 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
                                     <AccountRow
                                         key={`${index}:${account.name}`}
                                         title={accountTitle(account)}
-                                        detail={accountDetail(account)}
+                                        detail={accountDetail(account, (plan) => t("modelAccounts.planName", { plan }))}
                                         trailing={trailingOf(account)}
                                         windows={windowRowsOf(account)}
                                         balance={account.balance || null}
@@ -807,7 +830,7 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
                         </SettingsCard>
                     )}
 
-                    {status !== null && (
+                    {devTools && status !== null && (
                         <SettingsCard
                             title={t("modelAccounts.detailsTitle")}
                             description={t("modelAccounts.detailsDescription")}

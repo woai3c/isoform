@@ -186,11 +186,14 @@ function subscriptionFor(eventName: string): () => void {
     return call[1] as () => void;
 }
 
-function thinksWithRows(): string[] {
-    return within(screen.getByTestId("thinks-with"))
-        .getAllByRole("listitem")
-        .map((item) => item.textContent ?? "");
-}
+const devTools = vi.hoisted(() => ({ on: true }));
+vi.mock("@/components/settings/settings-dev-tools", async (original) => ({
+    ...(await original<typeof import("@/components/settings/settings-dev-tools")>()),
+    useSettingsDevTools: () => devTools.on,
+}));
+beforeEach(() => {
+    devTools.on = true;
+});
 
 describe("ModelAccountsSettings (Settings > Assistant)", () => {
     beforeEach(async () => {
@@ -260,7 +263,7 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
         ).toBeInTheDocument();
         expect(screen.getByText(/Each provider's terms govern that use/)).toBeInTheDocument();
         expect(screen.getByText(/read the Claude Code sign-in from the Keychain/)).toBeInTheDocument();
-        expect(screen.getByText("Nothing from these accounts is shared with Isoform.")).toBeInTheDocument();
+        expect(screen.getByText("Isoform uses these sign-ins only on this computer, to send your requests.")).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: "Use my signed-in accounts" }));
         await waitFor(() => expect(mocks.accept).toHaveBeenCalledWith(1));
@@ -468,9 +471,9 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
 
         const usage = cardOf("Usage left");
         expect(within(usage).getByText("Claude Code")).toBeInTheDocument();
-        expect(within(usage).getByText("max · user@example.com")).toBeInTheDocument();
-        expect(within(usage).getByText("5-hour")).toBeInTheDocument();
-        expect(within(usage).getByText("Weekly")).toBeInTheDocument();
+        expect(within(usage).getByText("Max plan")).toBeInTheDocument();
+        expect(within(usage).getByText("5-hour limit")).toBeInTheDocument();
+        expect(within(usage).getByText("Weekly limit")).toBeInTheDocument();
         expect(within(usage).getByText("70% left")).toBeInTheDocument();
         expect(within(usage).getByText("20% left")).toBeInTheDocument();
         expect(within(usage).getByText("resets in 2 hours")).toBeInTheDocument();
@@ -479,6 +482,35 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
             "70",
             "20",
         ]);
+    });
+
+    it.each([
+        ["en", ["5-hour limit", "Weekly limit", "Daily limit"]],
+        ["zh-CN", ["5 小时额度", "每周额度", "每日额度"]],
+    ])("says each window as a limit, never the model's name after the dot, in %s (ST61)", async (language, labels) => {
+        await i18n.changeLanguage(language);
+        try {
+            mocks.getStatus.mockResolvedValue(
+                statusWith({
+                    accounts: [
+                        claudeAccount({
+                            windows: [
+                                { name: "5 hours", used: 30, remaining: 70, resetsAt: inHours(2) },
+                                { name: "7 days · Fable", used: 80, remaining: 20, resetsAt: inDays(3) },
+                                { name: "1 day", used: 10, remaining: 90, resetsAt: inHours(9) },
+                            ],
+                        }),
+                    ],
+                }),
+            );
+            render(<ModelAccountsSettings ownKeyForm={null} />);
+            const bars = await screen.findAllByRole("progressbar");
+            expect(bars).toHaveLength(3);
+            for (const label of labels) expect(screen.getByText(label)).toBeInTheDocument();
+            expect(document.body).not.toHaveTextContent(/Fable|7 days|1 day|5 hours/);
+        } finally {
+            await i18n.changeLanguage("en");
+        }
     });
 
     it("hides the stale number and bar for a window whose reset time has passed", async () => {
@@ -722,7 +754,7 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
         await act(async () => {
             handler();
         });
-        expect(await screen.findByText("max · user@example.com")).toBeInTheDocument();
+        expect(await screen.findByText("Max plan")).toBeInTheDocument();
 
         view.unmount();
         expect(mocks.unsubscribe).toHaveBeenCalledTimes(2);
@@ -761,5 +793,25 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
     it("never passes fallback strings to translation calls", () => {
         expect(componentSource).not.toMatch(/\bt\(\s*["'`][A-Za-z:.]+["'`]\s*,\s*["'`]/);
         expect(componentSource).not.toMatch(/defaultValue/);
+    });
+});
+
+describe("plan names (ST70)", () => {
+    it("says Max plan, Pro plan and Kimi Code, never the raw label", async () => {
+        const { planDisplayName } = await import("./model-accounts-card");
+        const plan = (p: string) => `${p} plan`;
+        expect(planDisplayName("max", plan)).toBe("Max plan");
+        expect(planDisplayName("pro", plan)).toBe("Pro plan");
+        expect(planDisplayName("kimi-code", plan)).toBe("Kimi Code");
+    });
+});
+
+// ST13: Status details (raw gateway status) are developer-only.
+describe("ModelAccountsSettings without Developer tools", () => {
+    it("hides Status details", async () => {
+        devTools.on = false;
+        await renderPage();
+        expect(screen.queryByTestId("assistant-status-details")).not.toBeInTheDocument();
+        expect(screen.queryByText(en.modelAccounts.detailsTitle)).not.toBeInTheDocument();
     });
 });

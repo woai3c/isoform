@@ -411,6 +411,7 @@ export function SelfUpdatesSettings() {
         for (const item of [...state.retired].sort((left, right) => left.index - right.index)) {
             rows.splice(Math.min(item.index, rows.length), 0, renderRetired(item));
         }
+        if (rows.length === 0) return null;
         body = (
             <>
                 {rows.length > 0 && <div>{rows}</div>}

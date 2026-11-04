@@ -170,3 +170,28 @@ describe("SmsTextSettings", () => {
         expect(componentSource).not.toMatch(/\bt\(\s*["'`]smsTexts\.[A-Za-z0-9.]+["'`]\s*,\s*["'`]/);
     });
 });
+
+describe("SmsTextSettings reads (ST15)", () => {
+    beforeEach(() => {
+        pageQueryCache.clear();
+        resetPageQueries();
+        mocks.getStatus.mockReset();
+    });
+
+    it("shows nothing while the first read is pending, not a loading phrase", () => {
+        mocks.getStatus.mockReturnValue(new Promise(() => {}));
+        const { container } = render(<SmsTextSettings />);
+        expect(container).toBeEmptyDOMElement();
+        expect(screen.queryByText(en.smsTexts.loading)).not.toBeInTheDocument();
+    });
+
+    it("shows nothing when the first read fails and there was no number", async () => {
+        mocks.getStatus.mockRejectedValue(new Error("offline"));
+        const { container } = render(<SmsTextSettings />);
+        await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(container).toBeEmptyDOMElement();
+        expect(screen.queryByText(en.smsTexts.loadFailed)).not.toBeInTheDocument();
+        expect(screen.queryByText(zh.smsTexts.loadFailed)).not.toBeInTheDocument();
+    });
+});

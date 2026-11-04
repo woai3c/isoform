@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import {
     ComputerUseAccessCard,
     ComputerUseAppList,
@@ -47,6 +47,7 @@ function cursorBlockedReason(
 // is set up.
 function CursorOverlaySettings({ blockedReason }: { blockedReason: string | null }) {
     const { t } = useTranslation('settings');
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [enabled, setEnabledState] = useState(true);
     const [loading, setLoading] = useState(true);
 
@@ -66,7 +67,7 @@ function CursorOverlaySettings({ blockedReason }: { blockedReason: string | null
         SetCuaCursorOverlayEnabled(next)
             .catch(() => {
                 setEnabledState(!next);
-                toast.error(t('cursorOverlay.toggleFailed'));
+                failChange(t('cursorOverlay.toggleFailed'), () => void handleToggle());
             })
             .finally(() => {
                 setLoading(false);
@@ -87,6 +88,7 @@ function CursorOverlaySettings({ blockedReason }: { blockedReason: string | null
                     />
                 }
             />
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsCard>
     );
 }

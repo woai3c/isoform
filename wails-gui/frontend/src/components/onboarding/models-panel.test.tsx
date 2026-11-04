@@ -868,3 +868,11 @@ it("shows a model confirmed with Later as waiting for power and idle, in both la
         await i18n.changeLanguage("en");
     });
 });
+
+it("Settings shows its own Models card, never onboarding's continue words or a path to this page (ST64)", async () => {
+    render(<ModelsPanel settings />);
+    expect(await screen.findByText("Models on this computer")).toBeInTheDocument();
+    expect(screen.getByText("These models read your screen and audio on this computer.")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/just continue|Settings › Storage › Models/);
+    expect(screen.getAllByRole("button", { name: /^Change / }).length).toBeGreaterThan(0);
+});

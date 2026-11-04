@@ -76,6 +76,7 @@ type PersonDetail struct {
 	ResearchSummary string           `json:"researchSummary"`
 	Loops           []PersonLoop     `json:"loops"`
 	Together        []PersonTogether `json:"together"`
+	TogetherFailed  bool             `json:"togetherFailed"`
 	SharedTopics    []PersonTopic    `json:"sharedTopics"`
 	SeenIn          []string         `json:"seenIn"`
 	MessageCount    int              `json:"messageCount"`
@@ -755,7 +756,9 @@ func (a *App) getPersonDetail(id string, cache *peopleReadGateCache) (PersonDeta
 		detail.Together = append(detail.Together, PersonTogether{Kind: "message", At: at, App: app, Direction: direction})
 	}
 	if err := a.personTogether(ctx, p, stats.RecentMessages, &detail, cache); err != nil {
-		return PersonDetail{}, err
+		// A partial evidence read must not look complete or hide the rest of the person.
+		detail.Together = []PersonTogether{}
+		detail.TogetherFailed = true
 	}
 	// Shared topics enrich the detail. A topics read failure (for example a
 	// registry revision change during capture) leaves them empty instead of
@@ -787,6 +790,11 @@ func (a *App) getPersonDetail(id string, cache *peopleReadGateCache) (PersonDeta
 // message, reply or call with them, something made for them). Being seen in
 // the same session, app or hour is not enough; that work stays in Activity.
 func (a *App) personTogether(ctx context.Context, p storage.PrincipalRow, recent []storage.PrincipalRecentMessageRow, detail *PersonDetail, cache *peopleReadGateCache) error {
+	if a.peopleTogetherProbe != nil {
+		if err := a.peopleTogetherProbe(); err != nil {
+			return err
+		}
+	}
 	if a.IsClosedEyesModeEnabled() {
 		return nil
 	}
@@ -838,7 +846,7 @@ func (a *App) personTogether(ctx context.Context, p storage.PrincipalRow, recent
 		}
 		moments = a.filterComposerModelCandidates(a.activity.store, moments)
 		for _, moment := range moments {
-			if seen[moment.ID] || !a.peopleActivityReadable(ctx, moment, policy.pauses) {
+			if seen[moment.ID] || !personTogetherParticipant(moment.Title, names) || !a.peopleActivityReadable(ctx, moment, policy.pauses) {
 				continue
 			}
 			var runIDs []string
@@ -860,7 +868,7 @@ func (a *App) personTogether(ctx context.Context, p storage.PrincipalRow, recent
 					}
 				}
 			}
-			if !associated || !personTogetherParticipant(moment.Title, names) {
+			if !associated {
 				continue
 			}
 			seen[moment.ID] = true

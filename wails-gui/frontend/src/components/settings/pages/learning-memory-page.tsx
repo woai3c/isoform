@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSettingsDevTools } from "@/components/settings/settings-dev-tools";
 import { useTranslation } from "react-i18next";
 import { Download, CheckCircle2, Play, AlertCircle, Save, ShieldCheck } from "lucide-react";
 import {
@@ -592,6 +593,7 @@ export type LearningMemoryPageProps = KnowledgeLinks;
  */
 export function LearningMemoryPage({ onOpenMemory, onOpenPeople, onOpenProfile }: LearningMemoryPageProps) {
     const { t } = useTranslation("settings");
+    const devTools = useSettingsDevTools();
 
     return (
         <>
@@ -603,10 +605,13 @@ export function LearningMemoryPage({ onOpenMemory, onOpenPeople, onOpenProfile }
                 onOpenPeople={onOpenPeople}
                 onOpenProfile={onOpenProfile}
             />
-            <SettingsAdvanced pageId="memory" hint={t("learningMemory.advancedHint")}>
+            <SettingsAdvanced
+                pageId="memory"
+                hint={t(devTools ? "learningMemory.advancedHint" : "learningMemory.advancedHintPlain")}
+            >
                 <LearnByComparisonSettings />
-                <ChatContextPreviewCard />
-                <SearchIndexSettings />
+                {devTools && <ChatContextPreviewCard />}
+                {devTools && <SearchIndexSettings />}
             </SettingsAdvanced>
         </>
     );

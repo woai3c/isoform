@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"wails-gui/internal/platform/activitymon"
 
 	"wails-gui/internal/engagement"
 	"wails-gui/internal/identity"
@@ -658,4 +659,64 @@ func TestEngagementMemoryDreamPreviewWithProposalsIsReviewable(t *testing.T) {
 	}
 	var nilApp *App
 	nilApp.engagementMemoryDreamPreview(ctx, true, &DreamRun{ID: "dream-2", Status: "completed"}, preview) // must not panic
+}
+
+// settings-review ST66: a source the user switched off, a sleep or a lock is
+// never an outage; a stop nobody chose carries its cause.
+func TestCaptureOutageOnlyForUnchosenStops(t *testing.T) {
+	on := captureSnapshot{Kind: "microphone", Label: "Microphone", Granted: true, Enabled: true, Running: true}
+	chosen := on
+	chosen.Enabled = false
+	if chosen.stopped() {
+		t.Fatal("a source the user switched off counted as stopped")
+	}
+	revoked := on
+	revoked.Granted = false
+	died := on
+	died.Running = false
+	if !revoked.stopped() || revoked.cause() != "permission" || !died.stopped() || died.cause() != "stopped" {
+		t.Fatalf("causes: %v %q %v %q", revoked.stopped(), revoked.cause(), died.stopped(), died.cause())
+	}
+	tr := newEngagementCaptureTracker()
+	start := time.Date(2026, 11, 3, 9, 0, 0, 0, time.UTC)
+	tr.observe(start, []captureSnapshot{on})
+	for i := 1; i <= 6; i++ {
+		if due := tr.observe(start.Add(time.Duration(i)*5*time.Minute), []captureSnapshot{chosen}); len(due) != 0 {
+			t.Fatalf("switched-off source announced: %+v", due)
+		}
+	}
+	var due []engagementCaptureOutage
+	for i := 7; i <= 12 && len(due) == 0; i++ {
+		due = tr.observe(start.Add(time.Duration(i)*5*time.Minute), []captureSnapshot{died})
+	}
+	if len(due) != 1 || due[0].Cause != "stopped" {
+		t.Fatalf("unchosen stop: %+v", due)
+	}
+}
+
+func TestCaptureOutageNeverSpansASleep(t *testing.T) {
+	last := time.Date(2026, 11, 3, 9, 0, 0, 0, time.UTC)
+	if !engagementCaptureSleptSince(activitymon.SystemStateChange{Kind: activitymon.SystemStateSleep, At: last.Add(-time.Hour)}, last) {
+		t.Fatal("asleep now must reset")
+	}
+	if !engagementCaptureSleptSince(activitymon.SystemStateChange{Kind: activitymon.SystemStateWake, At: last.Add(time.Minute)}, last) {
+		t.Fatal("a wake since the last sample must reset")
+	}
+	if engagementCaptureSleptSince(activitymon.SystemStateChange{Kind: activitymon.SystemStateWake, At: last.Add(-time.Minute)}, last) {
+		t.Fatal("an older wake must not reset")
+	}
+	if engagementCaptureSleptSince(activitymon.SystemStateChange{}, last) {
+		t.Fatal("no evidence must not reset")
+	}
+}
+
+func TestEngagementCaptureDisabledDoesNotEstablishPriorRunningState(t *testing.T) {
+	tracker := newEngagementCaptureTracker()
+	now := time.Date(2026, 11, 4, 12, 0, 0, 0, time.UTC)
+	tracker.observe(now, []captureSnapshot{{Kind: "screen", Enabled: false}})
+	unavailable := []captureSnapshot{{Kind: "screen", Enabled: true, Granted: false}}
+	tracker.observe(now.Add(time.Minute), unavailable)
+	if got := tracker.observe(now.Add(30*time.Minute), unavailable); len(got) != 0 {
+		t.Fatalf("never-running source produced an outage: %+v", got)
+	}
 }

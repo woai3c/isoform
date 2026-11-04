@@ -94,7 +94,7 @@ describe("Settings About", () => {
         expect(discord).toHaveClass("text-ink", "border-border", "bg-background");
         expect(discord.querySelector("svg")).toHaveAttribute("fill", "currentColor");
     });
-    it("shows board rows, build details, paired phone and existing recovery controls, without email", async () => {
+    it("shows board rows, build details, paired phone, Get help with its email row outside Advanced (ST26), and recovery controls", async () => {
         const setup = vi.fn();
         render(<HelpAboutPage onReplayOnboarding={setup} />);
         await screen.findByText("Isoform for your computer");
@@ -110,15 +110,19 @@ describe("Settings About", () => {
         expect(
             screen.getByText(/Mac mini · macOS 26.1 · paired with My phone/),
         ).toBeInTheDocument();
-        expect(screen.getByText(/1.4 GB/)).toBeInTheDocument();
-        expect(screen.queryByText(/@isoform/)).not.toBeInTheDocument();
-        fireEvent.click(screen.getByRole("button", { name: /Advanced/ }));
+        expect(screen.getByText(/1.3 GB/)).toBeInTheDocument();
+        expect(screen.getByText("Email support")).toBeInTheDocument();
+        expect(
+            screen.getByText("Write to bo@isoform.ai. Your mail app opens a draft with your version."),
+        ).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Send feedback" })).toBeInTheDocument();
         expect(
             screen.getByRole("button", { name: "Copy report" }),
         ).toBeInTheDocument();
         expect(
             screen.getByRole("button", { name: "Join Discord" }),
         ).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: /Advanced/ }));
         fireEvent.click(
             screen.getByRole("button", { name: "Run setup again" }),
         );

@@ -18,6 +18,10 @@ import (
 const mobileBriefTodayFileName = "today.json"
 
 func (s *mobileBriefService) latestWithToday() (MobileBriefV1, bool) {
+	if !s.beginWork() {
+		return s.store.current()
+	}
+	defer s.wg.Done()
 	brief, ok, _ := s.refreshToday()
 	return brief, ok
 }
@@ -28,16 +32,23 @@ func (s *mobileBriefService) latestWithToday() (MobileBriefV1, bool) {
 // (GetLatestBrief) and a stored change is announced (brief:stored) for the
 // next read. A request during a refresh runs one more after it.
 func (s *mobileBriefService) refreshTodaySoon() {
+	s.mu.Lock()
+	if s.stopped {
+		s.mu.Unlock()
+		return
+	}
 	s.todayRefreshMu.Lock()
 	if s.todayRefreshing {
 		s.todayRefreshAgain = true
 		s.todayRefreshMu.Unlock()
+		s.mu.Unlock()
 		return
 	}
 	s.todayRefreshing = true
-	s.todayRefreshMu.Unlock()
 	s.wg.Add(1)
 	s.todayRefreshWG.Add(1)
+	s.todayRefreshMu.Unlock()
+	s.mu.Unlock()
 	go func() {
 		defer s.wg.Done()
 		defer s.todayRefreshWG.Done()

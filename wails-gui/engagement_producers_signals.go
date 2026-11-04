@@ -11,6 +11,7 @@ import (
 
 	"wails-gui/internal/engagement"
 	"wails-gui/internal/identity"
+	"wails-gui/internal/platform/activitymon"
 	"wails-gui/storage"
 )
 
@@ -63,6 +64,21 @@ type captureSnapshot struct {
 
 func (s captureSnapshot) off() bool {
 	return !s.Granted || !s.Enabled || !s.Running
+}
+
+// stopped is a stop nobody chose: the source is still switched on but its
+// permission is gone or its loop died (settings-review ST66). A source the
+// user switched off is not an outage.
+func (s captureSnapshot) stopped() bool {
+	return s.Enabled && (!s.Granted || !s.Running)
+}
+
+// cause names why a stopped source stopped, for the notice.
+func (s captureSnapshot) cause() string {
+	if !s.Granted {
+		return "permission"
+	}
+	return "stopped"
 }
 
 // engagementCaptureSnapshots builds the watched sources from a platform's
@@ -145,6 +161,7 @@ func (a *App) liveEngagementCaptureSnapshots() []captureSnapshot {
 type engagementCaptureOutage struct {
 	Kind  string
 	Label string
+	Cause string
 	Start time.Time
 }
 
@@ -153,8 +170,9 @@ type engagementCaptureOutage struct {
 // only counts as paused after it has been seen on in this process: a
 // permission that was never granted is onboarding, not an outage.
 type engagementCaptureTracker struct {
-	open  map[string]engagementCaptureOutage
-	wasOn map[string]bool
+	open   map[string]engagementCaptureOutage
+	wasOn  map[string]bool
+	lastAt time.Time
 }
 
 func newEngagementCaptureTracker() *engagementCaptureTracker {
@@ -169,8 +187,10 @@ func (t *engagementCaptureTracker) observe(now time.Time, snapshots []captureSna
 	var due []engagementCaptureOutage
 	for _, snap := range snapshots {
 		seen[snap.Kind] = true
-		if !snap.off() {
-			t.wasOn[snap.Kind] = true
+		if !snap.stopped() {
+			if !snap.off() {
+				t.wasOn[snap.Kind] = true
+			}
 			delete(t.open, snap.Kind)
 			continue
 		}
@@ -179,7 +199,7 @@ func (t *engagementCaptureTracker) observe(now time.Time, snapshots []captureSna
 		}
 		outage, ok := t.open[snap.Kind]
 		if !ok {
-			outage = engagementCaptureOutage{Kind: snap.Kind, Label: snap.Label, Start: now}
+			outage = engagementCaptureOutage{Kind: snap.Kind, Label: snap.Label, Cause: snap.cause(), Start: now}
 			t.open[snap.Kind] = outage
 		}
 		if now.Sub(outage.Start) > engagementCaptureOutageAfter {
@@ -209,7 +229,10 @@ func (a *App) observeCaptureHealth(
 	snapshots func() []captureSnapshot,
 ) {
 	var due, ended []engagementCaptureOutage
-	if a.IsClosedEyesModeEnabled() {
+	// A sleep, a lock or a pause is never an outage (settings-review ST66).
+	slept := engagementCaptureSleptSince(activitymon.LatestSystemSleepState(), tracker.lastAt)
+	tracker.lastAt = now
+	if a.IsClosedEyesModeEnabled() || slept || a.isBackgroundListeningScreenLocked() {
 		tracker.reset()
 	} else {
 		samples := snapshots()
@@ -243,6 +266,7 @@ func (a *App) submitCapturePausedSignal(ctx context.Context, outage engagementCa
 		Stakes:    0.7,
 		Params: map[string]string{
 			"what":     outage.Label,
+			"cause":    outage.Cause,
 			"duration": engagementDurationText(now.Sub(outage.Start)),
 		},
 	})
@@ -635,4 +659,16 @@ func (a *App) runEngagementSignals(ctx context.Context) {
 			a.checkPurposeEngagement(ctx, now)
 		}
 	}
+}
+
+// engagementCaptureSleptSince reports a computer asleep now, or one that woke
+// after the previous sample, so an outage never spans a sleep.
+func engagementCaptureSleptSince(state activitymon.SystemStateChange, last time.Time) bool {
+	switch state.Kind {
+	case activitymon.SystemStateSleep:
+		return true
+	case activitymon.SystemStateWake:
+		return !last.IsZero() && state.At.After(last)
+	}
+	return false
 }

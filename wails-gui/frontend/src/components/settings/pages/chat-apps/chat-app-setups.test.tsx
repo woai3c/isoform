@@ -6,6 +6,7 @@ import botSource from "./bot-setups.tsx?raw";
 import { DiscordStandaloneSetup, SlackStandaloneSetup, TelegramStandaloneSetup } from "./bot-setups";
 import { FeishuSettings } from "./feishu-setup";
 import { WeChatSettings } from "./wechat-setup";
+import { SaveSlackLocalCredentials, TestSlackConnection } from "../../../../../wailsjs/go/main/App";
 
 const mocks = vi.hoisted(() => ({
     feishuStatus: vi.fn(),
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
     wechatStatus: vi.fn(),
     startWeChatLogin: vi.fn(),
     pollWeChatLogin: vi.fn(),
+    disconnectWeChat: vi.fn(),
     slackStatus: vi.fn(),
     discordStatus: vi.fn(),
 }));
@@ -68,7 +70,7 @@ vi.mock("../../../../../wailsjs/go/main/App", () => ({
     // WeChat
     GetWeChatStatus: mocks.wechatStatus,
     ConnectWeChat: vi.fn(),
-    DisconnectWeChat: vi.fn(),
+    DisconnectWeChat: mocks.disconnectWeChat,
     StartWeChatLogin: mocks.startWeChatLogin,
     PollWeChatLogin: mocks.pollWeChatLogin,
 }));
@@ -345,6 +347,20 @@ describe("chat connector owner pairing", () => {
         expect(screen.queryByText("Finish pairing")).not.toBeInTheDocument();
     });
 
+    it("says Couldn't disconnect WeChat in copper without the raw error, and Try again retries", async () => {
+        mocks.wechatStatus.mockResolvedValue({ connected: true, bot_id: "bot_1", online: true, paired: true, pairing_code: "" });
+        mocks.disconnectWeChat.mockRejectedValueOnce(new Error("socket closed")).mockResolvedValueOnce(undefined);
+        render(<WeChatSettings onStatusChange={vi.fn()} />);
+        fireEvent.click(await screen.findByRole("button", { name: "Disconnect" }));
+        fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Disconnect" }));
+        const line = await screen.findByRole("alert");
+        expect(line).toHaveTextContent("Couldn't disconnect WeChat.");
+        expect(line).not.toHaveTextContent("socket closed");
+        expect(line).toHaveClass("text-copper");
+        fireEvent.click(within(line).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.disconnectWeChat).toHaveBeenCalledTimes(2));
+    });
+
     it("shows the Feishu pairing code until its owner sends it, then the paired note", async () => {
         mocks.feishuStatus.mockResolvedValueOnce({
             connected: true, app_id: "cli_1", bot_name: "Isoform Bot", daemon_online: true,
@@ -365,5 +381,54 @@ describe("chat connector owner pairing", () => {
         render(<FeishuSettings brand="feishu" onStatusChange={vi.fn()} />);
         expect(await screen.findByText(PAIRED_NOTE)).toBeInTheDocument();
         expect(screen.queryByText("Finish pairing")).not.toBeInTheDocument();
+    });
+});
+
+describe("chat app results in place (ST29)", () => {
+    async function fillSlack() {
+        mocks.slackStatus.mockResolvedValue({ connected: false, daemon_online: false });
+        render(<SlackStandaloneSetup onStatusChange={() => {}} />);
+        fireEvent.change(await screen.findByPlaceholderText("xoxb-..."), { target: { value: "xoxb-1" } });
+        fireEvent.change(screen.getByPlaceholderText("xapp-..."), { target: { value: "xapp-1" } });
+    }
+
+    beforeEach(async () => {
+        await i18n.changeLanguage("en");
+        vi.mocked(TestSlackConnection).mockReset();
+        vi.mocked(SaveSlackLocalCredentials).mockReset();
+    });
+
+    it("says under the token fields that the token works", async () => {
+        vi.mocked(TestSlackConnection).mockResolvedValue({ success: true, team_name: "Northwind" } as never);
+        await fillSlack();
+        fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+        expect(await screen.findByText("The token works for Northwind. Save and connect to finish.")).toBeInTheDocument();
+        expect(botSource).not.toContain("sonner");
+    });
+
+    it("shows a failed test in copper without the raw error", async () => {
+        vi.mocked(TestSlackConnection).mockResolvedValue({ success: false, error: "invalid_auth" } as never);
+        await fillSlack();
+        fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+        const line = await screen.findByRole("alert");
+        expect(line).toHaveTextContent("The token didn't work. Check it and try again.");
+        expect(line).toHaveClass("text-copper");
+        expect(line).not.toHaveTextContent("invalid_auth");
+    });
+
+    it("says Couldn't connect and retries the save", async () => {
+        vi.mocked(SaveSlackLocalCredentials).mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce(undefined as never);
+        await fillSlack();
+        fireEvent.click(screen.getByRole("button", { name: "Save and connect" }));
+        const line = await screen.findByRole("alert");
+        expect(line).toHaveTextContent("Couldn't connect Slack.");
+        fireEvent.click(within(line).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(SaveSlackLocalCredentials).toHaveBeenCalledTimes(2));
+    });
+
+    it("words the results in Chinese", async () => {
+        await i18n.changeLanguage("zh-CN");
+        expect(i18n.t("settings:connectors.common.couldntDisconnect", { app: "Slack" })).toBe("无法断开Slack。");
+        await i18n.changeLanguage("en");
     });
 });

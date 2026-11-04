@@ -29,6 +29,18 @@ describe("SettingsNav", () => {
         expect(screen.queryByRole("button", { name: /Phone calls/ })).not.toBeInTheDocument();
     });
 
+    it.each([
+        ["en", "Agent of You", "Reservations open"],
+        ["zh-CN", "出租智能体", "预留已开放"],
+    ])("tags Agent of You with Reservations open in %s, under its full name (ST24)", async (language, label, tag) => {
+        await i18n.changeLanguage(language);
+        renderNav();
+        const row = screen.getByRole("button", { name: new RegExp(label) });
+        expect(within(row).getByText(label)).toBeInTheDocument();
+        expect(within(row).getByText(tag)).toBeInTheDocument();
+        expect(row).not.toHaveTextContent(/Soon|即将推出/);
+    });
+
     it("groups pages under explained headings with Extensions collapsed", () => {
         renderNav();
 

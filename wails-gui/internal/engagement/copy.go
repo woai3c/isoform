@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -82,7 +83,7 @@ var copyCatalog = map[string]map[Kind]CopySet{
 			Actions:  map[string]string{"open": "Play"},
 		},
 		KindBriefMissed: {
-			PushBody: "Your brief did not arrive.",
+			PushBody: "Your brief didn't come.",
 			Sealed:   "Your {slot} brief was missed. Open Today to see when the next one runs.",
 			Text:     "Isoform: your {slot} brief was missed. Open Today on your computer for the next one.",
 			Actions:  map[string]string{"make_it_now": "Make it now", "open": "Open Today"},
@@ -220,7 +221,7 @@ var copyCatalog = map[string]map[Kind]CopySet{
 			Actions:  map[string]string{"open": "播放"},
 		},
 		KindBriefMissed: {
-			PushBody: "你的简报没有送达。",
+			PushBody: "你的简报没有来。",
 			Sealed:   "你的{slot}简报错过了。打开“今天”查看下一次的时间。",
 			Text:     "Isoform：你的{slot}简报错过了。在电脑上打开“今天”查看下一次。",
 			Actions:  map[string]string{"make_it_now": "现在生成", "open": "打开今天"},
@@ -343,6 +344,11 @@ func Copy(kind Kind, lang string, params ...map[string]string) (CopySet, bool) {
 			p = params[0]
 		}
 		set.Sealed, set.Text = briefMissedCopy(normalizeLang(lang), p)
+	}
+	if ok && kind == KindCapturePaused && len(params) > 0 {
+		if sealed, text := capturePausedCopy(normalizeLang(lang), params[0]["cause"]); sealed != "" {
+			set.Sealed, set.Text = sealed, text
+		}
 	}
 	if ok {
 		labels := make(map[string]string, len(set.Actions)+1)
@@ -663,24 +669,71 @@ func briefMissedCopy(lang string, params map[string]string) (string, string) {
 	if params != nil {
 		reason = reasons[map[bool]string{true: "zh-CN", false: "en"}[zh]][params["reason"]]
 	}
+	// Today's sentence with its cause (settings-review ST66, today-review
+	// v1.1.13 D3). The reason is filled in here; {slot} and {time} stay for
+	// the caller to localize.
+	at := params != nil && params["time"] != ""
+	clock := ""
+	if at {
+		clock = briefMissedClock(lang, params["time"])
+	}
 	var sealed string
 	switch {
-	// The reason is filled in here; {slot} stays for the caller to localize.
-	case reason != "" && zh:
-		sealed = "你的{slot}简报没有运行：" + reason + "。"
+	case zh && at && reason != "":
+		sealed = "你的{slot}简报在" + clock + "没有来：" + reason + "。"
+	case at && reason != "":
+		sealed = "Your {slot} brief didn't come at " + clock + ": " + reason + "."
+	case zh && reason != "":
+		sealed = "你的{slot}简报没有来：" + reason + "。"
 	case reason != "":
-		sealed = "Your {slot} brief didn't run: " + reason + "."
-	case zh && params != nil && params["time"] != "":
-		sealed = "你的{slot}简报在{time}没有运行。"
-	case params != nil && params["time"] != "":
-		sealed = "Your {slot} brief didn't run at {time}."
+		sealed = "Your {slot} brief didn't come: " + reason + "."
+	case zh && at:
+		sealed = "你的{slot}简报在" + clock + "没有来。"
+	case at:
+		sealed = "Your {slot} brief didn't come at " + clock + "."
 	case zh:
-		sealed = "你的{slot}简报没有运行。"
+		sealed = "你的{slot}简报没有来。"
 	default:
-		sealed = "Your {slot} brief didn't run."
+		sealed = "Your {slot} brief didn't come."
 	}
 	if zh {
 		return sealed, "Isoform：" + sealed
 	}
 	return sealed, "Isoform: " + sealed
+}
+
+// capturePausedCopy says which source stopped and why; only a stop nobody
+// chose is announced (settings-review ST66).
+func capturePausedCopy(lang, cause string) (string, string) {
+	causes := map[string]map[string]string{
+		"en":    {"permission": "its permission was turned off in System Settings", "stopped": "it stopped on its own"},
+		"zh-CN": {"permission": "系统设置里关闭了它的权限", "stopped": "它自己停了"},
+	}
+	key := "en"
+	if lang == "zh-CN" {
+		key = "zh-CN"
+	}
+	reason := causes[key][cause]
+	if reason == "" {
+		return "", ""
+	}
+	if key == "zh-CN" {
+		sealed := "{what}已经停了{duration}：" + reason + "。要重新打开吗？"
+		return sealed, "Isoform：" + sealed
+	}
+	sealed := "{what} has been off for {duration}: " + reason + ". Turn it back on?"
+	return sealed, "Isoform: " + sealed
+}
+
+// briefMissedClock renders the slot's due time ("15:04") on a 12-hour clock,
+// as Today does: "7:30 AM", zh "7:30".
+func briefMissedClock(lang, hhmm string) string {
+	t, err := time.Parse("15:04", hhmm)
+	if err != nil {
+		return hhmm
+	}
+	if lang == "zh-CN" {
+		return fmt.Sprintf("%d:%02d", t.Hour(), t.Minute())
+	}
+	return t.Format("3:04 PM")
 }

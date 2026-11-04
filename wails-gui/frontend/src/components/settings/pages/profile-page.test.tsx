@@ -22,3 +22,14 @@ it.each(['en', 'zh-CN'])('keeps name editing and recoverable failures on Profile
     expect(mocks.ensure).toHaveBeenLastCalledWith('Alex User', []);
     expect(mocks.refresh).toHaveBeenCalledOnce();
 });
+
+it('has no card title under the Profile page and shows Save only once the name changes (ST71)', async () => {
+    await i18n.changeLanguage('en');
+    const t = i18n.getFixedT('en', 'app');
+    render(<ProfilePage />);
+    expect(screen.queryByRole('heading', { name: t('userMenu.profile') })).not.toBeInTheDocument();
+    expect(screen.queryByText(t('userMenu.saveName'))).not.toBeInTheDocument();
+    expect(screen.queryByText(t('userMenu.cancelName'))).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(t('userMenu.nameLabel')), { target: { value: 'Alex Rivers' } });
+    expect(screen.getByText(t('userMenu.saveName'))).toBeInTheDocument();
+});

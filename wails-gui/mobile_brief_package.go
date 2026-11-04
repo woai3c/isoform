@@ -376,6 +376,10 @@ func (a *App) buildMobileBriefPackage(source MobileBriefV1, settings mobileBrief
 // rows saved into the brief later (finds) never change a package by
 // themselves. Quiet slots have no package.
 func (s *mobileBriefService) BriefPackage(briefID string) (mobileBriefPackage, bool) {
+	if !s.beginWork() {
+		return mobileBriefPackage{}, false
+	}
+	defer s.wg.Done()
 	s.packageMu.Lock()
 	defer s.packageMu.Unlock()
 	stored, found := s.store.load(briefID)

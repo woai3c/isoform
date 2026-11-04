@@ -10,6 +10,8 @@ import (
 // Design review v1.0.1 W40: one lesson, once. Fictional near-duplicates.
 func TestKnowHowNearDuplicateTitles(t *testing.T) {
 	same := [][2]string{
+		{"Retry the public sync when GitHub rejects SSH", "Retry the public sync when SSH pushes fail"},
+		{"Retry the public sync when GitHub rejects SSH", "Retry public sync through flaky SSH"},
 		{"Juniper Bakery deploys broke after repo rename", "Juniper Bakery deploys broke after the repo rename"},
 		{"Juniper Bakery deploys broke after repo rename", "Juniper Bakery deploys after repo rename"},
 	}
@@ -21,6 +23,7 @@ func TestKnowHowNearDuplicateTitles(t *testing.T) {
 	different := [][2]string{
 		{"Juniper Bakery deploys broke after repo rename", "Juniper Bakery deploys broke after the Node upgrade"},
 		{"Restart the socket", "Restart the printer"},
+		{"Retry the private sync when SSH pushes fail", "Retry the public sync when SSH pushes fail"},
 	}
 	for _, pair := range different {
 		if sameKnowHowLesson(pair[0], pair[1]) {
@@ -34,9 +37,9 @@ func TestKnowHowMergesCopiesAlreadySaved(t *testing.T) {
 	app := &App{}
 	app.knowHow.counter = &knowHowFakeCounter{}
 	day := time.Date(2026, 10, 30, 14, 10, 0, 0, time.UTC)
-	writeKnowHowFixture(t, "first", buildOKFKnowledgeMarkdown("first", "Juniper Bakery deploys broke after repo rename", "Point the site at the new repo", day, "activity", []string{"Terminal"}, []string{"s1"}, []string{"Relink the repo"}, "fix"))
-	writeKnowHowFixture(t, "second", buildOKFKnowledgeMarkdown("second", "Juniper Bakery deploys broke after the repo rename", "", day.Add(24*time.Hour), "activity", []string{"Safari"}, []string{"s2"}, []string{"Relink"}, "fix"))
-	writeKnowHowFixture(t, "third", buildOKFKnowledgeMarkdown("third", "Juniper Bakery deploys after repo rename", "", day.Add(48*time.Hour), "activity", nil, []string{"s3"}, []string{"Relink"}, "fix"))
+	writeKnowHowFixture(t, "first", buildOKFKnowledgeMarkdown("first", "Retry the public sync when GitHub rejects SSH", "Retry the sync", day, "activity", []string{"Terminal"}, []string{"s1"}, []string{"Relink the repo"}, "fix"))
+	writeKnowHowFixture(t, "second", buildOKFKnowledgeMarkdown("second", "Retry the public sync when SSH pushes fail", "", day.Add(24*time.Hour), "activity", []string{"Safari"}, []string{"s2"}, []string{"Relink"}, "fix"))
+	writeKnowHowFixture(t, "third", buildOKFKnowledgeMarkdown("third", "Retry public sync through flaky SSH", "", day.Add(48*time.Hour), "activity", nil, []string{"s3"}, []string{"Relink"}, "fix"))
 	writeKnowHowFixture(t, "other", buildOKFKnowledgeMarkdown("other", "Halcyon invoices use the customer's time zone", "", day, "activity", nil, nil, []string{"Ask Northwind"}, "decision"))
 
 	cards, err := app.ListKnowHow()
@@ -52,7 +55,7 @@ func TestKnowHowMergesCopiesAlreadySaved(t *testing.T) {
 			lesson = card
 		}
 	}
-	if lesson.Title != "Juniper Bakery deploys broke after repo rename" {
+	if lesson.Title != "Retry the public sync when GitHub rejects SSH" {
 		t.Fatalf("the first copy saved keeps the card: %+v", cards)
 	}
 	if len(lesson.MergedIDs) != 2 || len(lesson.Moments) != 3 {

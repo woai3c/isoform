@@ -1105,6 +1105,26 @@ button:not(:disabled):not([aria-disabled="true"]),
         accent-color: var(--color-accent-2);
     }
 
+    /* settings-review ST62: native radios render solid white in dark mode,
+       so every option looked chosen. An unselected radio is a hollow ring;
+       the chosen one is the ring with a dot. */
+    input[type="radio"] {
+        appearance: none;
+        flex-shrink: 0;
+        width: 14px;
+        height: 14px;
+        border-radius: 9999px;
+        border: 1.5px solid color-mix(in srgb, var(--color-muted) 75%, transparent);
+        background: transparent;
+    }
+    input[type="radio"]:checked {
+        border-color: var(--color-accent-2);
+        background: radial-gradient(circle, var(--color-accent-2) 0 3px, transparent 3.5px);
+    }
+    input[type="radio"]:disabled {
+        opacity: 0.5;
+    }
+
     input:focus-visible,
     textarea:focus-visible,
     select:focus-visible {

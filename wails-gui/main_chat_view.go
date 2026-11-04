@@ -62,7 +62,26 @@ func mainChatRowClass(row storage.StreamItemRow, now time.Time) MainChatRowClass
 
 // A digest is actionable only while a non-routine child needs an answer.
 // Terminal envelope state and expiry still end the whole card's wait.
+// A left-off observation is waiting only when it actually asks the person a question.
+func mainChatLeftOffQuestion(card mainChatProactive) bool {
+	if card.Kind != "decision_due" || card.Target.Kind != mainChatTargetThread {
+		return true
+	}
+	if strings.ContainsAny(card.Headline+card.Body, "?？") {
+		return true
+	}
+	for _, copy := range card.Localized {
+		if strings.ContainsAny(copy.Headline+copy.Body, "?？") {
+			return true
+		}
+	}
+	return false
+}
+
 func mainChatProactiveRowClass(card mainChatProactive, now time.Time) MainChatRowClass {
+	if !mainChatLeftOffQuestion(card) {
+		return MainChatRowRoutine
+	}
 	if card.KindMuted && !mainChatProactiveNeedsUser(card) {
 		if spec, known := engagement.Spec(engagement.Kind(card.Kind)); !known || !spec.Direct {
 			return MainChatRowRoutine
@@ -132,7 +151,7 @@ func mainChatMeetingStarted(card mainChatProactive, now time.Time) bool {
 // A left-off card is for the day it is about. After the next morning brief
 // (a brief built on a later day) it folds into that day's updates.
 func mainChatLeftOffFolded(card mainChatProactive, createdAt int64, briefAt time.Time) bool {
-	if card.Kind != string(engagement.KindDecisionDue) || card.Target.Kind != mainChatTargetThread || briefAt.IsZero() {
+	if card.Kind != string(engagement.KindDecisionDue) || card.Target.Kind != mainChatTargetThread || briefAt.IsZero() || mainChatLeftOffQuestion(card) {
 		return false
 	}
 	at := time.UnixMilli(createdAt)

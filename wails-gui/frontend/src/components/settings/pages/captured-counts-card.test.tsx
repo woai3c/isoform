@@ -1,5 +1,5 @@
 import { resetPageQueries } from '@/lib/page-queries';
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
 import zh from "@/i18n/locales/zh-CN/settings.json";
@@ -153,11 +153,16 @@ describe("CapturedCountsCard", () => {
 
         mocks.captureCounts.mockRejectedValue(new Error("database is locked"));
         emit("activity:session-saved", "s1");
-        expect(
-            await screen.findByText("The counts could not be read. Reopen Settings to try again."),
-        ).toBeInTheDocument();
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("Couldn't read these counts.");
+        expect(alert.className).toContain("text-copper");
         expect(screen.queryByTestId("captured-counts")).not.toBeInTheDocument();
         expect(mocks.captureCounts).toHaveBeenCalledTimes(2);
+
+        mocks.captureCounts.mockResolvedValue(counts);
+        fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+        expect(await screen.findByTestId("captured-counts")).toBeInTheDocument();
+        expect(mocks.captureCounts).toHaveBeenCalledTimes(3);
     });
 
     it("uses the Chinese copy", async () => {
@@ -168,5 +173,29 @@ describe("CapturedCountsCard", () => {
         expect(screen.getByText(zh.observation.captured.title)).toBeInTheDocument();
         expect(screen.getByText(zh.observation.captured.sources.audioMinutes)).toBeInTheDocument();
         await waitFor(() => expect(cells(new RegExp(zh.observation.captured.sources.screens))).toEqual(["412", "2,903"]));
+    });
+
+    it("hides a source with nothing this week, and the card when none are left", async () => {
+        mocks.captureCounts.mockResolvedValue({
+            ...counts,
+            sources: [
+                { source: "screens", today: 3, week: 3 },
+                { source: "meetings", today: 0, week: 0 },
+            ],
+        });
+        render(<CapturedCountsCard />);
+        await screen.findByTestId("captured-counts");
+        expect(screen.queryByText("Meeting transcripts")).not.toBeInTheDocument();
+        expect(cells(/Screens seen/)).toEqual(["3", "3"]);
+    });
+
+    it("hides the card when no source has anything this week", async () => {
+        mocks.captureCounts.mockResolvedValue({
+            ...counts,
+            sources: [{ source: "screens", today: 0, week: 0 }],
+        });
+        const { container } = render(<CapturedCountsCard />);
+        await waitFor(() => expect(mocks.captureCounts).toHaveBeenCalled());
+        await waitFor(() => expect(container).toBeEmptyDOMElement());
     });
 });

@@ -23,6 +23,7 @@ const beliefs = state === 'empty' ? [] : [
     belief('mornings', 'Guards mornings for deep work', 'Keeps 8 to 11 AM free for writing and code review, and declines meetings then.'),
     belief('replies', 'Writes short replies', 'Replies to Maya Okafor and the design team in two sentences or fewer.'),
     belief('calendar', 'Puts every plan on the calendar', 'Blocks time for each plan, from release checklists to trail runs with Theo Lindqvist.'),
+    ...(state === 'live' ? [belief('agents', 'Hands work to other agents and coordinates them through a hub', 'Hands work to other agents and coordinates them through a hub.')] : []),
 ];
 const about = {
     beliefs: beliefs.map((row) => ({
@@ -30,7 +31,7 @@ const about = {
         sessionCount: state === 'v101' && row.id === 'replies' ? 0 : 9, dayCount: 6, confirmedAt: 0, source: state === 'dayone' ? 'assistant-history' : 'activity', notQuiteAt: 0, portraitCandidate: false, area: 'work',
         evidenceFirstAt: now - 12 * day, evidenceLastAt: now - day,
     })),
-    newThisWeek: state === 'dayone' ? ['mornings', 'replies'] : state === 'v101' ? ['replies'] : [],
+    newThisWeek: state === 'live' ? ['agents'] : state === 'dayone' ? ['mornings', 'replies'] : state === 'v101' ? ['replies'] : [],
     totals: { beliefs: beliefs.length, confirmed: 0 },
     storage: { files: beliefs.length, bytes: 480, chunks: 6, vectorReady: true },
 };
@@ -58,6 +59,7 @@ const portrait = state === 'empty' || state === 'dayone' || state === 'learning'
     : state === 'couldntUse' ? { ...ready, failure: { reason: 'unusable', at: now, retryAt: now + 3 * 3_600_000, assistant: 'claude-code' } }
     : state === 'couldntUpdate' ? { ...ready, failure: { reason: 'limit', at: now, retryAt: now + 3 * 3_600_000, assistant: 'claude-code' } }
     : state === 'rewriting' ? { ...ready, rewriting: true, saidAt: now - 60_000 }
+    : state === 'live' && params.get('lang') === 'zh-CN' ? { ...ready, sentences: [{ role: 'connect', changed: false, parts: [part('你会为深度工作留出时间', ['mornings']), part('，也会把计划写进日历。', ['calendar'])] }], workWithMe: [{ text: '请在 11:00 后安排会议。', memoryIds: ['mornings'], area: 'routines', confirmed: false }] }
     : ready;
 const reads: Record<string, unknown> = {
     GetMemoryEntries: beliefs,

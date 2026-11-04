@@ -248,6 +248,7 @@
         "draft": "起草回复",
         "openLoops": "你们之间未完成的事",
         "together": "一起的经历",
+        "togetherFailed": "没能加载你们一起的经历。",
         "sharedTopics": "共同主题",
         "seenIn": "见于 {{apps}}",
         "recentMessages": "最近消息",

@@ -3,6 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { activeInterval } from "@/lib/app-activity";
 import { SettingsPageBoundary } from "@/components/settings/settings-page-boundary";
+import { SettingsDevToolsContext } from "@/components/settings/settings-dev-tools";
 import {
     RefreshCw,
     Loader2,
@@ -381,11 +382,13 @@ export function SettingsPage({
                     {/* Settings content — scrollable */}
                     <ScrollArea key={`${activePage}:${destination.chatApp ?? ""}`} className="flex-1">
                         <div ref={contentRef} className="w-full max-w-[760px] mx-auto px-4 pb-14 space-y-6 md:px-10">
+                            <SettingsDevToolsContext.Provider value={showDevTools}>
                             <SettingsAdvancedRevealContext.Provider value={destination.reveal}>
                                 <SettingsPageBoundary key={`${activePage}:${destination.chatApp ?? ""}`}>
                                     {renderPage()}
                                 </SettingsPageBoundary>
                             </SettingsAdvancedRevealContext.Provider>
+                            </SettingsDevToolsContext.Provider>
                         </div>
                     </ScrollArea>
                 </div>

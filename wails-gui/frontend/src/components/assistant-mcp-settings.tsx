@@ -8,12 +8,15 @@ import {
 } from "@/lib/wails-shim-app";
 import { SettingsCard } from "./settings/settings-primitives";
 import { Button } from "./ui/button";
+import { SettingsFailureLine, SettingsPlaceholderRows } from "./settings/settings-failure";
+import { useSettingsDevTools } from "./settings/settings-dev-tools";
 
 type ConnectionAction = "connect" | "revoke";
 type ConnectionError = "connectFailed" | "revokeFailed";
 
 export function AssistantMCPSettings() {
     const { t } = useTranslation("settings");
+    const devTools = useSettingsDevTools();
     const [connections, setConnections] = useState<MCPReadConnection[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadFailed, setLoadFailed] = useState(false);
@@ -77,14 +80,9 @@ export function AssistantMCPSettings() {
             description={t("assistantMcp.description")}
         >
             {loading ? (
-                <p className="text-xs text-muted" role="status">{t("assistantMcp.loading")}</p>
+                <SettingsPlaceholderRows rows={2} />
             ) : loadFailed ? (
-                <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs text-error" role="alert">{t("assistantMcp.loadFailed")}</p>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setReload((value) => value + 1)}>
-                        {t("assistantMcp.retry")}
-                    </Button>
-                </div>
+                <SettingsFailureLine failure={{ text: t("assistantMcp.loadFailed"), retry: () => setReload((value) => value + 1) }} />
             ) : (
                 <div className="space-y-4">
                     {connections.map((connection) => {
@@ -127,12 +125,12 @@ export function AssistantMCPSettings() {
                                         )}
                                     </div>
                                 </div>
-                                <div className="space-y-1">
+                                {devTools && <div className="space-y-1">
                                     <p className="text-[11px] text-muted">{t("assistantMcp.command")}</p>
                                     <pre className="select-text whitespace-pre-wrap break-all rounded-md border border-border bg-panel p-2 font-mono text-[11px] text-ink">
                                         <code>{connection.command}</code>
                                     </pre>
-                                </div>
+                                </div>}
                                 {!connection.available && (
                                     <p className="text-xs text-muted">
                                         {connection.availabilityReason === "isoform_missing"
@@ -141,11 +139,11 @@ export function AssistantMCPSettings() {
                                     </p>
                                 )}
                                 {connection.issue === "name_conflict" && (
-                                    <p className="text-xs text-error" role="alert">
+                                    <p className="text-[12px] text-copper" role="alert">
                                         {t("assistantMcp.nameConflict", { command: connection.conflictCommand || t("assistantMcp.otherCommand") })}
                                     </p>
                                 )}
-                                {error && <p className="text-xs text-error" role="alert">{t(`assistantMcp.${error}`)}</p>}
+                                <SettingsFailureLine failure={error ? { text: t(`assistantMcp.${error}`), retry: () => void changeConnection(connection.client, error === "connectFailed" ? "connect" : "revoke") } : null} />
                             </article>
                         );
                     })}

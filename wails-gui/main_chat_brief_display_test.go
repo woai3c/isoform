@@ -46,6 +46,14 @@ func TestMainChatBriefDisplayProjectionKeepsUnknownFieldsAndWithholdsWithdrawn(t
 	if shown["futureField"] != "kept" || shown["briefDisplay"] == nil || !strings.Contains(projected, `"futureNumber":9223372036854775807`) {
 		t.Fatalf("title metadata or unknown field missing: %+v", shown)
 	}
+	legacy := `{"kind":"first_week","evidence":[{"kind":"engagement","id":"2026-10-09-evening"}]}`
+	var old map[string]any
+	if err := json.Unmarshal([]byte(project(mainChatProactiveTool, legacy)), &old); err != nil {
+		t.Fatal(err)
+	}
+	if old["briefId"] != brief.BriefID || old["briefDisplay"] == nil {
+		t.Fatalf("legacy card: %+v", old)
+	}
 	input = `{"kind":"brief_ready","briefId":"2026-10-09-evening","evidence":[]}`
 	shown = nil
 	if err := json.Unmarshal([]byte(project(mainChatProactiveTool, input)), &shown); err != nil {

@@ -1,9 +1,9 @@
 import { ModelsPanel } from "@/components/onboarding/models-panel";
+import { SettingsFailureLine, SettingsPlaceholderRows, useSettingsFailure } from "@/components/settings/settings-failure";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { activeInterval } from "@/lib/app-activity";
 import type { TFunction } from "i18next";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
     Select,
@@ -92,6 +92,7 @@ function screenshotDayOptions(recordingDays: number): number[] {
 function BudgetNotice({ budget, onConfirmed }: { budget: StorageBudgetStatus; onConfirmed: () => void }) {
     const { t } = useTranslation("settings");
     const [confirming, setConfirming] = useState(false);
+    const { failure, fail, clear } = useSettingsFailure();
     if (budget.state === "unreachable") {
         return <SettingsReason>{t("storage.budget.unreachable", { kept: formatBytes(budget.keptBytes) })}</SettingsReason>;
     }
@@ -101,13 +102,10 @@ function BudgetNotice({ budget, onConfirmed }: { budget: StorageBudgetStatus; on
     const oldest = Math.min(...[budget.screenshots.oldestMs, budget.recordings.oldestMs].filter((ms) => ms > 0));
     const newest = Math.max(budget.screenshots.newestMs, budget.recordings.newestMs);
     const confirm = () => {
+        clear();
         ConfirmActivityStorageLimit()
             .then(onConfirmed)
-            .catch((err: unknown) =>
-                toast.error(
-                    t("storage.budget.confirmFailed", { error: err instanceof Error ? err.message : String(err) }),
-                ),
-            );
+            .catch(() => fail(t("storage.budget.confirmFailed"), confirm));
     };
     return (
         <div className="flex flex-col gap-2">
@@ -125,6 +123,7 @@ function BudgetNotice({ budget, onConfirmed }: { budget: StorageBudgetStatus; on
                     {t("storage.budget.confirmButton")}
                 </Button>
             </div>
+            <SettingsFailureLine failure={failure} />
             <ConfirmDialog
                 open={confirming}
                 onOpenChange={setConfirming}
@@ -143,15 +142,26 @@ function UsageCard({
     limitGB,
     budget,
     onConfirmed,
+    failed = false,
+    onRetry,
 }: {
     usage: ActivityStorageUsage | null;
     limitGB: number;
     budget: StorageBudgetStatus | null;
     onConfirmed: () => void;
+    failed?: boolean;
+    onRetry?: () => void;
 }) {
     const { t } = useTranslation("settings");
+    // settings-review ST63: the numbers or the failure line, never an empty card.
     if (!usage) {
-        return <SettingsCard title={t("storage.usage.title")} description={t("storage.usage.description")}>{null}</SettingsCard>;
+        return (
+            <SettingsCard title={t("storage.usage.title")} description={t("storage.usage.description")}>
+                {failed
+                    ? <SettingsFailureLine failure={{ text: t("storage.usage.failed"), retry: onRetry }} />
+                    : <SettingsPlaceholderRows rows={3} />}
+            </SettingsCard>
+        );
     }
     const limitBytes = limitGB * GIB;
     const ratio = limitBytes > 0 ? Math.min(1, usage.totalBytes / limitBytes) : 0;
@@ -371,7 +381,9 @@ function StorageLimitCard({ storage, usedBytes }: { storage: RecordingStorage; u
                         />
                     )
                 }
-            />
+            >
+                <SettingsFailureLine failure={storage.failure} />
+            </SettingsControlCard>
             <ConfirmDialog
                 open={confirmGB !== null}
                 onOpenChange={(open) => {
@@ -401,29 +413,31 @@ function ScreenshotDaysCard({ onSaved, recordingDays }: { onSaved: () => void; r
     const [days, setDays] = useState<number | null>(null);
     const [saving, setSaving] = useState(false);
     const [confirmDays, setConfirmDays] = useState<number | null>(null);
+    const { failure, fail, clear } = useSettingsFailure();
     const title = t("storage.screenshots.title");
 
-    useEffect(() => {
+    const read = useCallback(() => {
         GetScreenshotRetentionDays()
             .then((d) => setDays(d))
-            .catch(() => setDays(null));
-    }, []);
+            .catch(() => {
+                setDays(null);
+                fail(t("storage.screenshots.readFailed"), read);
+            });
+    }, [fail, t]);
+    useEffect(read, [read]);
 
     const save = (next: number) => {
         const previous = days;
+        clear();
         setDays(next);
         setSaving(true);
         SetScreenshotRetentionDays(next)
             .then(() => {
                 onSaved();
             })
-            .catch((err: unknown) => {
+            .catch(() => {
                 setDays(previous);
-                toast.error(
-                    t("storage.screenshots.failedToast", {
-                        error: err instanceof Error ? err.message : String(err),
-                    }),
-                );
+                fail(t("storage.screenshots.failedToast"), () => save(next));
             })
             .finally(() => setSaving(false));
     };
@@ -463,7 +477,7 @@ function ScreenshotDaysCard({ onSaved, recordingDays }: { onSaved: () => void; r
                 control={
                     days === null ? null : (
                         <Select value={String(shown)} onValueChange={handleSelect} disabled={saving}>
-                            <SelectTrigger aria-label={title} className="w-[180px] h-8 text-xs">
+                            <SelectTrigger aria-label={title} className="w-auto min-w-[180px] h-8 text-xs">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -476,7 +490,9 @@ function ScreenshotDaysCard({ onSaved, recordingDays }: { onSaved: () => void; r
                         </Select>
                     )
                 }
-            />
+            >
+                {failure && <SettingsFailureLine failure={failure} />}
+            </SettingsControlCard>
             <ConfirmDialog
                 open={confirmDays !== null}
                 onOpenChange={(open) => {
@@ -598,6 +614,7 @@ function CleanupCard({ onChanged }: { onChanged: () => void }) {
     const [plan, setPlan] = useState<StorageCleanupPlan | null>(null);
     const [checking, setChecking] = useState(false);
     const [confirming, setConfirming] = useState(false);
+    const { failure, fail, clear } = useSettingsFailure();
     const [status, setStatus] = useState<StorageCleanupStatus | null>(null);
     // Stops the cleanup's progress poll, which pauses while the window is hidden.
     const pollRef = useRef<(() => void) | null>(null);
@@ -640,19 +657,17 @@ function CleanupCard({ onChanged }: { onChanged: () => void }) {
     }, [startPolling, stopPolling]);
 
     const check = () => {
+        clear();
         setChecking(true);
         setStatus(null);
         PlanActivityStorageCleanup()
             .then((p) => setPlan(p))
-            .catch((err: unknown) =>
-                toast.error(
-                    t("storage.cleanup.checkFailed", { error: err instanceof Error ? err.message : String(err) }),
-                ),
-            )
+            .catch(() => fail(t("storage.cleanup.checkFailed"), check))
             .finally(() => setChecking(false));
     };
 
     const start = () => {
+        clear();
         StartActivityStorageCleanup()
             .then(() => {
                 setPlan(null);
@@ -670,11 +685,7 @@ function CleanupCard({ onChanged }: { onChanged: () => void }) {
                 });
                 startPolling();
             })
-            .catch((err: unknown) =>
-                toast.error(
-                    t("storage.cleanup.startFailed", { error: err instanceof Error ? err.message : String(err) }),
-                ),
-            );
+            .catch(() => fail(t("storage.cleanup.startFailed"), start));
     };
 
     const running = status?.running === true;
@@ -770,6 +781,7 @@ function CleanupCard({ onChanged }: { onChanged: () => void }) {
                 }
             >
                 {body}
+                {failure && <SettingsFailureLine failure={failure} />}
             </SettingsControlCard>
             <ConfirmDialog
                 open={confirming}
@@ -790,19 +802,27 @@ function CleanupCard({ onChanged }: { onChanged: () => void }) {
 export function StoragePage() {
     const storage = useRecordingStorage();
     const [usage, setUsage] = useState<ActivityStorageUsage | null>(null);
+    const [usageFailed, setUsageFailed] = useState(false);
+    const [usageAttempt, setUsageAttempt] = useState(0);
     const [budget, setBudget] = useState<StorageBudgetStatus | null>(null);
     const { refreshKey, refresh } = storage;
 
     useEffect(() => {
+        setUsageFailed(false);
         GetActivityStorageUsage()
-            .then((u) => setUsage(u))
-            // Usage is informational; a lower limit asks first while it is
-            // unknown.
-            .catch(() => setUsage(null));
+            .then((u) => {
+                setUsage(u ?? null);
+                setUsageFailed(!u);
+            })
+            // A lower limit still asks first while usage is unknown.
+            .catch(() => {
+                setUsage(null);
+                setUsageFailed(true);
+            });
         GetActivityStorageBudget()
             .then((b) => setBudget(b))
             .catch(() => setBudget(null));
-    }, [refreshKey]);
+    }, [refreshKey, usageAttempt]);
 
     // Settings changes start a rotation pass; read usage again once it has
     // had a moment. The timer is cleared when the page closes.
@@ -823,7 +843,7 @@ export function StoragePage() {
 
     return (
         <>
-            <UsageCard usage={usage} limitGB={storage.maxGB} budget={budget} onConfirmed={refreshSoon} />
+            <UsageCard usage={usage} limitGB={storage.maxGB} budget={budget} onConfirmed={refreshSoon} failed={usageFailed} onRetry={() => setUsageAttempt((n) => n + 1)} />
             <StorageLimitCard storage={storage} usedBytes={usage ? usage.totalBytes : null} />
             <ScreenshotDaysCard onSaved={refreshSoon} recordingDays={storage.days} />
             <CleanupCard onChanged={refresh} />

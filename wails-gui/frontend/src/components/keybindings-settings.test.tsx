@@ -105,13 +105,15 @@ describe("Keyboard shortcuts", () => {
         await startRecording("Search and commands: ⌘K");
         fireEvent.keyDown(window, { key: "j", metaKey: true });
         expect(screen.getByRole("button", { name: "Search and commands: ⌘J" })).toBeInTheDocument();
-        expect(mocks.toastSuccess).toHaveBeenCalledWith("Shortcut updated");
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
         await startRecording("New chat: ⌘T");
         fireEvent.keyDown(window, { key: "e", metaKey: true, ctrlKey: true, altKey: true });
-        expect(mocks.toastError).toHaveBeenCalledWith(
+        expect(screen.getByRole("alert")).toHaveTextContent(
             'Conflicts with "Pause observing for one hour". Choose a different shortcut.',
         );
+        expect(screen.getByRole("alert")).toHaveClass("text-copper");
+        expect(mocks.toastError).not.toHaveBeenCalled();
         expect(screen.getByText("Press a shortcut...")).toBeInTheDocument();
     });
 
@@ -187,8 +189,17 @@ describe("Keyboard shortcuts", () => {
         await waitFor(() => expect(select).toBeEnabled());
         fireEvent.keyDown(select, { key: "ArrowDown" });
         fireEvent.click(screen.getByRole("option", { name: "Off" }));
-        await waitFor(() => expect(mocks.toastError).toHaveBeenCalled());
+        const line = await screen.findByRole("alert");
+        expect(line).toHaveTextContent("Couldn't change this. Try again");
+        expect(line).toHaveClass("text-copper");
+        expect(mocks.toastError).not.toHaveBeenCalled();
         expect(select).toHaveTextContent("Tap Option twice");
         expect(JSON.parse(localStorage.getItem("yansu.keybindings") ?? "{}")).toEqual({});
+
+        mocks.setQuickChatHotkey.mockResolvedValue(undefined);
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(select).toHaveTextContent("Off"));
+        expect(mocks.setQuickChatHotkey).toHaveBeenCalledTimes(2);
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
 });

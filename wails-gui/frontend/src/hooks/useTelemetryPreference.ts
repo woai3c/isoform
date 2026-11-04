@@ -8,6 +8,8 @@ export function useTelemetryPreference() {
     const [enabled, setEnabled] = useState(true);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [readFailed, setReadFailed] = useState(false);
+    const [readCount, setReadCount] = useState(0);
     const revision = useRef(0);
     const pending = useRef(false);
 
@@ -18,17 +20,20 @@ export function useTelemetryPreference() {
             if (!active) return;
             revision.current += 1;
             setEnabled(tier !== "off");
+            setReadFailed(false);
             setLoading(false);
         });
         void GetTelemetryTier()
             .then((tier) => {
                 if (active && revision.current === initialRevision) {
                     setEnabled(tier !== "off");
+                    setReadFailed(false);
                 }
             })
-            // Keep the default visible if reading fails; an explicit toggle
-            // can still save an opt-out through the existing binding.
-            .catch(() => {})
+            // Never show the default as the truth when the read fails.
+            .catch(() => {
+                if (active && revision.current === initialRevision) setReadFailed(true);
+            })
             .finally(() => {
                 if (active) setLoading(false);
             });
@@ -36,6 +41,12 @@ export function useTelemetryPreference() {
             active = false;
             unsubscribe?.();
         };
+    }, [readCount]);
+
+    const read = useCallback(() => {
+        setLoading(true);
+        setReadFailed(false);
+        setReadCount((n) => n + 1);
     }, []);
 
     const save = useCallback(async (next: boolean) => {
@@ -46,12 +57,15 @@ export function useTelemetryPreference() {
         try {
             await SetTelemetryTier(next ? "detailed" : "off");
             // A more recent backend notification wins over a late response.
-            if (revision.current === saveRevision) setEnabled(next);
+            if (revision.current === saveRevision) {
+                setEnabled(next);
+                setReadFailed(false);
+            }
         } finally {
             pending.current = false;
             setSaving(false);
         }
     }, []);
 
-    return { enabled, loading, saving, setEnabled: save };
+    return { enabled, loading, saving, readFailed, read, setEnabled: save };
 }

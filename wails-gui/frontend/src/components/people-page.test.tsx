@@ -297,6 +297,29 @@ describe("People overview", () => {
         expect(screen.getByRole("button", { name: /Priya Nair/, pressed: true })).toBeInTheDocument();
     });
 
+    it("keeps the page and person visible when Together fails, and retries it", async () => {
+        const { details } = world();
+        mocks.detail.mockImplementation(async (id: string) => id === "priya" ? { ...details.priya, together: [], togetherFailed: true } : details[id]);
+        render(<PeoplePage />);
+        const failure = await screen.findByText("Couldn't load your moments together.");
+        expect(failure.closest('[data-people-failure]')).toHaveClass("text-copper");
+        expect(screen.getByRole("heading", { level: 2, name: "Priya Nair" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Priya Nair/, pressed: true })).toBeInTheDocument();
+        mocks.detail.mockImplementation(async (id: string) => details[id]);
+        fireEvent.click(within(failure.closest('[data-people-failure]') as HTMLElement).getByRole("button", { name: "Try again" }));
+        expect(await screen.findByText("Kickoff call · 45 min")).toBeInTheDocument();
+        expect(screen.queryByText("Couldn't load your moments together.")).not.toBeInTheDocument();
+    });
+
+    it("shows the Together failure and retry in Chinese", async () => {
+        await i18n.changeLanguage("zh-CN");
+        const { details } = world();
+        mocks.detail.mockImplementation(async (id: string) => ({ ...details[id], together: [], togetherFailed: true }));
+        render(<PeoplePage />);
+        const failure = await screen.findByText("没能加载你们一起的经历。");
+        expect(within(failure.closest('[data-people-failure]') as HTMLElement).getByRole("button", { name: "重试" })).toBeInTheDocument();
+    });
+
     it("shows grey lines while loading and a retry when the first read fails", async () => {
         world();
         mocks.overview.mockRejectedValue(new Error("boom"));

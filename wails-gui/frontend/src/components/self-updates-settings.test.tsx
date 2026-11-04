@@ -115,7 +115,7 @@ describe("SelfUpdatesSettings component", () => {
         mocks.list.mockResolvedValueOnce([]);
         fireEvent.click(screen.getByRole("button", { name: "Accept" }));
         await waitFor(() => {
-            expect(screen.getByText("Nothing to review right now.")).toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
         });
         expect(mocks.review).toHaveBeenCalledTimes(1);
         const input = mocks.review.mock.calls[0][0];
@@ -154,7 +154,7 @@ describe("SelfUpdatesSettings component", () => {
         mocks.list.mockResolvedValueOnce([]);
         fireEvent.click(save);
         await waitFor(() => {
-            expect(screen.getByText("Nothing to review right now.")).toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
         });
         expect(mocks.review.mock.calls[0][0]).toMatchObject({
             operationId: "op-supersede",
@@ -203,7 +203,7 @@ describe("SelfUpdatesSettings component", () => {
         expect(within(articles[0]).getByRole("alert")).toBeInTheDocument();
         expect(within(articles[0]).queryByRole("button", { name: "Accept" })).not.toBeInTheDocument();
 
-        fireEvent.click(within(articles[0]).getByRole("button", { name: "Dismiss" }));
+        fireEvent.click(within(articles[0]).getByRole("button", { name: "OK" }));
         expect(screen.queryByRole("alert")).not.toBeInTheDocument();
         expect(screen.getAllByRole("article")).toHaveLength(1);
     });

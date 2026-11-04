@@ -1321,3 +1321,31 @@ func TestPortraitRetryNamesThePhraseAndMissingRoles(t *testing.T) {
 		t.Fatalf("roles = %v", roles)
 	}
 }
+
+func TestPortraitLanguageMatches(t *testing.T) {
+	english := []portraitSentence{{Parts: []portraitPart{{Text: "You plan ahead."}}}}
+	chinese := []portraitSentence{{Parts: []portraitPart{{Text: "你会提前规划。"}}}}
+	if portraitLanguageMatches("zh-CN", english, nil) || !portraitLanguageMatches("zh-CN", chinese, []portraitLine{{Text: "先发送计划。"}}) || portraitLanguageMatches("zh-CN", chinese, []portraitLine{{Text: "Send the plan."}}) || !portraitLanguageMatches("en", english, nil) {
+		t.Fatal("portrait language must match each generated sentence and line")
+	}
+}
+
+func TestPortraitLanguageChangeDoesNotReusePriorSentence(t *testing.T) {
+	app, service, runner, path := newPortraitTestRig(t, 20)
+	now := time.Now()
+	service.check(context.Background(), now)
+	doc, err := readPortrait(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc.Language = "zh-CN"
+	if err := writePortrait(path, doc); err != nil {
+		t.Fatal(err)
+	}
+	mustPortraitRead(t, app, "writing")
+	service.check(context.Background(), now.Add(11*time.Minute))
+	if len(runner.inputs) < 2 || strings.Contains(runner.inputs[len(runner.inputs)-1].Prompt, "PREVIOUS (unchanged)") {
+		t.Fatal("a language change must rewrite instead of reusing the old sentence")
+	}
+	mustPortraitRead(t, app, "ready")
+}

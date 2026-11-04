@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { GetMagpieProfile, SetBackgroundUsesChoice, SetMagpieProfile, type MagpieProfileMember, type MagpieProfileView } from "@/lib/wails-shim-app";
@@ -7,9 +7,23 @@ import { Button } from "../ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { SettingsCard, SettingsRow } from "./settings-primitives";
+import { SettingsFailureLine, SettingsPlaceholderRows } from "@/components/settings/settings-failure";
 
 const efforts = ["low", "medium", "high", "xhigh", "max"] as const;
 const providerOf = (model: string) => model.split("/", 1)[0];
+/** Window event Who answers sends when an assistant is picked; its detail is the agent. */
+export const ANSWERING_PICKED_EVENT = "assistant-choice:answering";
+const PROVIDER_OF_AGENT: Record<string, string> = { "claude-code": "claude", codex: "codex" };
+
+/** A model's name, not its id: "claude/claude-sonnet-5-5" reads "Sonnet 5.5", "codex/gpt-5.5" reads "GPT-5.5". */
+export function modelName(id: string): string {
+    const bare = id.slice(id.indexOf("/") + 1).replace(/^claude-/, "").replace(/(\d)-(?=\d)/g, "$1.");
+    return bare
+        .split("-")
+        .map((word) => (word.toLowerCase() === "gpt" ? "GPT" : word.charAt(0).toUpperCase() + word.slice(1)))
+        .join(" ")
+        .replace(/^GPT /, "GPT-");
+}
 
 export function MagpieProfileCard() {
     const { t } = useTranslation("settings");
@@ -31,6 +45,8 @@ export function MagpieProfileCard() {
         load();
         return EventsOn("model-accounts:updated", load);
     }, [load]);
+    const viewRef = useRef(view);
+    viewRef.current = view;
 
     const save = (members: MagpieProfileMember[]) => {
         setBusy(true);
@@ -46,12 +62,27 @@ export function MagpieProfileCard() {
         [members[index], members[index + by]] = [members[index + by], members[index]];
         save(members);
     };
+    // Picking who answers moves that assistant to the top, so the two never disagree.
+    const saveRef = useRef(save);
+    saveRef.current = save;
+    useEffect(() => {
+        const onPicked = (event: Event) => {
+            const provider = PROVIDER_OF_AGENT[(event as CustomEvent<string>).detail];
+            const current = viewRef.current;
+            const index = current?.members.findIndex((member) => providerOf(member.model) === provider) ?? -1;
+            if (!current || index <= 0) return;
+            saveRef.current([current.members[index], ...current.members.filter((_, i) => i !== index)]);
+        };
+        window.addEventListener(ANSWERING_PICKED_EVENT, onPicked);
+        return () => window.removeEventListener(ANSWERING_PICKED_EVENT, onPicked);
+    }, []);
     const addable = view?.models.filter((model) => !view.members.some((member) => providerOf(member.model) === providerOf(model))) ?? [];
     const providers = [...new Set(addable.map(providerOf))];
 
     return (
         <SettingsCard title={t("magpieProfile.title")} description={t("magpieProfile.description")}>
-            {!view && !failed && <p role="status" className="settings-row-desc">{t("assistantChoice.loading")}</p>}
+            {!view && !failed && <SettingsPlaceholderRows />}
+            {!view && failed && <SettingsFailureLine failure={{ text: t("magpieProfile.loadFailed"), retry: () => { setFailed(false); load(); } }} />}
             {view && <div className="flex flex-col gap-3">
                 {view.members.map((member, index) => {
                     const provider = providerOf(member.model);
@@ -68,7 +99,7 @@ export function MagpieProfileCard() {
                         </div>
                         <SettingsRow title={t("assistantChoice.model")} control={<Select value={member.model} disabled={busy} onValueChange={(model) => change(index, { ...member, model })}>
                             <SelectTrigger className="w-[240px] text-xs" aria-label={t("assistantChoice.modelFor", { agent: name })}><SelectValue /></SelectTrigger>
-                            <SelectContent>{models.map((model) => <SelectItem key={model} value={model}>{model}</SelectItem>)}</SelectContent>
+                            <SelectContent>{models.map((model) => <SelectItem key={model} value={model}>{modelName(model)}</SelectItem>)}</SelectContent>
                         </Select>} />
                         <SettingsRow title={t("assistantChoice.effort")} control={<div className="settings-segment" role="radiogroup" aria-label={t("assistantChoice.effortFor", { agent: name })}>
                             {efforts.map((effort) => <button key={effort} type="button" role="radio" aria-checked={member.effort === effort} data-active={member.effort === effort} disabled={busy} onClick={() => change(index, { ...member, effort })}>{t(`assistantChoice.efforts.${effort}`)}</button>)}
@@ -86,9 +117,8 @@ export function MagpieProfileCard() {
                     setBusy(true);
                     SetBackgroundUsesChoice(on).then(() => setView({ ...view, backgroundUsesChoice: on })).catch(() => setFailed(true)).finally(() => setBusy(false));
                 }} />} />
-                <p className="text-xs text-muted">{t("magpieProfile.scope")}</p>
             </div>}
-            {failed && <p role="alert" className="text-xs text-muted">{t("assistantChoice.saveFailed")}</p>}
+            {view && failed && <SettingsFailureLine failure={{ text: t("assistantChoice.saveFailed") }} />}
         </SettingsCard>
     );
 }

@@ -1,60 +1,79 @@
 import { AboutUpdates } from "./about-updates";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, Copy } from "lucide-react";
+import { Loader2, Copy, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     GetPerfSnapshot,
+    GetVersion,
     OpenExternalURL,
 } from "../../../../wailsjs/go/main/App";
 import { DiscordIcon } from "@/components/icons/app-icons";
-import { toast } from "sonner";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import {
     SettingsCard,
     SettingsRow,
 } from "@/components/settings/settings-primitives";
 import { SettingsAdvanced } from "@/components/settings/settings-advanced";
 import {
-    copyPerfReport,
+    writePerfReport,
     type PerfSnapshotShape,
 } from "@/components/settings/perf-report";
 
 const DISCORD_INVITE_URL = "https://discord.gg/6XaU6hGKda";
+const SUPPORT_EMAIL = "bo@isoform.ai";
 
 // ── Get help ──
 
 function GetHelp() {
     const { t } = useTranslation("settings");
     const [copyingReport, setCopyingReport] = useState(false);
-    // The support report: a one-click "grab the perf snapshot into your
-    // clipboard" for users who don't know what devtools is — what they get is
-    // the same text-formatted report the Perf Analysis panel produces, safe to
-    // paste into a bug report. The text formatter deliberately omits
-    // subprocess command lines (which may contain `/Users/<name>/…`), so
-    // nothing identifying leaks through this path. It is named "support
-    // report" so it never reads like Privacy's "Share diagnostic data".
+    const [copied, setCopied] = useState(false);
+    const { failure, fail, clear } = useSettingsFailure();
+    // The support report is the text Perf Analysis produces, without
+    // subprocess command lines, so it is safe to paste into an email. Its
+    // result shows in place, under the rows.
     const handleCopyReport = useCallback(async () => {
         setCopyingReport(true);
+        setCopied(false);
+        clear();
         try {
-            const snap =
-                (await GetPerfSnapshot()) as unknown as PerfSnapshotShape;
-            await copyPerfReport(snap, t("about.supportReport.copiedToast"));
-        } catch (err) {
-            toast.error(
-                t("about.supportReport.errorToast", {
-                    error: err instanceof Error ? err.message : String(err),
-                }),
-            );
+            const snap = (await GetPerfSnapshot()) as unknown as PerfSnapshotShape;
+            if (!(await writePerfReport(snap))) throw new Error("copy");
+            setCopied(true);
+        } catch {
+            fail(t("about.supportReport.copyFailed"), () => void handleCopyReport());
         } finally {
             setCopyingReport(false);
         }
-    }, [t]);
+    }, [clear, fail, t]);
+
+    const handleEmail = useCallback(async () => {
+        clear();
+        try {
+            const version = await GetVersion().catch(() => "");
+            const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(t("support.feedbackSubject"))}&body=${encodeURIComponent(t("support.feedbackBody", { version }))}`;
+            await OpenExternalURL(url);
+        } catch {
+            fail(t("about.emailSupport.openFailed"));
+        }
+    }, [clear, fail, t]);
 
     return (
         <SettingsCard
             title={t("support.title")}
             description={t("support.description")}
         >
+            <SettingsRow
+                title={t("about.emailSupport.title")}
+                description={t("about.emailSupport.description")}
+                control={
+                    <Button size="sm" variant="outline" onClick={() => void handleEmail()}>
+                        <Mail className="h-3.5 w-3.5 mr-1.5" />
+                        {t("support.emailButton")}
+                    </Button>
+                }
+            />
             <SettingsRow
                 title={t("support.discordTitle")}
                 description={t("support.discordDescription")}
@@ -79,7 +98,7 @@ function GetHelp() {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleCopyReport}
+                        onClick={() => void handleCopyReport()}
                         disabled={copyingReport}
                     >
                         {copyingReport ? (
@@ -93,6 +112,12 @@ function GetHelp() {
                     </Button>
                 }
             />
+            {copied && (
+                <p role="status" className="text-[12px] text-ink">
+                    {t("about.supportReport.copiedToast")}
+                </p>
+            )}
+            <SettingsFailureLine failure={failure} />
         </SettingsCard>
     );
 }
@@ -136,8 +161,8 @@ export function HelpAboutPage({ onReplayOnboarding }: HelpAboutPageProps) {
     return (
         <>
             <AboutUpdates />
+            <GetHelp />
             <SettingsAdvanced pageId="about" hint={t("about.advancedHint")}>
-                <GetHelp />
                 <SettingsCard>
                     <SettingsRow
                         title={t("onboarding.title")}

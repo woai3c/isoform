@@ -234,6 +234,9 @@ func todayNeedFromChatItem(row StreamItemData, chatID string, now time.Time) (To
 	if json.Unmarshal([]byte(row.ToolInput), &card) != nil || card.MomentID == "" || !mobileTodayLiveCard(&card, now) {
 		return TodayNeed{}, "", false
 	}
+	if !mainChatLeftOffQuestion(card) {
+		return TodayNeed{}, "", false
+	}
 	switch card.Kind {
 	case "waiting_on_reply", "decision_due", "work_blocked", "commitment_slipping":
 	default:

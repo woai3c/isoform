@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { ParseKeys } from "i18next";
 import { useTranslation } from "react-i18next";
 import { LockKeyhole } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { SettingsFailureLine, SettingsPlaceholderRows, useSettingsFailure } from "@/components/settings/settings-failure";
 import { Switch } from "@/components/ui/switch";
 import { SettingsCard, SettingsRow } from "@/components/settings/settings-primitives";
 import { ListPlugins, SetBuiltinOn } from "../../../../wailsjs/go/main/App";
@@ -21,6 +20,7 @@ const TOGGLE_ERRORS = [
 
 export function PluginsPage() {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [plugins, setPlugins] = useState<PluginInfo[] | null>(null);
     const [loadFailed, setLoadFailed] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -47,7 +47,10 @@ export function PluginsPage() {
         } catch (error) {
             const detail = error instanceof Error ? error.message : String(error);
             const refusal = TOGGLE_ERRORS.find(({ match }) => match.test(detail));
-            toast.error(refusal ? t(refusal.key) : t("plugins.toggleFailed"));
+            failChange(
+                refusal ? t(refusal.key) : t("plugins.toggleFailed", { name: t(plugin.nameKey as ParseKeys<"settings">) }),
+                () => void toggle(plugin, enabled),
+            );
             // Existing setters can persist earlier dependency changes before
             // a later setter fails. Read the actual saved state again.
             await reload();
@@ -59,14 +62,9 @@ export function PluginsPage() {
     return (
         <SettingsCard title={t("plugins.builtinSection")} description={t("plugins.builtinDescription")}>
             {loadFailed ? (
-                <div className="flex items-center justify-between gap-4">
-                    <p className="settings-row-desc" role="alert">{t("plugins.loadFailed")}</p>
-                    <Button variant="outline" size="sm" onClick={() => void reload()}>
-                        {t("plugins.retry")}
-                    </Button>
-                </div>
+                <SettingsFailureLine failure={{ text: t("plugins.loadFailed"), retry: () => void reload() }} />
             ) : plugins === null ? (
-                <p className="settings-row-desc" role="status">{t("plugins.loading")}</p>
+                <SettingsPlaceholderRows rows={3} />
             ) : (
                 <>
                     {plugins.map((plugin) => {
@@ -117,6 +115,7 @@ export function PluginsPage() {
                     })}
                 </>
             )}
+            <SettingsFailureLine failure={changeFailure} />
         </SettingsCard>
     );
 }

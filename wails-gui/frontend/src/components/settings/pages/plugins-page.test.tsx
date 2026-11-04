@@ -95,7 +95,8 @@ describe("PluginsPage", () => {
         render(<PluginsPage />);
         const control = await screen.findByRole("switch", { name: "Web calendars" });
         fireEvent.click(control);
-        await waitFor(() => expect(bindings.error).toHaveBeenCalledWith(enSettings.plugins.toggleFailed));
+        expect(await screen.findByRole("alert")).toHaveTextContent(/^Couldn't change .+\./);
+        expect(bindings.error).not.toHaveBeenCalled();
         expect(control).toBeChecked();
         expect(control).toBeEnabled();
         expect(screen.queryByText("backend detail")).not.toBeInTheDocument();
@@ -113,7 +114,8 @@ describe("PluginsPage", () => {
         bindings.set.mockRejectedValue(`set plugin ${id}: ${detail}`);
         render(<PluginsPage />);
         fireEvent.click(await screen.findByRole("switch", { name }));
-        await waitFor(() => expect(bindings.error).toHaveBeenCalledWith(enSettings.plugins.errors[key]));
+        expect(await screen.findByRole("alert")).toHaveTextContent(enSettings.plugins.errors[key]);
+        expect(bindings.error).not.toHaveBeenCalled();
         expect(screen.getByRole("switch", { name })).not.toBeChecked();
     });
 
@@ -177,7 +179,8 @@ describe("PluginsPage", () => {
         bindings.set.mockRejectedValue(new Error("enter a phone number before turning on text messages"));
         render(<PluginsPage />);
         fireEvent.click(await screen.findByRole("switch", { name: zhSettings.plugins.builtins["text-channel"].name }));
-        await waitFor(() => expect(bindings.error).toHaveBeenCalledWith(zhSettings.plugins.errors.phoneNumber));
+        expect(await screen.findByRole("alert")).toHaveTextContent(zhSettings.plugins.errors.phoneNumber);
+        expect(bindings.error).not.toHaveBeenCalled();
     });
 
     it("keeps English and Chinese plugin keys in parity", () => {

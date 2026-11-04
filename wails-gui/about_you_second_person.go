@@ -16,7 +16,7 @@ var beliefSelfVerbs = map[string]bool{
 	"debug": true, "delegate": true, "deploy": true, "design": true, "dictate": true, "draft": true,
 	"drink": true, "edit": true, "email": true, "enjoy": true, "exercise": true, "expect": true,
 	"favor": true, "favour": true, "find": true, "fix": true, "follow": true, "gather": true,
-	"group": true, "handle": true, "keep": true, "lead": true, "learn": true, "like": true,
+	"group": true, "hand": true, "coordinate": true, "handle": true, "keep": true, "lead": true, "learn": true, "like": true,
 	"listen": true, "live": true, "log": true, "love": true, "manage": true, "meet": true,
 	"merge": true, "monitor": true, "need": true, "open": true, "organize": true, "plan": true,
 	"prefer": true, "prioritize": true, "push": true, "read": true, "record": true, "refactor": true,
@@ -63,7 +63,8 @@ func beliefAgreeWithYou(sentence string) string {
 		}
 		before := words[i-1]
 		_, irregular := beliefIrregularVerbs[next[:end]]
-		if !irregular && !strings.HasSuffix(before, ",") && (strings.HasSuffix(before, "s") || strings.HasSuffix(before, "S")) {
+		hasObject := i+2 < len(words) && (words[i+2] == "them" || words[i+2] == "it" || words[i+2] == "him" || words[i+2] == "her")
+		if !irregular && !hasObject && !strings.HasSuffix(before, ",") && (strings.HasSuffix(before, "s") || strings.HasSuffix(before, "S")) {
 			continue
 		}
 		if base, ok := beliefBaseVerbOf(next[:end]); ok {

@@ -4,6 +4,7 @@ import { Loader2, EyeOff, Eye } from "lucide-react";
 import { activeInterval } from "@/lib/app-activity";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
+import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import {
     DisconnectSlack,
     GetSlackStatus,
@@ -13,7 +14,6 @@ import {
     DisconnectTelegram,
 } from "../../../../../wailsjs/go/main/App";
 import { BrowserOpenURL } from "../../../../../wailsjs/runtime/runtime";
-import { toast } from "sonner";
 import {
     TestTelegramConnection,
     SaveTelegramLocalCredentials,
@@ -172,6 +172,8 @@ function BotConnectionDetails({ appName, online }: { appName: string; online: bo
 // directly via Socket Mode — no Isoform backend relay.
 export function SlackStandaloneSetup({ onStatusChange }: { onStatusChange: (status: ChatAppStatus) => void }) {
     const { t } = useTranslation('settings');
+    const { failure, fail, clear } = useSettingsFailure();
+    const [tokenNote, setTokenNote] = useState<string | null>(null);
     const [status, setStatus] = useState<{ connected: boolean; team_name?: string; slack_user_name?: string; daemon_online: boolean; paired?: boolean; pairing_code?: string }>({ connected: false, daemon_online: false });
     const [botToken, setBotToken] = useState("");
     const [appToken, setAppToken] = useState("");
@@ -207,7 +209,7 @@ export function SlackStandaloneSetup({ onStatusChange }: { onStatusChange: (stat
             setArchivedLabel(null);
             await refresh();
         } catch (err) {
-            toast.error(t('connectors.slack.standalone.saveFailed', { error: String(err) }));
+            fail(t('connectors.common.couldntConnect', { app: t('connectors.slack.title') }), handleReuse);
         } finally {
             setReuseLoading(false);
         }
@@ -225,21 +227,25 @@ export function SlackStandaloneSetup({ onStatusChange }: { onStatusChange: (stat
 
     const handleTest = async () => {
         setTesting(true);
+        clear();
+        setTokenNote(null);
         try {
             const res = await TestSlackConnection(botToken.trim(), appToken.trim());
-            if (res.success) toast.success(t('connectors.slack.standalone.testOk', { team: res.team_name ?? "" }));
-            else toast.error(res.error || t('connectors.common.testFailed'));
-        } catch (err) { toast.error(t('connectors.common.testFailedWithError', { error: String(err) })); }
+            if (res.success) setTokenNote(t('connectors.common.tokenWorks', { team: res.team_name ?? "" }));
+            else fail(t('connectors.common.tokenDidntWork'), handleTest);
+        } catch (err) { fail(t('connectors.common.tokenDidntWork'), handleTest); }
         finally { setTesting(false); }
     };
 
     const handleSave = async () => {
         setSaving(true);
+        clear();
+        setTokenNote(null);
         try {
             await SaveSlackLocalCredentials(botToken.trim(), appToken.trim());
             setBotToken(""); setAppToken("");
             await refresh();
-        } catch (err) { toast.error(t('connectors.slack.standalone.saveFailed', { error: String(err) })); }
+        } catch (err) { fail(t('connectors.common.couldntConnect', { app: t('connectors.slack.title') }), handleSave); }
         finally { setSaving(false); }
     };
 
@@ -251,7 +257,7 @@ export function SlackStandaloneSetup({ onStatusChange }: { onStatusChange: (stat
             setArchivedLabel(a.has ? a.label : null);
             setForceNew(false);
         }
-        catch (err) { toast.error(t('connectors.common.disconnectFailed', { error: String(err) })); }
+        catch (err) { fail(t('connectors.common.couldntDisconnect', { app: t('connectors.slack.title') }), handleDisconnect); }
     };
 
     if (status.connected) {
@@ -274,6 +280,7 @@ export function SlackStandaloneSetup({ onStatusChange }: { onStatusChange: (stat
                         <div className="flex items-center gap-2">
                             <DisconnectButton appName={t('connectors.slack.title')} onConfirm={handleDisconnect} />
                         </div>
+                        <SettingsFailureLine failure={failure} />
                     </div>
                 </SettingsCard>
                 <BotConnectionDetails appName={t('connectors.slack.title')} online={status.daemon_online} />
@@ -291,6 +298,7 @@ export function SlackStandaloneSetup({ onStatusChange }: { onStatusChange: (stat
                     onReuse={handleReuse}
                     onCreateNew={handleCreateNew}
                 />
+                <SettingsFailureLine failure={failure} className="mt-2" />
             </SettingsCard>
         );
     }
@@ -313,6 +321,8 @@ export function SlackStandaloneSetup({ onStatusChange }: { onStatusChange: (stat
                         <Button variant="outline" size="sm" className="transition-colors" disabled={!botToken.trim() || !appToken.trim() || testing} onClick={handleTest}>{testing ? t('connectors.slack.standalone.testing') : t('connectors.slack.standalone.test')}</Button>
                         <Button size="sm" className="transition-colors" disabled={!botToken.trim() || !appToken.trim() || saving} onClick={handleSave}>{saving ? t('connectors.slack.standalone.saving') : t('connectors.slack.standalone.save')}</Button>
                     </div>
+                    <SettingsFailureLine failure={failure} />
+                    {tokenNote && <p className="text-[12px] text-muted">{tokenNote}</p>}
                 </div>
             </SettingsCard>
             <BotSetupSteps
@@ -336,6 +346,8 @@ export function SlackStandaloneSetup({ onStatusChange }: { onStatusChange: (stat
 // auto-generated invite URL. Isoform connects directly to the gateway.
 export function DiscordStandaloneSetup({ onStatusChange }: { onStatusChange: (status: ChatAppStatus) => void }) {
     const { t } = useTranslation('settings');
+    const { failure, fail, clear } = useSettingsFailure();
+    const [tokenNote, setTokenNote] = useState<string | null>(null);
     const [status, setStatus] = useState<{ bound: boolean; discord_user?: string; daemon_online: boolean; paired?: boolean; pairing_code?: string }>({ bound: false, daemon_online: false });
     const [token, setToken] = useState("");
     const [testing, setTesting] = useState(false);
@@ -373,7 +385,7 @@ export function DiscordStandaloneSetup({ onStatusChange }: { onStatusChange: (st
             setArchivedLabel(null);
             await refresh();
         } catch (err) {
-            toast.error(t('connectors.discord.standalone.saveFailed', { error: String(err) }));
+            fail(t('connectors.common.couldntConnect', { app: t('connectors.discord.title') }), handleReuse);
         } finally {
             setReuseLoading(false);
         }
@@ -391,25 +403,29 @@ export function DiscordStandaloneSetup({ onStatusChange }: { onStatusChange: (st
 
     const handleTest = async () => {
         setTesting(true);
+        clear();
+        setTokenNote(null);
         try {
             const res = await TestDiscordConnection(token.trim());
             if (res.success) {
                 setInviteURL(res.invite_url ?? "");
-                toast.success(t('connectors.discord.standalone.testOk', { username: res.bot_username ?? "" }));
-            } else toast.error(res.error || t('connectors.common.testFailed'));
-        } catch (err) { toast.error(t('connectors.common.testFailedWithError', { error: String(err) })); }
+                setTokenNote(t('connectors.common.tokenWorks', { team: res.bot_username ?? "" }));
+            } else fail(t('connectors.common.tokenDidntWork'), handleTest);
+        } catch (err) { fail(t('connectors.common.tokenDidntWork'), handleTest); }
         finally { setTesting(false); }
     };
 
     const handleSave = async () => {
         setSaving(true);
+        clear();
+        setTokenNote(null);
         try {
             await SaveDiscordLocalCredentials(token.trim());
             const url = await GetDiscordInviteURL();
             setInviteURL(url);
             setToken("");
             await refresh();
-        } catch (err) { toast.error(t('connectors.discord.standalone.saveFailed', { error: String(err) })); }
+        } catch (err) { fail(t('connectors.common.couldntConnect', { app: t('connectors.discord.title') }), handleSave); }
         finally { setSaving(false); }
     };
 
@@ -422,7 +438,7 @@ export function DiscordStandaloneSetup({ onStatusChange }: { onStatusChange: (st
             setArchivedLabel(a.has ? a.label : null);
             setForceNew(false);
         }
-        catch (err) { toast.error(t('connectors.common.disconnectFailed', { error: String(err) })); }
+        catch (err) { fail(t('connectors.common.couldntDisconnect', { app: t('connectors.discord.title') }), handleDisconnect); }
     };
 
     if (status.bound) {
@@ -445,6 +461,7 @@ export function DiscordStandaloneSetup({ onStatusChange }: { onStatusChange: (st
                                 </Button>
                             )}
                         </div>
+                        <SettingsFailureLine failure={failure} />
                     </div>
                 </SettingsCard>
                 <BotConnectionDetails appName={t('connectors.discord.title')} online={status.daemon_online} />
@@ -462,6 +479,7 @@ export function DiscordStandaloneSetup({ onStatusChange }: { onStatusChange: (st
                     onReuse={handleReuse}
                     onCreateNew={handleCreateNew}
                 />
+                <SettingsFailureLine failure={failure} className="mt-2" />
             </SettingsCard>
         );
     }
@@ -487,6 +505,8 @@ export function DiscordStandaloneSetup({ onStatusChange }: { onStatusChange: (st
                         <Button variant="outline" size="sm" className="transition-colors" disabled={!token.trim() || testing} onClick={handleTest}>{testing ? t('connectors.discord.standalone.testing') : t('connectors.discord.standalone.test')}</Button>
                         <Button size="sm" className="transition-colors" disabled={!token.trim() || saving} onClick={handleSave}>{saving ? t('connectors.discord.standalone.saving') : t('connectors.discord.standalone.save')}</Button>
                     </div>
+                    <SettingsFailureLine failure={failure} />
+                    {tokenNote && <p className="text-[12px] text-muted">{tokenNote}</p>}
                 </div>
             </SettingsCard>
             <BotSetupSteps
@@ -507,6 +527,8 @@ export function DiscordStandaloneSetup({ onStatusChange }: { onStatusChange: (st
 // api.telegram.org directly. Replaces the backend-relay connect flow.
 export function TelegramStandaloneSetup({ onStatusChange }: { onStatusChange: (status: ChatAppStatus) => void }) {
     const { t } = useTranslation('settings');
+    const { failure, fail, clear } = useSettingsFailure();
+    const [tokenNote, setTokenNote] = useState<string | null>(null);
     const [status, setStatus] = useState<{
         connected: boolean;
         telegram_user_name?: string;
@@ -550,7 +572,7 @@ export function TelegramStandaloneSetup({ onStatusChange }: { onStatusChange: (s
             setArchivedLabel(null);
             await refresh();
         } catch (err) {
-            toast.error(t('connectors.telegram.standalone.saveFailed', { error: String(err) }));
+            fail(t('connectors.common.couldntConnect', { app: t('connectors.telegram.title') }), handleReuse);
         } finally {
             setReuseLoading(false);
         }
@@ -568,17 +590,19 @@ export function TelegramStandaloneSetup({ onStatusChange }: { onStatusChange: (s
 
     const handleTest = async () => {
         setTesting(true);
+        clear();
+        setTokenNote(null);
         setTestedUsername(null);
         try {
             const res = await TestTelegramConnection(token.trim());
             if (res.success) {
                 setTestedUsername(res.bot_username ?? "");
-                toast.success(t('connectors.telegram.standalone.testOk', { username: res.bot_username ?? "" }));
+                setTokenNote(t('connectors.common.tokenWorks', { team: res.bot_username ?? "" }));
             } else {
-                toast.error(res.error || t('connectors.common.testFailed'));
+                fail(t('connectors.common.tokenDidntWork'), handleTest);
             }
         } catch (err) {
-            toast.error(t('connectors.common.testFailedWithError', { error: String(err) }));
+            fail(t('connectors.common.tokenDidntWork'), handleTest);
         } finally {
             setTesting(false);
         }
@@ -586,13 +610,15 @@ export function TelegramStandaloneSetup({ onStatusChange }: { onStatusChange: (s
 
     const handleSave = async () => {
         setSaving(true);
+        clear();
+        setTokenNote(null);
         try {
             await SaveTelegramLocalCredentials(token.trim());
             setToken("");
             setTestedUsername(null);
             await refresh();
         } catch (err) {
-            toast.error(t('connectors.telegram.standalone.saveFailed', { error: String(err) }));
+            fail(t('connectors.common.couldntConnect', { app: t('connectors.telegram.title') }), handleSave);
         } finally {
             setSaving(false);
         }
@@ -606,7 +632,7 @@ export function TelegramStandaloneSetup({ onStatusChange }: { onStatusChange: (s
             setArchivedLabel(a.has ? a.label : null);
             setForceNew(false);
         } catch (err) {
-            toast.error(t('connectors.telegram.errors.disconnectFailed', { error: String(err) }));
+            fail(t('connectors.common.couldntDisconnect', { app: t('connectors.telegram.title') }), handleDisconnect);
         }
     };
 
@@ -643,6 +669,7 @@ export function TelegramStandaloneSetup({ onStatusChange }: { onStatusChange: (s
                             )}
                             <DisconnectButton appName={t('connectors.telegram.title')} onConfirm={handleDisconnect} />
                         </div>
+                        <SettingsFailureLine failure={failure} />
                     </div>
                 </SettingsCard>
                 <BotConnectionDetails appName={t('connectors.telegram.title')} online={status.daemon_online} />
@@ -660,6 +687,7 @@ export function TelegramStandaloneSetup({ onStatusChange }: { onStatusChange: (s
                     onReuse={handleReuse}
                     onCreateNew={handleCreateNew}
                 />
+                <SettingsFailureLine failure={failure} className="mt-2" />
             </SettingsCard>
         );
     }
@@ -695,6 +723,8 @@ export function TelegramStandaloneSetup({ onStatusChange }: { onStatusChange: (s
                             {saving ? t('connectors.telegram.standalone.saving') : t('connectors.telegram.standalone.save')}
                         </Button>
                     </div>
+                    <SettingsFailureLine failure={failure} />
+                    {tokenNote && <p className="text-[12px] text-muted">{tokenNote}</p>}
                 </div>
             </SettingsCard>
             <BotSetupSteps

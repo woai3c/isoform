@@ -500,10 +500,14 @@ export function ModelsPanel({
     );
     const content = (
         <>
-            <SetupHeading
-                title={t(settings ? "models.settingsTitle" : "models.heading")}
-                description={t("models.description")}
-            />
+            {settings ? (
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-[13px] font-semibold text-ink">{t("models.settingsTitle")}</h2>
+                    <p className="text-[12.5px] text-muted">{t("models.settingsDescription")}</p>
+                </div>
+            ) : (
+                <SetupHeading title={t("models.heading")} description={t("models.description")} />
+            )}
             <ModelNetworkNotice network={network} />
             {rows}
             {settings &&
@@ -555,7 +559,15 @@ export function ModelsPanel({
                         </div>
                     ))}
             {unavailable && <p className="setup-note">{t("models.legacy")}</p>}
-            {(error || actionError) && (
+            {settings && (error || actionError) && (
+                <p role="alert" data-settings-failure className="text-[12px] text-copper">
+                    {t("models.settingsLoadFailed")}{" "}
+                    <button type="button" className="text-accent hover:underline" onClick={() => void refresh()}>
+                        {t("models.tryAgain")}
+                    </button>
+                </p>
+            )}
+            {!settings && (error || actionError) && (
                 <p role="alert" className="text-xs text-error">
                     {t("models.loadFailed")}{" "}
                     <Button
@@ -567,7 +579,7 @@ export function ModelsPanel({
                     </Button>
                 </p>
             )}
-            <p className="setup-note">{t("models.note")}</p>
+            {!settings && <p className="setup-note">{t("models.note")}</p>}
             {settings && choices && (
                 <>
                     <div className="text-[12.5px] text-muted">

@@ -137,8 +137,14 @@ export function SettingsNav({ activePage, onSelect, showDevTools }: SettingsNavP
             className={NAV_ITEM_CLASS}
         >
             <entry.icon className="h-4 w-4 shrink-0" />
-            <span className="flex-1 truncate">{t(entry.labelKey as never)}</span>
-            {entry.comingSoon && <span className="settings-nav-soon">{t("nav.soon")}</span>}
+            {entry.comingSoon ? (
+                <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                    <span className="max-w-full truncate">{t(entry.labelKey as never)}</span>
+                    <span className="settings-nav-soon">{t("nav.soon")}</span>
+                </span>
+            ) : (
+                <span className="flex-1 truncate">{t(entry.labelKey as never)}</span>
+            )}
         </button>
     );
 

@@ -159,6 +159,18 @@ describe("StoragePage", () => {
         mocks.confirmLimit.mockResolvedValue(undefined);
     });
 
+    it("never shows an empty Space used card: a copper failure line whose Try again reads again (ST63)", async () => {
+        mocks.usage.mockRejectedValueOnce(new Error("disk busy"));
+        render(<StoragePage />);
+        const line = await screen.findByText(/Couldn't measure the space used\./);
+        expect(line).toHaveClass("text-copper");
+        const calls = mocks.usage.mock.calls.length;
+        fireEvent.click(within(line).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.usage.mock.calls.length).toBeGreaterThan(calls));
+        await waitFor(() => expect(screen.queryByText(/Couldn't measure the space used\./)).not.toBeInTheDocument());
+        expect(zh.storage.usage.failed).toBe("无法计算已用空间。");
+    });
+
     it("shows what each kind of data takes against the limit", async () => {
         await renderPage();
         expect(screen.getByTestId("storage-models")).toBeInTheDocument();
@@ -187,10 +199,33 @@ describe("StoragePage", () => {
         expect(mocks.setMaxGB).toHaveBeenCalledTimes(1);
     });
 
+    it("says a failed screenshot-time change in place, puts the old time back and retries it (ST9/ST11)", async () => {
+        await renderPage();
+        const select = screen.getByRole("combobox", { name: "Keep screenshots for" });
+        mocks.setScreenshotDays.mockRejectedValueOnce(new Error("store closed"));
+        fireEvent.change(select, { target: { value: "90" } });
+        const line = await screen.findByText("Couldn't change how long screenshots are kept.");
+        expect(line.closest("[data-settings-failure]")).toHaveClass("text-copper");
+        expect(mocks.toast.error).not.toHaveBeenCalled();
+        mocks.setScreenshotDays.mockResolvedValueOnce(undefined);
+        fireEvent.click(within(line.closest("[data-settings-failure]") as HTMLElement).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.setScreenshotDays).toHaveBeenCalledTimes(2));
+        expect(screen.queryByText("Couldn't change how long screenshots are kept.")).not.toBeInTheDocument();
+    });
+
+    it("says a failed cleanup check in place with Try again, not a toast", async () => {
+        await renderPage();
+        mocks.plan.mockRejectedValueOnce(new Error("busy"));
+        fireEvent.click(screen.getByRole("button", { name: "Check" }));
+        const line = await screen.findByText("Couldn't check what can be freed.");
+        expect(line.closest("[data-settings-failure]")).toHaveClass("text-copper");
+        expect(mocks.toast.error).not.toHaveBeenCalled();
+    });
+
     it("asks before a shorter screenshot time and saves a longer one directly", async () => {
         await renderPage();
         const select = screen.getByRole("combobox", { name: "Keep screenshots for" });
-        expect(within(select).getByRole("option", { name: "With recordings (Unlimited)" })).toBeInTheDocument();
+        expect(within(select).getByRole("option", { name: "As long as their recordings" })).toBeInTheDocument();
 
         fireEvent.change(select, { target: { value: "90" } });
         await waitFor(() => expect(mocks.setScreenshotDays).toHaveBeenCalledWith(90));
@@ -327,7 +362,7 @@ describe("StoragePage limit states", () => {
         mocks.budget.mockResolvedValue({ state: "ok", limitBytes: 0, projectedBytes: 0, keptBytes: 0, screenshots: EMPTY_ITEM, recordings: EMPTY_ITEM, checkedAtMs: 1 });
         render(<StoragePage />);
         const select = await screen.findByRole("combobox", { name: "Keep screenshots for" });
-        expect(within(select).getByRole("option", { name: "With recordings (30 days)" })).toBeInTheDocument();
+        expect(within(select).getByRole("option", { name: "As long as their recordings" })).toBeInTheDocument();
         // Only times shorter than the recording limit are offered.
         expect(within(select).queryByRole("option", { name: "30 days" })).not.toBeInTheDocument();
         expect(within(select).queryByRole("option", { name: "90 days" })).not.toBeInTheDocument();

@@ -1,9 +1,9 @@
-import { SettingReadError } from "./setting-read-error";
+import { SettingsFailureLine, SettingsPlaceholderRows, useSettingsFailure } from "@/components/settings/settings-failure";
+import { LoadUIState, SaveUIState } from "../../../../wailsjs/go/main/App";
 import { invalidateActivitySessionCache } from '@/components/timeline/activity-session-cache';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { X, CheckCircle2, Plus } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -152,6 +152,7 @@ function RecordingRetentionCard({ storage }: { storage: RecordingStorage }) {
                 }
             >
                 {summary}
+                <SettingsFailureLine failure={storage.failure} />
             </SettingsControlCard>
             <ConfirmDialog
                 open={confirmDays !== null}
@@ -208,7 +209,7 @@ function ConfirmRemoveAppDialog({
 }: {
     pending: PendingRemoval | null;
     onClose: () => void;
-    onConfirm: (id: string) => void;
+    onConfirm: (id: string, name: string) => void;
     copy: { title: string; description: string; confirm: string };
 }) {
     return (
@@ -222,7 +223,7 @@ function ConfirmRemoveAppDialog({
             confirmLabel={copy.confirm}
             variant="danger"
             onConfirm={() => {
-                if (pending) onConfirm(pending.id);
+                if (pending) onConfirm(pending.id, pending.name);
             }}
         />
     );
@@ -352,16 +353,21 @@ interface SensitiveAppEntry {
  *  always hidden; the user adds the rest. */
 function HiddenAppsSection({ systemApps }: { systemApps: SystemAppInfo[] }) {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [apps, setApps] = useState<SensitiveAppEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
+    const [readCount, setReadCount] = useState(0);
     const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
 
     useEffect(() => {
+        setLoading(true);
+        setLoadFailed(false);
         GetSensitiveApps()
             .then((list: SensitiveAppEntry[]) => setApps(list ?? []))
-            .catch(() => toast.error(t("sensitiveApps.toasts.loadFailed")))
+            .catch(() => setLoadFailed(true))
             .finally(() => setLoading(false));
-    }, [t]);
+    }, [readCount]);
 
     const handleAdd = async (app: SystemAppInfo) => {
         try {
@@ -375,18 +381,18 @@ function HiddenAppsSection({ systemApps }: { systemApps: SystemAppInfo[] }) {
                 return next;
             });
         } catch {
-            toast.error(t("sensitiveApps.toasts.addFailed"));
+            failChange(t("sensitiveApps.toasts.addFailed", { name: app.name }), () => void handleAdd(app));
         } finally {
             invalidateActivitySessionCache(true);
         }
     };
 
-    const handleRemove = (bundlePrefix: string) => {
+    const handleRemove = (bundlePrefix: string, name = bundlePrefix) => {
         RemoveSensitiveApp(bundlePrefix)
             .then(() => {
                 setApps((prev) => prev.filter((a) => a.isDefault || a.bundlePrefix !== bundlePrefix));
             })
-            .catch(() => toast.error(t("sensitiveApps.toasts.removeFailed")))
+            .catch(() => failChange(t("sensitiveApps.toasts.removeFailed", { name }), () => handleRemove(bundlePrefix, name)))
             .finally(() => invalidateActivitySessionCache(true));
     };
 
@@ -450,8 +456,10 @@ function HiddenAppsSection({ systemApps }: { systemApps: SystemAppInfo[] }) {
                 title={t("privacy.ignoredApps.hiddenTitle")}
                 description={t("privacy.ignoredApps.hiddenDescription")}
             />
-            {loading ? (
-                <span className="text-xs text-muted">{t("privacy.ignoredApps.loading")}</span>
+            {loadFailed ? (
+                <SettingsFailureLine failure={{ text: t("sensitiveApps.toasts.loadFailed"), retry: () => setReadCount((n) => n + 1) }} />
+            ) : loading ? (
+                <SettingsPlaceholderRows />
             ) : (
                 (installedDefaults.length > 0 || userApps.length > 0) && (
                     <div className="flex flex-col divide-y divide-border/50">
@@ -471,6 +479,7 @@ function HiddenAppsSection({ systemApps }: { systemApps: SystemAppInfo[] }) {
                     confirm: t("privacy.ignoredApps.confirmUnhide.confirm"),
                 }}
             />
+            <SettingsFailureLine failure={changeFailure} />
         </section>
     );
 }
@@ -494,16 +503,21 @@ function NotListenedAppsSection({
     onOpenPage?: OpenSettingsPage;
 }) {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [apps, setApps] = useState<VoiceInputAppEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
+    const [readCount, setReadCount] = useState(0);
     const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
 
     useEffect(() => {
+        setLoading(true);
+        setLoadFailed(false);
         GetVoiceInputApps()
             .then((list: VoiceInputAppEntry[]) => setApps(list ?? []))
-            .catch(() => toast.error(t("voiceInputApps.toasts.loadFailed")))
+            .catch(() => setLoadFailed(true))
             .finally(() => setLoading(false));
-    }, [t]);
+    }, [readCount]);
 
     const handleAdd = async (app: SystemAppInfo) => {
         try {
@@ -517,16 +531,16 @@ function NotListenedAppsSection({
                 return next;
             });
         } catch {
-            toast.error(t("voiceInputApps.toasts.addFailed"));
+            failChange(t("voiceInputApps.toasts.addFailed", { name: app.name }), () => void handleAdd(app));
         }
     };
 
-    const handleRemove = (bundleId: string) => {
+    const handleRemove = (bundleId: string, name = bundleId) => {
         RemoveVoiceInputApp(bundleId)
             .then(() => {
                 setApps((prev) => prev.filter((a) => a.bundleId !== bundleId));
             })
-            .catch(() => toast.error(t("voiceInputApps.toasts.removeFailed")));
+            .catch(() => failChange(t("voiceInputApps.toasts.removeFailed", { name }), () => handleRemove(bundleId, name)));
     };
 
     const userApps = useMemo(() => apps.filter((a) => !a.isDefault), [apps]);
@@ -563,8 +577,10 @@ function NotListenedAppsSection({
                 </div>
             ) : (
                 <>
-                    {loading ? (
-                        <span className="text-xs text-muted">{t("privacy.ignoredApps.loading")}</span>
+                    {loadFailed ? (
+                        <SettingsFailureLine failure={{ text: t("voiceInputApps.toasts.loadFailed"), retry: () => setReadCount((n) => n + 1) }} />
+                    ) : loading ? (
+                        <SettingsPlaceholderRows />
                     ) : (
                         userApps.length > 0 && (
                             <div className="flex flex-col divide-y divide-border/50">
@@ -600,6 +616,7 @@ function NotListenedAppsSection({
                     confirm: t("privacy.ignoredApps.confirmListen.confirm"),
                 }}
             />
+            <SettingsFailureLine failure={changeFailure} />
         </section>
     );
 }
@@ -631,12 +648,13 @@ function IgnoredAppsCard({ listeningOff, onOpenPage }: { listeningOff: boolean; 
 
 function DiagnosticDataCard() {
     const { t } = useTranslation("settings");
-    const { enabled, loading, saving, setEnabled } = useTelemetryPreference();
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
+    const { enabled, loading, saving, readFailed, read, setEnabled } = useTelemetryPreference();
     const title = t("privacy.diagnostics.title");
 
     const handleChange = (next: boolean) => {
         void setEnabled(next).catch(() => {
-            toast.error(t("privacy.diagnostics.saveFailed"));
+            failChange(t("privacy.diagnostics.saveFailed"), () => void handleChange(next));
         });
     };
 
@@ -644,8 +662,15 @@ function DiagnosticDataCard() {
         <SettingsControlCard
             title={title}
             description={t("privacy.diagnostics.description")}
-            control={<Switch aria-label={title} checked={enabled} disabled={loading || saving} onCheckedChange={handleChange} />}
-        />
+            control={
+                readFailed ? null : loading ? null : (
+                    <Switch aria-label={title} checked={enabled} disabled={saving} onCheckedChange={handleChange} />
+                )
+            }
+        >
+            {readFailed && <SettingsFailureLine failure={{ text: t("settingRead.failed"), retry: read }} />}
+            <SettingsFailureLine failure={changeFailure} />
+        </SettingsControlCard>
     );
 }
 
@@ -655,6 +680,7 @@ function DiagnosticDataCard() {
 // Get/SetAskBeforeRiskyCommands in risky_commands_config.go.
 function RiskyCommandsCard() {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange } = useSettingsFailure();
     const [enabled, setEnabled] = useState<boolean | null>(null);
     const [readFailed, setReadFailed] = useState(false);
     const title = t("privacy.riskyCommands.title");
@@ -673,7 +699,7 @@ function RiskyCommandsCard() {
         setEnabled(next);
         SetAskBeforeRiskyCommands(next).catch(() => {
             read();
-            toast.error(t("privacy.riskyCommands.saveFailed"));
+            failChange(t("privacy.riskyCommands.saveFailed"), () => void handleChange(next));
         });
     };
 
@@ -681,25 +707,48 @@ function RiskyCommandsCard() {
         <SettingsControlCard
             title={title}
             description={t("privacy.riskyCommands.description")}
-            control={readFailed ? <SettingReadError retry={read} /> : enabled === null ? null : <Switch aria-label={title} checked={enabled} onCheckedChange={handleChange} />}
-        />
+            control={readFailed || enabled === null ? null : <Switch aria-label={title} checked={enabled} onCheckedChange={handleChange} />}
+        >
+            {readFailed && <SettingsFailureLine failure={{ text: t("settingRead.failed"), retry: read }} />}
+            <SettingsFailureLine failure={changeFailure} />
+        </SettingsControlCard>
     );
 }
 
 /** How long the forget waits for Undo before it runs. */
 export const ASSISTANT_HISTORY_FORGET_MS = 5000;
 
+/** Where a forget that failed after Settings closed is remembered (S032). */
+export const ASSISTANT_HISTORY_FAILURE_KEY = "settings.assistantHistory.failure";
+type AssistantHistoryFailure = "stop" | "forget" | "start";
+
 // Reading the Claude Code and Codex history on this computer (first-day
 // handoff §7). On by default. Turning it off forgets what came from it, after
-// an Undo window; turning it on reads the history again at once. Backed by
-// Get/SetReadAssistantHistory in assistant_history.go.
+// an Undo window shown in place; turning it on reads the history again at once.
+// Leaving within the window runs the change at once, and a failure then is
+// shown here the next time Privacy opens. Backed by Get/SetReadAssistantHistory.
 function AssistantHistoryCard() {
     const { t } = useTranslation("settings");
+    const { failure: changeFailure, fail: failChange, clear: clearChange } = useSettingsFailure();
     const [enabled, setEnabled] = useState<boolean | null>(null);
     const [readFailed, setReadFailed] = useState(false);
+    const [stopping, setStopping] = useState(false);
     const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const undoToast = useRef<string | number | undefined>(undefined);
     const title = t("privacy.assistantHistory.title");
+
+    const showFailure = useCallback(
+        (kind: AssistantHistoryFailure) => {
+            const text =
+                kind === "stop"
+                    ? t("privacy.assistantHistory.stopFailed")
+                    : kind === "forget"
+                      ? t("privacy.assistantHistory.forgetFailed")
+                      : t("privacy.assistantHistory.startFailed");
+            const next = kind === "start";
+            failChange(text, () => void saveRef.current(next));
+        },
+        [failChange, t],
+    );
 
     const read = () => {
         setEnabled(null);
@@ -708,66 +757,93 @@ function AssistantHistoryCard() {
             if (typeof on !== "boolean") throw new Error("Invalid setting");
             setEnabled(on);
         }).catch(() => setReadFailed(true));
+        LoadUIState(ASSISTANT_HISTORY_FAILURE_KEY).then((kind) => {
+            if (kind === "stop" || kind === "forget") showFailure(kind);
+        }).catch(() => {});
     };
     useEffect(() => { read(); }, []);
 
-    // Leaving the page doesn't cancel the forget: the switch already shows off.
+    const save = async (next: boolean) => {
+        clearChange();
+        try {
+            await SetReadAssistantHistory(next);
+            setEnabled(next);
+            void SaveUIState(ASSISTANT_HISTORY_FAILURE_KEY, "").catch(() => {});
+        } catch {
+            // The preference may already be saved even if forgetting failed:
+            // show the saved switch, and say which half failed.
+            let on: boolean | null = null;
+            try {
+                on = await GetReadAssistantHistory();
+            } catch {
+                on = !next;
+            }
+            setEnabled(on);
+            const kind: AssistantHistoryFailure = next ? "start" : on ? "stop" : "forget";
+            showFailure(kind);
+            if (kind !== "start") void SaveUIState(ASSISTANT_HISTORY_FAILURE_KEY, kind).catch(() => {});
+        }
+    };
+    const saveRef = useRef(save);
+    saveRef.current = save;
+
+    // Leaving the page doesn't cancel the stop: it runs at once.
     useEffect(() => () => {
         if (!pending.current) return;
         clearTimeout(pending.current);
         pending.current = null;
-        if (undoToast.current !== undefined) toast.dismiss(undoToast.current);
-        SetReadAssistantHistory(false).catch(() => toast.error(t("privacy.assistantHistory.forgetFailed"), { duration: Infinity }));
+        SetReadAssistantHistory(false)
+            .then(() => SaveUIState(ASSISTANT_HISTORY_FAILURE_KEY, ""))
+            .catch(async () => {
+                const on = await GetReadAssistantHistory().catch(() => true);
+                await SaveUIState(ASSISTANT_HISTORY_FAILURE_KEY, on ? "stop" : "forget");
+            })
+            .catch(() => {});
     }, []);
 
-    const save = (next: boolean) => {
-        SetReadAssistantHistory(next).catch(async () => {
-            // The preference may already be saved even if erasing a record
-            // failed. Show the persisted switch state and report the error.
-            try {
-                setEnabled(await GetReadAssistantHistory());
-            } catch {
-                setEnabled(null);
-                setReadFailed(true);
-            }
-            toast.error(t(next ? "privacy.assistantHistory.saveFailed" : "privacy.assistantHistory.forgetFailed"), { duration: Infinity });
-        });
+    const undo = () => {
+        if (pending.current) clearTimeout(pending.current);
+        pending.current = null;
+        setStopping(false);
+        setEnabled(true);
     };
 
     const handleChange = (next: boolean) => {
+        clearChange();
         setEnabled(next);
         if (next) {
             if (pending.current) {
-                clearTimeout(pending.current);
-                pending.current = null;
+                undo();
                 return;
             }
-            save(true);
+            void save(true);
             return;
         }
+        setStopping(true);
         pending.current = setTimeout(() => {
             pending.current = null;
-            save(false);
+            setStopping(false);
+            void save(false);
         }, ASSISTANT_HISTORY_FORGET_MS);
-        undoToast.current = toast(t("privacy.assistantHistory.forgetting"), {
-            duration: ASSISTANT_HISTORY_FORGET_MS,
-            action: {
-                label: t("privacy.assistantHistory.undo"),
-                onClick: () => {
-                    if (pending.current) clearTimeout(pending.current);
-                    pending.current = null;
-                    setEnabled(true);
-                },
-            },
-        });
     };
 
     return (
         <SettingsControlCard
             title={title}
             description={t("privacy.assistantHistory.description")}
-            control={readFailed ? <SettingReadError retry={read} /> : enabled === null ? null : <Switch aria-label={title} checked={enabled} onCheckedChange={handleChange} />}
-        />
+            control={readFailed || enabled === null ? null : <Switch aria-label={title} checked={enabled} onCheckedChange={handleChange} />}
+        >
+            {readFailed && <SettingsFailureLine failure={{ text: t("settingRead.failed"), retry: read }} />}
+            {stopping && (
+                <p className="text-[12px] text-muted">
+                    {t("privacy.assistantHistory.stopping")}{" "}
+                    <button type="button" className="text-accent hover:underline" onClick={undo}>
+                        {t("privacy.assistantHistory.undo")}
+                    </button>
+                </p>
+            )}
+            <SettingsFailureLine failure={changeFailure} />
+        </SettingsControlCard>
     );
 }
 
