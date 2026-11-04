@@ -51,7 +51,7 @@ func TestNormalizeBriefText(t *testing.T) {
 		{"grouped duration", "1,005 h", "en", "1,005 h", true, near},
 		{"zh hour", "6:00 PM", "zh-CN", "下午6点", true, near},
 		{"zh half hour", "1:30 PM", "zh-CN", "下午1点半", true, near},
-		{"zh minutes", "下午1:04:32", "zh-CN", "下午1:04", false, near},
+		{"zh minutes", "下午1:04:32", "zh-CN", "13:04", false, near},
 		{"zh native", "下午6点，下午1点半", "zh-CN", "下午6点，下午1点半", true, near},
 		{"zh qualified colon", "下午6:00，下午1:30", "zh-CN", "下午6点，下午1点半", true, near},
 		{"zh noon midnight", "12:00 PM, 12:00 AM", "zh-CN", "中午12点, 凌晨12点", true, near},
@@ -129,7 +129,7 @@ func TestNormalizeBriefActivityText(t *testing.T) {
 func TestBriefClockMetadataUsesSharedExactTimes(t *testing.T) {
 	for _, tc := range []struct{ layout, want string }{
 		{"3:04pm", "Sat Oct 17, 1:04 PM"},
-		{"15:04", "Sat Oct 17, 下午1:04"},
+		{"15:04", "Sat Oct 17, 13:04"},
 	} {
 		if got := mobileBriefLocalTime("2026-10-17T13:04:32Z", time.UTC, tc.layout); got != tc.want {
 			t.Errorf("known metadata %s: got %q, want %q", tc.layout, got, tc.want)

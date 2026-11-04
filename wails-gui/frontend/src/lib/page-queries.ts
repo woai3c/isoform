@@ -270,10 +270,13 @@ export async function prefetchMainChat() {
     // count is the in-memory state (GetMainChatWaiting), not a read here.
     if (id) await LoadStreamItemsPage(id, -1, CHAT_FIRST_PAGE_SIZE);
 }
-export function todayDayShapeDate(briefDate?: string, evening = false): string {
-    const day = briefDate && /^\d{4}-\d{2}-\d{2}$/.test(briefDate) ? new Date(`${briefDate}T12:00:00`) : new Date();
-    if (evening) day.setDate(day.getDate() + 1);
-    return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+/** The strip shows the day the brief talks about: its own day while that is
+ *  today, an evening brief included, otherwise today (today-review v1.1.20
+ *  R44). `evening` is kept for callers; it no longer moves the day. */
+export function todayDayShapeDate(briefDate?: string, _evening = false): string {
+    const iso = (day: Date) => `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    const today = iso(new Date());
+    return briefDate && /^\d{4}-\d{2}-\d{2}$/.test(briefDate) && briefDate > today ? briefDate : today;
 }
 
 export async function prefetchToday() {

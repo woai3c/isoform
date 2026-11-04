@@ -441,14 +441,11 @@ func validatedTodayHold(hold *TodayDayShapeHold, day, asOf time.Time) (*TodayDay
 	return &TodayDayShapeHold{Start: start.In(day.Location()).Format(time.RFC3339), End: end.In(day.Location()).Format(time.RFC3339), Label: label}, nil
 }
 
-// An evening brief previews tomorrow, while rereading a morning brief keeps
-// its original day. The binding's date argument always remains explicit.
+// The strip shows the day the brief talks about: its own day, an evening
+// brief included (today-review v1.1.20 R44). The binding's date argument
+// always remains explicit.
 func todayDayShapeBriefDay(brief MobileBriefV1) (time.Time, error) {
-	day, err := time.ParseInLocation("2006-01-02", brief.LocalDate, mobileBriefNarrativeLocation(brief))
-	if err == nil && mobileBriefDisplaySlot(brief, defaultMobileBriefSettings()) == mobileBriefSlotEvening {
-		day = day.AddDate(0, 0, 1)
-	}
-	return day, err
+	return time.ParseInLocation("2006-01-02", brief.LocalDate, mobileBriefNarrativeLocation(brief))
 }
 
 // Keep the phone's legacy activity statistics, adding the identical strip

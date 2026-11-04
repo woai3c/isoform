@@ -67,7 +67,7 @@
         "made": "{{time}}已生成",
         "openOnToday": "在“今日”中打开",
         "lastThree": "最近三次",
-        "ran": "{{day}}{{time}}",
+        "ran": "{{day}} {{time}}",
         "today": "今天",
         "yesterday": "昨天",
         "missedAsleep": "没有运行：{{time}}时电脑在睡眠。",

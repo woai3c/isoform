@@ -347,7 +347,7 @@ func TestMobileBriefDayShapeLineReadsLikeAPerson(t *testing.T) {
 		}
 	}
 	zh := mobileBriefDayShapeLine(shape, morning, la, "zh")
-	if !strings.Contains(zh, "上午10:00的“Halcyon Spanish lesson - Maya C.”和“Priya / Alex: 1:1”时间冲突。") || strings.Contains(zh, "星期一") {
+	if !strings.Contains(zh, "10:00的“Halcyon Spanish lesson - Maya C.”和“Priya / Alex: 1:1”时间冲突。") || strings.Contains(zh, "星期一") {
 		t.Errorf("zh shape line = %q", zh)
 	}
 
@@ -574,7 +574,7 @@ func TestMobileBriefTodayRefreshShapeLineFollowsTheUILanguage(t *testing.T) {
 		if item.Kind != "day_shape" {
 			continue
 		}
-		if !strings.Contains(item.Detail, "今天第一个会议是下午1:00的“Design review”") || strings.Contains(item.Detail, "You") {
+		if !strings.Contains(item.Detail, "今天第一个会议是13:00的“Design review”") || strings.Contains(item.Detail, "You") {
 			t.Fatalf("refreshed shape line is not Chinese: %q", item.Detail)
 		}
 		return

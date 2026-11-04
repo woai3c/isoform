@@ -515,8 +515,8 @@ describe("TodayBriefSection while today's brief is on its way", () => {
     it.each([
         ["en", 6, "Tried 6 times without finishing. Isoform tries again at 9:40 AM."],
         ["en", 0, "Isoform tries again at 9:40 AM."],
-        ["zh-CN", 6, "试了 6 次都没完成。Isoform 会在上午9:40再试。"],
-        ["zh-CN", 0, "Isoform 会在上午9:40再试。"],
+        ["zh-CN", 6, "试了 6 次都没完成。Isoform 会在9:40再试。"],
+        ["zh-CN", 0, "Isoform 会在9:40再试。"],
     ])("says only what the record proves about the tries in %s (%i tries, v1.1.5 #2)", async (language, attempts, line) => {
         await i18n.changeLanguage(language);
         const onOpenBrief = vi.fn();
@@ -531,7 +531,7 @@ describe("TodayBriefSection while today's brief is on its way", () => {
         expect(buttons).toHaveLength(1);
         fireEvent.click(buttons[0]);
         expect(onMakeNow).toHaveBeenCalledTimes(1);
-        if (language === "zh-CN") expect(within(card).getByTestId("brief-pending-last")).toHaveTextContent("上一份：昨天晚上7:30 · 阅读");
+        if (language === "zh-CN") expect(within(card).getByTestId("brief-pending-last")).toHaveTextContent("上一份：昨天 19:30 · 阅读");
         await i18n.changeLanguage("en");
     });
 
@@ -1253,7 +1253,7 @@ describe("the brief's card (RC 1)", () => {
         ["en", "Meetings at 9am, 12pm and 1:50pm; noon stays free."],
         ["en", "Meetings at 9:00 AM, 12:00 PM and 1:50 PM; noon stays free."],
         ["zh-CN", "Meetings at 9am, 12pm and 1:50pm; noon stays free."],
-        ["zh-CN", "会议在上午9:00、中午12:00和下午1:50；中午有空。"],
+        ["zh-CN", "会议在9:00、12:00和13:50；中午有空。"],
     ])("renders supplied shape prose byte-for-byte when written in the brief in %s: %s", async (language, detail) => {
         await i18n.changeLanguage(language);
         // Feat replaced the legacy shape box with TodayDayStrip. Retained
@@ -1441,7 +1441,7 @@ describe("the brief's card (RC 1)", () => {
 
     it.each(['en', 'zh-CN'])('integrates verbatim delivery and whole-unit withholding with masked chips in %s', async (language) => {
         await i18n.changeLanguage(language);
-        const normal = language === 'en' ? '  Atlas review starts at 9:00 AM.\nKeep the spacing.  ' : '  Atlas 评审在上午9:00开始。\n保留原来的空格。  ';
+        const normal = language === 'en' ? '  Atlas review starts at 9:00 AM.\nKeep the spacing.  ' : '  Atlas 评审在9:00开始。\n保留原来的空格。  ';
         const unsafe = 'A complete sentence.\nReply to Name?';
         const doc = brief({ narrative: [{ text: normal, refs: ['e1'] }, { text: unsafe, refs: ['e1'] }],
             cards: [
@@ -1479,7 +1479,7 @@ describe("the brief's card (RC 1)", () => {
         await i18n.changeLanguage(language);
         renderSection({ view: view({ brief: brief({ slot: 'evening', asOf: '2026-10-22T20:05:00-07:00', timezone: 'America/Los_Angeles', audio: undefined }) }) });
         const caption = screen.getByTestId('brief-no-recording');
-        expect(caption).toHaveTextContent(language === 'en' ? 'Evening brief · 8:05 PM' : '晚间简报 · 晚上8:05');
+        expect(caption).toHaveTextContent(language === 'en' ? 'Evening brief · 8:05 PM' : '晚间简报 · 20:05');
         expect(caption).toHaveClass('text-muted');
         expect(screen.queryByTestId('brief-audio-toggle')).not.toBeInTheDocument();
         expect(caption.children).toHaveLength(0);
@@ -1653,7 +1653,7 @@ describe("brief hygiene quiet state", () => {
         const line = screen.getByTestId("brief-quiet");
         expect(line.textContent).toBe(language === "en"
             ? "Quiet since yesterday's brief: 24 screens, nothing new on your topics. Next brief at 7:00 AM."
-            : "自昨天的简报以来很安静：24 个屏幕，关注的话题没有新动态。下次简报在上午7:00。");
+            : "自昨天的简报以来很安静：24 个屏幕，关注的话题没有新动态。下次简报在7:00。");
         expect(within(line).queryByRole("button")).toBeNull();
         expect(screen.queryByTestId("brief-audio")).toBeNull();
         expect(screen.queryByText("You have two meetings and the release is close.")).toBeNull();

@@ -18,7 +18,7 @@ func TestComputerClockFollowsTheComputersSetting(t *testing.T) {
 	if got := computerClock(at, "en"); got != "4:44 PM" {
 		t.Fatalf("12-hour English clock = %q", got)
 	}
-	if got := computerClock(at, "zh-CN"); got != "下午4:44" {
+	if got := computerClock(at, "zh-CN"); got != "16:44" {
 		t.Fatalf("12-hour Chinese clock = %q", got)
 	}
 	if got := (&App{}).GetClockFormat(); got != "12h" {
@@ -86,7 +86,7 @@ func TestMainChatCopyParamsWordTheClockInTheComputersFormat(t *testing.T) {
 	if got := mainChatCopyParams(params, "en")["time"]; got != "7:00 AM" {
 		t.Fatalf("12-hour English time = %q", got)
 	}
-	if got := mainChatCopyParams(params, "zh-CN")["time"]; got != "上午7:00" {
+	if got := mainChatCopyParams(params, "zh-CN")["time"]; got != "7:00" {
 		t.Fatalf("12-hour Chinese time = %q", got)
 	}
 	computerUses24Hour = func() bool { return true }

@@ -134,7 +134,8 @@ func TestMobileBriefBudgetSpeechExpansionAndEmptyLegacyParagraphs(t *testing.T) 
 		t.Fatal("empty legacy paragraphs must use the source-backed fallback")
 	}
 	// Localization must not break the existing per-paragraph byte contract.
-	brief.Narrative = []MobileBriefPara{{Text: strings.Repeat("6:00 PM ", 74), Refs: refs}}
+	// "6 PM" is written "18:00" in Chinese, one byte longer.
+	brief.Narrative = []MobileBriefPara{{Text: strings.Repeat("6 PM ", 110), Refs: refs}}
 	if len(brief.Narrative[0].Text) > mobileBriefNarrativeMaxBytes {
 		t.Fatal("fixture must fit the original byte bound")
 	}

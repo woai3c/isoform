@@ -33,9 +33,12 @@ export function setComputerClock(format: string): void {
 }
 
 /** The one clock on Today (Claude Design, 2026-10-22): "7:00 AM", "12:30 PM",
- *  "2:47 PM" in English, "上午7:00", "中午12:30", "下午2:47" in Chinese, or
- *  "14:47" when the computer uses 24-hour time. */
+ *  "2:47 PM" in English, "7:00", "12:30", "14:47" in Chinese, or "14:47"
+ *  when the computer uses 24-hour time. */
 function shortClock(hour: number, minute: number, language: string, t: Translate): string {
+    // Chinese reads 24-hour with no leading zero and no 上午/下午: "17:28"
+    // (today-review v1.1.20 R47, activity-review v1.0.6 AR42).
+    if (language.startsWith("zh")) return `${hour}:${String(minute).padStart(2, "0")}`;
     if (computerUses24Hour) return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
     const h = (hour + 11) % 12 + 1;
     const chinese = language.startsWith("zh");

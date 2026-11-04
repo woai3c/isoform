@@ -11,7 +11,8 @@ import (
 func TestBriefDeliveryMergeKeepsClocksMasksAndPrivacy(t *testing.T) {
 	for _, tc := range []struct{ language, clock, mask string }{
 		{"en", "9:00 AM", "an account number"},
-		{"zh-CN", "上午9:00", "一个账号"},
+		// The paragraph is English, so its mask reads in English (R46).
+		{"zh-CN", "9:00", "an account number"},
 	} {
 		t.Run(tc.language, func(t *testing.T) {
 			app, svc, stored := newStoredMobileBriefPrivacyFixture(t)

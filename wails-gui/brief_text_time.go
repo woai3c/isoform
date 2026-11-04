@@ -16,6 +16,8 @@ const briefChineseClockPattern = `(?:凌晨|早上|上午|中午|下午|晚上)\
 // Only a period marker makes them unambiguous clocks; metadata is formatted
 // directly from time.Time instead of passing through this prose parser.
 var briefTextClock = regexp.MustCompile(`(?i)\b[0-2]?[0-9](?::[0-5][0-9](?::[0-5][0-9])?)?\s*[ap]\.?m\b|` + briefChineseClockPattern)
+var briefTextBareClock = regexp.MustCompile(`\b(?:[01]?[0-9]|2[0-3]):[0-5][0-9]\b`)
+
 var briefTextClockParts = regexp.MustCompile(`(?i)^(\d{1,2})(?::(\d{2}))?(?::\d{2})?\s*([ap])?\.?m?\.?$`)
 var briefTextChineseClockParts = regexp.MustCompile(`^(凌晨|早上|上午|中午|下午|晚上)\s*(\d{1,2})(?:(?:点|时)(?:(半)|(\d{1,2})分?)?|:(\d{2})(?::\d{2})?)$`)
 var briefTextRange = regexp.MustCompile(`(?i)(?:\bfrom\s+|从)?(` + briefTextClock.String() + `)\s*(?:to|[-–—]|至|到)\s*(` + briefTextClock.String() + `)`)
@@ -77,23 +79,8 @@ func briefClockParts(value string) (int, int, bool) {
 
 func briefShortClock(hour, minute int, language string) string {
 	if briefChinese(language) {
-		period := "上午"
-		switch true {
-		case hour < 6:
-			period = "凌晨"
-		case hour == 12:
-			period = "中午"
-		case hour >= 18:
-			period = "晚上"
-		case hour > 12:
-			period = "下午"
-		}
-		// Six in the evening is conventionally 下午6点 in the brief.
-		if hour == 18 {
-			period = "下午"
-		}
-		h := (hour+11)%12 + 1
-		return fmt.Sprintf("%s%d:%02d", period, h, minute)
+		// 24-hour, no 上午/下午 (today-review v1.1.20 R47).
+		return fmt.Sprintf("%d:%02d", hour, minute)
 	}
 	period := "AM"
 	if hour >= 12 {
@@ -107,7 +94,9 @@ func briefShortClock(hour, minute int, language string) string {
 // always uses briefShortClock, including generated prose and prepared chips.
 func briefSpokenClock(hour, minute int, language string) string {
 	if briefChinese(language) {
-		head, _, _ := strings.Cut(briefShortClock(hour, minute, language), ":")
+		// Speech keeps the spoken period ("下午6点"); only written clocks
+		// are 24-hour (today-review v1.1.20 R47).
+		head := briefSpokenChinesePeriod(hour) + strconv.Itoa((hour+11)%12+1)
 		switch minute {
 		case 0:
 			return head + "点"
@@ -126,6 +115,21 @@ func briefSpokenClock(hour, minute int, language string) string {
 		return fmt.Sprintf("%d%s", h, period)
 	}
 	return fmt.Sprintf("%d:%02d%s", h, minute, period)
+}
+
+func briefSpokenChinesePeriod(hour int) string {
+	switch true {
+	case hour < 6:
+		return "凌晨"
+	case hour == 12:
+		return "中午"
+	case hour > 18:
+		return "晚上"
+	case hour > 12:
+		// Six in the evening is conventionally 下午6点 in the brief.
+		return "下午"
+	}
+	return "上午"
 }
 
 // normalizeBriefText shares exact clock values between written and spoken

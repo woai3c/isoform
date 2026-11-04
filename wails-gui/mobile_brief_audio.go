@@ -161,6 +161,16 @@ func mobileBriefSpeech(brief MobileBriefV1, lang string) (string, bool) {
 		}
 	}
 	paragraphs, fits := fitMobileBriefNarrative(brief, narrative, lang)
+	if fits {
+		// Speech reads the source clocks: written Chinese clocks are bare
+		// 24-hour values (R47) that speech can't tell from other numbers.
+		paragraphs = paragraphs[:0]
+		for _, paragraph := range narrative {
+			if paragraph.Text = strings.TrimSpace(paragraph.Text); paragraph.Text != "" {
+				paragraphs = append(paragraphs, paragraph)
+			}
+		}
+	}
 	template := !fits || len(paragraphs) == 0
 	if template {
 		if brief.rankedEdition {

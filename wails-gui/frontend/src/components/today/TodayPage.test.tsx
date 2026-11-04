@@ -1757,26 +1757,22 @@ it('resumes observation in place from the quiet footer', async () => {
 
 describe("TodayPage brief slot selects the strip date without changing the read contract", () => {
     afterEach(() => { vi.useRealTimers(); pauseMocks.dayShape.mockResolvedValue(null); });
-    it.each(["morning", "evening"])("draws the %s brief's day when read in the evening", async (slot) => {
+    it.each(["morning", "evening"])("draws the %s brief's own day with the now line when read in the evening (R44)", async (slot) => {
         vi.useFakeTimers({ toFake: ["Date"] });
         vi.setSystemTime(new Date("2026-10-23T22:00:00-07:00"));
         const translations = createInstance();
         await translations.init({ lng: "en", resources: { en: { today: en, chat: enChat } } });
         mockUseTranslation.mockImplementation((namespace: string) => ({ t: translations.getFixedT("en", namespace as "today"), i18n: translations }));
         const brief = { ...todayNextBrief, slot };
-        const requestedDate = slot === "evening" ? "2026-10-24" : "2026-10-23";
-        const shape = slot === "evening" ? JSON.parse(JSON.stringify(dayShapeFixture).replaceAll("2026-10-23T", "2026-10-24T")) : dayShapeFixture;
+        const requestedDate = "2026-10-23";
+        const shape = dayShapeFixture;
         pauseMocks.dayShape.mockResolvedValue({ ...shape, now: "2026-10-23T22:00:00-07:00" });
         mockUseLatestBrief.mockReturnValue({ view: { brief, building: false, enabled: true, nextAt: "", nextSlot: "", empty: false, missing: [] }, loading: false, make: "idle", nextAllowedAt: "", makeNow: vi.fn(), refresh: vi.fn() });
         renderToday();
         await screen.findByTestId("today-day-track");
         expect(pauseMocks.dayShape).toHaveBeenCalledWith(requestedDate);
         expect(pauseMocks.dayShape.mock.calls.every((args) => args.length === 1)).toBe(true);
-        if (slot === "evening") {
-            expect(screen.queryByTestId("today-day-now")).not.toBeInTheDocument();
-            expect(screen.getByTestId("today-day-hours")).toHaveTextContent("8:00 AM");
-            expect(screen.queryByTestId("today-day-caption")).not.toBeInTheDocument();
-        } else {
+        {
             expect(screen.getByTestId("today-day-now")).toHaveStyle({ left: "calc(100% - 2px)" });
             for (const group of screen.getAllByTestId("today-day-event-group")) expect(group).toHaveStyle({ opacity: "0.45" });
             expect(screen.queryByTestId("today-day-hold-group")).not.toBeInTheDocument();

@@ -11,9 +11,9 @@ import (
 func TestBriefGeneratedClockFormat(t *testing.T) {
 	for _, language := range []string{"en", "zh-CN"} {
 		for _, tc := range []struct{ input, en, zh string }{
-			{"9am", "9:00 AM", "上午9:00"},
-			{"12:30pm", "12:30 PM", "中午12:30"},
-			{"9:00am", "9:00 AM", "上午9:00"},
+			{"9am", "9:00 AM", "9:00"},
+			{"12:30pm", "12:30 PM", "12:30"},
+			{"9:00am", "9:00 AM", "9:00"},
 			{"noon", "noon", "noon"},
 		} {
 			input := tc.input
@@ -116,7 +116,7 @@ func TestBriefEveryGeneratedFieldUsesDisplayClocks(t *testing.T) {
 			const raw = "Meet at 9am, 12pm and 1:50pm, or 9:00am; noon stays free."
 			want := "Meet at 9:00 AM, 12:00 PM and 1:50 PM, or 9:00 AM; noon stays free."
 			if language == "zh-CN" {
-				want = "Meet at 上午9:00, 中午12:00 and 下午1:50, or 上午9:00; noon stays free."
+				want = "Meet at 9:00, 12:00 and 13:50, or 9:00; noon stays free."
 			}
 			item := MobileBriefItem{ID: "meeting-at-9am", Kind: "day_shape", Title: raw, Detail: raw, NextStep: raw,
 				At: "2026-10-23T09:00:00Z", URL: "https://example.com/9am", AttentionReason: raw,

@@ -94,30 +94,34 @@ func TestTodayDayShapeHoldChangesAnswerIdentity(t *testing.T) {
 	}
 }
 
-func TestTodayDayShapeEveningPreviewsTomorrow(t *testing.T) {
+// An evening brief about tonight draws the rest of today (today-review
+// v1.1.20 R44), so its hold is tonight and the strip stays on its own day.
+func TestTodayDayShapeEveningShowsItsOwnDay(t *testing.T) {
 	app := newTodayContextTestApp(t, true)
 	day := dayShapeTestDay(t)
 	brief, _ := writtenBriefFixture()
 	brief.Slot, brief.LocalDate, brief.Timezone, brief.AsOf = mobileBriefSlotEvening, "2026-10-23", day.Location().String(), day.Add(18*time.Hour).Format(time.RFC3339)
 	svc, _ := newTestMobileBriefService(t, &fakeMobileBriefClock{now: day.Add(18 * time.Hour)})
 	svc.app, app.mobileBriefSvc = app, svc
-	tomorrow := day.AddDate(0, 0, 1)
-	hold := &TodayDayShapeHold{Start: tomorrow.Add(11 * time.Hour).Format(time.RFC3339), End: tomorrow.Add(12 * time.Hour).Format(time.RFC3339), Label: "Sam memo"}
-	question := &mobileBriefNarrativeReplyClosing{Text: "Want me to hold time for the note to Sam?", Card: "offer-2", Hold: hold}
+	tonight := &TodayDayShapeHold{Start: day.Add(19 * time.Hour).Format(time.RFC3339), End: day.Add(20 * time.Hour).Format(time.RFC3339), Label: "Sam memo"}
+	question := &mobileBriefNarrativeReplyClosing{Text: "Want me to hold time for the note to Sam?", Card: "offer-2", Hold: tonight}
 	closing, err := mobileBriefWrittenClosing(brief, question, "English")
-	if err != nil || !reflect.DeepEqual(closing.Hold, hold) {
-		t.Fatalf("tomorrow hold=%+v %v", closing, err)
+	if err != nil || !reflect.DeepEqual(closing.Hold, tonight) {
+		t.Fatalf("tonight hold=%+v %v", closing, err)
+	}
+	tomorrow := day.AddDate(0, 0, 1)
+	question.Hold = &TodayDayShapeHold{Start: tomorrow.Add(11 * time.Hour).Format(time.RFC3339), End: tomorrow.Add(12 * time.Hour).Format(time.RFC3339), Label: "Sam memo"}
+	if closing, err := mobileBriefWrittenClosing(brief, question, "English"); err == nil && closing.Hold != nil {
+		t.Fatalf("an evening brief about tonight held tomorrow: %+v", closing.Hold)
 	}
 	if prompt := mobileBriefTestPrompt(brief, "English"); !strings.Contains(prompt, "Do not offer to hold") {
 		t.Fatal("evening prompt must not offer a hold")
 	}
-	phone := app.mobileBriefWithDayShape(brief)
-	if phone.DayShape == nil || !strings.HasPrefix(phone.DayShape.RangeStart, "2026-10-24T08:00:00") {
-		t.Fatalf("evening phone day=%+v", phone.DayShape)
-	}
-	brief.Slot = mobileBriefSlotMorning
-	phone = app.mobileBriefWithDayShape(brief)
-	if !strings.HasPrefix(phone.DayShape.RangeStart, "2026-10-23T08:00:00") {
-		t.Fatalf("morning reread changed day=%+v", phone.DayShape)
+	for _, slot := range []string{mobileBriefSlotEvening, mobileBriefSlotMorning} {
+		brief.Slot = slot
+		phone := app.mobileBriefWithDayShape(brief)
+		if phone.DayShape == nil || phone.DayShape.TodayDayShape == nil || !strings.HasPrefix(phone.DayShape.RangeStart, "2026-10-23T08:00:00") {
+			t.Fatalf("%s phone day=%+v", slot, phone.DayShape)
+		}
 	}
 }

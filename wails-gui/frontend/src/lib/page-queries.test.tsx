@@ -138,14 +138,14 @@ describe('cached page hooks through shim spies', () => {
         expect(binding('GetTodaySuggestion')).not.toHaveBeenCalled();
     });
 
-    it('preloads tomorrow for an evening brief', async () => {
+    it('preloads the evening brief\'s own day, the rest of today (today-review v1.1.20 R44)', async () => {
         vi.useFakeTimers({ toFake: ['Date'] });
         vi.setSystemTime(new Date(2026, 9, 23, 9));
         seedToday();
         binding('GetLatestBrief').mockResolvedValue({ brief: { localDate: '2026-10-23', slot: 'evening', asOf: '2026-10-23T18:00:00-07:00' } });
         await reads.prefetchToday();
-        expect(binding('GetTodayDayShape')).toHaveBeenCalledWith('2026-10-24');
-        expect(pageQueryCache.peek('GetTodayDayShape', ['2026-10-24'])).toEqual(dayShapeFixture);
+        expect(binding('GetTodayDayShape')).toHaveBeenCalledWith('2026-10-23');
+        expect(pageQueryCache.peek('GetTodayDayShape', ['2026-10-23'])).toEqual(dayShapeFixture);
     });
 
     // Snappy 1.0: focus answers from what Today has. Topics, the quiet lines,

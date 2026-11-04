@@ -16,9 +16,9 @@ func TestYourWeekClockRange(t *testing.T) {
 		startHour, endHour int
 		en, zh             string
 	}{
-		{name: "same period", startHour: 9, endHour: 11, en: "9 to 11 AM", zh: "上午9点到11点"},
-		{name: "ten to noon", startHour: 10, endHour: 12, en: "10 AM to 12 PM", zh: "上午10点到中午12点"},
-		{name: "eleven to noon", startHour: 11, endHour: 12, en: "11 AM to 12 PM", zh: "上午11点到中午12点"},
+		{name: "same period", startHour: 9, endHour: 11, en: "9 to 11 AM", zh: "9点到11点"},
+		{name: "ten to noon", startHour: 10, endHour: 12, en: "10 AM to 12 PM", zh: "10点到12点"},
+		{name: "eleven to noon", startHour: 11, endHour: 12, en: "11 AM to 12 PM", zh: "11点到12点"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			start := day.Add(time.Duration(tc.startHour) * time.Hour)
@@ -243,7 +243,7 @@ func TestYourWeekNextFirstDayUsesConfiguredWorkdays(t *testing.T) {
 		t.Fatalf("hold copy: %q / %q", text, message)
 	}
 	zhText, zhMessage := yourWeekHoldAsk("the launch plan", *hold, "zh")
-	if !strings.Contains(zhText, "周一上午") || !strings.Contains(zhText, "9点到11点") || !strings.Contains(zhMessage, "10月26日") || !strings.Contains(zhMessage, "不要邀请任何人") {
+	if !strings.Contains(zhText, "周一9点到11点") || !strings.Contains(zhMessage, "10月26日") || !strings.Contains(zhMessage, "不要邀请任何人") {
 		t.Fatalf("Chinese hold copy: %q / %q", zhText, zhMessage)
 	}
 }

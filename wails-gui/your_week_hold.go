@@ -96,16 +96,10 @@ func yourWeekHoldAsk(subject string, hold TodayDayShapeHold, lang string) (strin
 
 func yourWeekClockRange(start, end time.Time, lang string) string {
 	if lang == "zh" {
+		// 24-hour, no 上午/下午 (today-review v1.1.20 R47): "9点到11点", "13点到15点".
 		startClock := strings.TrimSuffix(briefShortClock(start.Hour(), start.Minute(), lang), ":00")
 		endClock := strings.TrimSuffix(briefShortClock(end.Hour(), end.Minute(), lang), ":00")
-		startHour := fmt.Sprintf("%d", (start.Hour()+11)%12+1)
-		endHour := fmt.Sprintf("%d", (end.Hour()+11)%12+1)
-		startPeriod := strings.TrimSuffix(startClock, startHour)
-		endPeriod := strings.TrimSuffix(endClock, endHour)
-		if startPeriod != endPeriod {
-			return startClock + "点到" + endClock + "点"
-		}
-		return startClock + "点到" + endHour + "点"
+		return startClock + "点到" + endClock + "点"
 	}
 	startHour := fmt.Sprintf("%d", (start.Hour()+11)%12+1)
 	endHour := fmt.Sprintf("%d", (end.Hour()+11)%12+1)

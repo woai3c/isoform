@@ -503,7 +503,7 @@ describe('main chat proactive messages', () => {
             briefDisplay: { slot: 'on_request', asOf: '2026-11-04T01:28:00Z', timezone: 'America/Los_Angeles' },
             actionIds: ['open'], actionLabels: { open: 'Open' },
         })} />);
-        expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(lang === 'en' ? 'Evening brief · 5:28 PM' : '晚间简报 · 下午5:28');
+        expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent(lang === 'en' ? 'Evening brief · 5:28 PM' : '晚间简报 · 17:28');
         expect(screen.queryByText('Your first week with Isoform.')).not.toBeInTheDocument();
     });
 
@@ -2044,7 +2044,7 @@ describe('chat walk-through v1.0.2 cards', () => {
 
     it.each([
         ['en', 'Left off in Isoform · Yesterday, 7:01 PM'],
-        ['zh-CN', '停在Isoform · 昨天晚上7:01'],
+        ['zh-CN', '停在Isoform · 昨天 19:01'],
     ])('#2 reads a left-off card as two sentences and one source line with one time in %s', async (language, line) => {
         vi.useFakeTimers({ toFake: ['Date'] });
         vi.setSystemTime(new Date(2026, 9, 30, 9));
@@ -2055,7 +2055,7 @@ describe('chat walk-through v1.0.2 cards', () => {
         expect(document.querySelector('[data-left-off]')).toHaveTextContent(line);
         const text = document.body.textContent ?? '';
         expect(text).not.toMatch(/has a next step|saved record|已保存的记录/);
-        expect(text.match(/7:01/g)).toHaveLength(1);
+        expect(text.match(language === 'en' ? /7:01/g : /19:01/g)).toHaveLength(1);
         expect(screen.getByRole('button', { name: (language === 'en' ? en : zh).mainChat.card.button.showThread })).toBeInTheDocument();
     });
 

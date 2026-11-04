@@ -656,6 +656,10 @@ func mobileBriefCardLabelValid(label, lang string) bool {
 		}
 		return clock
 	})
+	if lang == "zh" {
+		// Chinese clocks are 24-hour with no period: "9:00", "17:28" (R47).
+		prose = briefTextBareClock.ReplaceAllString(prose, "")
+	}
 	if label == "" || utf8.RuneCountInString(label) > mobileBriefCardLabelRunes || strings.ContainsAny(prose, "\n\r?？!！:：\"“”") {
 		return false
 	}

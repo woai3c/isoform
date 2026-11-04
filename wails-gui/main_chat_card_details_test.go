@@ -83,7 +83,7 @@ func TestMainChatPrivateMeetingAndConflictSentences(t *testing.T) {
 			if got := item.Localized["en"]; got.Headline != "Two meetings overlap at 7:05 AM." || got.Body != tc.wantEN {
 				t.Fatalf("English conflict copy = %+v", got)
 			}
-			if got := item.Localized["zh-CN"]; got.Headline != "上午7:05 有两个会议冲突。" || got.Body != tc.wantZH {
+			if got := item.Localized["zh-CN"]; got.Headline != "7:05 有两个会议冲突。" || got.Body != tc.wantZH {
 				t.Fatalf("Chinese conflict copy = %+v", got)
 			}
 		})

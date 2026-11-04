@@ -13,7 +13,7 @@ beforeEach(async () => { await i18n.changeLanguage("en"); mocks.byId.mockReset()
 afterEach(async () => { await i18n.changeLanguage("en"); });
 
 describe("TodayLastBriefPanel (today-review v1.1.5 #1)", () => {
-    it.each([["en", "Evening brief, Sat 5:50 PM"], ["zh-CN", "晚间简报，周六下午5:50"]])("opens the earlier brief with its day and no question to answer in %s", async (language, title) => {
+    it.each([["en", "Evening brief, Sat 5:50 PM"], ["zh-CN", "晚间简报，周六 17:50"]])("opens the earlier brief with its day and no question to answer in %s", async (language, title) => {
         await i18n.changeLanguage(language);
         mocks.byId.mockResolvedValue(view("2026-10-31-evening"));
         const onClose = vi.fn();

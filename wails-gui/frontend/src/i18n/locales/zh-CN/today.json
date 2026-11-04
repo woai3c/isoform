@@ -198,8 +198,8 @@
             },
             "time": "{{period}}{{hour}}:{{minutes}}",
             "dateAtTime": "{{date}} {{time}}",
-            "yesterdayAt": "昨天{{time}}",
-            "dayAt": "{{day}}{{time}}"
+            "yesterdayAt": "昨天 {{time}}",
+            "dayAt": "{{day}} {{time}}"
         },
         "label": "你的简报",
         "slot": {
@@ -301,13 +301,13 @@
             "tried_other": "试了 {{count}} 次都没完成。Isoform 会在{{time}}再试。",
             "triedTimeout_one": "试了 1 次。超时了。Isoform 会在{{time}}再试。",
             "triedTimeout_other": "试了 {{count}} 次。超时了。Isoform 会在{{time}}再试。",
-            "lastBrief": "上一份：{{day}}{{time}}",
+            "lastBrief": "上一份：{{day}} {{time}}",
             "dayToday": "今天",
             "dayYesterday": "昨天",
             "openFailed": "没能打开这份简报。",
             "tryAgain": "重试",
             "readIt": "阅读",
-            "lastBriefTitle": "{{brief}}，{{day}}{{time}}"
+            "lastBriefTitle": "{{brief}}，{{day}} {{time}}"
         },
         "cooldown": "{{when}}之后可以再生成一份。",
         "failed": "无法生成简报，请重试。",
@@ -646,9 +646,9 @@
         "range": "{{start}}至{{end}}",
         "separator": "、",
         "freeDuration": "空闲 {{duration}}",
-        "hoursMinutes": "{{hours}}小时{{minutes}}分钟",
-        "hours": "{{hours}}小时",
-        "minutes": "{{minutes}}分钟",
+        "hoursMinutes": "{{hours}} 小时 {{minutes}} 分钟",
+        "hours": "{{hours}} 小时",
+        "minutes": "{{minutes}} 分钟",
         "tomorrow": "明天",
         "dayPrefix": "{{day}} · ",
         "emptyOnDay": "{{day}}日历上没有安排"

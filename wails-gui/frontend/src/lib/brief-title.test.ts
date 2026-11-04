@@ -14,21 +14,21 @@ describe.each(["en", "zh-CN"])("brief titles in %s", (language) => {
 
     it("names the kind and the time the brief was made, as design section 1 does", () => {
         expect(briefTitle(brief({ slot: "morning", asOf: "2026-10-28T13:50:00Z" }), language, tr))
-            .toBe(en ? "Morning brief · 1:50 PM" : "早间简报 · 下午1:50");
+            .toBe(en ? "Morning brief · 1:50 PM" : "早间简报 · 13:50");
         expect(briefTitle(brief({ slot: "evening", asOf: "2026-10-28T18:00:00Z" }), language, tr))
-            .toBe(en ? "Evening brief · 6:00 PM" : "晚间简报 · 下午6:00");
+            .toBe(en ? "Evening brief · 6:00 PM" : "晚间简报 · 18:00");
         expect(briefTitle(brief({ slot: "on_request", asOf: "2026-10-28T15:41:00Z" }), language, tr))
-            .toBe(en ? "Evening brief · 3:41 PM" : "晚间简报 · 下午3:41");
+            .toBe(en ? "Evening brief · 3:41 PM" : "晚间简报 · 15:41");
         expect(briefTitle(brief({ slot: "evening", asOf: "2026-10-28T18:00:00Z", yourWeek: {} as never }), language, tr))
-            .toBe(en ? "Your week · 6:00 PM" : "你的一周 · 下午6:00");
+            .toBe(en ? "Your week · 6:00 PM" : "你的一周 · 18:00");
     });
 
     it("names a brief asked for by its time: before noon morning, from noon evening (today-review v1.1.16 D14)", () => {
         const en = language === "en";
         expect(briefTitle(brief({ slot: "on_request", displaySlot: "morning", asOf: "2026-10-28T17:24:00Z" } as never), language, tr))
-            .toBe(en ? "Evening brief · 5:24 PM" : "晚间简报 · 下午5:24");
+            .toBe(en ? "Evening brief · 5:24 PM" : "晚间简报 · 17:24");
         expect(briefTitle(brief({ slot: "on_request", displaySlot: "evening", asOf: "2026-10-28T11:59:00Z" } as never), language, tr))
-            .toBe(en ? "Morning brief · 11:59 AM" : "早间简报 · 上午11:59");
+            .toBe(en ? "Morning brief · 11:59 AM" : "早间简报 · 11:59");
         expect(briefKind({ slot: "on_request", asOf: "2026-10-28T12:00:00Z", timezone: "UTC" } as never)).toBe("evening");
         expect(briefKind({ slot: "on_request", displaySlot: "evening" } as never)).toBe("evening");
         expect(briefKind({ slot: "on_request" } as never)).toBe("on_request");
@@ -39,25 +39,25 @@ describe.each(["en", "zh-CN"])("brief titles in %s", (language) => {
             slot: "morning", asOf: "2026-10-28T16:12:00Z",
             generation: { reason: "asleep", scheduledAt: "2026-10-28T13:50:00Z", generatedAt: "2026-10-28T16:12:00Z", message: "" },
         });
-        expect(briefTitle(late, language, tr)).toBe(en ? "Morning brief · 4:12 PM" : "早间简报 · 下午4:12");
+        expect(briefTitle(late, language, tr)).toBe(en ? "Morning brief · 4:12 PM" : "早间简报 · 16:12");
         const run = { briefId: late.briefId, status: "ok" as const, scheduledAt: "2026-10-28T13:50:00Z", at: late.asOf, late: true, reason: "asleep" as const };
         expect(briefLateLine(late, language, tr, run))
-            .toBe(en ? "Came at 4:12 PM, not 1:50 PM: your computer was asleep." : "下午4:12才生成，不是1:50：电脑在睡眠。");
+            .toBe(en ? "Came at 4:12 PM, not 1:50 PM: your computer was asleep." : "16:12才生成，不是13:50：电脑在睡眠。");
         expect(briefLateLine(late, language, tr)).toBeNull();
         expect(briefLateLine(late, language, tr, { ...run, briefId: "other" })).toBeNull();
         expect(briefLateLine(late, language, tr, { ...run, late: false })).toBeNull();
         expect(briefLateLine(late, language, tr, { ...run, reason: "closed" }))
-            .toBe(en ? "Came at 4:12 PM, not 1:50 PM: Isoform wasn't open." : "下午4:12才生成，不是1:50：Isoform 没有打开。");
+            .toBe(en ? "Came at 4:12 PM, not 1:50 PM: Isoform wasn't open." : "16:12才生成，不是13:50：Isoform 没有打开。");
         expect(briefLateLine(late, language, tr, { ...run, reason: "" }))
-            .toBe(en ? "Came at 4:12 PM, not 1:50 PM." : "下午4:12才生成，不是1:50。");
+            .toBe(en ? "Came at 4:12 PM, not 1:50 PM." : "16:12才生成，不是13:50。");
 
     });
 
     it("titles the brief with its matching completed run's ready time", () => {
         const doc = brief({ asOf: "2026-10-28T13:00:00Z" });
         const run = { briefId: doc.briefId, status: "ok" as const, scheduledAt: doc.asOf, at: "2026-10-28T16:23:00Z" };
-        expect(briefTitle(doc, language, tr, run)).toBe(en ? "Morning brief · 4:23 PM" : "早间简报 · 下午4:23");
-        expect(briefTitle(doc, language, tr, { ...run, briefId: "other" })).toBe(en ? "Morning brief · 1:00 PM" : "早间简报 · 下午1:00");
+        expect(briefTitle(doc, language, tr, run)).toBe(en ? "Morning brief · 4:23 PM" : "早间简报 · 16:23");
+        expect(briefTitle(doc, language, tr, { ...run, briefId: "other" })).toBe(en ? "Morning brief · 1:00 PM" : "早间简报 · 13:00");
     });
 
     it("has no Late line for a brief made on time", () => {
