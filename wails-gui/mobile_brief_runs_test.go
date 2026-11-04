@@ -349,6 +349,26 @@ func TestMobileBriefSourcesChangedCollectsAgainAtOnce(t *testing.T) {
 	if calls != mobileBriefSourceRetries || len(runs) != 2 || runs[1].Status != mobileBriefRunFailed || runs[1].Attempts != 1 {
 		t.Fatalf("calls=%d runs=%+v", calls, runs)
 	}
+	// The first such failed attempt is retried right away, not after the
+	// backoff; a second one in a row waits.
+	select {
+	case <-svc.wake:
+	default:
+		t.Fatal("a sources-changed failure did not ask for an immediate retry")
+	}
+	if svc.retryAfter.After(clock.Now()) {
+		t.Fatalf("a sources-changed failure waits until %s", svc.retryAfter)
+	}
+	calls = 0
+	svc.checkDue(context.Background())
+	if runs := svc.runs.list(); calls != mobileBriefSourceRetries || runs[1].Attempts != 2 || !svc.retryAfter.Equal(clock.Now().Add(mobileBriefRetryBackoff(2))) {
+		t.Fatalf("calls=%d runs=%+v retryAfter=%s", calls, runs, svc.retryAfter)
+	}
+	select {
+	case <-svc.wake:
+		t.Fatal("a second sources-changed failure in a row retried at once")
+	default:
+	}
 }
 
 // A morning that keeps failing never holds back the evening slot.

@@ -86,7 +86,22 @@ func runMorningBriefPipelineAttempt(ctx context.Context, name, weekIntent string
 		scores, selection, unscored = morningBriefScores{}, morningBriefFallbackSelection(candidates), true
 	}
 	if selection.Lead == nil || !unscored && len(scores.Openings) == 0 {
-		return morningBriefDraft{}, false, withLogStage("score", errMorningBriefNoEligibleLead)
+		// A real person's day rarely has a lead the fixed gates accept. With
+		// admitted candidates, write them in the same plain order as a scoring
+		// error; only an empty or wholly ungated set has no brief to write.
+		plain := morningBriefPlainOrderSelection(candidates)
+		if plain.Lead == nil {
+			return morningBriefDraft{}, false, withLogStage("score", errMorningBriefNoEligibleLead)
+		}
+		switch true {
+		case unscored:
+			log.Printf("[mobile-brief] ranked morning fixed order has no gated lead; leading with the first of %d candidates", len(candidates))
+		case selection.Lead == nil:
+			log.Printf("[mobile-brief] ranked morning scorer picked no lead; writing %d candidates in the fixed order", len(candidates))
+		default:
+			log.Printf("[mobile-brief] ranked morning scorer gave no openings; writing %d candidates in the fixed order", len(candidates))
+		}
+		scores, selection, unscored = morningBriefScores{}, plain, true
 	}
 	if err := check(ctx); err != nil {
 		return morningBriefDraft{}, false, err

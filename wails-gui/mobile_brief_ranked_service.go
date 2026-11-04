@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"math"
 )
 
@@ -97,21 +96,25 @@ func (s *mobileBriefService) composeRankedMorning(ctx context.Context, input mob
 		}
 		return prepareRankedMorningDraft(brief, draft, in.Selection, s.app.currentUILanguageName())
 	}
+	// A quiet morning (every item checked, confident, and neither waiting on
+	// the user nor slipping) can never have a lead, so it gets the short
+	// statement. Any other morning is written, in plain order if the scorer
+	// picks no lead (runMorningBriefPipeline).
+	if morningBriefQuietEligible(input, rows, candidates) {
+		if err := check(ctx); err != nil {
+			return original, nil, morningBriefDraft{}, err
+		}
+		// Reserve one readable source for the short statement; the binding
+		// retains every checked candidate, including the uncited ones.
+		refs, resolveErr := resolve(ctx, morningBriefSelection{Lead: &candidates[0]})
+		if resolveErr != nil || len(refs[candidates[0].ID]) == 0 {
+			return original, nil, morningBriefDraft{}, errMobileBriefSourcesChanged
+		}
+		line := pick(mobileBriefVoiceLang(s.app.currentUILanguageName()), "The checked items did not surface a decision for this morning.", "已检查的事项中，今早没有需要决定的事。")
+		return brief, binding, morningBriefDraft{Paragraphs: []MobileBriefPara{{Text: line, Refs: refs[candidates[0].ID]}}}, nil
+	}
 	draft, _, err := runMorningBriefPipeline(ctx, "you", weekIntent, nil, nil, nil, nil, candidates, check, call, resolve, groundMorningBriefLead, write)
 	if err != nil {
-		if errors.Is(err, errMorningBriefNoEligibleLead) && morningBriefQuietEligible(input, rows, candidates) {
-			if err := check(ctx); err != nil {
-				return original, nil, morningBriefDraft{}, err
-			}
-			// Reserve one readable source for the short statement; the binding
-			// retains every checked candidate, including the uncited ones.
-			refs, resolveErr := resolve(ctx, morningBriefSelection{Lead: &candidates[0]})
-			if resolveErr != nil || len(refs[candidates[0].ID]) == 0 {
-				return original, nil, morningBriefDraft{}, errMobileBriefSourcesChanged
-			}
-			line := pick(mobileBriefVoiceLang(s.app.currentUILanguageName()), "The checked items did not surface a decision for this morning.", "已检查的事项中，今早没有需要决定的事。")
-			return brief, binding, morningBriefDraft{Paragraphs: []MobileBriefPara{{Text: line, Refs: refs[candidates[0].ID]}}}, nil
-		}
 		return original, nil, morningBriefDraft{}, withLogStage("pipeline", err)
 	}
 	if len(draft.Paragraphs) == 0 {

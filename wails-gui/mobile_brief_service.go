@@ -99,8 +99,11 @@ type mobileBriefService struct {
 	retryAfter    time.Time
 	// retryFor is the brief id retryAfter holds back: a slot that keeps
 	// failing never delays the next slot.
-	retryFor     string
-	missedLogged map[string]bool
+	retryFor string
+	// sourceRetriedFor is the brief id whose last failure, sources changed
+	// during collection, was already retried at once.
+	sourceRetriedFor string
+	missedLogged     map[string]bool
 	// awakeSlots are the slots whose window was open while the computer was
 	// awake. One that closes without a brief was not slept through, so no
 	// missed notice goes out for it (a failure has its own notice).
@@ -488,11 +491,27 @@ func mobileBriefFailureKind(err error) string {
 
 // retryLater waits before the next try of a failed slot, longer after each
 // failure in a row (mobileBriefRetryBackoff), and logs why it failed.
+// Sources that changed during collection are a background write, not a
+// broken brief: the first such failure in a row is retried at once.
 func (s *mobileBriefService) retryLater(briefID, slot string, attempts int, err error) {
 	delay := mobileBriefRetryBackoff(attempts)
 	s.mu.Lock()
+	now := false
+	if !errors.Is(err, errMobileBriefSourcesChanged) {
+		s.sourceRetriedFor = ""
+	} else if s.sourceRetriedFor != briefID {
+		s.sourceRetriedFor, delay, now = briefID, 0, true
+	}
 	s.retryAfter, s.retryFor = s.now().Add(delay), briefID
 	s.mu.Unlock()
+	if now {
+		log.Printf("[mobile-brief] scheduled %s brief failed (%s, attempt %d): %s; retrying now", slot, mobileBriefFailureKind(err), attempts, safeLogError(err))
+		select {
+		case s.wake <- struct{}{}:
+		default:
+		}
+		return
+	}
 	log.Printf("[mobile-brief] scheduled %s brief failed (%s, attempt %d): %s; retrying in %s", slot, mobileBriefFailureKind(err), attempts, safeLogError(err), delay)
 }
 

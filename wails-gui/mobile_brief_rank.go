@@ -161,6 +161,38 @@ func morningBriefScoreCallError(err error) error {
 // scorer's reply cannot be used: the fixed precedence, then earliest due
 // time, then source kind and identity. The gates are those of the scored path.
 func morningBriefFallbackSelection(candidates []morningBriefCandidate) morningBriefSelection {
+	return morningBriefSelect(morningBriefFallbackOrder(candidates), nil)
+}
+
+// morningBriefPlainOrderSelection is the fixed-order selection with a lead
+// even when no item passes the lead gate: the first item that needs the
+// user, then the slipping item, then the first other usable item in the
+// fixed order. Every item still passes the selection's confidence gate, so
+// the writer and its source references see only what the scored path could.
+func morningBriefPlainOrderSelection(candidates []morningBriefCandidate) morningBriefSelection {
+	selection := morningBriefFallbackSelection(candidates)
+	switch true {
+	case selection.Lead != nil:
+	case len(selection.Needs) > 0:
+		lead := selection.Needs[0]
+		selection.Lead, selection.Needs = &lead, selection.Needs[1:]
+	case selection.Slip != nil:
+		selection.Lead, selection.Slip = selection.Slip, nil
+	default:
+		for _, c := range morningBriefFallbackOrder(candidates) {
+			if c.ID != "" && !c.Handled && c.Confidence >= 0.5 && c.Confidence <= 1 {
+				selection.Lead = &c
+				break
+			}
+		}
+		if selection.Lead == nil && selection.Handled != nil {
+			selection.Lead, selection.Handled = selection.Handled, nil
+		}
+	}
+	return selection
+}
+
+func morningBriefFallbackOrder(candidates []morningBriefCandidate) []morningBriefCandidate {
 	ordered := append([]morningBriefCandidate(nil), candidates...)
 	due := func(c morningBriefCandidate) (time.Time, bool) {
 		at, err := time.Parse(time.RFC3339, c.Due)
@@ -181,7 +213,7 @@ func morningBriefFallbackSelection(candidates []morningBriefCandidate) morningBr
 			return a.ID < b.ID
 		}
 	})
-	return morningBriefSelect(ordered, nil)
+	return ordered
 }
 
 // morningBriefSelect applies the fixed precedence and typed caps in code.
