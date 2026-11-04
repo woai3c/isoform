@@ -5748,6 +5748,13 @@ export interface GoalMoveResult {
 
 export const MoveGoal = appBinding<[GoalMoveInput], GoalMoveResult>('MoveGoal');
 
+/** A goal the user adds on About you; Key makes a retry add it once. */
+export interface GoalCreateInput {
+    text: string;
+    key: string;
+}
+export const CreateGoal = appBinding<[GoalCreateInput], GoalMoveResult>('CreateGoal');
+
 /** The goal Today asks "Still working on ...?" about (goal_checkin.go). */
 export interface GoalCheckInView {
     goalId: string;
@@ -5826,6 +5833,7 @@ export interface AboutYouPortraitLine {
     text: string;
     memoryIds?: string[] | null;
     area: string;
+    source?: string;
     confirmed: boolean;
 }
 export interface AboutYouPortraitLately {

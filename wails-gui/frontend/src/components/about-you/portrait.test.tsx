@@ -72,7 +72,7 @@ function portrait(overrides: Partial<AboutYouPortrait> = {}): AboutYouPortrait {
             usual: 3,
         },
         workWithMe: [
-            { text: 'Send the number, not the opinion.', memoryIds: ['plan', 'outline'], area: 'work', confirmed: false },
+            { text: 'Send the number, not the opinion.', memoryIds: ['plan', 'outline'], area: 'work', source: 'slack', confirmed: false },
             { text: "Short replies aren't cold.", memoryIds: ['yes'], area: 'communication', confirmed: true },
         ],
         beliefCount: 59,
@@ -124,12 +124,13 @@ describe('Your portrait', () => {
     it('Still learning: a dashed ring, the days left and the progress bar; no How to work with me', async () => {
         mocks.getPortrait.mockResolvedValue(portrait({
             state: 'learning', name: null, sentences: [], workWithMe: [], lately: null, generatedAt: 0,
-            progress: { beliefs: 14, beliefsNeeded: 20, days: 3, daysNeeded: 5, groups: 2, groupsNeeded: 3, moreDays: 3, met: false },
+            progress: { beliefs: 14, beliefsNeeded: 20, days: 3, daysNeeded: 5, groups: 2, groupsNeeded: 3, moreDays: 3, met: false, sidesReady: false },
         }));
         renderCard();
         expect(await screen.findByRole('heading', { name: 'On its way' })).toBeInTheDocument();
-        expect(screen.getByText('Isoform writes it once it has seen enough of your work and your life. About 3 more days.')).toBeInTheDocument();
-        expect(screen.getByText('14 of 20 beliefs · 3 of 5 days')).toBeInTheDocument();
+        // v1.0.2 Y34: one line about days, no belief counts; the bar measures days only.
+        expect(screen.getByText('Isoform writes your portrait after about 3 more days of your work.')).toBeInTheDocument();
+        expect(document.body).not.toHaveTextContent(/14|20 beliefs|of 5 days/);
         expect(screen.getByTestId('portrait-progress')).toHaveStyle({ transform: 'scaleX(0.6)' });
         expect(screen.getByTestId('portrait-shape')).toHaveAttribute('data-shape', 'ring');
         expect(screen.queryByText('How to work with me')).not.toBeInTheDocument();
@@ -170,11 +171,23 @@ describe('Your portrait', () => {
         expect(screen.getByRole('button', { name: 'yeses go out in about 20 minutes' })).toHaveAttribute('data-underline', 'solid');
         expect(screen.getByText('You confirmed it')).toBeInTheDocument();
         expect(screen.getByText('Isoform inferred it')).toBeInTheDocument();
-        expect(screen.getByText('From 59 beliefs · updated today')).toBeInTheDocument();
+        expect(screen.getByText('Updated today')).toBeInTheDocument();
         expect(screen.getByText('Lately')).toBeInTheDocument();
         expect(screen.getByText('How to work with me')).toBeInTheDocument();
-        expect(screen.getByText('From how you work')).toBeInTheDocument();
+        expect(screen.getByText('From your Slack messages')).toBeInTheDocument();
         expect(screen.getByText('You confirmed this')).toBeInTheDocument();
+    });
+
+    it('names a How to work with me source only when it is a real one (Y29)', async () => {
+        mocks.getPortrait.mockResolvedValue(portrait({
+            workWithMe: [
+                { text: 'Send the number, not the opinion.', memoryIds: ['plan'], area: 'other', confirmed: false },
+                { text: 'Ask before Friday.', memoryIds: ['outline'], area: 'work', source: 'activity', confirmed: false },
+            ],
+        }));
+        renderCard();
+        expect(await screen.findByText('Ask before Friday.')).toBeInTheDocument();
+        expect(screen.queryByText(/From everything else|From how you work|From your/)).toBeNull();
     });
 
     it('Why this name: one row per word with what it means and where it comes from', async () => {
@@ -193,11 +206,11 @@ describe('Your portrait', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'plan the whole thing' }));
         const popover = await screen.findByRole('dialog');
         expect(popover).toHaveTextContent('Why Isoform says this');
-        expect(popover).toHaveTextContent('“Outlines the whole plan before starting”');
+        expect(popover).toHaveTextContent('Outlines the whole plan before starting');
         expect(popover).toHaveTextContent('Inferred');
         expect(popover).toHaveTextContent('Confidence 3 of 4');
         expect(popover).toHaveTextContent('Seen 11 times on 9 days · Keynote, Cursor');
-        expect(popover).toHaveTextContent('Learned today');
+        expect(popover).not.toHaveTextContent('Learned today');
         fireEvent.click(within(popover).getByRole('button', { name: "That's me" }));
         await act(async () => {});
         expect(mocks.confirmEntry.mock.calls.map((call) => call[0])).toEqual(['plan', 'outline']);
@@ -226,13 +239,60 @@ describe('Your portrait', () => {
         expect(within(popover).queryByRole('button')).not.toBeInTheDocument();
     });
 
+    // About you v1.0.0 Y14: zh learning heading.
+    it('reads 还在了解你 while still learning in zh-CN', async () => {
+        await i18n.changeLanguage('zh-CN');
+        mocks.getPortrait.mockResolvedValue(portrait({
+            state: 'learning', name: null, sentences: [], workWithMe: [], lately: null, generatedAt: 0,
+            progress: { beliefs: 14, beliefsNeeded: 20, days: 3, daysNeeded: 5, groups: 2, groupsNeeded: 3, moreDays: 3, met: false, sidesReady: false },
+        }));
+        renderCard();
+        expect(await screen.findByRole('heading', { name: '还在了解你' })).toBeInTheDocument();
+        await i18n.changeLanguage('en');
+    });
+
+    // About you v1.0.0 Y12: no empty box; a cold read that failed says so in copper.
+    it.each([
+        ['en', 'Your portrait', "Couldn't open your portrait.", 'Try again'],
+        ['zh-CN', null, '没能打开你的画像。', null],
+    ] as const)('a portrait that could not open says so with Try again in %s', async (language, heading, line, retry) => {
+        await i18n.changeLanguage(language);
+        mocks.getPortrait.mockRejectedValueOnce(new Error('read failed'));
+        renderCard();
+        const alert = (await screen.findByText(line)).closest('[role="alert"]');
+        expect(alert).toHaveClass('text-copper');
+        if (heading) expect(screen.getByText(heading)).toBeInTheDocument();
+        mocks.getPortrait.mockResolvedValue(portrait());
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: retry ?? i18n.t('memory:aboutYou.retry') })); });
+        expect(await screen.findByRole('button', { name: 'plan the whole thing' })).toBeInTheDocument();
+        expect(screen.queryByText(line)).not.toBeInTheDocument();
+        await i18n.changeLanguage('en');
+    });
+
+    // About you v1.0.0 Y15: an answer that failed goes back to the truth, in copper.
+    it("That's me that didn't save goes back, with a copper line and Try again", async () => {
+        mocks.getPortrait.mockResolvedValue(portrait());
+        mocks.confirmPortrait.mockRejectedValueOnce(new Error('offline'));
+        renderCard();
+        const plan = await screen.findByRole('button', { name: 'plan the whole thing' });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: "That's me" })); });
+        expect(plan).toHaveAttribute('data-underline', 'dotted');
+        const alert = screen.getByRole('alert');
+        expect(alert).toHaveClass('text-copper');
+        expect(screen.getByRole('button', { name: "That's me" })).toBeInTheDocument();
+        mocks.confirmPortrait.mockResolvedValueOnce(['plan', 'outline', 'short', 'first']);
+        await act(async () => { fireEvent.click(within(alert).getByRole('button', { name: 'Try again' })); });
+        expect(mocks.confirmPortrait).toHaveBeenCalledTimes(2);
+        expect(screen.getByRole('button', { name: 'plan the whole thing' })).toHaveAttribute('data-underline', 'solid');
+    });
+
     it("That's me answers at once: underlines draw solid, How to work with me follows, the keep line, and Undo puts it back", async () => {
         mocks.getPortrait.mockResolvedValue(portrait());
         mocks.confirmPortrait.mockResolvedValue(['plan', 'outline', 'short', 'first']);
         renderCard();
         const plan = await screen.findByRole('button', { name: 'plan the whole thing' });
         expect(plan).toHaveAttribute('data-underline', 'dotted');
-        expect(screen.getByText('From how you work')).toBeInTheDocument();
+        expect(screen.getByText('From your Slack messages')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: "That's me" }));
         // At once, before the backend answers: each inferred phrase draws in turn.
         expect(plan).toHaveAttribute('data-underline', 'solid');
@@ -240,7 +300,7 @@ describe('Your portrait', () => {
         expect(screen.getByRole('button', { name: 'keeps drafts short' })).toHaveStyle({ '--draw-delay': '210ms' });
         // The already confirmed phrase doesn't draw again.
         expect(screen.getByRole('button', { name: 'yeses go out in about 20 minutes' })).not.toHaveAttribute('data-drawing');
-        expect(screen.queryByText('From how you work')).not.toBeInTheDocument();
+        expect(screen.queryByText('From your Slack messages')).not.toBeInTheDocument();
         expect(screen.getAllByText('You confirmed this')).toHaveLength(2);
         await act(async () => {});
         const status = screen.getByRole('status', { name: '' });
@@ -363,7 +423,8 @@ describe('Your portrait', () => {
 
     it.each([
         ['no_answer', `Codex didn't answer. Isoform tries again at ${at(now + 3_600_000)}.`, true],
-        ['unusable', `Couldn't write it yet. Isoform tries again at ${at(now + 3_600_000)}.`, true],
+        // About you v1.0.0 Y13: a shown portrait that couldn't update says so.
+        ['unusable', `Couldn't update it yet. Isoform tries again at ${at(now + 3_600_000)}.`, true],
         ['limit', `Codex reached its limit until ${at(now + 3_600_000)}. Isoform writes it then, by itself.`, false],
     ] as const)('With a portrait shown (%s): it stays under one copper line', async (reason, copy, tryNow) => {
         mocks.getPortrait.mockResolvedValue(portrait({ failure: { reason, at: now, retryAt: now + 3_600_000, assistant: 'codex' } }));
@@ -402,7 +463,7 @@ describe('Your portrait', () => {
         expect(within(box).queryByText(/more to unlock|\d+ more/)).toBeNull();
         // The whole-portrait buttons, the legend and the meta stay.
         expect(screen.getByText('You confirmed it')).toBeInTheDocument();
-        expect(screen.getByText(/From 59 beliefs/)).toBeInTheDocument();
+        expect(screen.getByText(/Updated today/)).toBeInTheDocument();
     });
 
     it("That's me on a row: Confirmed, then the rewrite comes in tinted at once", async () => {
@@ -474,7 +535,7 @@ describe('Your portrait', () => {
         expect(within(screen.getByTestId('portrait-confirm-rows')).getAllByRole('listitem')).toHaveLength(3);
         expect(screen.queryByTestId('portrait-paragraph')).toBeNull();
         expect(screen.queryByText('You confirmed it')).toBeNull();
-        expect(screen.queryByText(/From 59 beliefs/)).toBeNull();
+        expect(screen.queryByText(/Updated today/)).toBeNull();
         expect(screen.queryByText("Couldn't write it yet")).toBeNull();
         expect(screen.queryByRole('button', { name: 'Try now' })).toBeNull();
         // How to work with me shows its lines that passed.
@@ -491,12 +552,33 @@ describe('Your portrait', () => {
         expect(screen.getByRole('button', { name: '不太对' })).toBeInTheDocument();
     });
 
+    // About you v1.0.0 Y23: a copy that failed keeps Copy and says so in copper.
+    it.each([
+        ['en', 'Copy', "Couldn't copy.", 'Try again'],
+        ['zh-CN', null, '没能复制。', null],
+    ] as const)('Copy that failed stays Copy with a copper line in %s', async (language, copyName, line, retry) => {
+        await i18n.changeLanguage(language);
+        mocks.getPortrait.mockResolvedValue(portrait());
+        mocks.copy.mockResolvedValueOnce(false);
+        renderCard();
+        const label = copyName ?? i18n.t('memory:aboutYou.portrait.workWithMe.copy');
+        const copy = await screen.findByRole('button', { name: label });
+        await act(async () => { fireEvent.click(copy); });
+        expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+        expect(screen.getByText(line).closest('[role="alert"]')).toHaveClass('text-copper');
+        mocks.copy.mockResolvedValueOnce(true);
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: retry ?? i18n.t('memory:aboutYou.retry') })); });
+        expect(mocks.copy).toHaveBeenCalledTimes(2);
+        expect(screen.queryByText(line)).not.toBeInTheDocument();
+        await i18n.changeLanguage('en');
+    });
+
     it('Copy puts the title and lines on the clipboard and reads Copied for 1.6 s', async () => {
         mocks.getPortrait.mockResolvedValue(portrait());
         renderCard();
         const copy = await screen.findByRole('button', { name: 'Copy' });
         vi.useFakeTimers();
-        fireEvent.click(copy);
+        await act(async () => { fireEvent.click(copy); });
         expect(mocks.copy).toHaveBeenCalledWith("How to work with me\n\n- Send the number, not the opinion.\n- Short replies aren't cold.");
         expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
         act(() => { vi.advanceTimersByTime(1600); });
@@ -519,6 +601,6 @@ describe('Your portrait', () => {
         renderCard();
         expect(await screen.findByRole('heading', { name: '蓝图型建造者' })).toBeInTheDocument();
         expect(screen.getByText('说得对')).toBeInTheDocument();
-        expect(screen.getByText('依据 59 条认识 · 今天更新')).toBeInTheDocument();
+        expect(screen.getByText('今天更新')).toBeInTheDocument();
     });
 });

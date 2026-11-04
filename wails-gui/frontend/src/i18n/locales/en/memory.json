@@ -1,6 +1,5 @@
 {
     "title": "Memory",
-    "writePlaceholder": "# Memory Title\n\nWrite your memory here...",
     "header": {
         "showSidebar": "Show sidebar",
         "hideSidebar": "Hide sidebar",
@@ -12,7 +11,6 @@
         "exit": "Exit",
         "edit": "Edit",
         "editMemory": "Edit Memory",
-        "newMemory": "New Memory",
         "save": "Save",
         "saving": "Saving...",
         "translate": "Translate",
@@ -24,7 +22,7 @@
         "viewHistory": "View version history",
         "importFromAi": "Import from AI tools",
         "reindex": "Re-index memory files",
-        "newFile": "New memory file",
+        "newFile": "Add a note about you",
         "dreamTooltip": "Open Memory Dream — nightly consolidation"
     },
     "sidebar": {
@@ -35,10 +33,10 @@
         "groupLabel": "Group",
         "groupByDimension": "Kind",
         "groupByDate": "Date",
-        "searching": "Searching...",
         "noResults": "No results found",
         "noFilesYet": "No memories yet",
-        "noFilesMatch": "No memories match",
+        "noFilesMatch": "Nothing matches.",
+        "nothingMatches": "Nothing matches “{{query}}”.",
         "filterKind": "Filter by kind",
         "allKinds": "All kinds"
     },
@@ -64,7 +62,6 @@
         "agentic_memory": "AI",
         "custom": "Custom"
     },
-    "newTemplate": "# New Memory\n\n",
     "relativeTime": {
         "today": "today",
         "yesterday": "yesterday",
@@ -90,14 +87,6 @@
         "noChanges": "No changes — this snapshot matches the current version."
     },
     "toasts": {
-        "saved": {
-            "title": "Memory saved",
-            "body": "Saved as a user edit. Your changes take priority over observed memories."
-        },
-        "translated": {
-            "title": "Memory translated",
-            "body": "A snapshot was saved before replacing the current entry."
-        },
         "translateFailed": {
             "title": "Translation failed"
         },
@@ -108,10 +97,6 @@
         "globalTranslated": {
             "title": "Memories translated",
             "body": "{{translated}} / {{total}} memories translated to {{target}}. Failed: {{failed}}."
-        },
-        "saveFailed": {
-            "title": "Memory could not be saved",
-            "body": "Your changes are still here. Try saving again."
         }
     },
     "globalTranslate": {
@@ -137,15 +122,19 @@
             "currentEntries": {
                 "label_one": "All current entries ({{count}})",
                 "label_other": "All current entries ({{count}})",
-                "description": "Translate every live memory entry. Each entry keeps a snapshot before it is replaced."
+                "description": "Translates every belief. Each keeps its earlier version."
             }
+        },
+        "result": {
+            "done": "Translated into {{target}}.",
+            "failed": "Some couldn't be translated."
         }
     },
     "rejectAttribution": {
-        "buttonTitle": "Wrong subject — this isn't about me",
+        "buttonTitle": "Wrong subject",
         "buttonAria": "Mark \"{{title}}\" as wrongly attributed",
         "title": "Wrong subject?",
-        "description": "Correct who \"{{title}}\" is about, or review its removal before confirming. Rejection uses the same forget scope and temporary protection against relearning. The rejection reason is not saved.",
+        "description": "Tell Isoform who \"{{title}}\" is really about, or forget it. Your reason isn't saved.",
         "reasonLabel": "Reason",
         "presets": {
             "reassignToContact": "This is real, but Isoform credited the wrong person — let me pick who actually said it.",
@@ -157,14 +146,13 @@
         },
         "reassignPickerLabel": "Who actually said this?",
         "reassignSubmit": "Reassign",
-        "reassignSuccessToast": "Got it — memory reassigned to {{name}}.",
         "customLabel": "Reason",
         "customPlaceholder": "Explain what's wrong about this memory...",
         "additionalLabel": "Additional context (optional)",
         "additionalPlaceholder": "Add any context for this correction...",
         "cancel": "Cancel",
         "submit": "Review removal",
-        "errorToast": "Could not reject memory: {{error}}"
+        "reassignFailed": "Couldn't move it to {{name}}. Nothing changed."
     },
     "summary": {
         "totalFiles": "Total files",
@@ -177,32 +165,6 @@
         "recent": "Recent",
         "new": "New",
         "jumpToActivitySession": "Jump to activity session"
-    },
-    "empty": {
-        "title": "No memories yet",
-        "intro": "Memories are personal notes you create and edit. Unlike knowledge (which is auto-extracted), you control what goes here.",
-        "examples": {
-            "preferences": {
-                "label": "Preferences",
-                "desc": "Communication style, code conventions, and workflow habits"
-            },
-            "projectContext": {
-                "label": "Project context",
-                "desc": "Goals, constraints, team structure, and deadlines"
-            },
-            "instructions": {
-                "label": "Instructions",
-                "desc": "Standing rules Isoform should follow in future sessions"
-            },
-            "referenceNotes": {
-                "label": "Reference notes",
-                "desc": "URLs, credentials locations, environment details"
-            }
-        },
-        "vectorSearchActive": "Vector search: active",
-        "vectorSearchInactive": "Vector search: inactive",
-        "modelLabel": "Model: {{model}}",
-        "createFirst": "Create your first memory"
     },
     "sources": {
         "activity": "Activity",
@@ -356,15 +318,13 @@
         "confirm": "Confirm correction",
         "correcting": "Correcting...",
         "previewFailed": "The correction preview could not be loaded. Nothing has been changed. Try again.",
-        "failed": "The correction could not be completed, or the removal list changed. Refresh the preview and review it before trying again.",
-        "successTitle": "Attribution corrected"
+        "failed": "The correction could not be completed, or the removal list changed. Refresh the preview and review it before trying again."
     },
     "forget": {
         "action": "Forget this",
         "itemAction": "Forget \"{{title}}\"",
-        "title": "Forget this memory?",
-        "description": "Review what will be removed for \"{{title}}\" before confirming.",
-        "loading": "Checking this memory and its derived entries...",
+        "title": "Forget this?",
+        "description": "{{title}}",
         "removes": "Will be permanently removed",
         "kinds": {
             "memory": "Memory",
@@ -387,8 +347,6 @@
         "previewFailed": "The removal preview could not be loaded. Nothing has been forgotten. Try again.",
         "forgetFailed": "Forgetting could not be completed, or the removal list changed. Refresh the preview and review it before trying again.",
         "refresh": "Refresh preview",
-        "successTitle": "Memory forgotten",
-        "successBody": "Removed {{records}}, {{embeddings}} and {{versions}}. Matching re-observations are blocked for {{days}} days. Source activities and conversations, unrelated logs and external backups remain.",
         "recordCount_one": "{{count}} record",
         "recordCount_other": "{{count}} records",
         "embeddingCount_one": "{{count}} search embedding",
@@ -410,9 +368,12 @@
             "hypothesis": "Hypothesis",
             "entry": "Derived entry"
         },
-        "matchingProtection": "Forgetting works offline using local fact hashes. Optional AI matching can also recognize reworded facts when available."
+        "matchingProtection": "Forgetting works offline using local fact hashes. Optional AI matching can also recognize reworded facts when available.",
+        "bodyRemoves": "Isoform removes this belief, its earlier versions and what it built from it.",
+        "bodyDays": "For {{days}} days, Isoform won't learn it again.",
+        "bodyStays": "Your activity and chats stay."
     },
-    "searchPlaceholder": "Search memory text...",
+    "searchPlaceholder": "Search what Isoform believes",
     "row": {
         "empty": "No memory text yet",
         "learned": "Learned {{when}}",
@@ -447,7 +408,7 @@
         "dateUnknown": "Date unavailable",
         "dayBeforeYesterday": "the day before yesterday",
         "lastTwoDays": "from your work over the last two days",
-        "since": "from your work since {{when}}",
+        "since": "from your work over the last {{count}} days",
         "yourWork": "from your work",
         "provenanceApps": "Learned {{range}}, mostly in {{apps}}.",
         "provenance": "Learned {{range}}.",
@@ -517,7 +478,7 @@
             "confirmed_one": "You’ve confirmed {{count}}.",
             "confirmed_other": "You’ve confirmed {{count}}.",
             "noneConfirmed": "You haven’t confirmed any yet.",
-            "local": "Saved on this computer. You can correct or forget any of it.",
+            "local": "Stored on your computer. You can correct or forget any of it.",
             "empty": "Isoform writes what it learns about you here. The first notes come tonight."
         },
         "span": {
@@ -583,7 +544,7 @@
             "notQuite": "Not quite",
             "saidThatsYou": "You said that's you",
             "undo": "Undo",
-            "meta": "From {{beliefs}} · updated {{when}}",
+            "meta": "Updated {{when}}",
             "beliefs_one": "{{count}} belief",
             "beliefs_other": "{{count}} beliefs",
             "notQuiteLabel": "What's off? You can leave it blank.",
@@ -596,7 +557,7 @@
             "showIt": "Show it",
             "forgotten": "One sentence rested on what you forgot, so it's gone. Isoform is rewriting the rest around it.",
             "evidenceTitle": "Why Isoform says this",
-            "quote": "“{{text}}”",
+            "quote": "{{text}}",
             "seen_one": "Seen once on {{days}}",
             "seen_other": "Seen {{count}} times on {{days}}",
             "days_one": "{{count}} day",
@@ -606,9 +567,8 @@
             "latelyFacts": "{{thisMonth}} a week this month · usually {{usual}}",
             "showInBeliefs": "Show in Beliefs",
             "learning": "On its way",
-            "learningLine_one": "Isoform writes it once it has seen enough of your work and your life. About {{count}} more day.",
-            "learningLine_other": "Isoform writes it once it has seen enough of your work and your life. About {{count}} more days.",
-            "learningBar": "{{beliefs}} of {{beliefsNeeded}} beliefs · {{days}} of {{daysNeeded}} days",
+            "learningLine_one": "Isoform writes your portrait after about {{count}} more day of your work.",
+            "learningLine_other": "Isoform writes your portrait after about {{count}} more days of your work.",
             "writingTitle": "Writing your portrait",
             "writingLine": "{{assistant}} is writing it now, about a minute. You'll get a notification.",
             "failedTitle": "Couldn't write it yet",
@@ -617,7 +577,8 @@
                 "noAI": "Sign in to Claude Code or Codex, and Isoform writes it right away.",
                 "noAnswer": "{{assistant}} didn't answer. Isoform tries again at {{time}}.",
                 "unusable": "Couldn't write it yet. Isoform tries again at {{time}}.",
-                "unusableTitled": "Isoform tries again at {{time}}."
+                "unusableTitled": "Isoform tries again at {{time}}.",
+                "unusableUpdate": "Couldn't update it yet. Isoform tries again at {{time}}."
             },
             "signIn": "Sign in",
             "shapeLine": "Isoform has your shape. To put it into words, it needs a little more to go on: confirm the ones below, or give it a few more days.",
@@ -638,8 +599,15 @@
                 "sub": "Written for the people you work with. Only you see it until you copy it.",
                 "copy": "Copy",
                 "copied": "Copied",
-                "from": "From {{group}}",
-                "confirmed": "You confirmed this"
+                "copyFailed": "Couldn't copy.",
+                "confirmed": "You confirmed this",
+                "fromSource": {
+                    "slack": "From your Slack messages",
+                    "discord": "From your Discord messages",
+                    "telegram": "From your Telegram messages",
+                    "feishu": "From your Feishu messages",
+                    "email": "From your email"
+                }
             },
             "saidThatsYouWhen": "You said that's you {{when}}",
             "keeps": "Isoform keeps this version. Anything newer waits for you.",
@@ -654,6 +622,17 @@
                 "today": "today",
                 "yesterday": "yesterday",
                 "date": "on {{date}}"
+            },
+            "failed": {
+                "phrase": "Didn't save. This part is still inferred.",
+                "phraseUndo": "Undo didn't save. Still confirmed.",
+                "undo": "Undo didn't save. Your portrait still says that's you.",
+                "note": "Your note didn't save. It's still here.",
+                "tryNow": "Couldn't start it now. Isoform still tries again at {{time}}.",
+                "didntSave": "Didn't save.",
+                "rowUndo": "Undo didn't save.",
+                "show": "Couldn't open the new version. This one stays.",
+                "open": "Couldn't open your portrait."
             }
         },
         "goals": {
@@ -661,27 +640,30 @@
             "add": "Add a goal",
             "tracking": "Tracking",
             "waiting": "Waiting on someone",
-            "done": "Done ({{count}})",
-            "held": "Only on this computer ({{count}})",
-            "empty": "No goals yet. Tell Isoform what you're working toward and it keeps track here.",
-            "createPrompt": "I want to set a new goal: ",
+            "done": "Done",
+            "held": "Only on this computer",
             "loadFailed": "Isoform couldn't read your goals.",
             "retry": "Try again",
             "loading": "Loading your goals",
-            "detailLabel": "Goal"
+            "detailLabel": "Goal",
+            "addedToday": "You added it today.",
+            "moveFailed": "Isoform couldn't change this goal.",
+            "addField": {
+                "label": "What are you working toward?",
+                "placeholder": "For example: Run a half marathon in March",
+                "add": "Add",
+                "cancel": "Cancel",
+                "failed": "Your goal didn't save. It's still here."
+            }
         },
         "review": {
             "title": "New this week",
-            "left_one": "{{count}} to check",
-            "left_other": "{{count}} to check",
-            "allChecked": "All checked",
-            "quote": "“{{text}}”",
+            "quote": "{{text}}",
             "seen_one": "Seen once",
             "seen_other": "Seen {{count}} times",
             "where": "{{seen}} · {{apps}}",
             "communicationWhere": "{{area}} · {{evidence}}",
             "confirm": "That’s me",
-            "confirming": "Confirming...",
             "notQuite": "Not quite",
             "forget": "Forget",
             "undo": "Undo",
@@ -691,7 +673,7 @@
             "forgetPending_other": "Forgetting in {{count}} seconds.",
             "forgotten_one": "Forgotten. Isoform won’t learn it again for {{count}} day.",
             "forgotten_other": "Forgotten. Isoform won’t learn it again for {{count}} days.",
-            "confirmFailed": "Could not confirm this. Try again.",
+            "confirmFailed": "Didn't save.",
             "forgetFailed": "Could not forget this. Nothing was removed.",
             "corrected": "Corrected. Isoform will use your wording.",
             "portraitConfirmed": "Confirmed. Your portrait can use this now.",
@@ -699,7 +681,9 @@
             "save": "Save",
             "cancel": "Cancel",
             "stoppedUsing": "Isoform stopped using this.",
-            "answerFailed": "Could not save that. Try again."
+            "answerFailed": "Could not save that. Try again.",
+            "wordsFailed": "Your words didn't save. They're still here.",
+            "undoFailed": "Undo didn't save."
         },
         "detail": {
             "label": "Belief detail",
@@ -713,11 +697,14 @@
             "usesFailed": "Could not load where Isoform uses this.",
             "openSession": "Open where this was learned in Activity",
             "confirmedWhen": "You confirmed this {{when}}.",
-            "notQuiteWhen": "You said not quite {{when}}. Isoform isn’t using it."
+            "notQuiteWhen": "You said not quite {{when}}. Isoform isn’t using it.",
+            "saveFailed": "Your change didn't save. It's still here.",
+            "translateFailed": "Couldn't translate it. Nothing changed."
         },
         "evidence": {
-            "seen": "Seen {{when}} in {{app}}",
-            "withDuration": "{{seen}} · {{duration}}"
+            "seen": "Seen {{when}}",
+            "withDuration": "{{seen}} · {{duration}}",
+            "from": "From your {{app}}: {{text}}"
         },
         "uses": {
             "chat_one": "Used once in chat answers",
@@ -744,15 +731,22 @@
             "chunks_one": "{{count}} chunk indexed",
             "chunks_other": "{{count}} chunks indexed",
             "vectorActive": "vector search active",
-            "vectorInactive": "vector search inactive"
+            "vectorInactive": "vector search inactive",
+            "model": "Model: {{model}}"
         },
         "aboutFailed": "Could not load what is new this week or how sure Isoform is.",
         "firstDay": {
             "line_one": "{{count}} belief from your {{history}}. You haven't confirmed any yet.",
             "line_other": "{{count}} beliefs from your {{history}}. You haven't confirmed any yet.",
+            "lineWithLocal": "{{line}} {{local}}",
             "checkFirst": "Check these first",
-            "checkFirstHint": "The first three to confirm",
+            "checkFirstHint": "From your {{history}}",
             "source": "{{assistant}}, {{date}}"
         }
+    },
+    "newNote": {
+        "title": "Add a note about you",
+        "line": "Isoform puts what you write here ahead of what it learned.",
+        "placeholder": "For example: I keep emails to three sentences."
     }
 }

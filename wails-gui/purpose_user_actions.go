@@ -534,3 +534,31 @@ func (a *App) MoveGoal(input GoalMoveInput) (GoalMoveResult, error) {
 		State: detail.Current.LifecycleState, Title: detail.Current.Title,
 	}, nil
 }
+
+// GoalCreateInput is a goal the user adds by hand on About you (Add a goal).
+// Key is the caller's idempotency key, so a retried call adds it once.
+type GoalCreateInput struct {
+	Text string `json:"text"`
+	Key  string `json:"key"`
+}
+
+// CreateGoal adds a goal the user typed on the computer. It answers with the
+// goal as MoveGoal does, or one of MoveGoal's named errors.
+func (a *App) CreateGoal(input GoalCreateInput) (GoalMoveResult, error) {
+	key := strings.TrimSpace(input.Key)
+	if key == "" || len(key) > 128 || strings.TrimSpace(input.Text) == "" {
+		return GoalMoveResult{}, errGoalMoveInvalid
+	}
+	detail, err := a.createUserPurpose(userPurposeCreate{
+		Key: "computer:" + key, Origin: "computer", Kind: PurposeKindGoal, Text: input.Text,
+	}, time.Now())
+	if err != nil && detail.OpenLoop.ID == "" {
+		log.Printf("[goals] create failed: %v", err)
+		return GoalMoveResult{}, errGoalMoveUnavailable
+	}
+	a.emitBrowserEvent("agency:updated")
+	return GoalMoveResult{
+		ID: detail.OpenLoop.ID, EventID: detail.Current.ID,
+		State: detail.Current.LifecycleState, Title: detail.Current.Title,
+	}, nil
+}

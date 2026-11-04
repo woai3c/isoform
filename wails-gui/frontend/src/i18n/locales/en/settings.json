@@ -2299,11 +2299,10 @@
         "technicalOutcome": "Technical outcome: {{value}}"
     },
     "aiMemoryImportDialog": {
-        "dialogTitle": "Import AI memory",
+        "dialogTitle": "Import from AI tools",
         "dialogDescription": "Import memory files from other AI tools into Isoform.",
-        "scanning": "Scanning for AI memory files...",
-        "scanFailed": "Failed to scan: {{error}}",
-        "noFilesFound": "No AI memory files found on this machine.",
+        "scanFailed": "Couldn't look for files from other AI tools.",
+        "noFilesFound": "No files from other AI tools on this computer.",
         "fileCount_one": "{{count}} file",
         "fileCount_other": "{{count}} files",
         "allImported": "all imported",
@@ -2311,8 +2310,8 @@
         "importButton_one": "Import {{count}} file",
         "importButton_other": "Import {{count}} files",
         "importing": "Importing...",
-        "fileImportSuccess_one": "Successfully imported {{count}} memory file.",
-        "fileImportSuccess_other": "Successfully imported {{count}} memory files.",
+        "fileImportSuccess_one": "Imported {{count}} file.",
+        "fileImportSuccess_other": "Imported {{count}} files.",
         "fileImportNone": "No files were imported.",
         "skippedSuffix": " {{count}} skipped.",
         "providers": {
@@ -2332,8 +2331,9 @@
         "copyPromptButton": "Copy",
         "copiedLabel": "Copied",
         "importButton": "Import",
-        "promptImportSuccess": "{{provider}} memories imported successfully.",
-        "promptImportNone": "No memories were imported."
+        "promptImportSuccess": "Imported from {{provider}}.",
+        "promptImportNone": "No memories were imported.",
+        "retry": "Try again"
     },
     "skillHub": {
         "clawhub": {

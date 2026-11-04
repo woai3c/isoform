@@ -10,7 +10,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { notifyToast } from '@/lib/notify';
 import { SaveMemoryEntry } from '../../wailsjs/go/main/App';
 import type { main } from '../../wailsjs/go/models';
 
@@ -27,23 +26,25 @@ export function MemoryNewDialog({
     const { t } = useTranslation(['memory', 'common']);
     const [content, setContent] = useState('');
     const [saving, setSaving] = useState(false);
+    const [failed, setFailed] = useState(false);
 
     useEffect(() => {
-        if (open) setContent(t('newTemplate') as string);
-    }, [open, t]);
+        if (open) {
+            setContent('');
+            setFailed(false);
+        }
+    }, [open]);
 
     const save = () => {
         if (saving || !content.trim()) return;
         setSaving(true);
-        SaveMemoryEntry('', content)
+        setFailed(false);
+        SaveMemoryEntry('', noteFile(content))
             .then((saved) => {
                 onOpenChange(false);
                 onSaved(saved);
-                notifyToast(t('toasts.saved.title') as string, t('toasts.saved.body') as string, 'success');
             })
-            .catch(() => {
-                notifyToast(t('toasts.saveFailed.title') as string, t('toasts.saveFailed.body') as string, 'error');
-            })
+            .catch(() => setFailed(true))
             .finally(() => setSaving(false));
     };
 
@@ -52,21 +53,27 @@ export function MemoryNewDialog({
             <DialogContent className="w-[640px] max-w-[90vw] h-[70vh]" onKeyDown={(event) => event.stopPropagation()}>
                 <DialogHeader>
                     <div>
-                        <DialogTitle>{t('header.newMemory')}</DialogTitle>
-                        <DialogDescription className="mt-1">{t('editor.attribution')}</DialogDescription>
+                        <DialogTitle>{t('newNote.title')}</DialogTitle>
+                        <DialogDescription className="mt-1">{t('newNote.line')}</DialogDescription>
                     </div>
                     <DialogCloseButton disabled={saving} aria-label={t('common:close')} />
                 </DialogHeader>
                 <div className="flex min-h-0 flex-1 flex-col gap-3 px-6 py-4">
                     <textarea
-                        className="min-h-0 w-full flex-1 resize-none rounded-xl border border-border bg-panel p-4 font-mono text-xs leading-relaxed text-ink placeholder:text-muted focus:border-border-focus focus:outline-none"
+                        className="min-h-0 w-full flex-1 resize-none rounded-xl border border-border bg-panel p-4 text-[13px] leading-relaxed text-ink placeholder:text-muted focus:border-border-focus focus:outline-none"
                         value={content}
                         onChange={(event) => setContent(event.target.value)}
-                        placeholder={t('writePlaceholder') as string}
-                        aria-label={t('editor.label') as string}
+                        placeholder={t('newNote.placeholder') as string}
+                        aria-label={t('newNote.title') as string}
                         disabled={saving}
                         autoFocus
                     />
+                    {failed && (
+                        <p role="alert" className="m-0 flex flex-wrap items-center gap-2 text-[12.5px] text-copper">
+                            <span>{t('aboutYou.detail.saveFailed')}</span>
+                            <button type="button" className="text-accent hover:underline" disabled={saving} onClick={save}>{t('aboutYou.retry')}</button>
+                        </p>
+                    )}
                 </div>
                 <div className="flex justify-end gap-2 px-6 pb-5">
                     <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -80,4 +87,13 @@ export function MemoryNewDialog({
             </DialogContent>
         </Dialog>
     );
+}
+
+/** The note as a memory file: Isoform names it from the first line, so the
+ *  person only writes the note. */
+export function noteFile(note: string): string {
+    const text = note.trim();
+    const first = text.split(/\n/)[0].replace(/^#+\s*/, '').trim();
+    const title = first.length > 60 ? `${first.slice(0, 57).trimEnd()}…` : first;
+    return `# ${title}\n- **Source**: user_edit\n\n${text}\n`;
 }

@@ -35,14 +35,34 @@ func classifyMemoryArea(words, kind string) string {
 	if contains("health|medical|medicine|medication|medications|doctor|hospital|diagnosis|diagnosed|therapy|therapist|depression|anxiety|adhd|autism|bipolar|cancer|diabetes|pregnant|pregnancy|disability|illness|pain|insulin|mental|allergy|allergies|blood|symptom|symptoms|treatment|exercise|diet|sleep|religion|religious|church|muslim|christian|politics|political|democrat|republican|sexual|sexuality|gay|lesbian|race|ethnicity|salary|debt|bank|password|secret|健康|医疗|疾病|心理|医院|药|宗教|政治|性取向|财务") {
 		return "other"
 	}
-	for _, rule := range []struct{ area, words string }{
+	rules := []struct{ area, words string }{
 		{"communication", "email|emails|message|messages|reply|replies|concise|tone|communication|communicate|writing|沟通|邮件|回复"},
-		{"tools", "tool|tools|editor|terminal|software|keyboard|browser|bun|npm|pnpm|git|vscode|工具|编辑器|终端"},
+		{"tools", "tool|tools|editor|terminal|software|keyboard|browser|bun|npm|pnpm|git|vscode|package|packages|automation|automations|repo|repos|repository|backup|hub|script|scripts|工具|编辑器|终端|自动化|仓库"},
 		{"people", "colleague|colleagues|coworker|coworkers|manager|family|friend|friends|partner|teammate|teammates|同事|家人|朋友"},
 		{"routines", "routine|routines|daily|weekly|morning|evening|habit|habits|每天|每周|早上|习惯"},
 		{"interests", "hobby|hobbies|enjoy|enjoys|music|reading|photography|cooking|hiking|兴趣|音乐|摄影"},
 		{"work", "work|project|projects|deadline|deadlines|meeting|meetings|customer|customers|release|工作|项目|会议"},
-	} {
+	}
+	// A belief sits in the group its title is about: the first area word in
+	// the title wins, so "Uses an automation to check for replies" is tools.
+	title, _, _ := strings.Cut(words, "\n")
+	titleTokens := " " + strings.Join(strings.FieldsFunc(title, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsNumber(r) }), " ") + " "
+	best, bestAt := "", -1
+	for _, rule := range rules {
+		for _, word := range strings.Split(rule.words, "|") {
+			at := strings.Index(titleTokens, " "+word+" ")
+			if []rune(word)[0] > unicode.MaxASCII {
+				at = strings.Index(title, word)
+			}
+			if at >= 0 && (bestAt < 0 || at < bestAt) {
+				best, bestAt = rule.area, at
+			}
+		}
+	}
+	if best != "" {
+		return best
+	}
+	for _, rule := range rules {
 		if contains(rule.words) {
 			return rule.area
 		}

@@ -23,7 +23,7 @@ import {
     type AboutYouPortraitPart,
 } from '@/lib/wails-shim-app';
 import { copyTextToClipboard } from '@/components/activity-summary';
-import { ConfidenceBar } from '@/components/about-you/belief-status';
+import { ConfidenceBar, slotStatus } from '@/components/about-you/belief-status';
 import { UndoLink, answerWhen } from '@/components/about-you/new-this-week';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -95,7 +95,7 @@ function assistantName(t: TFunction<'memory'>, assistant: string) {
  * never a duration (v2.0.0 section 3). Under the "Couldn't write it yet"
  * title an unreadable answer gives only the time, so the words don't repeat.
  */
-function failureText(t: TFunction<'memory'>, language: string, failure: AboutYouPortraitFailure, titled: boolean) {
+function failureText(t: TFunction<'memory'>, language: string, failure: AboutYouPortraitFailure, titled: boolean, updating = false) {
     const assistant = assistantName(t, failure.assistant);
     const time = new Intl.DateTimeFormat(language, { hour: 'numeric', minute: '2-digit' }).format(new Date(failure.retryAt));
     switch (failure.reason) {
@@ -104,6 +104,7 @@ function failureText(t: TFunction<'memory'>, language: string, failure: AboutYou
         case 'no_ai':
             return t('aboutYou.portrait.reasons.noAI');
         case 'unusable':
+            if (updating) return t('aboutYou.portrait.reasons.unusableUpdate', { time });
             return titled ? t('aboutYou.portrait.reasons.unusableTitled', { time }) : t('aboutYou.portrait.reasons.unusable', { time });
         default:
             return t('aboutYou.portrait.reasons.noAnswer', { assistant, time });
@@ -142,11 +143,13 @@ function ConfirmRows({
     writing,
     onAnswer,
     onUndo,
+    failures = {},
 }: {
     rows: AboutYouPortraitCandidate[];
     writing: boolean;
     onAnswer: (id: string, thatsMe: boolean) => void;
     onUndo: (id: string) => void;
+    failures?: Record<string, PortraitFailure>;
 }) {
     const { t } = useTranslation('memory');
     return (
@@ -183,6 +186,7 @@ function ConfirmRows({
                                 </Button>
                             </span>
                         )}
+                        {failures[row.memoryId] && <FailedLine text={failures[row.memoryId].text} onRetry={failures[row.memoryId].retry} className="col-span-full" />}
                     </li>
                 ))}
             </ul>
@@ -192,6 +196,14 @@ function ConfirmRows({
 }
 
 /** "today", "yesterday", a weekday within the week, else a short date. */
+const WORK_WITH_ME_SOURCES = ['slack', 'discord', 'telegram', 'feishu', 'email'] as const;
+
+/** A How to work with me row names where it came from only when that's a real place (Y29). */
+export function workWithMeSource(t: TFunction<'memory'>, source?: string): string {
+    const known = WORK_WITH_ME_SOURCES.find((name) => name === source);
+    return known ? t(`aboutYou.portrait.workWithMe.fromSource.${known}`) : '';
+}
+
 function updatedWhen(language: string, at: number) {
     const start = (time: number) => new Date(new Date(time).toDateString()).getTime();
     const days = Math.round((start(Date.now()) - start(at)) / 86_400_000);
@@ -215,9 +227,9 @@ function EvidenceRows({ ids, describe }: { ids: string[]; describe: (id: string)
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11.5px] text-muted">
                             <span className={cn(
                                 'inline-flex h-5 items-center rounded-md px-2 text-[11px] font-semibold',
-                                row.status === 'confirmed' ? 'bg-success-bg text-success' : row.status === 'learned_today' ? 'bg-accent-light text-accent' : 'bg-surface-active text-muted',
+                                row.status === 'confirmed' ? 'bg-success-bg text-success' : 'bg-surface-active text-muted',
                             )}>
-                                {t(`aboutYou.status.${row.status}`)}
+                                {t(`aboutYou.status.${slotStatus(row.status)}`)}
                             </span>
                             <span className="inline-flex items-center gap-1.5">
                                 {t('aboutYou.confidence', { count: Math.max(0, Math.min(4, Math.round(row.confidence))) })}
@@ -256,25 +268,43 @@ function Phrase({
     const [confirmed, setConfirmed] = useState<string[] | null>(null);
     const ids = part.memoryIds ?? [];
     const first = ids.find((id) => describe(id));
+    // A failed answer goes back to what is true and says so here (Y15).
+    const [phraseFailed, setPhraseFailed] = useState<'confirm' | 'undo' | null>(null);
+    // That's me shows at once; it is all or nothing, so a failure undoes
+    // whatever under the phrase already saved.
     const confirm = async () => {
+        const todo = ids.filter((id) => describe(id)?.status !== 'confirmed');
+        setPhraseFailed(null);
         setConfirming(true);
+        setConfirmed(todo);
         const done: string[] = [];
         try {
-            for (const id of ids) {
-                if (describe(id)?.status !== 'confirmed') {
-                    await ConfirmMemoryEntry(id);
-                    done.push(id);
-                }
+            for (const id of todo) {
+                await ConfirmMemoryEntry(id);
+                done.push(id);
             }
+        } catch {
+            for (const id of done) await UndoConfirmMemoryEntry(id).catch(() => undefined);
+            setConfirmed(null);
+            setPhraseFailed('confirm');
         } finally {
             setConfirming(false);
-            setConfirmed(done);
         }
     };
     const undo = async () => {
         const done = confirmed ?? [];
+        setPhraseFailed(null);
         setConfirmed(null);
-        for (const id of done) await UndoConfirmMemoryEntry(id).catch(() => {});
+        const left = [...done];
+        try {
+            while (left.length > 0) {
+                await UndoConfirmMemoryEntry(left[0]);
+                left.shift();
+            }
+        } catch {
+            setConfirmed(done);
+            setPhraseFailed('undo');
+        }
     };
     const drawing = confirmed !== null ? 120 : draw;
     const solid = part.confirmed || confirmed !== null;
@@ -337,8 +367,30 @@ function Phrase({
                         </button>
                     </div>
                 )}
+                {phraseFailed && (
+                    <FailedLine
+                        text={t(phraseFailed === 'confirm' ? 'aboutYou.portrait.failed.phrase' : 'aboutYou.portrait.failed.phraseUndo')}
+                        onRetry={() => void (phraseFailed === 'confirm' ? confirm() : undo())}
+                        className="mt-2"
+                    />
+                )}
             </PopoverContent>
         </Popover>
+    );
+}
+
+type PortraitFailure = { text: string; retry: () => void; where?: 'top' | 'answer' | 'note' };
+
+/** A failed answer, in copper where it happened, with Try again (Y15). */
+export function FailedLine({ text, onRetry, className }: { text: string; onRetry: () => void; className?: string }) {
+    const { t } = useTranslation('memory');
+    return (
+        <p role="alert" className={cn('m-0 flex flex-wrap items-center gap-2 text-[12.5px] text-copper', className)}>
+            <span>{text}</span>
+            <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-[12.5px] text-accent hover:underline" onClick={onRetry}>
+                {t('aboutYou.retry')}
+            </button>
+        </p>
     );
 }
 
@@ -380,6 +432,19 @@ export function AboutYouPortraitCard({
     const [noting, setNoting] = useState(false);
     const [note, setNote] = useState('');
     const [copied, setCopied] = useState(false);
+    const [copyFailed, setCopyFailed] = useState(false);
+    // Y15: a failed answer goes back to what is true; the copper line says so.
+    const [lineFail, setLineFail] = useState<PortraitFailure | null>(null);
+    const [rowFail, setRowFail] = useState<Record<string, PortraitFailure>>({});
+    const [readFailed, setReadFailed] = useState(false);
+    const noteRef = useRef('');
+    noteRef.current = note;
+    const clearRowFail = (id: string) => setRowFail((prev) => {
+        if (!prev[id]) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+    });
     const shown = useRef<AboutYouPortrait | null>(portrait);
     const settled = useRef(false);
     const refresh = useCallback(() => setReload((value) => value + 1), []);
@@ -397,6 +462,7 @@ export function AboutYouPortraitCard({
                     && !sameVersion(before, next) && !before.rewriting && !before.confirming;
                 settled.current = true;
                 accept.current = false;
+                setReadFailed(false);
                 if (hold) {
                     setPending(next);
                     return;
@@ -406,8 +472,8 @@ export function AboutYouPortraitCard({
                 setPending((held) => (held && !sameVersion(held, next) ? held : null));
             })
             .catch(() => {
-                // The backend writes a new portrait when the saved one can't
-                // be read; the next event re-reads it.
+                // With nothing shown, say so (Y12); a shown portrait stays.
+                if (current && !shown.current) setReadFailed(true);
             });
         return () => {
             current = false;
@@ -462,6 +528,12 @@ export function AboutYouPortraitCard({
         () => [t('aboutYou.portrait.workWithMe.title'), '', ...lines.map((line) => `- ${line.text}`)].join('\n'),
         [lines, t],
     );
+    const copyWork = async () => {
+        setCopyFailed(false);
+        const ok = await Promise.resolve(copyTextToClipboard(workText)).then((done) => done !== false, () => false);
+        setCopied(ok);
+        setCopyFailed(!ok);
+    };
     useEffect(() => {
         if (!copied) return;
         const timer = setTimeout(() => setCopied(false), 1600);
@@ -489,10 +561,12 @@ export function AboutYouPortraitCard({
         setPortrait(next);
         setDrawn(draws);
         setSaid([]);
+        setLineFail(null);
         try {
             setSaid(await ConfirmAboutYouPortrait());
         } catch {
             putBack();
+            setLineFail({ where: 'answer', text: t('aboutYou.portrait.failed.didntSave'), retry: () => void thatsMe() });
         }
     };
     const putBack = () => {
@@ -505,12 +579,29 @@ export function AboutYouPortraitCard({
             setPortrait(before);
         }
     };
+    const restore = (view: AboutYouPortrait | null) => {
+        if (!view) return;
+        shown.current = view;
+        setPortrait(view);
+    };
     const undo = async () => {
         const ids = said ?? [];
+        const view = shown.current;
+        const before = beforeSaid.current;
+        setLineFail(null);
         putBack();
-        await UndoConfirmAboutYouPortrait(ids).catch(() => {});
+        try {
+            await UndoConfirmAboutYouPortrait(ids);
+        } catch {
+            beforeSaid.current = before;
+            restore(view);
+            setSaid(ids);
+            setLineFail({ where: 'answer', text: t('aboutYou.portrait.failed.undo'), retry: () => void undo() });
+        }
     };
     const showPending = async () => {
+        const view = shown.current;
+        setLineFail(null);
         if (pending) {
             shown.current = pending;
             setPortrait(pending);
@@ -518,33 +609,60 @@ export function AboutYouPortraitCard({
         }
         if (portrait?.pending) {
             accept.current = true;
-            await ShowAboutYouPortraitPending().catch(() => {});
+            try {
+                await ShowAboutYouPortraitPending();
+            } catch {
+                accept.current = false;
+                restore(view);
+                setLineFail({ where: 'top', text: t('aboutYou.portrait.failed.show'), retry: () => void showPending() });
+                return;
+            }
             pageQueryCache.invalidate(['GetAboutYouPortrait']);
             refresh();
         }
     };
     const saveNote = async () => {
+        const text = noteRef.current.trim();
+        const view = shown.current;
+        setLineFail(null);
         setNoting(false);
         if (portrait) {
             const next = { ...portrait, rewriting: true };
             shown.current = next;
             setPortrait(next);
         }
-        await NotQuiteAboutYouPortrait(note.trim()).catch(() => {});
-        setNote('');
+        try {
+            await NotQuiteAboutYouPortrait(text);
+            setNote('');
+        } catch {
+            restore(view);
+            setNoting(true);
+            setLineFail({ where: 'note', text: t('aboutYou.portrait.failed.note'), retry: () => void saveNote() });
+        }
     };
     const tryNow = async () => {
+        const view = shown.current;
+        setLineFail(null);
         if (portrait) {
             const next = { ...portrait, writing: true, failure: named ? null : portrait.failure, state: portrait.state === 'failed' ? 'writing' as const : portrait.state };
             shown.current = next;
             setPortrait(next);
         }
-        await RetryAboutYouPortrait().catch(() => {});
+        try {
+            await RetryAboutYouPortrait();
+        } catch {
+            restore(view);
+            const at = view?.failure?.retryAt ?? 0;
+            const time = at ? new Intl.DateTimeFormat(i18n.language, { hour: 'numeric', minute: '2-digit' }).format(new Date(at)) : '';
+            setLineFail({ where: 'top', text: t('aboutYou.portrait.failed.tryNow', { time }), retry: () => void tryNow() });
+        }
     };
     // A row answers at once on the card; That's me shows "Writing with what
     // you confirmed" until the rewrite lands, and that version applies at once.
     const answer = async (id: string, thatsMe: boolean) => {
         const row = rows.find((candidate) => candidate.memoryId === id);
+        const view = shown.current;
+        clearRowFail(id);
         if (row) answeredRows.current.set(id, row);
         setRowAnswers((prev) => ({ ...prev, [id]: thatsMe ? 'confirmed' : 'noted' }));
         if (portrait && thatsMe) {
@@ -552,12 +670,31 @@ export function AboutYouPortraitCard({
             shown.current = next;
             setPortrait(next);
         }
-        await AnswerAboutYouPortraitBelief(id, thatsMe).catch(() => {});
+        try {
+            await AnswerAboutYouPortraitBelief(id, thatsMe);
+        } catch {
+            answeredRows.current.delete(id);
+            setRowAnswers((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            });
+            if (thatsMe) restore(view);
+            setRowFail((prev) => ({ ...prev, [id]: { text: t('aboutYou.portrait.failed.didntSave'), retry: () => void answer(id, thatsMe) } }));
+        }
     };
     const undoRow = async (id: string) => {
-        const thatsMe = rowAnswers[id] === 'confirmed';
+        const previous = rowAnswers[id];
+        const thatsMe = previous === 'confirmed';
+        clearRowFail(id);
         setRowAnswers((prev) => ({ ...prev, [id]: '' }));
-        await UndoAboutYouPortraitBelief(id, thatsMe).catch(() => {});
+        try {
+            await UndoAboutYouPortraitBelief(id, thatsMe);
+        } catch {
+            setRowAnswers((prev) => ({ ...prev, [id]: previous }));
+            setRowFail((prev) => ({ ...prev, [id]: { text: t('aboutYou.portrait.failed.rowUndo'), retry: () => void undoRow(id) } }));
+            return;
+        }
         pageQueryCache.invalidate(['GetAboutYouPortrait']);
         refresh();
     };
@@ -649,15 +786,12 @@ export function AboutYouPortraitCard({
                         {t('aboutYou.portrait.learningLine', { count: Math.max(1, progress?.moreDays ?? 1) })}
                     </p>
                     {progress && (
-                        <div className="mt-3.5 grid max-w-[360px] gap-1.5 text-[12px] text-subtle">
-                            <div className="h-1.5 overflow-hidden rounded-[3px] bg-surface-active">
-                                <i
-                                    data-testid="portrait-progress"
-                                    className="block h-full w-full origin-left rounded-[3px] bg-accent"
-                                    style={{ transform: `scaleX(${Math.min(1, Math.min(progress.beliefs / Math.max(1, progress.beliefsNeeded), progress.days / Math.max(1, progress.daysNeeded)))})` }}
-                                />
-                            </div>
-                            <span>{t('aboutYou.portrait.learningBar', { ...progress })}</span>
+                        <div aria-hidden="true" className="mt-3.5 h-1.5 max-w-[360px] overflow-hidden rounded-[3px] bg-surface-active">
+                            <i
+                                data-testid="portrait-progress"
+                                className="block h-full w-full origin-left rounded-[3px] bg-accent"
+                                style={{ transform: `scaleX(${Math.min(1, progress.days / Math.max(1, progress.daysNeeded))})` }}
+                            />
                         </div>
                     )}
                 </div>
@@ -682,7 +816,7 @@ export function AboutYouPortraitCard({
             body = (
                 <div>
                     <p className="m-0 mt-2.5 max-w-[58ch] text-[14.5px] leading-[1.55] text-muted">
-                        {portrait!.failure ? failureText(t, i18n.language, portrait!.failure, true) : null}
+                        {portrait!.failure && lineFail?.where !== 'top' ? failureText(t, i18n.language, portrait!.failure, true) : null}
                     </p>
                     {portrait!.failure && (
                         <div className="mt-3.5 empty:hidden">
@@ -698,7 +832,7 @@ export function AboutYouPortraitCard({
             body = (
                 <>
                     <p className="m-0 mt-3 max-w-[58ch] text-[14.5px] leading-[1.55] text-muted" data-testid="portrait-shape-line">{t('aboutYou.portrait.shapeLine')}</p>
-                    {rows.length > 0 && <ConfirmRows rows={rows} writing={portrait!.confirming} onAnswer={(id, thatsMe) => void answer(id, thatsMe)} onUndo={(id) => void undoRow(id)} />}
+                    {rows.length > 0 && <ConfirmRows rows={rows} writing={portrait!.confirming} onAnswer={(id, thatsMe) => void answer(id, thatsMe)} onUndo={(id) => void undoRow(id)} failures={rowFail} />}
                     {portrait!.lately && (
                         <div className="mt-4 grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-2.5 border-t border-border-divider pt-3.5 max-[560px]:grid-cols-1 max-[560px]:gap-1">
                             <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-accent">{t('aboutYou.portrait.lately')}</span>
@@ -758,13 +892,14 @@ export function AboutYouPortraitCard({
                             />
                             <div className="mt-2 flex gap-1.5">
                                 <Button size="sm" className={pill} onClick={() => void saveNote()}>{t('aboutYou.portrait.save')}</Button>
-                                <Button size="sm" variant="outline" className={pill} onClick={() => { setNoting(false); setNote(''); }}>{t('aboutYou.portrait.cancel')}</Button>
+                                <Button size="sm" variant="outline" className={pill} onClick={() => { setNoting(false); setNote(''); setLineFail(null); }}>{t('aboutYou.portrait.cancel')}</Button>
                             </div>
+                            {lineFail?.where === 'note' && <FailedLine text={lineFail.text} onRetry={lineFail.retry} className="mt-2" />}
                         </div>
                     ) : (
                         <div className="mt-3.5 flex min-h-7 flex-wrap items-center gap-1.5">
                             {portrait!.rewriting ? (
-                                <span className="text-[12.5px] text-copper">{t('aboutYou.portrait.rewriting')}</span>
+                                <span className="text-[12.5px] text-muted">{t('aboutYou.portrait.rewriting')}</span>
                             ) : said ? (
                                 <span className="answer-line inline-flex items-center gap-1.5 text-[12.5px] text-success">
                                     <Check className="h-3.5 w-3.5" aria-hidden="true" />
@@ -789,13 +924,11 @@ export function AboutYouPortraitCard({
                                 </>
                             )}
                             <span className="ml-auto text-[11.5px] text-muted">
-                                {t('aboutYou.portrait.meta', {
-                                    beliefs: t('aboutYou.portrait.beliefs', { count: portrait!.beliefCount }),
-                                    when: updatedWhen(i18n.language, portrait!.generatedAt),
-                                })}
+                                {t('aboutYou.portrait.meta', { when: updatedWhen(i18n.language, portrait!.generatedAt) })}
                             </span>
                         </div>
                     )}
+                    {lineFail?.where === 'answer' && !noting && <FailedLine text={lineFail.text} onRetry={lineFail.retry} className="mt-1.5" />}
                     {said && !noting && (
                         <p className="answer-line m-0 mt-1.5 text-[12.5px] text-muted" data-testid="portrait-keeps">{t('aboutYou.portrait.keeps')}</p>
                     )}
@@ -816,7 +949,8 @@ export function AboutYouPortraitCard({
     return (
         <div className="flex flex-col gap-4">
             <section aria-labelledby="about-you-portrait" data-state={portrait?.state ?? 'withdrawn'} className="rounded-2xl border border-border bg-panel px-[26px] pt-[22px] pb-[18px] max-[560px]:p-4">
-                {ready && (pending || portrait?.pending) && (
+                {lineFail?.where === 'top' && <FailedLine text={lineFail.text} onRetry={lineFail.retry} className="mb-3" />}
+                {ready && lineFail?.where !== 'top' && (pending || portrait?.pending) && (
                     <div role="status" className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
                         <span>{t('aboutYou.portrait.newVersion')}</span>
                         <button
@@ -828,9 +962,9 @@ export function AboutYouPortraitCard({
                         </button>
                     </div>
                 )}
-                {named && portrait?.failure && !portrait.rewriting && (
+                {named && portrait?.failure && !portrait.rewriting && lineFail?.where !== 'top' && (
                     <div role="status" className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] text-copper">
-                        <span>{failureText(t, i18n.language, portrait.failure, false)}</span>
+                        <span>{failureText(t, i18n.language, portrait.failure, false, true)}</span>
                         <FailureAction failure={portrait.failure} onTryNow={() => void tryNow()} link />
                     </div>
                 )}
@@ -842,7 +976,7 @@ export function AboutYouPortraitCard({
                     </div>
                     {whyName}
                 </div>
-                {body}
+                {!portrait && readFailed ? <FailedLine text={t('aboutYou.portrait.failed.open')} onRetry={refresh} className="mt-2.5" /> : body}
             </section>
             {named && !working && lines.length > 0 && (
                 <section aria-labelledby="about-you-work-with-me" className="rounded-2xl border border-border bg-panel px-[26px] py-[18px] max-[560px]:p-4">
@@ -853,14 +987,12 @@ export function AboutYouPortraitCard({
                             size="sm"
                             variant="outline"
                             className={cn(pill, 'ml-auto text-ink')}
-                            onClick={() => {
-                                void copyTextToClipboard(workText);
-                                setCopied(true);
-                            }}
+                            onClick={() => void copyWork()}
                         >
                             {copied ? t('aboutYou.portrait.workWithMe.copied') : t('aboutYou.portrait.workWithMe.copy')}
                         </Button>
                     </div>
+                    {copyFailed && <FailedLine className="mt-2" text={t('aboutYou.portrait.workWithMe.copyFailed')} onRetry={() => void copyWork()} />}
                     <ul className="m-0 mt-3 list-none p-0">
                         {lines.map((line, index) => (
                             <li key={index} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-t border-border-divider py-[9px] text-[14px] leading-[1.5] text-ink max-[560px]:grid-cols-1 max-[560px]:gap-0.5">
@@ -868,7 +1000,7 @@ export function AboutYouPortraitCard({
                                 <span className="whitespace-nowrap text-[11.5px] text-muted">
                                     {line.confirmed
                                         ? t('aboutYou.portrait.workWithMe.confirmed')
-                                        : t('aboutYou.portrait.workWithMe.from', { group: t(`aboutYou.portrait.groups.${line.area || 'other'}` as 'aboutYou.portrait.groups.work') })}
+                                        : workWithMeSource(t, line.source)}
                                 </span>
                             </li>
                         ))}

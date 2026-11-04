@@ -31,6 +31,10 @@ func TestMemoryAreaClassifier(t *testing.T) {
 		{"我喜欢摄影。", "user_insight", "interests"},
 		{"我每天记录健康状况。", "user_insight", "other"},
 		{"I like terminals.", "custom", "other"}, // Unknown words never borrow source metadata.
+		// About you v1.0.1 Y33: the title's subject decides the group.
+		{"Uses a scheduled automation to check daily for replies\nRuns at 9 AM.", "user_insight", "tools"},
+		{"Keeps the backup hub read-only\nReplies about it go to Maya.", "user_insight", "tools"},
+		{"Replies to Maya Okafor in two sentences", "user_insight", "communication"},
 	} {
 		t.Run(tc.belief, func(t *testing.T) {
 			if got := classifyMemoryArea(tc.belief, tc.kind); got != tc.want {

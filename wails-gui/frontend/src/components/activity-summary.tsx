@@ -27,14 +27,18 @@ export function cleanSummaryText(summary: string): string {
  *  Finder the child process inherits no LANG/LC_CTYPE, so UTF-8 bytes get
  *  written to NSPasteboard as MacRoman — Chinese pastes as mojibake. The
  *  bridge is preferred; pbcopy is the non-darwin fallback. */
-export async function copyTextToClipboard(text: string): Promise<void> {
+/** Resolves false when neither clipboard path took the text. */
+export async function copyTextToClipboard(text: string): Promise<boolean> {
     try {
         await NativeClipboardSetText(text);
-        return;
+        return true;
     } catch { /* fall through to pbcopy path */ }
     try {
         await ClipboardSetText(text);
-    } catch { /* ignore */ }
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /** The digest's first sentence as plain one-line text, for the Week view's

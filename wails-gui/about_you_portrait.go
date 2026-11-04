@@ -65,6 +65,7 @@ type portraitInput struct {
 	MemoryID     string                `json:"memoryId"`
 	Digest       string                `json:"digest"`
 	Area         string                `json:"area,omitempty"`
+	Source       string                `json:"source,omitempty"`
 	Confirmed    bool                  `json:"confirmed,omitempty"`
 	NotQuite     bool                  `json:"notQuite,omitempty"`
 	Days         []string              `json:"days,omitempty"`
@@ -196,7 +197,10 @@ type AboutYouPortraitLine struct {
 	Text      string   `json:"text"`
 	MemoryIDs []string `json:"memoryIds"`
 	Area      string   `json:"area"`
-	Confirmed bool     `json:"confirmed"`
+	// Source is the one real place every belief under the line came from
+	// ("slack"); empty when there isn't one, and then the row has no label.
+	Source    string `json:"source,omitempty"`
+	Confirmed bool   `json:"confirmed"`
 }
 
 type AboutYouPortraitLately struct {
@@ -999,9 +1003,18 @@ func (s *AboutYouPortraitService) project(doc *portraitDocument, live map[string
 	for _, line := range doc.WorkWithMe {
 		out := AboutYouPortraitLine{Text: pii.DisplayText(line.Text), MemoryIDs: append([]string{}, line.IDs...)}
 		areas := map[string]float64{}
+		sources := map[string]bool{}
 		for _, id := range line.IDs {
 			out.Confirmed = out.Confirmed || live[id].Confirmed
 			areas[memoryAreaOrOther(live[id].Area)]++
+			sources[strings.ToLower(live[id].Source)] = true
+		}
+		if len(sources) == 1 {
+			for source := range sources {
+				if portraitRealSources[source] {
+					out.Source = source
+				}
+			}
 		}
 		if top := portraitTopAreas(areas, 1); len(top) > 0 {
 			out.Area = top[0]
@@ -1103,7 +1116,7 @@ func (s *AboutYouPortraitService) portraitSources(entries []MemoryEntry) []portr
 	sources := make([]portraitSource, 0, len(entries))
 	for _, entry := range entries {
 		fm := parseMemoryFrontmatter(entry.Content)
-		source := portraitSource{ID: entry.ID, Title: entry.Title, Points: parseMemoryPoints(entry.Content), Area: entry.Area, Confirmed: portraitConfirmed(entry), NotQuite: portraitNotQuite(entry), FirstLearnedAt: entry.UpdatedAt, SentMessageCount: fm.SentMessageCount, Digest: portraitDigest(entry)}
+		source := portraitSource{ID: entry.ID, Title: entry.Title, Points: parseMemoryPoints(entry.Content), Area: entry.Area, Source: entry.Source, Confirmed: portraitConfirmed(entry), NotQuite: portraitNotQuite(entry), FirstLearnedAt: entry.UpdatedAt, SentMessageCount: fm.SentMessageCount, Digest: portraitDigest(entry)}
 		if source.FirstLearnedAt == 0 {
 			source.FirstLearnedAt = entry.ModTime
 		}
@@ -1153,9 +1166,13 @@ func portraitImportedObservations(entry MemoryEntry) []portraitObservation {
 	return out
 }
 
+// portraitRealSources are the places a How to work with me row can name
+// (about-you v1.0.1 Y29); activity, manual and user_edit aren't one.
+var portraitRealSources = map[string]bool{"slack": true, "discord": true, "telegram": true, "feishu": true, "email": true}
+
 func portraitInputOf(source portraitSource) portraitInput {
 	private := memoryAreaOrOther(source.Area) == "people" || portraitSensitiveTopic(source.text())
-	return portraitInput{MemoryID: source.ID, Digest: source.Digest, Area: memoryAreaOrOther(source.Area), Confirmed: source.Confirmed, NotQuite: source.NotQuite, Observations: source.observations(), Private: private}
+	return portraitInput{MemoryID: source.ID, Digest: source.Digest, Area: memoryAreaOrOther(source.Area), Source: source.Source, Confirmed: source.Confirmed, NotQuite: source.NotQuite, Observations: source.observations(), Private: private}
 }
 
 // check is one pass of the scheduler: pass 1 always, pass 2 when a write is

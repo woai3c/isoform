@@ -1,6 +1,5 @@
 {
     "title": "记忆",
-    "writePlaceholder": "# 记忆标题\n\n在这里写下你的记忆……",
     "header": {
         "showSidebar": "显示侧边栏",
         "hideSidebar": "隐藏侧边栏",
@@ -12,7 +11,6 @@
         "exit": "退出",
         "edit": "编辑",
         "editMemory": "编辑记忆",
-        "newMemory": "新建记忆",
         "save": "保存",
         "saving": "保存中……",
         "translate": "翻译",
@@ -24,7 +22,7 @@
         "viewHistory": "查看版本历史",
         "importFromAi": "从 AI 工具导入",
         "reindex": "重新索引记忆文件",
-        "newFile": "新建记忆文件",
+        "newFile": "添加一条关于你的说明",
         "dreamTooltip": "打开记忆梦境 — 每晚记忆整理"
     },
     "sidebar": {
@@ -35,10 +33,10 @@
         "groupLabel": "分组",
         "groupByDimension": "类型",
         "groupByDate": "日期",
-        "searching": "搜索中……",
         "noResults": "未找到结果",
         "noFilesYet": "暂无记忆",
-        "noFilesMatch": "没有匹配的记忆",
+        "noFilesMatch": "没有匹配的内容。",
+        "nothingMatches": "没有与“{{query}}”匹配的内容。",
         "filterKind": "按类型筛选",
         "allKinds": "全部类型"
     },
@@ -64,7 +62,6 @@
         "agentic_memory": "AI",
         "custom": "自定义"
     },
-    "newTemplate": "# 新建记忆\n\n",
     "relativeTime": {
         "today": "今天",
         "yesterday": "昨天",
@@ -90,14 +87,6 @@
         "noChanges": "无变化——该快照与当前版本一致。"
     },
     "toasts": {
-        "saved": {
-            "title": "记忆已保存",
-            "body": "已保存为用户编辑。你的修改优先于观察到的记忆。"
-        },
-        "translated": {
-            "title": "记忆已翻译",
-            "body": "替换当前条目前已保存快照。"
-        },
         "translateFailed": {
             "title": "翻译失败"
         },
@@ -108,10 +97,6 @@
         "globalTranslated": {
             "title": "记忆已翻译",
             "body": "已将 {{translated}} / {{total}} 条记忆翻译为 {{target}}。失败：{{failed}}。"
-        },
-        "saveFailed": {
-            "title": "无法保存记忆",
-            "body": "你的修改仍然保留在这里，请重试保存。"
         }
     },
     "globalTranslate": {
@@ -137,15 +122,19 @@
             "currentEntries": {
                 "label_one": "所有当前条目（{{count}}）",
                 "label_other": "所有当前条目（{{count}}）",
-                "description": "翻译每一条当前记忆；替换前会为每条记忆保留快照。"
+                "description": "翻译每一条认识，每条都会保留之前的版本。"
             }
+        },
+        "result": {
+            "done": "已翻译为{{target}}。",
+            "failed": "有些没能翻译。"
         }
     },
     "rejectAttribution": {
-        "buttonTitle": "搞错主体了 —— 这不是我",
+        "buttonTitle": "搞错主体了",
         "buttonAria": "标记「{{title}}」为主体归属错误",
         "title": "搞错主体了？",
-        "description": "更正“{{title}}”的归属，或先查看移除范围再确认。拒绝使用相同的忘记范围及临时防止重新学习的保护机制。拒绝原因不会保存。",
+        "description": "告诉 Isoform“{{title}}”真正说的是谁，或者忘记它。你的理由不会被保存。",
         "reasonLabel": "原因",
         "presets": {
             "reassignToContact": "记忆本身是真的,但 Isoform 搞错主体了 —— 让我选真正说这句话的人。",
@@ -157,14 +146,13 @@
         },
         "reassignPickerLabel": "实际上是谁说的?",
         "reassignSubmit": "重新归属",
-        "reassignSuccessToast": "已收到 —— 记忆已重新归属到 {{name}}。",
         "customLabel": "原因",
         "customPlaceholder": "说明这条记忆错在哪里...",
         "additionalLabel": "补充说明(可选)",
         "additionalPlaceholder": "添加此次更正的相关说明…",
         "cancel": "取消",
         "submit": "查看移除范围",
-        "errorToast": "无法拒绝该记忆:{{error}}"
+        "reassignFailed": "没能归到 {{name}} 名下，没有任何改动。"
     },
     "summary": {
         "totalFiles": "文件总数",
@@ -177,32 +165,6 @@
         "recent": "最近",
         "new": "新建",
         "jumpToActivitySession": "跳转到活动会话"
-    },
-    "empty": {
-        "title": "暂无记忆",
-        "intro": "记忆是你自己创建并编辑的个人笔记。与自动提取的知识不同，记忆里的内容完全由你掌控。",
-        "examples": {
-            "preferences": {
-                "label": "偏好",
-                "desc": "沟通风格、代码规范以及工作流习惯"
-            },
-            "projectContext": {
-                "label": "项目背景",
-                "desc": "目标、约束、团队结构和截止日期"
-            },
-            "instructions": {
-                "label": "指令",
-                "desc": "Isoform 在后续会话中需要遵守的固定规则"
-            },
-            "referenceNotes": {
-                "label": "参考笔记",
-                "desc": "URL、凭证位置、环境信息"
-            }
-        },
-        "vectorSearchActive": "向量搜索：已启用",
-        "vectorSearchInactive": "向量搜索：未启用",
-        "modelLabel": "模型：{{model}}",
-        "createFirst": "创建你的第一条记忆"
     },
     "sources": {
         "activity": "活动",
@@ -356,15 +318,13 @@
         "confirm": "确认更正",
         "correcting": "正在更正…",
         "previewFailed": "无法加载更正预览。尚未更改任何内容，请重试。",
-        "failed": "无法完成更正，或移除列表已变化。请刷新并查看预览后再试。",
-        "successTitle": "已更正记忆归属"
+        "failed": "无法完成更正，或移除列表已变化。请刷新并查看预览后再试。"
     },
     "forget": {
         "action": "忘记这条",
         "itemAction": "忘记“{{title}}”",
-        "title": "忘记这条记忆？",
-        "description": "确认前，请查看将为“{{title}}”移除的内容。",
-        "loading": "正在检查这条记忆及其衍生条目…",
+        "title": "忘记这一条？",
+        "description": "{{title}}",
         "removes": "将永久移除",
         "kinds": {
             "memory": "记忆",
@@ -387,8 +347,6 @@
         "previewFailed": "无法加载移除预览。尚未忘记任何内容，请重试。",
         "forgetFailed": "无法完成忘记操作，或移除列表已变化。请刷新并查看预览后再试。",
         "refresh": "刷新预览",
-        "successTitle": "已忘记该记忆",
-        "successBody": "已移除 {{records}}、{{embeddings}}和 {{versions}}。将在 {{days}} 天内阻止匹配的再次观察。原始活动和对话、无关日志以及外部备份仍然保留。",
         "recordCount_one": "{{count}} 条记录",
         "recordCount_other": "{{count}} 条记录",
         "embeddingCount_one": "{{count}} 个搜索向量",
@@ -410,9 +368,12 @@
             "hypothesis": "假设记录",
             "entry": "衍生条目"
         },
-        "matchingProtection": "忘记操作可离线完成，使用本地事实哈希进行匹配。AI 匹配可用时，还能帮助识别换一种说法的事实。"
+        "matchingProtection": "忘记操作可离线完成，使用本地事实哈希进行匹配。AI 匹配可用时，还能帮助识别换一种说法的事实。",
+        "bodyRemoves": "Isoform 会删除这条认识、它的历史版本，以及由它推出的内容。",
+        "bodyDays": "{{days}} 天内，Isoform 不会再学到它。",
+        "bodyStays": "你的活动记录和聊天会保留。"
     },
-    "searchPlaceholder": "搜索记忆内容……",
+    "searchPlaceholder": "搜索 Isoform 对你的认识",
     "row": {
         "empty": "暂无记忆内容",
         "learned": "{{when}}学到",
@@ -447,7 +408,7 @@
         "dateUnknown": "日期不可用",
         "dayBeforeYesterday": "前天",
         "lastTwoDays": "在过去两天的工作中",
-        "since": "自{{when}}以来的工作中",
+        "since": "来自你最近 {{count}} 天的工作",
         "yourWork": "从你的工作中",
         "provenanceApps": "{{range}}了解到，主要来自 {{apps}}。",
         "provenance": "{{range}}了解到。",
@@ -517,7 +478,7 @@
             "confirmed_one": "你已确认 {{count}} 条。",
             "confirmed_other": "你已确认 {{count}} 条。",
             "noneConfirmed": "你还没有确认任何一条。",
-            "local": "保存在这台电脑上。你可以更正或忘记其中任何一条。",
+            "local": "存储在你的电脑上。你可以更正或忘记其中任何一条。",
             "empty": "Isoform 会把对你的了解写在这里。第一批今晚就有。"
         },
         "span": {
@@ -583,7 +544,7 @@
             "notQuite": "不太对",
             "saidThatsYou": "你说这就是你",
             "undo": "撤销",
-            "meta": "依据 {{beliefs}} · {{when}}更新",
+            "meta": "{{when}}更新",
             "beliefs_one": "{{count}} 条认识",
             "beliefs_other": "{{count}} 条认识",
             "notQuiteLabel": "哪里不对？也可以不填。",
@@ -596,7 +557,7 @@
             "showIt": "显示",
             "forgotten": "有一句依据的是你忘记的内容，已删除。Isoform 正在围绕其余内容重写。",
             "evidenceTitle": "Isoform 为什么这样说",
-            "quote": "“{{text}}”",
+            "quote": "{{text}}",
             "seen_one": "在 {{days}}里出现 1 次",
             "seen_other": "在 {{days}}里出现 {{count}} 次",
             "days_one": "{{count}} 天",
@@ -605,10 +566,9 @@
             "appSeparator": "、",
             "latelyFacts": "本月每周 {{thisMonth}} 次 · 平时 {{usual}} 次",
             "showInBeliefs": "在「认识」中查看",
-            "learning": "快好了",
-            "learningLine_one": "Isoform 看到足够多你的工作和生活后就会写，大约还要 {{count}} 天。",
-            "learningLine_other": "Isoform 看到足够多你的工作和生活后就会写，大约还要 {{count}} 天。",
-            "learningBar": "已有 {{beliefs}} 条认识，共需 {{beliefsNeeded}} 条 · 已过 {{days}} 天，共需 {{daysNeeded}} 天",
+            "learning": "还在了解你",
+            "learningLine_one": "再有大约 {{count}} 天你的工作，Isoform 就会写出你的画像。",
+            "learningLine_other": "再有大约 {{count}} 天你的工作，Isoform 就会写出你的画像。",
             "writingTitle": "正在写你的画像",
             "writingLine": "{{assistant}} 正在写，大约一分钟。写好后会通知你。",
             "failedTitle": "暂时还写不了",
@@ -617,7 +577,8 @@
                 "noAI": "登录 Claude Code 或 Codex 后，Isoform 会马上开始写。",
                 "noAnswer": "{{assistant}} 没有回应。Isoform 会在 {{time}} 再试。",
                 "unusable": "暂时还写不了。Isoform 会在 {{time}} 再试。",
-                "unusableTitled": "Isoform 会在 {{time}} 再试。"
+                "unusableTitled": "Isoform 会在 {{time}} 再试。",
+                "unusableUpdate": "暂时还没能更新。Isoform 会在 {{time}} 再试。"
             },
             "signIn": "登录",
             "shapeLine": "Isoform 已经勾勒出你的轮廓。要把它写成文字，还需要多一点依据：确认下面几条，或者再给它几天。",
@@ -638,8 +599,15 @@
                 "sub": "写给和你共事的人。在你复制之前，只有你能看到。",
                 "copy": "复制",
                 "copied": "已复制",
-                "from": "来自{{group}}",
-                "confirmed": "你已确认"
+                "copyFailed": "没能复制。",
+                "confirmed": "你已确认",
+                "fromSource": {
+                    "slack": "来自你的 Slack 消息",
+                    "discord": "来自你的 Discord 消息",
+                    "telegram": "来自你的 Telegram 消息",
+                    "feishu": "来自你的飞书消息",
+                    "email": "来自你的邮件"
+                }
             },
             "saidThatsYouWhen": "你{{when}}说这就是你",
             "keeps": "Isoform 会保留这一版。有新版本时，会先等你来看。",
@@ -654,6 +622,17 @@
                 "today": "今天",
                 "yesterday": "昨天",
                 "date": "在 {{date}}"
+            },
+            "failed": {
+                "phrase": "没能保存，这部分仍是推断。",
+                "phraseUndo": "撤销没能保存，仍为已确认。",
+                "undo": "撤销没能保存，画像仍是你确认过的样子。",
+                "note": "你的说明没能保存，内容还在这里。",
+                "tryNow": "现在没能开始。Isoform 仍会在 {{time}} 再试。",
+                "didntSave": "没能保存。",
+                "rowUndo": "撤销没能保存。",
+                "show": "没能打开新版，先保留这一版。",
+                "open": "没能打开你的画像。"
             }
         },
         "goals": {
@@ -661,27 +640,30 @@
             "add": "添加目标",
             "tracking": "进行中",
             "waiting": "在等别人",
-            "done": "已完成（{{count}}）",
-            "held": "只在这台电脑上（{{count}}）",
-            "empty": "还没有目标。告诉 Isoform 你在推进什么，它会在这里跟进。",
-            "createPrompt": "我想设定一个新目标：",
+            "done": "已完成",
+            "held": "只在这台电脑上",
             "loadFailed": "Isoform 无法读取你的目标。",
             "retry": "重试",
             "loading": "正在读取你的目标",
-            "detailLabel": "目标"
+            "detailLabel": "目标",
+            "addedToday": "你今天添加的。",
+            "moveFailed": "Isoform 没能更改这个目标。",
+            "addField": {
+                "label": "你在为什么努力？",
+                "placeholder": "例如：三月跑一个半马",
+                "add": "添加",
+                "cancel": "取消",
+                "failed": "你的目标没能保存，内容还在这里。"
+            }
         },
         "review": {
             "title": "本周新认识",
-            "left_one": "{{count}} 条待确认",
-            "left_other": "{{count}} 条待确认",
-            "allChecked": "已全部确认",
-            "quote": "“{{text}}”",
+            "quote": "{{text}}",
             "seen_one": "出现过 1 次",
             "seen_other": "出现过 {{count}} 次",
             "where": "{{seen}} · {{apps}}",
             "communicationWhere": "{{area}} · {{evidence}}",
             "confirm": "说得对",
-            "confirming": "正在确认……",
             "notQuite": "不太对",
             "forget": "忘记",
             "undo": "撤销",
@@ -691,7 +673,7 @@
             "forgetPending_other": "{{count}} 秒后忘记。",
             "forgotten_one": "已忘记。{{count}} 天内 Isoform 不会再学到它。",
             "forgotten_other": "已忘记。{{count}} 天内 Isoform 不会再学到它。",
-            "confirmFailed": "无法确认，请重试。",
+            "confirmFailed": "没能保存。",
             "forgetFailed": "无法忘记这一条，尚未移除任何内容。",
             "corrected": "已更正。Isoform 会采用你的措辞。",
             "portraitConfirmed": "已确认。你的画像现在可以用上这一条。",
@@ -699,7 +681,9 @@
             "save": "保存",
             "cancel": "取消",
             "stoppedUsing": "Isoform 不再用这一条了。",
-            "answerFailed": "没能保存，请重试。"
+            "answerFailed": "没能保存，请重试。",
+            "wordsFailed": "你的话没能保存，内容还在这里。",
+            "undoFailed": "撤销没能保存。"
         },
         "detail": {
             "label": "认识详情",
@@ -713,11 +697,14 @@
             "usesFailed": "无法加载 Isoform 在哪里用到它。",
             "openSession": "在活动中打开学到这一条的地方",
             "confirmedWhen": "你{{when}}确认了这一条。",
-            "notQuiteWhen": "你{{when}}说不太对，Isoform 没有在用它。"
+            "notQuiteWhen": "你{{when}}说不太对，Isoform 没有在用它。",
+            "saveFailed": "你的修改没能保存，内容还在这里。",
+            "translateFailed": "没能翻译，没有任何改动。"
         },
         "evidence": {
-            "seen": "{{when}}在 {{app}} 中出现",
-            "withDuration": "{{seen}} · {{duration}}"
+            "seen": "{{when}}看到",
+            "withDuration": "{{seen}} · {{duration}}",
+            "from": "来自你的 {{app}}：{{text}}"
         },
         "uses": {
             "chat_one": "在聊天的回答中用到 1 次",
@@ -744,15 +731,22 @@
             "chunks_one": "已索引 {{count}} 个片段",
             "chunks_other": "已索引 {{count}} 个片段",
             "vectorActive": "向量搜索已启用",
-            "vectorInactive": "向量搜索未启用"
+            "vectorInactive": "向量搜索未启用",
+            "model": "模型：{{model}}"
         },
         "aboutFailed": "无法加载本周新认识和 Isoform 的把握程度。",
         "firstDay": {
             "line_one": "来自你 {{history}}的 {{count}} 条认识。你还没有确认任何一条。",
             "line_other": "来自你 {{history}}的 {{count}} 条认识。你还没有确认任何一条。",
+            "lineWithLocal": "{{line}}{{local}}",
             "checkFirst": "先确认这几条",
-            "checkFirstHint": "最先要确认的三条",
+            "checkFirstHint": "来自你的 {{history}}",
             "source": "{{assistant}}，{{date}}"
         }
+    },
+    "newNote": {
+        "title": "添加一条关于你的说明",
+        "line": "你写在这里的内容，Isoform 会优先于它学到的内容。",
+        "placeholder": "例如：我的邮件一般不超过三句话。"
     }
 }

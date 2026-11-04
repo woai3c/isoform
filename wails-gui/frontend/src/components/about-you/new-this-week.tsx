@@ -18,20 +18,20 @@ import { memoryPoints } from '@/lib/memory-content';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { activeInterval } from '@/lib/app-activity';
+import { slotStatus } from '@/components/about-you/belief-status';
 
 /** How long a one-click Forget waits for Undo before it runs. */
 export const FORGET_UNDO_MS = 10_000;
 
 export type ReviewResult =
-    | { kind: 'confirming' }
     | { kind: 'confirmFailed' }
     /** wasNotQuite: That's me on a Not quite belief; Undo puts Not quite back. */
-    | { kind: 'confirmed'; wasNotQuite?: boolean }
+    | { kind: 'confirmed'; wasNotQuite?: boolean; undoFailed?: boolean }
     | { kind: 'asking' }
     | { kind: 'saving' }
     | { kind: 'answerFailed' }
-    | { kind: 'corrected'; wording: string }
-    | { kind: 'notQuite'; confirmedAt: number }
+    | { kind: 'corrected'; wording: string; undoFailed?: boolean }
+    | { kind: 'notQuite'; confirmedAt: number; undoFailed?: boolean }
     | { kind: 'pending'; until: number }
     | { kind: 'forgetting' }
     | { kind: 'forgotten'; days: number }
@@ -93,11 +93,10 @@ export function useBeliefReview({
     }, []);
 
     const confirm = useCallback(async (id: string, wasNotQuite = false) => {
-        set(id, { kind: 'confirming' });
+        // The answer shows at once (Y27); a failure brings the buttons back.
+        set(id, { kind: 'confirmed', wasNotQuite });
         try {
-            const saved = await ConfirmMemoryEntry(id);
-            set(id, { kind: 'confirmed', wasNotQuite });
-            onConfirmed(saved);
+            onConfirmed(await ConfirmMemoryEntry(id));
         } catch {
             set(id, { kind: 'confirmFailed' });
         }
@@ -181,7 +180,8 @@ export function useBeliefReview({
             clear(id);
             onChanged();
         } catch {
-            set(id, { kind: 'answerFailed' });
+            // The answer stays, and says Undo didn't save (Y15).
+            if (result.kind === 'confirmed' || result.kind === 'notQuite' || result.kind === 'corrected') set(id, { ...result, undoFailed: true });
         }
     }, [cancel, clear, onChanged, onConfirmed, results, set]);
 
@@ -211,7 +211,7 @@ export type BeliefReview = ReturnType<typeof useBeliefReview>;
 
 /** Whether a belief's buttons show: nothing answered yet, or it failed. */
 export function reviewOpen(result: ReviewResult | undefined) {
-    return !result || result.kind === 'confirming' || result.kind === 'confirmFailed';
+    return !result || result.kind === 'confirmFailed';
 }
 
 /** The chip an answer leaves: Confirmed, Not quite, else the belief's own. */
@@ -237,8 +237,9 @@ export function answerWhen(t: TFunction<'memory'>, language: string, at: number)
 }
 
 /** Inferred, Learned today, Confirmed or Not quite (outlined, muted). */
-export function BeliefChip({ status, className }: { status: AboutYouBelief['status']; className?: string }) {
+export function BeliefChip({ status: given, className }: { status: AboutYouBelief['status']; className?: string }) {
     const { t } = useTranslation('memory');
+    const status = slotStatus(given);
     return (
         <span
             data-status={status}
@@ -276,6 +277,7 @@ export function NotQuiteField({ item, review }: { item: ReviewItem; review: Beli
     const fieldId = useId();
     const [words, setWords] = useState('');
     const saving = review.results[item.id]?.kind === 'saving';
+    const failed = review.results[item.id]?.kind === 'answerFailed';
     const save = () => void review.answerNotQuite(item.id, words);
     return (
         <div className="rounded-[10px] bg-panel-warm p-3">
@@ -305,6 +307,12 @@ export function NotQuiteField({ item, review }: { item: ReviewItem; review: Beli
                 <Button size="sm" disabled={saving} aria-busy={saving} onClick={save}>{t('aboutYou.review.save')}</Button>
                 <Button size="sm" variant="outline" disabled={saving} onClick={() => review.cancel(item.id)}>{t('aboutYou.review.cancel')}</Button>
             </div>
+            {failed && (
+                <p role="alert" className="m-0 mt-2 flex flex-wrap items-center gap-2 text-[12.5px] text-copper">
+                    <span>{t('aboutYou.review.wordsFailed')}</span>
+                    <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-[12.5px] text-accent hover:underline" onClick={save}>{t('aboutYou.retry')}</button>
+                </p>
+            )}
         </div>
     );
 }
@@ -347,7 +355,7 @@ export function ReviewOutcome({ item, review, className }: { item: ReviewItem; r
             break;
         case 'answerFailed':
             message = t('aboutYou.review.answerFailed');
-            tone = 'text-error';
+            tone = 'text-copper';
             break;
         case 'pending':
             message = t('aboutYou.review.forgetPending', { count: Math.round(FORGET_UNDO_MS / 1000) });
@@ -360,11 +368,12 @@ export function ReviewOutcome({ item, review, className }: { item: ReviewItem; r
             break;
         case 'forgetFailed':
             message = t('aboutYou.review.forgetFailed');
-            tone = 'text-error';
+            tone = 'text-copper';
             break;
     }
     const failed = result.kind === 'forgetFailed' || result.kind === 'answerFailed';
     const undoable = result.kind === 'confirmed' || result.kind === 'corrected' || result.kind === 'notQuite';
+    const undoFailed = undoable && !!result.undoFailed;
     return (
         <div className={cn('answer-line flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px]', tone, className)}>
             {(result.kind === 'confirmed' || result.kind === 'corrected') && <Check className="h-3.5 w-3.5 flex-none" aria-hidden="true" />}
@@ -383,11 +392,18 @@ export function ReviewOutcome({ item, review, className }: { item: ReviewItem; r
                     {t('aboutYou.review.forgetPending', { count: Math.max(1, Math.ceil((result.until - review.now) / 1000)) })}
                 </span>
             )}
-            {(undoable || result.kind === 'pending') && (
+            {((undoable && !undoFailed) || result.kind === 'pending') && (
                 <>
                     <span aria-hidden="true" className="text-muted">·</span>
                     <UndoLink buttonRef={undoButton} onClick={() => void review.undo(item.id)} />
                 </>
+            )}
+            {undoFailed && (
+                <span role="alert" className="inline-flex flex-wrap items-center gap-1.5 text-copper">
+                    <span aria-hidden="true" className="text-muted">·</span>
+                    <span>{t('aboutYou.review.undoFailed')}</span>
+                    <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-[13px] text-accent hover:underline" onClick={() => void review.undo(item.id)}>{t('aboutYou.retry')}</button>
+                </span>
             )}
             {result.kind === 'forgetFailed' && (
                 <Button size="sm" variant="secondary" onClick={() => void review.retryForget(item.id)}>
@@ -421,7 +437,7 @@ function ReviewCard({ item, review }: { item: ReviewItem; review: BeliefReview }
         >
             <div className="flex items-start gap-2">
                 {item.where && <span className="min-w-0 flex-1 text-xs text-muted">{item.where}</span>}
-                {!forgetting && <BeliefChip status={status} className="ml-auto" />}
+                {!forgetting && status !== 'learned_today' && <BeliefChip status={status} className="ml-auto" />}
             </div>
             <p id={quoteId} className={cn('m-0 text-sm leading-[1.45] text-ink break-words', forgetting && 'text-muted line-through')}>
                 {t('aboutYou.review.quote', { text: item.text })}
@@ -429,26 +445,21 @@ function ReviewCard({ item, review }: { item: ReviewItem; review: BeliefReview }
             {open ? (
                 <>
                     {result?.kind === 'confirmFailed' && (
-                        <p role="alert" className="m-0 text-[12.5px] text-error">{t('aboutYou.review.confirmFailed')}</p>
+                        <p role="alert" className="m-0 text-[12.5px] text-copper">{t('aboutYou.review.confirmFailed')}</p>
                     )}
                     <div className="mt-auto flex flex-wrap gap-1.5">
-                        <Button
-                            size="sm"
-                            disabled={result?.kind === 'confirming'}
-                            aria-busy={result?.kind === 'confirming'}
-                            onClick={() => void review.confirm(item.id)}
-                        >
-                            {t(result?.kind === 'confirming' ? 'aboutYou.review.confirming' : 'aboutYou.review.confirm')}
+                        <Button size="sm" onClick={() => void review.confirm(item.id)}>
+                            {t('aboutYou.review.confirm')}
                         </Button>
-                        <Button size="sm" variant="secondary" disabled={result?.kind === 'confirming'} onClick={() => review.ask(item.id)}>
+                        <Button size="sm" variant="secondary" onClick={() => review.ask(item.id)}>
                             {t('aboutYou.review.notQuite')}
                         </Button>
-                        <Button size="sm" variant="outline" disabled={result?.kind === 'confirming'} onClick={() => review.forget(item.id)}>
+                        <Button size="sm" variant="outline" onClick={() => review.forget(item.id)}>
                             {t('aboutYou.review.forget')}
                         </Button>
                     </div>
                 </>
-            ) : result?.kind === 'asking' || result?.kind === 'saving' ? (
+            ) : result?.kind === 'asking' || result?.kind === 'saving' || result?.kind === 'answerFailed' ? (
                 <NotQuiteField item={item} review={review} />
             ) : (
                 <ReviewOutcome item={item} review={review} className="mt-auto" />
@@ -474,18 +485,12 @@ export function NewThisWeek({
 }) {
     const { t } = useTranslation(['memory', 'common']);
     if (items.length === 0) return null;
-    const left = items.filter((item) => {
-        const kind = review.results[item.id]?.kind;
-        return !kind || kind === 'confirmFailed' || kind === 'forgetFailed' || kind === 'asking' || kind === 'answerFailed';
-    }).length;
 
     return (
         <section aria-labelledby={headingId} className="flex flex-col gap-3">
             <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1.5">
                 <h2 id={headingId} className="m-0 text-lg font-semibold text-ink">{title ?? t('aboutYou.review.title')}</h2>
-                <span className="text-[13px] text-muted">
-                    {left > 0 ? hint ?? t('aboutYou.review.left', { count: left }) : t('aboutYou.review.allChecked')}
-                </span>
+                {hint && <span className="text-[13px] text-muted">{hint}</span>}
             </div>
             {/* 300px keeps That's me, Not quite and Forget on one row (about 250px
                 in English); narrower windows get one card per row. */}

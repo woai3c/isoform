@@ -7,7 +7,7 @@ const id = '7f9343c6-30cf-4833-a386-962a62877328';
 const entry = {
     id,
     title: id,
-    content: `---\nuuid: ${id}\ntype: memory\ndimension: user_insight\ntimestamp: 2026-10-16T09:30:00Z\n---\n# Writing style\n- Prefers **concise** replies.\n- Uses examples when helpful.`,
+    content: `---\nuuid: ${id}\ntype: memory\ndimension: user_insight\ntimestamp: 2026-10-16T09:30:00Z\n---\n# Writing style\n- You prefer **concise** replies.\n- You use examples when helpful.`,
     dimension: 'user_insight',
     updatedAt: new Date(2026, 9, 16, 9, 30).getTime(),
     modTime: new Date(2026, 9, 17, 12).getTime(),
@@ -25,6 +25,19 @@ describe('MemoryRow', () => {
     });
     afterEach(() => vi.useRealTimers());
 
+    it('says one true date: Inferred in the status slot, and the footer names the change once (v1.0.2 Y36)', async () => {
+        await i18n.changeLanguage('en');
+        const now = new Date(2026, 9, 17, 12).getTime();
+        const changed = { ...entry, updatedAt: now - 3 * 86400000, modTime: now - 3 * 86400000 };
+        const belief = { id, title: 'Writing style', status: 'learned_today' as const, confidence: 2, firstLearnedAt: now - 12 * 86400000, updatedAt: changed.updatedAt, sessionCount: 4, dayCount: 2, confirmedAt: 0 };
+        const { container, rerender } = render(<MemoryRow entry={changed} belief={belief} onSelect={vi.fn()} onEdit={vi.fn()} onForget={vi.fn()} onReject={vi.fn()} />);
+        expect(screen.getByText('Inferred')).toBeInTheDocument();
+        expect(container).not.toHaveTextContent('Learned today');
+        expect(container.textContent?.match(/Updated|Learned/g)).toEqual(['Updated']);
+        rerender(<MemoryRow entry={changed} belief={{ ...belief, firstLearnedAt: changed.updatedAt }} onSelect={vi.fn()} onEdit={vi.fn()} onForget={vi.fn()} onReject={vi.fn()} />);
+        expect(container.textContent?.match(/Updated|Learned/g)).toEqual(['Learned']);
+    });
+
     it.each([
         ['en', 'Updated yesterday', 'Edit', 'Forget', 'Confidence 3 of 4', 'Inferred'],
         ['zh-CN', '昨天更新', '编辑', '忘记', '可信度 3/4', '推断'],
@@ -33,9 +46,9 @@ describe('MemoryRow', () => {
         const onSelect = vi.fn();
         const onEdit = vi.fn();
         const onForget = vi.fn();
-        const belief = { id, title: 'Writing style', status: 'inferred' as const, confidence: 3, firstLearnedAt: entry.updatedAt, updatedAt: entry.updatedAt, sessionCount: 4, dayCount: 2, confirmedAt: 0 };
+        const belief = { id, title: 'Writing style', status: 'inferred' as const, confidence: 3, firstLearnedAt: entry.updatedAt - 5 * 86400000, updatedAt: entry.updatedAt, sessionCount: 4, dayCount: 2, confirmedAt: 0 };
         const { container } = render(<MemoryRow entry={entry} belief={belief} onSelect={onSelect} onEdit={onEdit} onForget={onForget} onReject={vi.fn()} />);
-        const select = screen.getByRole('button', { name: /Writing style.*Prefers concise replies\./, pressed: false });
+        const select = screen.getByRole('button', { name: /Writing style.*You prefer concise replies\./, pressed: false });
         expect(select.querySelector('span')).toHaveTextContent('Writing style');
         expect(within(select).getByRole('img', { name: confidence })).toBeInTheDocument();
         expect(within(select).getByText(status)).toBeInTheDocument();

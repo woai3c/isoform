@@ -71,6 +71,7 @@ type portraitSource struct {
 	Title            string
 	Points           []string
 	Area             string
+	Source           string
 	Confirmed        bool
 	NotQuite         bool
 	FirstLearnedAt   int64

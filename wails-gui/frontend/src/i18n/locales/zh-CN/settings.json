@@ -2299,11 +2299,10 @@
         "technicalOutcome": "技术结果：{{value}}"
     },
     "aiMemoryImportDialog": {
-        "dialogTitle": "导入 AI 记忆",
+        "dialogTitle": "从 AI 工具导入",
         "dialogDescription": "将其他 AI 工具的记忆文件导入到 Isoform。",
-        "scanning": "正在扫描 AI 记忆文件……",
-        "scanFailed": "扫描失败：{{error}}",
-        "noFilesFound": "本机未发现 AI 记忆文件。",
+        "scanFailed": "没能查找其他 AI 工具的文件。",
+        "noFilesFound": "这台电脑上没有其他 AI 工具的文件。",
         "fileCount_one": "{{count}} 个文件",
         "fileCount_other": "{{count}} 个文件",
         "allImported": "已全部导入",
@@ -2311,8 +2310,8 @@
         "importButton_one": "导入 {{count}} 个文件",
         "importButton_other": "导入 {{count}} 个文件",
         "importing": "导入中……",
-        "fileImportSuccess_one": "已成功导入 {{count}} 个记忆文件。",
-        "fileImportSuccess_other": "已成功导入 {{count}} 个记忆文件。",
+        "fileImportSuccess_one": "已导入 {{count}} 个文件。",
+        "fileImportSuccess_other": "已导入 {{count}} 个文件。",
         "fileImportNone": "未导入任何文件。",
         "skippedSuffix": " 已跳过 {{count}} 个。",
         "providers": {
@@ -2332,8 +2331,9 @@
         "copyPromptButton": "复制",
         "copiedLabel": "已复制",
         "importButton": "导入",
-        "promptImportSuccess": "{{provider}} 记忆已成功导入。",
-        "promptImportNone": "未导入任何记忆。"
+        "promptImportSuccess": "已从 {{provider}} 导入。",
+        "promptImportNone": "未导入任何记忆。",
+        "retry": "重试"
     },
     "skillHub": {
         "clawhub": {

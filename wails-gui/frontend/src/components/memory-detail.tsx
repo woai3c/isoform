@@ -15,6 +15,7 @@ import { pageQueryCache } from '@/lib/query-cache';
 import { SaveMemoryEntry } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import {
+    beliefInSecondPerson,
     humanMemoryText,
     memoryApps,
     memoryDate,
@@ -27,7 +28,6 @@ import {
 } from '@/lib/memory-content';
 import { durationWords, USE_SURFACES } from '@/lib/about-you';
 import { communicationDraftDetails, memoryArea, sentMessageEvidence } from '@/lib/communication';
-import { notifyToast } from '@/lib/notify';
 import { onPrivacyReset } from '@/lib/privacy-reset';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -58,11 +58,14 @@ export function MemoryMoreMenu({
     onHistory,
     onTranslate,
     onReject,
+    devTools = false,
 }: {
     entry: main.MemoryEntry;
     onHistory: () => void;
     onTranslate: () => void;
     onReject: () => void;
+    /** Developer tools on: Copy memory ID. */
+    devTools?: boolean;
 }) {
     const { t } = useTranslation(['memory', 'common']);
     return (
@@ -73,17 +76,12 @@ export function MemoryMoreMenu({
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                    onSelect={() => {
-                        void navigator.clipboard
-                            .writeText(entry.id)
-                            .then(() => notifyToast(t('common:copied'), '', 'success'))
-                            .catch(() => notifyToast(t('detail.copyFailed'), '', 'error'));
-                    }}
-                >
-                    <Copy />
-                    {t('support.copyId')}
-                </DropdownMenuItem>
+                {devTools && (
+                    <DropdownMenuItem onSelect={() => void navigator.clipboard?.writeText(entry.id).catch(() => undefined)}>
+                        <Copy />
+                        {t('support.copyId')}
+                    </DropdownMenuItem>
+                )}
                 {entry.hasHistory && (
                     <DropdownMenuItem onSelect={onHistory}>
                         <History />
@@ -129,6 +127,8 @@ export function MemoryDetail({
     onTranslate,
     onOpenBelief,
     onOpenActivitySession,
+    devTools = false,
+    translateFailed = false,
 }: {
     entry: main.MemoryEntry;
     belief?: AboutYouBelief;
@@ -145,8 +145,13 @@ export function MemoryDetail({
     onTranslate?: () => void;
     onOpenBelief?: (id: string) => void;
     onOpenActivitySession?: (sessionId: string) => void;
+    /** Developer tools on: Copy memory ID and Technical details. */
+    devTools?: boolean;
+    /** Translate failed; the copper line offers Try again (onTranslate). */
+    translateFailed?: boolean;
 }) {
     const { t, i18n } = useTranslation(['memory', 'common']);
+    const lastSave = useRef('');
     const sectionId = useId();
     const points = useMemo(() => memoryPoints(entry.content), [entry.content]);
     const [active, setActive] = useState<{
@@ -300,6 +305,7 @@ export function MemoryDetail({
         if (saving) return;
         setSaving(true);
         setError(false);
+        lastSave.current = content;
         try {
             const saved = await SaveMemoryEntry(entry.id, content);
             editingRef.current = false;
@@ -307,18 +313,8 @@ export function MemoryDetail({
             setDraft('');
             onSaved(saved);
             onEditEnd?.(true);
-            notifyToast(
-                t('toasts.saved.title'),
-                t('toasts.saved.body'),
-                'success',
-            );
         } catch {
             setError(true);
-            notifyToast(
-                t('toasts.saveFailed.title'),
-                t('toasts.saveFailed.body'),
-                'error',
-            );
         } finally {
             setSaving(false);
         }
@@ -384,16 +380,13 @@ export function MemoryDetail({
                           ? t('relativeTime.daysAgo', { count: calendarDaysAgo(lastChange) })
                           : when,
               });
+    const hasWhy = communication || evidenceError || evidence === null || evidence.length > 0;
     const range = firstLearned
         ? calendarDaysAgo(firstLearned) === 0
             ? t('detail.workToday')
             : calendarDaysAgo(firstLearned) === 1
               ? t('detail.lastTwoDays')
-              : t('detail.since', {
-                    when: t('relativeTime.daysAgo', {
-                        count: calendarDaysAgo(firstLearned),
-                    }),
-                })
+              : t('detail.since', { count: calendarDaysAgo(firstLearned) })
         : t('detail.yourWork');
     const label = memoryLabel(entry, t);
     const dimension = DIMENSIONS.includes(entry.dimension) ? entry.dimension : 'uncategorized';
@@ -408,15 +401,14 @@ export function MemoryDetail({
     const status = answeredStatus(result, ownStatus);
     const answerItem: ReviewItem = {
         id: entry.id,
-        text: humanMemoryText(points[0]?.text ?? '') || memoryLabel(entry, t),
+        text: beliefInSecondPerson(humanMemoryText(points[0]?.text ?? '')) || memoryLabel(entry, t),
         where: '',
         communication,
         portraitCandidate: belief?.portraitCandidate,
         status: ownStatus,
     };
-    const asking = result?.kind === 'asking' || result?.kind === 'saving';
+    const asking = result?.kind === 'asking' || result?.kind === 'saving' || result?.kind === 'answerFailed';
     const answered = !reviewOpen(result) && !asking;
-    const confirming = result?.kind === 'confirming';
     const cancelEdit = () => {
         editingRef.current = false;
         setActive(null);
@@ -465,7 +457,7 @@ export function MemoryDetail({
                     </span>
                     <span className="ml-auto flex shrink-0 items-center gap-1">
                         {onHistory && onTranslate && (
-                            <MemoryMoreMenu entry={entry} onHistory={onHistory} onTranslate={onTranslate} onReject={onReject} />
+                            <MemoryMoreMenu entry={entry} onHistory={onHistory} onTranslate={onTranslate} onReject={onReject} devTools={devTools} />
                         )}
                         {onClose && (
                             <Button variant="ghost" size="icon" aria-label={t('aboutYou.detail.close')} onClick={onClose}>
@@ -499,7 +491,7 @@ export function MemoryDetail({
                                 onClick={() => startEdit(point.id)}
                                 className="flex-1 min-w-0 rounded-lg px-3 py-2 text-left text-[13px] leading-relaxed text-ink break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
                             >
-                                {humanMemoryText(point.text)}
+                                {beliefInSecondPerson(humanMemoryText(point.text))}
                             </button>
                             <button
                                 type="button"
@@ -509,7 +501,7 @@ export function MemoryDetail({
                                     point: humanMemoryText(point.text),
                                 })}
                                 title={t('row.forget')}
-                                className="mt-1 mr-1 rounded-lg p-1.5 text-muted hover:text-error hover:bg-error-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus opacity-100 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+                                className="mt-1 mr-1 rounded-lg p-1.5 text-muted hover:text-ink hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus opacity-100 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -533,8 +525,11 @@ export function MemoryDetail({
                     <p className="px-3 text-sm text-muted">{t('row.empty')}</p>
                 )}
                 {error && (
-                    <p role="alert" className="px-3 text-xs text-error">
-                        {t('toasts.saveFailed.body')}
+                    <p role="alert" className="m-0 flex flex-wrap items-center gap-2 px-3 text-[12.5px] text-copper">
+                        <span>{t('aboutYou.detail.saveFailed')}</span>
+                        <button type="button" className="text-accent hover:underline" disabled={saving} onClick={() => void save(lastSave.current)}>
+                            {t('aboutYou.retry')}
+                        </button>
                     </p>
                 )}
             </section>
@@ -551,6 +546,7 @@ export function MemoryDetail({
                 {updated}
             </p>
 
+            {hasWhy ? (
             <section aria-labelledby={`${sectionId}-why`} className="flex flex-col gap-2">
                 <h3 id={`${sectionId}-why`} className="m-0 text-[13px] font-semibold text-ink">{t('detail.why')}</h3>
                 {communication && (
@@ -560,7 +556,7 @@ export function MemoryDetail({
                     </div>
                 )}
                 {evidenceError ? (
-                    <div role="alert" className="flex items-center gap-3 text-[13px] text-muted">
+                    <div role="alert" className="flex items-center gap-3 text-[13px] text-copper">
                         <span className="flex-1">{t('aboutYou.detail.evidenceFailed')}</span>
                         <Button size="sm" variant="secondary" onClick={() => setReload((value) => value + 1)}>
                             {t('aboutYou.retry')}
@@ -569,12 +565,16 @@ export function MemoryDetail({
                 ) : evidence === null ? (
                     <SkeletonLines widths={['60%', '90%', '75%']} />
                 ) : evidence.length === 0 ? (
-                    !communication && <p className="m-0 text-xs text-muted">{t('detail.noEvidence')}</p>
+                    null
                 ) : (
                     <>
                         {evidence.map((item, index) => {
                             const duration = durationWords(t, item.durationMs);
-                            const seen = t('aboutYou.evidence.seen', { when: relativeWords(t, item.at), app: item.appName });
+                            const seen = t('aboutYou.evidence.seen', { when: relativeWords(t, item.at) });
+                            const said = beliefInSecondPerson(humanMemoryText(item.text));
+                            const words = item.appName
+                                ? t('aboutYou.evidence.from', { app: item.appName, text: said.replace(/^You(r?)\b/, 'you$1') })
+                                : said;
                             return (
                                 <article
                                     key={`${item.at}-${index}`}
@@ -586,7 +586,7 @@ export function MemoryDetail({
                                             {t('detail.notRight')}
                                         </Button>
                                     </div>
-                                    <span className="text-[13px] leading-snug text-ink">{humanMemoryText(item.text)}</span>
+                                    <span className="text-[13px] leading-snug text-ink">{words}</span>
                                 </article>
                             );
                         })}
@@ -598,11 +598,18 @@ export function MemoryDetail({
                     </Button>
                 )}
             </section>
+            ) : (
+                !communication && firstSession && onOpenActivitySession && (
+                    <Button size="sm" variant="link" className="self-start px-0" onClick={() => onOpenActivitySession(firstSession)}>
+                        {t(evidenceSession ? 'aboutYou.detail.seeInActivity' : 'aboutYou.detail.openSession')}
+                    </Button>
+                )
+            )}
 
             <section aria-labelledby={`${sectionId}-uses`} className="flex flex-col gap-2">
                 <h3 id={`${sectionId}-uses`} className="m-0 text-[13px] font-semibold text-ink">{t('aboutYou.detail.usesTitle')}</h3>
                 {usesError ? (
-                    <div role="alert" className="flex items-center gap-3 text-[13px] text-muted">
+                    <div role="alert" className="flex items-center gap-3 text-[13px] text-copper">
                         <span className="flex-1">{t('aboutYou.detail.usesFailed')}</span>
                         <Button size="sm" variant="secondary" onClick={() => setReload((value) => value + 1)}>
                             {t('aboutYou.retry')}
@@ -635,7 +642,7 @@ export function MemoryDetail({
                 <section aria-labelledby={`${sectionId}-drafts`} className="flex flex-col gap-2">
                     <h3 id={`${sectionId}-drafts`} className="m-0 text-[13px] font-semibold text-ink">{t('aboutYou.communication.draftsTitle')}</h3>
                     {examplesError ? (
-                        <div role="alert" className="flex items-center gap-3 text-[13px] text-muted">
+                        <div role="alert" className="flex items-center gap-3 text-[13px] text-copper">
                             <span className="flex-1">{t('aboutYou.communication.draftsFailed')}</span>
                             <Button size="sm" variant="secondary" onClick={() => setExamplesReload((value) => value + 1)}>
                                 {t('aboutYou.retry')}
@@ -691,28 +698,36 @@ export function MemoryDetail({
                 )}
                 <div className="flex flex-wrap gap-2">
                     {review && !answered && !asking && status !== 'confirmed' && (
-                        <Button size="sm" onClick={() => void review.confirm(entry.id, status === 'not_quite')} disabled={confirming} aria-busy={confirming}>
-                            {t(confirming ? 'aboutYou.review.confirming' : 'aboutYou.review.confirm')}
+                        <Button size="sm" onClick={() => void review.confirm(entry.id, status === 'not_quite')}>
+                            {t('aboutYou.review.confirm')}
                         </Button>
                     )}
                     {review && !answered && !asking && status !== 'not_quite' && (
-                        <Button size="sm" variant="secondary" onClick={() => review.ask(entry.id)} disabled={confirming}>
+                        <Button size="sm" variant="secondary" onClick={() => review.ask(entry.id)}>
                             {t('aboutYou.review.notQuite')}
                         </Button>
                     )}
                     <Button size="sm" variant="secondary" onClick={() => startEdit(points[0]?.id ?? null)} disabled={saving || active !== null}>
                         {t('aboutYou.detail.editWording')}
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={onForget}>
+                    <Button size="sm" variant="secondary" onClick={onForget}>
                         {t('forget.action')}
                     </Button>
                 </div>
                 {result?.kind === 'confirmFailed' && (
-                    <p role="alert" className="m-0 text-[12.5px] text-error">{t('aboutYou.review.confirmFailed')}</p>
+                    <p role="alert" className="m-0 text-[12.5px] text-copper">{t('aboutYou.review.confirmFailed')}</p>
+                )}
+                {translateFailed && (
+                    <p role="alert" className="m-0 flex flex-wrap items-center gap-2 text-[12.5px] text-copper">
+                        <span>{t('aboutYou.detail.translateFailed')}</span>
+                        {onTranslate && (
+                            <button type="button" className="text-accent hover:underline" onClick={onTranslate}>{t('aboutYou.retry')}</button>
+                        )}
+                    </p>
                 )}
             </div>
 
-            <Collapsible className="text-xs text-muted">
+            {devTools && <Collapsible className="text-xs text-muted">
                 <CollapsibleTrigger className="group/tech flex items-center gap-1.5 rounded-md text-[12.5px] text-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus">
                     {t('aboutYou.technical.title')}
                     <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]/tech:rotate-180" />
@@ -747,7 +762,7 @@ export function MemoryDetail({
                         <dd className="m-0 text-ink">{when}</dd>
                     </dl>
                 </CollapsibleContent>
-            </Collapsible>
+            </Collapsible>}
         </div>
     );
 }

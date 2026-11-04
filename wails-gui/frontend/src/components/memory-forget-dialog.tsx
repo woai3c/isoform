@@ -21,9 +21,11 @@ interface MemoryForgetDialogProps {
     rejectionReason?: string;
     onOpenChange: (open: boolean) => void;
     onForgot: (preview: MemoryForgetPreview, correctedAttribution: boolean) => void;
+    /** Developer tools on: the itemized list, counts and scope notes. */
+    devTools?: boolean;
 }
 
-export function MemoryForgetDialog({ target, rejectionReason, onOpenChange, onForgot }: MemoryForgetDialogProps) {
+export function MemoryForgetDialog({ target, rejectionReason, onOpenChange, onForgot, devTools = false }: MemoryForgetDialogProps) {
     const { t } = useTranslation(['memory', 'common']);
     const [preview, setPreview] = useState<MemoryForgetPreview | null>(null);
     const [loading, setLoading] = useState(false);
@@ -85,14 +87,8 @@ export function MemoryForgetDialog({ target, rejectionReason, onOpenChange, onFo
                     <DialogCloseButton disabled={forgetting} aria-label={t('common:close')} />
                 </DialogHeader>
                 <div className="px-6 py-5 space-y-4 overflow-y-auto min-h-0 text-xs text-muted">
-                    {loading && (
-                        <p role="status" className="flex items-center gap-2">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            {t('forget.loading')}
-                        </p>
-                    )}
                     {error && (
-                        <p role="alert" className="text-error">
+                        <p role="alert" className="text-copper">
                             {correctingAttribution
                                 ? t(error === 'previewFailed' ? 'correction.previewFailed' : 'correction.failed')
                                 : t(`forget.${error}`)}
@@ -100,6 +96,14 @@ export function MemoryForgetDialog({ target, rejectionReason, onOpenChange, onFo
                     )}
                     {preview && preview.memoryId === target?.id && (
                         <>
+                            <p className="text-ink">{t('forget.bodyRemoves')}</p>
+                            <p className="text-ink">{t('forget.bodyDays', { days: preview.retentionDays })}</p>
+                            <p className="text-ink">{t('forget.bodyStays')}</p>
+                            <p className="text-ink">{t('forget.irreversible')}</p>
+                        </>
+                    )}
+                    {devTools && preview && preview.memoryId === target?.id && (
+                        <div data-testid="forget-dev-details" className="space-y-4 border-t border-border-subtle pt-4">
                             <div>
                                 <h3 className="font-medium text-ink mb-2">{t('forget.removes')}</h3>
                                 <ul className="space-y-2">
@@ -129,8 +133,7 @@ export function MemoryForgetDialog({ target, rejectionReason, onOpenChange, onFo
                             <p>{t('forget.suppression', { days: preview.retentionDays })}</p>
                             <p>{t('forget.matchingProtection')}</p>
                             <p>{t('forget.scopeLimit')}</p>
-                            <p className="text-ink">{t('forget.irreversible')}</p>
-                        </>
+                        </div>
                     )}
                 </div>
                 <div className="flex justify-end gap-2 px-6 pb-5 shrink-0">

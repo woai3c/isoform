@@ -48,6 +48,7 @@ export function RejectAttributionDialog({
     const [customReason, setCustomReason] = useState('');
     const [reassignTarget, setReassignTarget] = useState<PrincipalDTO | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [reassignFailed, setReassignFailed] = useState<string | null>(null);
 
     // Reset state whenever the dialog opens against a new target so
     // a previously-typed reason doesn't leak into the next rejection.
@@ -57,6 +58,7 @@ export function RejectAttributionDialog({
             setCustomReason('');
             setReassignTarget(null);
             setSubmitting(false);
+            setReassignFailed(null);
         }
     }, [target?.id]);
 
@@ -78,6 +80,7 @@ export function RejectAttributionDialog({
         const reason = resolveReason();
         if (!reason) return;
         setSubmitting(true);
+        setReassignFailed(null);
         try {
             if (isReassign) {
                 if (!reassignTarget) {
@@ -89,6 +92,7 @@ export function RejectAttributionDialog({
                 await onReject(reason);
             }
         } catch {
+            if (isReassign && reassignTarget) setReassignFailed(reassignTarget.displayName);
             setSubmitting(false);
         }
     }, [isReassign, onReassign, onReject, reassignTarget, resolveReason]);
@@ -194,6 +198,12 @@ export function RejectAttributionDialog({
                         />
                     </div>
                 </div>
+                {reassignFailed !== null && (
+                    <p role="alert" className="m-0 flex flex-wrap items-center gap-2 px-6 pb-3 text-[12.5px] text-copper">
+                        <span>{t('rejectAttribution.reassignFailed', { name: reassignFailed })}</span>
+                        <button type="button" className="text-accent hover:underline" disabled={submitting} onClick={() => void handleSubmit()}>{t('aboutYou.retry')}</button>
+                    </p>
+                )}
                 <div className="flex items-center justify-end gap-2 px-6 pb-5">
                     <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
                         {t('rejectAttribution.cancel')}

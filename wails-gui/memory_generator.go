@@ -664,6 +664,7 @@ func (mc *MemoryGenerator) runMemoryPipelineDetailed(
 		})
 	}
 
+	memResult.Title = beliefInSecondPerson(memResult.Title)
 	if len(memResult.MemoryPoints) == 0 {
 		log.Printf("[memory] generation returned no points for %s:%s, skipping", source, sourceID)
 		logDecision("skip", "AI returned no memory points")
@@ -719,6 +720,14 @@ func (mc *MemoryGenerator) runMemoryPipelineDetailed(
 	action := memResult.Action
 	if action == "" {
 		action = "create" // backwards compatibility
+	}
+
+	if action != "skip" && memResult.UpdateID == "" {
+		if id := nearDuplicateMemoryID(memResult.Title); id != "" {
+			action = "update"
+			memResult.UpdateID = id
+			logDecision("dedup_near_duplicate", activityPrivateLogField("update_id", id))
+		}
 	}
 
 	switch action {
@@ -1054,7 +1063,7 @@ Respond with ONLY a JSON object (no markdown, no code fences):
 {
   "action": "create|update|skip",
   "updateId": "existing-entry-id-if-updating",
-  "title": "concise title describing the memory context",
+  "title": "the belief in one short sentence, in second person, e.g. You use design reviews to find launch blockers before release",
   "memoryPoints": ["memory point 1", "memory point 2"],
   "dimension": "user_insight|topic_highlight|deep_user_model|agentic_memory"
 }

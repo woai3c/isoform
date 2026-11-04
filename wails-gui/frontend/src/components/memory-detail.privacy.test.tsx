@@ -33,7 +33,7 @@ vi.mock('@/lib/notify', () => ({ notifyToast: vi.fn() }));
 const entry = {
     id: 'communication',
     title: 'Language with Jia',
-    content: '# Language with Jia\n- Writes to Jia in Chinese.\n',
+    content: '# Language with Jia\n- You write to Jia in Chinese.\n',
     apps: ['WeChat', 'Mail'],
     updatedAt: 1000,
 } as unknown as main.MemoryEntry;

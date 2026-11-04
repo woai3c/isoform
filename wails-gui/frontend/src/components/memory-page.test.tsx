@@ -36,6 +36,8 @@ const mocks = vi.hoisted(() => ({
     listGoals: vi.fn(),
     getGoal: vi.fn(),
     moveGoal: vi.fn(),
+    createGoal: vi.fn(),
+    translateAll: vi.fn(),
     events: new Map<string, Set<(value: unknown) => void>>(),
 }));
 
@@ -61,13 +63,14 @@ vi.mock('@/lib/wails-shim-app', () => ({
     GetMemoryVersion: mocks.getVersion,
     TranslateMemoryEntryToCurrentLanguage: vi.fn(),
     TranslateMemoryVersionToCurrentLanguage: vi.fn(),
-    StartTranslateAllCurrentMemoryEntries: vi.fn(),
+    StartTranslateAllCurrentMemoryEntries: (...args: unknown[]) => mocks.translateAll(...args),
     ReassignMemoryAttribution: vi.fn(),
     RejectMemoryAttributionWithPreview: mocks.rejectWithPreview,
     // The Goals group reads these; with no answer staged, the list is empty.
     ListGoals: (...args: unknown[]) => mocks.listGoals(...args) ?? Promise.resolve({ tracking: [], done: [], held: [] }),
     GetGoal: (...args: unknown[]) => mocks.getGoal(...args),
     MoveGoal: (...args: unknown[]) => mocks.moveGoal(...args),
+    CreateGoal: (...args: unknown[]) => mocks.createGoal(...args),
 }));
 vi.mock('../../wailsjs/runtime/runtime', () => ({
     EventsOn: (name: string, callback: (value: unknown) => void) => {
@@ -104,7 +107,7 @@ beforeEach(() => {
 const entry = {
     id: 'writing-style',
     title: 'Writing style',
-    content: '# Writing style\n- **Dimension**: user_insight\n- **Source**: activity\n\nI prefer detailed replies.\n',
+    content: '# Writing style\n- **Dimension**: user_insight\n- **Source**: activity\n\nYou prefer detailed replies.\n',
     dimension: 'user_insight',
     source: 'activity',
     modTime: Date.now(),
@@ -186,8 +189,8 @@ function resetDefaults(entries: Entry[]) {
     mocks.getStatus.mockResolvedValue({ files: entries.length, chunks: 3, vectorReady: true });
 }
 
-async function openPageMenu() {
-    fireEvent.keyDown(await screen.findByRole('button', { name: 'More About you actions' }), { key: 'Enter' });
+async function openPageMenu(name = 'More About you actions') {
+    fireEvent.keyDown(await screen.findByRole('button', { name }), { key: 'Enter' });
 }
 
 async function openDetailMenu(name = 'More memory actions') {
@@ -195,13 +198,13 @@ async function openDetailMenu(name = 'More memory actions') {
 }
 
 async function renderSelected() {
-    render(<MemoryPage initialSelectedId={entry.id} />);
+    render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
     await screen.findByRole('heading', { name: entry.title });
 }
 
 async function openForget() {
     fireEvent.click(screen.getByRole('button', { name: 'Forget this' }));
-    const dialog = screen.getByRole('dialog', { name: 'Forget this memory?' });
+    const dialog = screen.getByRole('dialog', { name: 'Forget this?' });
     await within(dialog).findByText('Detailed communication preference');
     return dialog;
 }
@@ -233,7 +236,10 @@ describe('MemoryPage editing and forgetting', () => {
         const dialog = screen.getByRole('dialog');
         await within(dialog).findByText('Memory 0');
         fireEvent.click(within(dialog).getByRole('button', { name: 'Forget this' }));
-        await waitFor(() => expect(mocks.notify).toHaveBeenCalledWith('Memory forgotten', expect.stringContaining(expected), 'success'));
+        await waitFor(() => expect(mocks.forgetEntry).toHaveBeenCalled());
+        // About you v1.0.0 Y6: no toast; the belief leaving is the answer.
+        expect(mocks.notify).not.toHaveBeenCalled();
+        void expected;
     });
 
     it.each([
@@ -242,7 +248,7 @@ describe('MemoryPage editing and forgetting', () => {
     ])('localizes the user-edit source in Technical details, never in the belief list, in %s', async (language, expected) => {
         await i18n.changeLanguage(language);
         mocks.getEntries.mockResolvedValue([{ ...entry, source: 'user_edit' }]);
-        render(<MemoryPage initialSelectedId={entry.id} />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         const detail = await screen.findByRole('complementary', { name: language === 'en' ? 'Belief detail' : '认识详情' });
         expect(screen.queryByText(expected)).not.toBeInTheDocument();
         fireEvent.click(within(detail).getByRole('button', { name: language === 'en' ? 'Technical details' : '技术细节' }));
@@ -288,7 +294,8 @@ describe('MemoryPage editing and forgetting', () => {
         fireEvent.click(within(correctionDialog).getByRole('button', { name: confirmAction }));
         await waitFor(() => expect(mocks.rejectWithPreview).toHaveBeenCalledWith(entry.id, reason, 'reviewed-scope-v1'));
         expect(mocks.forgetEntry).not.toHaveBeenCalled();
-        expect(mocks.notify).toHaveBeenCalledWith(successTitle, expect.any(String), 'success');
+        expect(mocks.notify).not.toHaveBeenCalled();
+        void successTitle;
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     });
 
@@ -336,16 +343,16 @@ describe('MemoryPage editing and forgetting', () => {
         expect(screen.getAllByText('A preference').some((node) => node.tagName === 'SPAN')).toBe(true);
         fireEvent.click(screen.getByRole('button', { name: 'Edit wording' }));
         const editor = screen.getByRole('textbox', { name: 'Memory point' });
-        expect(editor).toHaveValue('I prefer detailed replies.');
+        expect(editor).toHaveValue('You prefer detailed replies.');
         expect(screen.getByText('Your changes are saved as user edits and take priority over observed memories.')).toBeInTheDocument();
         const edited = entry.content.replace('detailed', 'concise');
-        fireEvent.change(editor, { target: { value: 'I prefer concise replies.' } });
+        fireEvent.change(editor, { target: { value: 'You prefer concise replies.' } });
         mocks.getEntries.mockResolvedValue([{ ...entry, content: edited, source: 'user_edit' }]);
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
         await waitFor(() => expect(mocks.saveEntry).toHaveBeenCalledWith(entry.id, edited));
         await waitFor(() => expect(screen.queryByRole('textbox', { name: 'Memory point' })).not.toBeInTheDocument());
-        expect(screen.getByRole('button', { name: 'I prefer concise replies.' })).toBeInTheDocument();
-        expect(mocks.notify).toHaveBeenCalledWith('Memory saved', expect.stringContaining('user edit'), 'success');
+        expect(screen.getByRole('button', { name: 'You prefer concise replies.' })).toBeInTheDocument();
+        expect(mocks.notify).not.toHaveBeenCalled();
         expect(screen.getByRole('button', { name: /^Other\s*1$/ })).toBeInTheDocument();
     });
 
@@ -356,7 +363,7 @@ describe('MemoryPage editing and forgetting', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
         expect(mocks.saveEntry).not.toHaveBeenCalled();
         expect(screen.queryByRole('textbox', { name: 'Memory point' })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'I prefer detailed replies.' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'You prefer detailed replies.' })).toBeInTheDocument();
     });
 
     it('clears the active draft when its memory is forgotten and starts the next edit as a new record', async () => {
@@ -373,12 +380,12 @@ describe('MemoryPage editing and forgetting', () => {
         expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
         expect(mocks.saveEntry).not.toHaveBeenCalled();
         await openPageMenu();
-        fireEvent.click(await screen.findByRole('menuitem', { name: 'New memory file' }));
-        const newDialog = await screen.findByRole('dialog', { name: 'New Memory' });
-        expect(within(newDialog).getByRole('textbox', { name: 'Memory text' })).toHaveValue(en.newTemplate);
-        fireEvent.change(within(newDialog).getByRole('textbox', { name: 'Memory text' }), { target: { value: '# New fact\nA different preference.' } });
+        fireEvent.click(await screen.findByRole('menuitem', { name: 'Add a note about you' }));
+        const newDialog = await screen.findByRole('dialog', { name: 'Add a note about you' });
+        expect(within(newDialog).getByRole('textbox', { name: 'Add a note about you' })).toHaveValue('');
+        fireEvent.change(within(newDialog).getByRole('textbox', { name: 'Add a note about you' }), { target: { value: 'You keep emails to three sentences.' } });
         fireEvent.click(within(newDialog).getByRole('button', { name: 'Save' }));
-        await waitFor(() => expect(mocks.saveEntry).toHaveBeenCalledWith('', '# New fact\nA different preference.'));
+        await waitFor(() => expect(mocks.saveEntry).toHaveBeenCalledWith('', '# You keep emails to three sentences.\n- **Source**: user_edit\n\nYou keep emails to three sentences.\n'));
     });
 
     it('keeps an unsaved edit after failure and allows a retry', async () => {
@@ -388,7 +395,9 @@ describe('MemoryPage editing and forgetting', () => {
         const editor = screen.getByRole('textbox', { name: 'Memory point' });
         fireEvent.change(editor, { target: { value: 'Keep replies concise.' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-        await waitFor(() => expect(mocks.notify).toHaveBeenCalledWith('Memory could not be saved', expect.any(String), 'error'));
+        // About you v1.0.0 Y6/Y7: the failure is a copper line in place, not a toast.
+        expect((await screen.findByText("Your change didn't save. It's still here.")).closest('[role="alert"]')).toHaveClass('text-copper');
+        expect(mocks.notify).not.toHaveBeenCalled();
         expect(editor).toHaveValue('Keep replies concise.');
         expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -401,7 +410,7 @@ describe('MemoryPage editing and forgetting', () => {
         const dialog = await openForget();
         expect(mocks.getPreview).toHaveBeenCalledWith(entry.id);
         expect(mocks.forgetEntry).not.toHaveBeenCalled();
-        expect(within(dialog).getByText('Writing style')).toBeInTheDocument();
+        expect(within(dialog).getAllByText('Writing style').length).toBeGreaterThan(0);
         expect(within(dialog).getByText('Archived memory')).toBeInTheDocument();
         expect(within(dialog).getByText('Earlier writing style')).toBeInTheDocument();
         expect(within(dialog).getByText('Self Dream')).toBeInTheDocument();
@@ -417,7 +426,7 @@ describe('MemoryPage editing and forgetting', () => {
         await waitFor(() => expect(mocks.forgetEntry).toHaveBeenCalledWith(entry.id, 'reviewed-scope-v1'));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(screen.queryByRole('heading', { name: entry.title })).not.toBeInTheDocument();
-        expect(mocks.notify).toHaveBeenCalledWith('Memory forgotten', expect.stringContaining('Removed 5 records, 3 search embeddings and 2 saved versions'), 'success');
+        expect(mocks.notify).not.toHaveBeenCalled();
     });
 
     it('opens the same preview from a grouped row and cancelling leaves it untouched', async () => {
@@ -439,7 +448,8 @@ describe('MemoryPage editing and forgetting', () => {
         const dialog = screen.getByRole('dialog');
         const confirm = within(dialog).getByRole('button', { name: 'Forget this' });
         expect(confirm).toBeDisabled();
-        expect(within(dialog).getByRole('status')).toHaveTextContent('Checking this memory');
+        // About you v1.0.0 Y8: no loading words while the preview loads.
+        expect(within(dialog).queryByRole('status')).not.toBeInTheDocument();
         fireEvent.click(confirm);
         expect(mocks.forgetEntry).not.toHaveBeenCalled();
         await act(async () => resolvePreview(preview()));
@@ -488,18 +498,19 @@ describe('MemoryPage editing and forgetting', () => {
         const dialog = screen.getByRole('dialog');
         await within(dialog).findByText('Detailed communication preference');
         fireEvent.click(within(dialog).getByRole('button', { name: '忘记这条' }));
-        await waitFor(() => expect(mocks.notify).toHaveBeenCalledWith('已忘记该记忆', expect.stringContaining('已移除 5 条记录、3 个搜索向量和 2 个历史版本。'), 'success'));
+        await waitFor(() => expect(mocks.forgetEntry).toHaveBeenCalled());
+        expect(mocks.notify).not.toHaveBeenCalled();
     });
 
     it('renders the editing and forget controls in Chinese', async () => {
         await i18n.changeLanguage('zh-CN');
         await renderSelected();
         fireEvent.click(screen.getByRole('button', { name: '修改措辞' }));
-        expect(screen.getByRole('textbox', { name: '记忆要点' })).toHaveValue('I prefer detailed replies.');
+        expect(screen.getByRole('textbox', { name: '记忆要点' })).toHaveValue('You prefer detailed replies.');
         expect(screen.getByText('你的修改会保存为用户编辑，优先于观察到的记忆。')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: '取消' }));
         fireEvent.click(screen.getByRole('button', { name: '忘记这条' }));
-        const dialog = screen.getByRole('dialog', { name: '忘记这条记忆？' });
+        const dialog = screen.getByRole('dialog', { name: '忘记这一条？' });
         await within(dialog).findByText('自我梦境');
         expect(within(dialog).getByText('已归档的记忆')).toBeInTheDocument();
         expect(within(dialog).getByText('目标图谱')).toBeInTheDocument();
@@ -513,7 +524,7 @@ describe('MemoryPage editing and forgetting', () => {
 
 describe('MemoryPage memory-first browsing', () => {
     const id = 'b4c8e1a9-4f72-4b18-a19d-6f143d66e98b';
-    const untitled = { ...entry, id, title: id, content: '---\nuuid: ' + id + '\ntype: memory\ndimension: user_insight\n---\nPrefers concise replies.' };
+    const untitled = { ...entry, id, title: id, content: '---\nuuid: ' + id + '\ntype: memory\ndimension: user_insight\n---\nYou prefer concise replies.' };
 
     beforeEach(async () => {
         vi.resetAllMocks();
@@ -530,8 +541,8 @@ describe('MemoryPage memory-first browsing', () => {
         await i18n.changeLanguage(language);
         const writeText = vi.fn().mockResolvedValue(undefined);
         Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
-        const { container } = render(<MemoryPage initialSelectedId={id} />);
-        await screen.findByRole('heading', { name: 'Prefers concise replies.' });
+        const { container } = render(<MemoryPage devToolsUnlocked initialSelectedId={id} />);
+        await screen.findByRole('heading', { name: 'You prefer concise replies.' });
         expect(container.innerHTML).not.toContain(id);
         expect(screen.queryByRole('button', { name: copy })).not.toBeInTheDocument();
         fireEvent.keyDown(screen.getByRole('button', { name: menu }), { key: 'Enter' });
@@ -542,62 +553,73 @@ describe('MemoryPage memory-first browsing', () => {
     });
 
     it.each([
-        ['en', 'Search memory text...', 'Filter by kind', 'Edit "Prefers concise replies."', 'Forget "Prefers concise replies."'],
-        ['zh-CN', '搜索记忆内容……', '按类型筛选', '编辑「Prefers concise replies.」', '忘记“Prefers concise replies.”'],
+        ['en', 'Search what Isoform believes', 'Filter by kind', 'Edit "You prefer concise replies."', 'Forget "You prefer concise replies."'],
+        ['zh-CN', '搜索 Isoform 对你的认识', '按类型筛选', '编辑「You prefer concise replies.」', '忘记“You prefer concise replies.”'],
     ])('combines text search and kind filtering with direct edit and forget actions in %s', async (language, search, filter, edit, forget) => {
         await i18n.changeLanguage(language);
-        const topic = { ...entry, id: 'topic-id', title: 'Another topic', dimension: 'topic_highlight', content: '# Another topic\nUses concise project plans.' };
+        const topic = { ...entry, id: 'topic-id', title: 'Another topic', dimension: 'topic_highlight', content: '# Another topic\nYou use concise project plans.' };
         resetDefaults([untitled, topic]);
         // The index can be unavailable; local body matches still work.
         mocks.search.mockRejectedValue(new Error('offline'));
-        render(<MemoryPage initialSelectedId={id} />);
-        await screen.findByRole('heading', { name: 'Prefers concise replies.' });
+        render(<MemoryPage devToolsUnlocked initialSelectedId={id} />);
+        await screen.findByRole('heading', { name: 'You prefer concise replies.' });
         fireEvent.change(screen.getByRole('textbox', { name: search }), { target: { value: 'CONCISE' } });
         fireEvent.change(screen.getByRole('combobox', { name: filter }), { target: { value: 'preference' } });
         await waitFor(() => expect(mocks.search).toHaveBeenCalledWith('CONCISE', 20));
-        expect(screen.getByRole('button', { name: /Prefers concise replies\./, pressed: true })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /Prefers concise project plans\./ })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /You prefer concise replies\./, pressed: true })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /You prefer concise project plans\./ })).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: edit }));
-        expect(screen.getByRole('textbox', { name: language === 'en' ? 'Memory point' : '记忆要点' })).toHaveValue('Prefers concise replies.');
+        expect(screen.getByRole('textbox', { name: language === 'en' ? 'Memory point' : '记忆要点' })).toHaveValue('You prefer concise replies.');
         fireEvent.click(screen.getByRole('button', { name: forget }));
         await waitFor(() => expect(mocks.getPreview).toHaveBeenCalledWith(id));
         const dialog = screen.getByRole('dialog');
-        expect(await within(dialog).findByText('Prefers concise replies.')).toBeInTheDocument();
+        expect((await within(dialog).findAllByText('You prefer concise replies.')).length).toBeGreaterThan(0);
         expect(dialog).not.toHaveTextContent(id);
     });
 
     it('filters the belief list by text and kind', async () => {
-        const topic = { ...entry, id: 'topic-id', title: 'Project plans', dimension: 'topic_highlight', content: '# Project plans\nUses concise project plans.' };
+        const topic = { ...entry, id: 'topic-id', title: 'Project plans', dimension: 'topic_highlight', content: '# Project plans\nYou use concise project plans.' };
         resetDefaults([untitled, topic]);
-        render(<MemoryPage />);
-        expect(await screen.findAllByRole('button', { name: /Project plans.*Uses concise project plans/, pressed: false })).toHaveLength(1);
-        fireEvent.change(screen.getByRole('textbox', { name: 'Search memory text...' }), { target: { value: 'CONCISE' } });
+        render(<MemoryPage devToolsUnlocked />);
+        expect(await screen.findAllByRole('button', { name: /Project plans.*You use concise project plans/, pressed: false })).toHaveLength(1);
+        fireEvent.change(screen.getByRole('textbox', { name: 'Search what Isoform believes' }), { target: { value: 'CONCISE' } });
         fireEvent.change(screen.getByRole('combobox', { name: 'Filter by kind' }), { target: { value: 'preference' } });
-        expect(screen.getAllByRole('button', { name: /Prefers concise replies\./, pressed: false })).toHaveLength(1);
-        expect(screen.queryByRole('button', { name: /Project plans.*Uses concise project plans/, pressed: false })).not.toBeInTheDocument();
+        expect(screen.getAllByRole('button', { name: /You prefer concise replies\./, pressed: false })).toHaveLength(1);
+        expect(screen.queryByRole('button', { name: /Project plans.*You use concise project plans/, pressed: false })).not.toBeInTheDocument();
+    });
+
+    // About you v1.0.0 Y18: no Searching words; nothing matching names the query.
+    it('says nothing matches the query, without Searching words', async () => {
+        mocks.search.mockReturnValueOnce(new Promise(() => {}));
+        render(<MemoryPage devToolsUnlocked />);
+        await screen.findAllByRole('button', { name: /You prefer concise replies\./, pressed: false });
+        fireEvent.change(screen.getByRole('textbox', { name: 'Search what Isoform believes' }), { target: { value: 'zebra' } });
+        await waitFor(() => expect(mocks.search).toHaveBeenCalledWith('zebra', 20));
+        expect(screen.queryByText('Searching...')).not.toBeInTheDocument();
+        expect(screen.getByText('Nothing matches “zebra”.')).toBeInTheDocument();
     });
 
     it('deduplicates indexed chunks into the same memory rows without exposing paths and ignores stale searches', async () => {
         let resolveFirst!: (results: unknown[]) => void;
         mocks.search.mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; }));
         mocks.search.mockResolvedValueOnce([{ path: id + '.md', startLine: 10, endLine: 12 }, { path: id + '.md', startLine: 20, endLine: 22 }]);
-        render(<MemoryPage initialSelectedId={id} />);
-        await screen.findByRole('heading', { name: 'Prefers concise replies.' });
-        const search = screen.getByRole('textbox', { name: 'Search memory text...' });
+        render(<MemoryPage devToolsUnlocked initialSelectedId={id} />);
+        await screen.findByRole('heading', { name: 'You prefer concise replies.' });
+        const search = screen.getByRole('textbox', { name: 'Search what Isoform believes' });
         fireEvent.change(search, { target: { value: 'first query' } });
         await waitFor(() => expect(mocks.search).toHaveBeenCalledWith('first query', 20));
         fireEvent.change(search, { target: { value: 'communication style' } });
         await waitFor(() => expect(mocks.search).toHaveBeenCalledWith('communication style', 20));
-        expect(await screen.findByRole('button', { name: /Prefers concise replies\./, pressed: true })).toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: /You prefer concise replies\./, pressed: true })).toBeInTheDocument();
         await act(async () => resolveFirst([]));
-        expect(screen.getAllByRole('button', { name: /Prefers concise replies\./, pressed: true })).toHaveLength(1);
+        expect(screen.getAllByRole('button', { name: /You prefer concise replies\./, pressed: true })).toHaveLength(1);
         expect(screen.queryByText(id + '.md')).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Edit "Prefers concise replies."' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Edit "You prefer concise replies."' })).toBeInTheDocument();
     });
 });
 
 describe('MemoryPage human-first detail', () => {
-    const detailed = { ...entry, content: entry.content + '- I use examples when helpful. I keep meetings short.\n', apps: ['ChatGPT', 'loginwindow', 'Safari', 'chatgpt', 'Isoform', 'Terminal'], activitySessionIds: ['hidden-session'] };
+    const detailed = { ...entry, content: entry.content + '- You use examples when helpful. You keep meetings short.\n', apps: ['ChatGPT', 'loginwindow', 'Safari', 'chatgpt', 'Isoform', 'Terminal'], activitySessionIds: ['hidden-session'] };
     const yesterday = Date.now() - 86400000;
     beforeEach(async () => {
         vi.resetAllMocks();
@@ -610,11 +632,11 @@ describe('MemoryPage human-first detail', () => {
     });
 
     it.each([
-        ['en', 'Memory points', 'Why Isoform believes this', 'Where Isoform uses it', 'Technical details', 'Not right', 'Seen yesterday in ChatGPT · 2 hours'],
-        ['zh-CN', '记忆要点', 'Isoform 为什么这样认为', 'Isoform 在哪里用到它', '技术细节', '不准确', '昨天在 ChatGPT 中出现 · 2 小时'],
-    ])('orders points, provenance, readable evidence, uses and closed technical details in %s', async (language, pointsLabel, why, uses, technical, reject, seen) => {
+        ['en', 'Memory points', 'Why Isoform believes this', 'Where Isoform uses it', 'Technical details', 'Not right', 'Seen yesterday · 2 hours', 'From your ChatGPT: Prepared a weekly update.'],
+        ['zh-CN', '记忆要点', 'Isoform 为什么这样认为', 'Isoform 在哪里用到它', '技术细节', '不准确', '昨天看到 · 2 小时', '来自你的 ChatGPT：Prepared a weekly update.'],
+    ])('orders points, provenance, readable evidence, uses and closed technical details in %s', async (language, pointsLabel, why, uses, technical, reject, seen, source) => {
         await i18n.changeLanguage(language);
-        const { container } = render(<MemoryPage initialSelectedId={entry.id} />);
+        const { container } = render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         await screen.findByRole('heading', { name: entry.title });
         const points = screen.getByRole('region', { name: pointsLabel });
         const provenance = screen.getByTestId('memory-provenance');
@@ -625,21 +647,21 @@ describe('MemoryPage human-first detail', () => {
             expect(before.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         }
         expect(technicalButton).toHaveAttribute('aria-expanded', 'false');
-        // Evidence is the moment title Isoform wrote, when and in which app.
-        expect(await screen.findByText('Prepared a weekly update.')).toBeVisible();
+        // Evidence is the source in words (v1.0.2 Y35): where, then what Isoform saw.
+        expect(await screen.findByText(source)).toBeVisible();
         expect(screen.getByText(seen)).toBeInTheDocument();
         expect(container.innerHTML).not.toContain('hidden-session');
         expect(provenance).toHaveTextContent('ChatGPT');
         expect(provenance).not.toHaveTextContent('loginwindow');
         expect(provenance).not.toHaveTextContent('Terminal');
-        expect(within(points).getAllByRole('button', { name: /^I / })).toHaveLength(3);
+        expect(within(points).getAllByRole('button', { name: /^You / })).toHaveLength(3);
         fireEvent.click(screen.getByRole('button', { name: reject }));
         expect(await screen.findByRole('dialog')).toBeInTheDocument();
     });
 
     it('opens the newest moment in Activity without putting its ID on the page', async () => {
         const onOpen = vi.fn();
-        const { container } = render(<MemoryPage onOpenActivitySession={onOpen} initialSelectedId={entry.id} />);
+        const { container } = render(<MemoryPage devToolsUnlocked onOpenActivitySession={onOpen} initialSelectedId={entry.id} />);
         fireEvent.click(await screen.findByRole('button', { name: 'See these moments in Activity' }));
         expect(onOpen).toHaveBeenCalledWith('hidden-session');
         expect(container.innerHTML).not.toContain('hidden-session');
@@ -650,7 +672,7 @@ describe('MemoryPage human-first detail', () => {
             { surface: 'brief', count: 1, lastAt: Date.now() - 3 * 86400000 },
             { surface: 'chat', count: 3, lastAt: yesterday },
         ] });
-        render(<MemoryPage initialSelectedId={entry.id} />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         const items = await screen.findAllByRole('listitem');
         expect(items.map((item) => item.textContent)).toEqual([
             'Used 3 times in chat answers · last yesterday',
@@ -661,67 +683,80 @@ describe('MemoryPage human-first detail', () => {
 
     it('says when Isoform has not used a belief, and offers a retry when evidence fails', async () => {
         mocks.getEvidence.mockRejectedValueOnce(new Error('store'));
-        render(<MemoryPage initialSelectedId={entry.id} />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         expect(await screen.findByText('Isoform has not used this yet.')).toBeInTheDocument();
         const alert = await screen.findByRole('alert');
         expect(alert).toHaveTextContent('Could not load why Isoform believes this.');
         fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
-        expect(await screen.findByText('Prepared a weekly update.')).toBeInTheDocument();
+        expect(await screen.findByText('From your ChatGPT: Prepared a weekly update.')).toBeInTheDocument();
     });
 
     it('keeps older provenance relative and handles evidence without app names', async () => {
         mocks.getEntries.mockResolvedValue([{ ...detailed, updatedAt: Date.now() - 4 * 86400000 }]);
         mocks.getEvidence.mockResolvedValue([{ at: Date.now() - 5 * 86400000, durationMs: 0, appName: 'Notes', text: 'A planning note.', activitySessionId: '' }]);
-        render(<MemoryPage initialSelectedId={entry.id} />);
-        await waitFor(() => expect(screen.getByTestId('memory-provenance')).toHaveTextContent('Learned from your work since 5 days ago'));
-        expect(screen.getByTestId('memory-provenance')).toHaveTextContent('Updated 4 days ago.');
-        expect(await screen.findByText('A planning note.')).toBeVisible();
-        expect(screen.getByText('Seen 5 days ago in Notes')).toBeInTheDocument();
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
+        await waitFor(() => expect(screen.getByTestId('memory-provenance')).toHaveTextContent(/^Learned from your work over the last 5 days, mostly in [^.]+\. Updated 4 days ago\.$/));
+        expect(await screen.findByText('From your Notes: A planning note.')).toBeVisible();
+        expect(screen.getByText('Seen 5 days ago')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'See these moments in Activity' })).not.toBeInTheDocument();
     });
 
+    it('says one true English date line and drops Why when there is no source (v1.0.2 Y35, Y36)', async () => {
+        const daysAgo = (count: number) => { const day = new Date(); day.setDate(day.getDate() - count); day.setHours(12, 0, 0, 0); return day.getTime(); };
+        const plain = { ...entry, apps: [], activitySessionIds: [], updatedAt: daysAgo(3), modTime: daysAgo(3) };
+        resetDefaults([plain]);
+        mocks.getAbout.mockResolvedValue(aboutFor([plain], { status: 'learned_today', firstLearnedAt: daysAgo(12) }));
+        mocks.getEvidence.mockResolvedValue([]);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
+        await waitFor(() => expect(screen.getByTestId('memory-provenance')).toHaveTextContent(/^Learned from your work over the last 12 days\. Updated 3 days ago\.$/));
+        await waitFor(() => expect(mocks.getEvidence).toHaveBeenCalled());
+        await act(async () => {});
+        expect(screen.queryByRole('heading', { name: 'Why Isoform believes this' })).not.toBeInTheDocument();
+        expect(screen.queryByText('Learned today')).not.toBeInTheDocument();
+    });
+
     it('edits just one sentence, preserves metadata and neighboring points, and retains drafts after a failure', async () => {
-        render(<MemoryPage initialSelectedId={entry.id} />);
-        const point = await screen.findByRole('button', { name: 'I keep meetings short.' });
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
+        const point = await screen.findByRole('button', { name: 'You keep meetings short.' });
         fireEvent.click(point);
         const editor = screen.getByRole('textbox', { name: 'Memory point' });
-        fireEvent.change(editor, { target: { value: 'I keep meetings focused.' } });
+        fireEvent.change(editor, { target: { value: 'You keep meetings focused.' } });
         mocks.saveEntry.mockRejectedValueOnce(new Error('disk full'));
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
         expect(await screen.findByRole('alert')).toBeInTheDocument();
-        expect(editor).toHaveValue('I keep meetings focused.');
+        expect(editor).toHaveValue('You keep meetings focused.');
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-        await waitFor(() => expect(mocks.saveEntry).toHaveBeenLastCalledWith(entry.id, detailed.content.replace('I keep meetings short.', 'I keep meetings focused.')));
-        await screen.findByRole('button', { name: 'I keep meetings focused.' });
+        await waitFor(() => expect(mocks.saveEntry).toHaveBeenLastCalledWith(entry.id, detailed.content.replace('You keep meetings short.', 'You keep meetings focused.')));
+        await screen.findByRole('button', { name: 'You keep meetings focused.' });
         expect(screen.queryByRole('textbox', { name: 'Memory point' })).not.toBeInTheDocument();
     });
 
     it('adds a point, cancels without saving and removes only the chosen point', async () => {
-        render(<MemoryPage initialSelectedId={entry.id} />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         fireEvent.click(await screen.findByRole('button', { name: 'Add a point' }));
-        fireEvent.change(screen.getByRole('textbox', { name: 'Memory point' }), { target: { value: 'I work on the computer and review on my phone.' } });
+        fireEvent.change(screen.getByRole('textbox', { name: 'Memory point' }), { target: { value: 'You work on the computer and review on my phone.' } });
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
         expect(mocks.saveEntry).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: 'Add a point' }));
-        fireEvent.change(screen.getByRole('textbox', { name: 'Memory point' }), { target: { value: 'I review on my phone.' } });
+        fireEvent.change(screen.getByRole('textbox', { name: 'Memory point' }), { target: { value: 'You review on my phone.' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-        await screen.findByRole('button', { name: 'I review on my phone.' });
-        fireEvent.click(screen.getByRole('button', { name: 'Forget point: I use examples when helpful.' }));
+        await screen.findByRole('button', { name: 'You review on my phone.' });
+        fireEvent.click(screen.getByRole('button', { name: 'Forget point: You use examples when helpful.' }));
         await waitFor(() => expect(mocks.saveEntry).toHaveBeenCalledTimes(2));
         const content = mocks.saveEntry.mock.calls[1][1];
-        expect(content).not.toContain('I use examples when helpful.');
-        expect(content).toContain('I keep meetings short.');
+        expect(content).not.toContain('You use examples when helpful.');
+        expect(content).toContain('You keep meetings short.');
         expect(content).toContain('- **Dimension**: user_insight');
     });
 
     it('does not carry an inline draft or open sections into another memory', async () => {
-        resetDefaults([detailed, { ...entry, id: 'second', title: 'Planning', content: '# Planning\n- I plan on paper.' }]);
-        render(<MemoryPage initialSelectedId={entry.id} />);
+        resetDefaults([detailed, { ...entry, id: 'second', title: 'Planning', content: '# Planning\n- You plan on paper.' }]);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         fireEvent.click(await screen.findByRole('button', { name: 'Edit wording' }));
         fireEvent.change(screen.getByRole('textbox', { name: 'Memory point' }), { target: { value: 'Unsaved sentence' } });
         const detail = screen.getByRole('complementary', { name: 'Belief detail' });
         fireEvent.click(within(detail).getByRole('button', { name: 'Technical details' }));
-        fireEvent.click(screen.getByRole('button', { name: /Planning.*I plan on paper/, pressed: false }));
+        fireEvent.click(screen.getByRole('button', { name: /Planning.*You plan on paper/, pressed: false }));
         expect(await screen.findByRole('heading', { name: 'Planning' })).toBeInTheDocument();
         expect(screen.queryByRole('textbox', { name: 'Memory point' })).not.toBeInTheDocument();
         expect(within(screen.getByRole('complementary', { name: 'Belief detail' })).getByRole('button', { name: 'Technical details' })).toHaveAttribute('aria-expanded', 'false');
@@ -736,7 +771,7 @@ describe('MemoryPage human-first detail', () => {
                 <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); setOpen(next); }}>
                     <RetainedDialogContent open={open} retain={false} onEscapeKeyDown={(e) => { if (escapeRef.current?.()) e.preventDefault(); }}>
                         <DialogTitle>About you</DialogTitle>
-                        <MemoryPage initialSelectedId={entry.id} escapeRef={escapeRef} />
+                        <MemoryPage devToolsUnlocked initialSelectedId={entry.id} escapeRef={escapeRef} />
                     </RetainedDialogContent>
                 </Dialog>
             );
@@ -780,7 +815,7 @@ describe('MemoryPage human-first detail', () => {
         }
         render(<Host />);
         await screen.findByRole('heading', { name: entry.title });
-        const search = screen.getByRole('textbox', { name: 'Search memory text...' });
+        const search = screen.getByRole('textbox', { name: 'Search what Isoform believes' });
         fireEvent.change(search, { target: { value: 'replies' } });
         search.focus();
         fireEvent.keyDown(search, { key: 'Escape' });
@@ -796,7 +831,7 @@ describe('MemoryPage human-first detail', () => {
     it('keeps the Activity link when the evidence read fails', async () => {
         mocks.getEvidence.mockRejectedValue(new Error('store'));
         const onOpen = vi.fn();
-        render(<MemoryPage onOpenActivitySession={onOpen} initialSelectedId={entry.id} />);
+        render(<MemoryPage devToolsUnlocked onOpenActivitySession={onOpen} initialSelectedId={entry.id} />);
         expect(await screen.findByText('Could not load why Isoform believes this.')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Open where this was learned in Activity' }));
         expect(onOpen).toHaveBeenCalledWith('hidden-session');
@@ -805,15 +840,17 @@ describe('MemoryPage human-first detail', () => {
     it('offers the linked session in Activity when no readable moment is left', async () => {
         mocks.getEvidence.mockResolvedValue([]);
         const onOpen = vi.fn();
-        render(<MemoryPage onOpenActivitySession={onOpen} initialSelectedId={entry.id} />);
-        expect(await screen.findByText('No activity evidence is available for this memory.')).toBeInTheDocument();
+        render(<MemoryPage devToolsUnlocked onOpenActivitySession={onOpen} initialSelectedId={entry.id} />);
+        // About you v1.0.0 Y20: no placeholder line for missing evidence.
+        await waitFor(() => expect(mocks.getEvidence).toHaveBeenCalled());
+        expect(screen.queryByText('No activity evidence is available for this memory.')).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Open where this was learned in Activity' }));
         expect(onOpen).toHaveBeenCalledWith('hidden-session');
     });
 });
 
 describe('About you overview', () => {
-    const second = { ...entry, id: 'second', title: 'Planning', dimension: 'user_insight', content: '# Planning\n- Plans the week on Sunday evening.\n' };
+    const second = { ...entry, id: 'second', title: 'Planning', dimension: 'user_insight', content: '# Planning\n- You plan the week on Sunday evening.\n' };
     beforeEach(async () => {
         vi.resetAllMocks();
         window.localStorage.clear();
@@ -822,12 +859,12 @@ describe('About you overview', () => {
     });
 
     it.each([
-        ['en', 'What Isoform believes about you', '2 beliefs from 3 weeks of your work. You haven’t confirmed any yet. Saved on this computer. You can correct or forget any of it.'],
-        ['zh-CN', 'Isoform 对你的认识', '2 条认识，来自你 3 周的工作。你还没有确认任何一条。保存在这台电脑上。你可以更正或忘记其中任何一条。'],
+        ['en', 'What Isoform believes about you', '2 beliefs from 3 weeks of your work. You haven’t confirmed any yet. Stored on your computer. You can correct or forget any of it.'],
+        ['zh-CN', 'Isoform 对你的认识', '2 条认识，来自你 3 周的工作。你还没有确认任何一条。存储在你的电脑上。你可以更正或忘记其中任何一条。'],
     ])('leads with what Isoform believes, over how long, in %s', async (language, title, summary) => {
         await i18n.changeLanguage(language);
         mocks.getAbout.mockResolvedValue(aboutFor([entry, second], { firstLearnedAt: Date.now() - 21 * 86400000 }));
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
         expect(await screen.findByText(summary)).toBeInTheDocument();
     });
@@ -837,13 +874,15 @@ describe('About you overview', () => {
             { ...aboutFor([entry]).beliefs[0], area: 'work', status: 'confirmed', confidence: 4 },
             { ...aboutFor([second]).beliefs[0], area: 'people', status: 'learned_today', confidence: 1 },
         ] });
-        render(<MemoryPage />);
-        const preference = await screen.findByRole('button', { name: /Writing style.*I prefer detailed replies/, pressed: false });
+        render(<MemoryPage devToolsUnlocked />);
+        const preference = await screen.findByRole('button', { name: /Writing style.*You prefer detailed replies/, pressed: false });
         expect(within(preference).getByRole('img', { name: 'Confidence 4 of 4' })).toBeInTheDocument();
         expect(within(preference).getByText('Confirmed')).toBeInTheDocument();
-        const learned = screen.getByRole('button', { name: /Planning.*Plans the week/, pressed: false });
+        const learned = screen.getByRole('button', { name: /Planning.*You plan the week/, pressed: false });
         expect(within(learned).getByRole('img', { name: 'Confidence 1 of 4' })).toBeInTheDocument();
-        expect(within(learned).getByText('Learned today')).toBeInTheDocument();
+        // v1.0.2 Y36: the status slot says only Inferred or Confirmed.
+        expect(within(learned).getByText('Inferred')).toBeInTheDocument();
+        expect(within(learned).queryByText('Learned today')).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: /^Work\s*1$/ })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /^People\s*1$/ })).toBeInTheDocument();
         expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
@@ -857,7 +896,7 @@ describe('About you overview', () => {
     // three buttons on one row.
     it('stacks belief groups at full width and keeps review cards wide enough for one button row', async () => {
         mocks.getAbout.mockImplementation(async () => aboutFor([entry, second], { newThisWeek: [second.id] }));
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const groups = await screen.findByTestId('belief-groups');
         expect(groups).toHaveClass('flex', 'flex-col');
         expect(groups.className).not.toMatch(/\bgrid\b|grid-template-columns/);
@@ -872,7 +911,7 @@ describe('About you overview', () => {
     });
 
     it('keeps the storage numbers folded under Technical details', async () => {
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const technical = await screen.findByRole('button', { name: 'Technical details' });
         expect(screen.queryByText(/chunks indexed/)).not.toBeInTheDocument();
         fireEvent.click(technical);
@@ -883,21 +922,21 @@ describe('About you overview', () => {
         // A published sibling read re-runs the load, so the failure persists
         // until the store recovers and the user retries.
         mocks.getEntries.mockRejectedValue(new Error('disk'));
-        const { container } = render(<MemoryPage />);
+        const { container } = render(<MemoryPage devToolsUnlocked />);
         expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
         const alert = await screen.findByRole('alert');
         expect(alert).toHaveTextContent('Could not load what Isoform believes about you.');
         mocks.getEntries.mockResolvedValue([entry, second]);
         fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
-        expect(await screen.findByRole('button', { name: /Planning.*Plans the week/, pressed: false })).toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: /Planning.*You plan the week/, pressed: false })).toBeInTheDocument();
     });
 
     it('says when confidence and new beliefs cannot be read, keeps the beliefs, and retries', async () => {
         mocks.getAbout.mockRejectedValue(new Error('store'));
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const alert = await screen.findByRole('alert');
         expect(alert).toHaveTextContent('Could not load what is new this week or how sure Isoform is.');
-        expect(screen.getByRole('button', { name: /Planning.*Plans the week/, pressed: false })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Planning.*You plan the week/, pressed: false })).toBeInTheDocument();
         mocks.getAbout.mockResolvedValue({ ...aboutFor([entry, second]), beliefs: aboutFor([entry, second], { confidence: 3 }).beliefs });
         fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
         expect(await screen.findAllByRole('img', { name: 'Confidence 3 of 4' })).toHaveLength(2);
@@ -905,7 +944,7 @@ describe('About you overview', () => {
     });
 
     it('builds no area-of-life switch and no "Only for work"', async () => {
-        render(<MemoryPage initialSelectedId={entry.id} />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         await screen.findByRole('heading', { name: entry.title });
         expect(screen.queryByText(/Area of life/i)).not.toBeInTheDocument();
         expect(screen.queryByText(/Only for work/i)).not.toBeInTheDocument();
@@ -913,7 +952,7 @@ describe('About you overview', () => {
 });
 
 describe('About you portrait', () => {
-    const second = { ...entry, id: 'second', title: 'Planning', content: '# Planning\n- Plans the week on Sunday evening.\n' };
+    const second = { ...entry, id: 'second', title: 'Planning', content: '# Planning\n- You plan the week on Sunday evening.\n' };
     beforeEach(async () => {
         vi.resetAllMocks();
         window.localStorage.clear();
@@ -929,7 +968,7 @@ describe('About you portrait', () => {
             { text: 'plan on Sundays', memoryIds: ['second'], confirmed: true },
             { text: '.' },
         ]));
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         expect(await screen.findByRole('heading', { level: 2, name: 'The Blueprint Builder' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'You' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'plan on Sundays' })).toHaveAttribute('data-underline', 'solid');
@@ -937,21 +976,38 @@ describe('About you portrait', () => {
         fireEvent.click(screen.getByRole('button', { name: 'plan on Sundays' }));
         const popover = await screen.findByRole('dialog');
         expect(popover).toHaveTextContent('Why Isoform says this');
-        expect(popover).toHaveTextContent('“Plans the week on Sunday evening.”');
+        expect(popover).toHaveTextContent('You plan the week on Sunday evening.');
         fireEvent.click(within(popover).getByRole('button', { name: 'Show in Beliefs' }));
         expect(await screen.findByRole('heading', { level: 2, name: 'Planning' })).toBeInTheDocument();
     });
 
-    it('says the portrait is on its way while Isoform is still learning', async () => {
+    // About you v1.0.0 Y5: Not quite on a phrase opens the decided review field.
+    it('opens the review field from a phrase Not quite', async () => {
+        mocks.getPortrait.mockResolvedValue(readyPortrait([
+            { text: 'You ' },
+            { text: 'want detailed replies', memoryIds: [entry.id] },
+            { text: '.' },
+        ]));
         render(<MemoryPage />);
+        fireEvent.click(await screen.findByRole('button', { name: 'want detailed replies' }));
+        const popover = await screen.findByRole('dialog');
+        fireEvent.click(within(popover).getByRole('button', { name: 'Not quite' }));
+        expect(await screen.findByText(/What.s closer\? You can leave it blank\./)).toBeInTheDocument();
+        expect(mocks.notify).not.toHaveBeenCalled();
+    });
+
+    it('says the portrait is on its way while Isoform is still learning', async () => {
+        render(<MemoryPage devToolsUnlocked />);
         expect(await screen.findByRole('heading', { level: 2, name: 'On its way' })).toBeInTheDocument();
-        expect(screen.getByText('2 of 20 beliefs · 1 of 5 days')).toBeInTheDocument();
+        // v1.0.2 Y34: the waiting portrait counts nothing.
+        expect(screen.getByText('Isoform writes your portrait after about 4 more days of your work.')).toBeInTheDocument();
+        expect(screen.queryByText(/of 20 beliefs|of 5 days/)).not.toBeInTheDocument();
         expect(screen.queryByText(/Loading/)).not.toBeInTheDocument();
     });
 
     it('never shows a load error: an unreadable portrait waits for the rewrite', async () => {
         mocks.getPortrait.mockRejectedValueOnce(new Error('portrait_unavailable'));
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument();
         await act(async () => {});
         expect(screen.queryByText(/Could not load your portrait/)).not.toBeInTheDocument();
@@ -962,7 +1018,7 @@ describe('About you portrait', () => {
 });
 
 describe('About you new this week', () => {
-    const fresh = { ...entry, id: 'fresh', title: 'Short calls', apps: ['Zoom', 'loginwindow'], content: '# Short calls\n- Keeps calls short before 11 AM.\n' };
+    const fresh = { ...entry, id: 'fresh', title: 'Short calls', apps: ['Zoom', 'loginwindow'], content: '# Short calls\n- You keep calls short before 11 AM.\n' };
     beforeEach(async () => {
         vi.resetAllMocks();
         window.localStorage.clear();
@@ -977,20 +1033,38 @@ describe('About you new this week', () => {
 
     async function card() {
         const section = await screen.findByRole('region', { name: 'New this week' });
-        return within(section).getByRole('article', { name: '“Keeps calls short before 11 AM.”' });
+        return within(section).getByRole('article', { name: 'You keep calls short before 11 AM.' });
     }
 
     it('lists each new belief with how often it was seen and where, never a system app', async () => {
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const article = await card();
         expect(article).toHaveTextContent('Seen 2 times · Zoom');
         expect(article).not.toHaveTextContent('loginwindow');
-        expect(article).toHaveTextContent('“Keeps calls short before 11 AM.”');
-        expect(screen.getByText('1 to check')).toBeInTheDocument();
+        expect(article).toHaveTextContent('You keep calls short before 11 AM.');
+        // About you v1.0.0 Y17: no count of what is left.
+        expect(screen.queryByText('1 to check')).not.toBeInTheDocument();
+    });
+
+    it('says Learned today once on a New this week card, as the line, not as a chip too (Y32)', async () => {
+        mocks.getAbout.mockResolvedValue(aboutFor([entry, fresh], { newThisWeek: ['fresh'], status: 'learned_today' }));
+        render(<MemoryPage devToolsUnlocked />);
+        const article = await card();
+        expect(article.querySelector('[data-status="learned_today"]')).toBeNull();
+        expect(within(article).queryAllByText(/Learned today/).length).toBeLessThanOrEqual(1);
+    });
+
+    it('reads a subjectless belief in second person, without quotation marks (Y28)', async () => {
+        const subjectless = { ...fresh, content: '# Short calls\n- Keeps calls short before 11 AM.\n' };
+        mocks.getAbout.mockResolvedValue(aboutFor([entry, subjectless], { newThisWeek: ['fresh'] }));
+        render(<MemoryPage devToolsUnlocked />);
+        const article = await card();
+        expect(article).toHaveTextContent('You keep calls short before 11 AM.');
+        expect(article).not.toHaveTextContent('“');
     });
 
     it("confirms in one click with That's me: the chip flips, the line says what it means, Undo takes it back", async () => {
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const article = await card();
         expect(within(article).getByText('Inferred')).toHaveAttribute('data-status', 'inferred');
         mocks.getAbout.mockImplementation(async () => aboutFor([entry, fresh]));
@@ -1000,7 +1074,7 @@ describe('About you new this week', () => {
         expect(line).toHaveAttribute('role', 'status');
         expect(line).toHaveFocus();
         expect(within(article).getByText('Confirmed')).toHaveAttribute('data-status', 'confirmed');
-        expect(screen.getByText('All checked')).toBeInTheDocument();
+        expect(screen.queryByText('All checked')).not.toBeInTheDocument();
         expect(mocks.forgetEntry).not.toHaveBeenCalled();
         // No toast: the answer is the line on the card.
         expect(mocks.notify).not.toHaveBeenCalled();
@@ -1014,7 +1088,7 @@ describe('About you new this week', () => {
 
     it('says the portrait can use a confirm-row belief now', async () => {
         mocks.getAbout.mockImplementation(async () => aboutFor([entry, fresh], { newThisWeek: ['fresh'], portraitCandidate: true }));
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const article = await card();
         fireEvent.click(within(article).getByRole('button', { name: 'That’s me' }));
         expect(await within(article).findByText('Confirmed. Your portrait can use this now.')).toBeInTheDocument();
@@ -1022,21 +1096,21 @@ describe('About you new this week', () => {
 
     it('keeps the card open with a retry message when confirming fails', async () => {
         mocks.confirm.mockRejectedValueOnce(new Error('suppressed'));
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const article = await card();
         fireEvent.click(within(article).getByRole('button', { name: 'That’s me' }));
-        expect(await within(article).findByRole('alert')).toHaveTextContent('Could not confirm this. Try again.');
+        expect(await within(article).findByRole('alert')).toHaveTextContent("Didn't save.");
         expect(within(article).getByRole('button', { name: 'That’s me' })).toBeEnabled();
     });
 
     it('asks Not quite in place; left blank, Isoform stops using it, and Undo puts it back', async () => {
         mocks.notQuite.mockResolvedValue(0);
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const article = await card();
         fireEvent.click(within(article).getByRole('button', { name: 'Not quite' }));
         const field = within(article).getByRole('textbox', { name: 'What’s closer? You can leave it blank.' });
         expect(field).toHaveFocus();
-        expect(field).toHaveAttribute('placeholder', 'Keeps calls short before 11 AM.');
+        expect(field).toHaveAttribute('placeholder', 'You keep calls short before 11 AM.');
         // Not in the side pane any more.
         expect(screen.queryByRole('textbox', { name: 'Memory point' })).not.toBeInTheDocument();
         fireEvent.click(within(article).getByRole('button', { name: 'Save' }));
@@ -1051,7 +1125,7 @@ describe('About you new this week', () => {
 
     it('forgets in one click after 10 seconds with the reviewed preview token, and Undo cancels it', async () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         let article = await card();
         fireEvent.click(within(article).getByRole('button', { name: 'Forget' }));
         // Announced once; the visible countdown is silent.
@@ -1085,7 +1159,7 @@ describe('About you new this week', () => {
     it('says nothing was removed when the one-click forget fails, and retries', async () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
         mocks.forgetEntry.mockRejectedValueOnce(new Error('scope changed'));
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const article = await card();
         fireEvent.click(within(article).getByRole('button', { name: 'Forget' }));
         await act(async () => { vi.advanceTimersByTime(10_000); });
@@ -1097,7 +1171,7 @@ describe('About you new this week', () => {
 
     it('cancels a pending forget when the page closes, so nothing is forgotten', async () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
-        const { unmount } = render(<MemoryPage />);
+        const { unmount } = render(<MemoryPage devToolsUnlocked />);
         const article = await card();
         fireEvent.click(within(article).getByRole('button', { name: 'Forget' }));
         expect(within(article).getByRole('button', { name: 'Undo' })).toHaveFocus();
@@ -1109,12 +1183,12 @@ describe('About you new this week', () => {
 
     it('cancels a pending one-click forget when the reviewed Forget this runs first', async () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
-        render(<MemoryPage initialSelectedId="fresh" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="fresh" />);
         const article = await card();
         fireEvent.click(within(article).getByRole('button', { name: 'Forget' }));
         const detail = screen.getByRole('complementary', { name: 'Belief detail' });
         fireEvent.click(within(detail).getByRole('button', { name: 'Forget this' }));
-        const dialog = await screen.findByRole('dialog', { name: 'Forget this memory?' });
+        const dialog = await screen.findByRole('dialog', { name: 'Forget this?' });
         await within(dialog).findByText('Calls');
         mocks.getEntries.mockResolvedValue([entry]);
         mocks.getAbout.mockImplementation(async () => aboutFor([entry]));
@@ -1128,7 +1202,7 @@ describe('About you new this week', () => {
     it('returns Not quite to the open card on Cancel or Esc, and with words saves the wording with Undo', async () => {
         mocks.saveEntry.mockImplementation(async (id: string, content: string) => ({ ...fresh, id, content, source: 'user_edit' }));
         mocks.undoWording.mockResolvedValue({ ...fresh });
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         let article = await card();
         fireEvent.click(within(article).getByRole('button', { name: 'Not quite' }));
         fireEvent.click(within(article).getByRole('button', { name: 'Cancel' }));
@@ -1139,37 +1213,37 @@ describe('About you new this week', () => {
         expect(within(article).getByRole('button', { name: 'That’s me' })).toBeInTheDocument();
         fireEvent.click(within(article).getByRole('button', { name: 'Not quite' }));
         const field = within(article).getByRole('textbox');
-        fireEvent.change(field, { target: { value: 'Keeps calls short before noon.' } });
+        fireEvent.change(field, { target: { value: 'You keep calls short before noon.' } });
         // Return saves.
         fireEvent.keyDown(field, { key: 'Enter' });
-        await waitFor(() => expect(mocks.saveEntry).toHaveBeenCalledWith('fresh', fresh.content.replace('Keeps calls short before 11 AM.', 'Keeps calls short before noon.')));
+        await waitFor(() => expect(mocks.saveEntry).toHaveBeenCalledWith('fresh', fresh.content.replace('You keep calls short before 11 AM.', 'You keep calls short before noon.')));
         expect(await within(article).findByText('Corrected. Isoform will use your wording.')).toBeInTheDocument();
         expect(within(article).getByText('Confirmed', { selector: '[data-status]' })).toBeInTheDocument();
         fireEvent.click(within(article).getByRole('button', { name: 'Undo' }));
-        await waitFor(() => expect(mocks.undoWording).toHaveBeenCalledWith('fresh', 'Keeps calls short before noon.'));
+        await waitFor(() => expect(mocks.undoWording).toHaveBeenCalledWith('fresh', 'You keep calls short before noon.'));
     });
 
     it('keeps the confirmation when the belief is edited after That’s me', async () => {
         const confirmedContent = '---\nconfirmed_at: 2026-10-22T09:00:00Z\n---\n' + fresh.content;
         mocks.confirm.mockResolvedValue({ ...fresh, content: confirmedContent });
         mocks.saveEntry.mockImplementation(async (id: string, content: string) => ({ ...fresh, id, content }));
-        render(<MemoryPage initialSelectedId="fresh" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="fresh" />);
         const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         fireEvent.click(await within(detail).findByRole('button', { name: 'That’s me' }));
         await waitFor(() => expect(mocks.confirm).toHaveBeenCalledWith('fresh'));
         await waitFor(() => expect(within(detail).getByRole('button', { name: 'Edit wording' })).toBeEnabled());
         fireEvent.click(within(detail).getByRole('button', { name: 'Edit wording' }));
-        fireEvent.change(screen.getByRole('textbox', { name: 'Memory point' }), { target: { value: 'Keeps calls short before noon.' } });
+        fireEvent.change(screen.getByRole('textbox', { name: 'Memory point' }), { target: { value: 'You keep calls short before noon.' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-        await waitFor(() => expect(mocks.saveEntry).toHaveBeenCalledWith('fresh', confirmedContent.replace('Keeps calls short before 11 AM.', 'Keeps calls short before noon.')));
+        await waitFor(() => expect(mocks.saveEntry).toHaveBeenCalledWith('fresh', confirmedContent.replace('You keep calls short before 11 AM.', 'You keep calls short before noon.')));
     });
 
     it('says so in the detail when confirming fails', async () => {
         mocks.confirm.mockRejectedValueOnce(new Error('suppressed'));
-        render(<MemoryPage initialSelectedId="fresh" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="fresh" />);
         const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         fireEvent.click(await within(detail).findByRole('button', { name: 'That’s me' }));
-        expect(await within(detail).findByRole('alert')).toHaveTextContent('Could not confirm this. Try again.');
+        expect(await within(detail).findByRole('alert')).toHaveTextContent("Didn't save.");
         expect(within(detail).getByRole('button', { name: 'That’s me' })).toBeEnabled();
     });
 
@@ -1204,16 +1278,16 @@ describe('About you new this week', () => {
 
     it('cancels a pending forget when the page is closed but kept mounted', async () => {
         vi.useFakeTimers({ shouldAdvanceTime: true });
-        const { rerender } = render(<MemoryPage active />);
+        const { rerender } = render(<MemoryPage devToolsUnlocked active />);
         const article = await card();
         fireEvent.click(within(article).getByRole('button', { name: 'Forget' }));
-        rerender(<MemoryPage active={false} />);
+        rerender(<MemoryPage devToolsUnlocked active={false} />);
         await act(async () => { vi.advanceTimersByTime(15_000); });
         expect(mocks.forgetEntry).not.toHaveBeenCalled();
     });
 
     it("answers in the detail the same way, keeps Edit wording and Forget, and says when later", async () => {
-        render(<MemoryPage initialSelectedId="fresh" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="fresh" />);
         const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         expect(within(detail).getByRole('button', { name: 'Not quite' })).toBeInTheDocument();
         fireEvent.click(await within(detail).findByRole('button', { name: 'That’s me' }));
@@ -1227,7 +1301,7 @@ describe('About you new this week', () => {
 
         // Later: a confirmed belief says when, and offers Not quite.
         mocks.getAbout.mockImplementation(async () => aboutFor([entry, fresh], { status: 'confirmed', confirmedAt: Date.now() }));
-        render(<MemoryPage initialSelectedId="fresh" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="fresh" />);
         let later = await screen.findByRole('complementary', { name: 'Belief detail' });
         expect(await within(later).findByText('You confirmed this today.')).toBeInTheDocument();
         expect(within(later).getByRole('button', { name: 'Not quite' })).toBeInTheDocument();
@@ -1237,7 +1311,7 @@ describe('About you new this week', () => {
 
         // A Not quite belief says Isoform isn't using it, and offers That's me.
         mocks.getAbout.mockImplementation(async () => aboutFor([entry, fresh], { status: 'not_quite', notQuiteAt: Date.now() - 86_400_000 }));
-        render(<MemoryPage initialSelectedId="fresh" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="fresh" />);
         later = await screen.findByRole('complementary', { name: 'Belief detail' });
         expect(await within(later).findByText('You said not quite yesterday. Isoform isn’t using it.')).toBeInTheDocument();
         fireEvent.click(within(later).getByRole('button', { name: 'That’s me' }));
@@ -1254,19 +1328,19 @@ describe('About you new this week', () => {
         const confirmedFile = { ...entry, content: '---\nconfirmed_at: 2026-10-22T09:00:00Z\n---\n' + entry.content };
         resetDefaults([confirmedFile, fresh]);
         mocks.getAbout.mockRejectedValue(new Error('store'));
-        const { unmount } = render(<MemoryPage initialSelectedId="fresh" />);
+        const { unmount } = render(<MemoryPage devToolsUnlocked initialSelectedId="fresh" />);
         let detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         fireEvent.click(within(detail).getByRole('button', { name: 'That’s me' }));
         await waitFor(() => expect(mocks.confirm).toHaveBeenCalledWith('fresh'));
         unmount();
-        render(<MemoryPage initialSelectedId={entry.id} />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         await within(detail).findByRole('button', { name: 'Edit wording' });
         expect(within(detail).queryByRole('button', { name: 'That’s me' })).not.toBeInTheDocument();
     });
 
     it("confirms from the detail with That's me too", async () => {
-        render(<MemoryPage initialSelectedId="fresh" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="fresh" />);
         const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         fireEvent.click(await within(detail).findByRole('button', { name: 'That’s me' }));
         await waitFor(() => expect(mocks.confirm).toHaveBeenCalledWith('fresh'));
@@ -1280,7 +1354,7 @@ describe('About you communication', () => {
         title: 'Language with Jia',
         apps: ['WeChat', 'Mail'],
         activitySessionIds: ['private-session'],
-        content: '# Language with Jia\n- Writes to Jia in Chinese.\n',
+        content: '# Language with Jia\n- You write to Jia in Chinese.\n',
     };
     const example = {
         id: 'draft-1',
@@ -1326,7 +1400,7 @@ describe('About you communication', () => {
             ...aboutFor(entries),
             beliefs: aboutFor(entries).beliefs.map((belief, index) => ({ ...belief, area: assigned[index] })),
         });
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const groups = await screen.findByTestId('belief-groups');
         const headings = within(groups).getAllByRole('heading', { level: 2 });
         expect(headings.map((heading) => heading.textContent)).toEqual([
@@ -1345,8 +1419,8 @@ describe('About you communication', () => {
             evidenceFirstAt: new Date(2026, 8, 30).getTime(),
             evidenceLastAt: Date.now(),
         }));
-        render(<MemoryPage />);
-        const article = await screen.findByRole('article', { name: '“Writes to Jia in Chinese.”' });
+        render(<MemoryPage devToolsUnlocked />);
+        const article = await screen.findByRole('article', { name: 'You write to Jia in Chinese.' });
         expect(article).toHaveTextContent('How you communicate');
         expect(article).toHaveTextContent('14 messages you sent');
         expect(article).toHaveTextContent('Sep 30, 2026 to today');
@@ -1358,7 +1432,7 @@ describe('About you communication', () => {
 
     it('shows sent evidence and draft examples, hides the Activity jump and keeps Change on the inspected belief when another ID comes first', async () => {
         mocks.getExamples.mockResolvedValue([example]);
-        render(<MemoryPage initialSelectedId="communication" onOpenActivitySession={vi.fn()} />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="communication" onOpenActivitySession={vi.fn()} />);
         const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         expect(within(detail).getByText('How you communicate')).toBeInTheDocument();
         expect(within(detail).getByText(/14 messages you sent/)).toHaveTextContent('WeChat and Mail');
@@ -1370,14 +1444,14 @@ describe('About you communication', () => {
         expect(within(detail).getByText(example.text)).toBeInTheDocument();
         expect(within(detail).getByText('Written the way you write to 加一: Chinese, 2 sentences, no greeting.')).toBeInTheDocument();
         fireEvent.click(within(detail).getByRole('button', { name: 'Change' }));
-        expect(screen.getByRole('button', { name: /Language with Jia.*Writes to Jia/, pressed: true })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Language with Jia.*You write to Jia/, pressed: true })).toBeInTheDocument();
         expect(mocks.getExamples).toHaveBeenCalledWith('communication');
     });
 
     it('keeps draft examples loading, offers retry after failure and then renders the example', async () => {
         let reject!: (reason: unknown) => void;
         mocks.getExamples.mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
-        render(<MemoryPage initialSelectedId="communication" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="communication" />);
         const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         expect(within(detail).getByText('How a draft shows it')).toBeInTheDocument();
         expect(within(detail).getByText('How a draft shows it').parentElement!.querySelector('[aria-busy="true"]')).not.toBeNull();
@@ -1392,7 +1466,7 @@ describe('About you communication', () => {
 
     it.each(['memory:updated', 'closed-eyes:changed'])('reloads draft examples after %s and hides a withdrawn example', async (eventName) => {
         mocks.getExamples.mockResolvedValue([example]);
-        render(<MemoryPage initialSelectedId="communication" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="communication" />);
         expect(await screen.findByText(example.text)).toBeInTheDocument();
         expect(mocks.getExamples).toHaveBeenCalledTimes(1);
         mocks.getExamples.mockResolvedValue([]);
@@ -1401,7 +1475,7 @@ describe('About you communication', () => {
         });
         expect(screen.queryByText(example.text)).not.toBeInTheDocument();
         const readsBeforeReopen = mocks.getExamples.mock.calls.length;
-        fireEvent.click(await screen.findByRole('button', { name: /Language with Jia.*Writes to Jia/ }));
+        fireEvent.click(await screen.findByRole('button', { name: /Language with Jia.*You write to Jia/ }));
         await waitFor(() => expect(mocks.getExamples.mock.calls.length).toBeGreaterThan(readsBeforeReopen));
         await waitFor(() => expect(screen.queryByText('How a draft shows it')).not.toBeInTheDocument());
         expect(screen.queryByText(example.text)).not.toBeInTheDocument();
@@ -1410,13 +1484,13 @@ describe('About you communication', () => {
     it('does not restore a stale example response after a newer withdrawal read', async () => {
         let resolveFirst!: (rows: Array<typeof example>) => void;
         mocks.getExamples.mockReturnValueOnce(new Promise((resolve) => { resolveFirst = resolve; })).mockResolvedValue([]);
-        render(<MemoryPage initialSelectedId="communication" />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="communication" />);
         await waitFor(() => expect(mocks.getExamples).toHaveBeenCalledTimes(1));
         await act(async () => {
             for (const listener of [...(mocks.events.get('memory:updated') ?? [])]) listener(undefined);
         });
         const readsBeforeReopen = mocks.getExamples.mock.calls.length;
-        fireEvent.click(await screen.findByRole('button', { name: /Language with Jia.*Writes to Jia/ }));
+        fireEvent.click(await screen.findByRole('button', { name: /Language with Jia.*You write to Jia/ }));
         await waitFor(() => expect(mocks.getExamples.mock.calls.length).toBeGreaterThan(readsBeforeReopen));
         await waitFor(() => expect(screen.queryByText('How a draft shows it')).not.toBeInTheDocument());
         await act(async () => resolveFirst([example]));
@@ -1425,7 +1499,7 @@ describe('About you communication', () => {
     });
 
     it('hides How a draft shows it when there are no examples and never reads examples for other areas', async () => {
-        const { unmount } = render(<MemoryPage initialSelectedId="communication" />);
+        const { unmount } = render(<MemoryPage devToolsUnlocked initialSelectedId="communication" />);
         const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
         await waitFor(() => expect(mocks.getExamples).toHaveBeenCalledWith('communication'));
         expect(within(detail).queryByText('How a draft shows it')).not.toBeInTheDocument();
@@ -1433,7 +1507,7 @@ describe('About you communication', () => {
 
         resetPageQueries();
         resetDefaults([entry]);
-        render(<MemoryPage initialSelectedId={entry.id} />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         await screen.findByRole('complementary', { name: 'Belief detail' });
         expect(mocks.getExamples).toHaveBeenCalledTimes(1);
         expect(screen.queryByText('How a draft shows it')).not.toBeInTheDocument();
@@ -1460,12 +1534,12 @@ describe('Decision 11: everything the Memory page had stays reachable', () => {
         mocks.getEvidence.mockResolvedValue([{ at: Date.now(), durationMs: 0, appName: 'Mail', text: 'Wrote a detailed reply.', activitySessionId: 's-1' }]);
         mocks.getPreview.mockResolvedValue(preview());
         mocks.listVersions.mockResolvedValue([{ timestampMs: Date.now() - 86400000, sizeBytes: 100 }]);
-        mocks.getVersion.mockResolvedValue('# Writing style\n- **Dimension**: user_insight\n\nI prefer short replies.\n');
+        mocks.getVersion.mockResolvedValue('# Writing style\n- **Dimension**: user_insight\n\nYou prefer short replies.\n');
     });
 
     it('keeps search, the kind filter and the source in Technical details after fixed area grouping replaces the switch', async () => {
-        render(<MemoryPage initialSelectedId={entry.id} />);
-        expect(await screen.findByRole('textbox', { name: 'Search memory text...' })).toBeInTheDocument();
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
+        expect(await screen.findByRole('textbox', { name: 'Search what Isoform believes' })).toBeInTheDocument();
         expect(screen.getByRole('combobox', { name: 'Filter by kind' })).toBeInTheDocument();
         expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
         const detail = screen.getByRole('complementary', { name: 'Belief detail' });
@@ -1474,31 +1548,76 @@ describe('Decision 11: everything the Memory page had stays reachable', () => {
     });
 
     it.each([
-        ['New memory file', 'New Memory'],
+        ['Add a note about you', 'Add a note about you'],
         ['Import from AI tools', 'Import dialog open'],
         ['Memory Dream', 'Dream dialog open'],
         ['Translate memories', 'Translate memories'],
     ])('opens %s from the page More menu', async (item, opened) => {
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         await openPageMenu();
         fireEvent.click(await screen.findByRole('menuitem', { name: item }));
-        if (opened === 'New Memory' || opened === 'Translate memories') {
+        if (opened === 'Add a note about you' || opened === 'Translate memories') {
             expect(await screen.findByRole('dialog', { name: opened })).toBeInTheDocument();
         } else {
             expect(await screen.findByText(opened)).toBeInTheDocument();
         }
     });
 
+    // About you v1.0.0 Y26: Translate all keeps its result in its dialog, never a toast.
+    it('keeps the Translate all result in its dialog, with Try again when some fail', async () => {
+        const done = async (payload: unknown) => {
+            await act(async () => {
+                for (const listener of [...(mocks.events.get('global-translation:done') ?? [])]) await listener(payload);
+            });
+        };
+        mocks.translateAll.mockResolvedValue({ total: 2, targetLanguage: 'English' });
+        render(<MemoryPage devToolsUnlocked />);
+        await openPageMenu();
+        fireEvent.click(await screen.findByRole('menuitem', { name: 'Translate memories' }));
+        const dialog = await screen.findByRole('dialog', { name: 'Translate memories' });
+        expect(dialog).toHaveTextContent('Translates every belief. Each keeps its earlier version.');
+        await act(async () => { fireEvent.click(within(dialog).getByRole('button', { name: en['globalTranslate']['confirm'] })); });
+        expect(mocks.translateAll).toHaveBeenCalledOnce();
+        expect(screen.getByRole('dialog', { name: 'Translate memories' })).toBeInTheDocument();
+        await done({ scope: 'memory', summary: { translated: 1, failed: 1, total: 2, targetLanguage: 'English' } });
+        const failed = within(dialog).getByText("Some couldn't be translated.").closest('[role="alert"]');
+        expect(failed).toHaveClass('text-copper');
+        await act(async () => { fireEvent.click(within(dialog).getByRole('button', { name: 'Try again' })); });
+        expect(mocks.translateAll).toHaveBeenCalledTimes(2);
+        await done({ scope: 'memory', summary: { translated: 2, failed: 0, total: 2, targetLanguage: 'English' } });
+        expect(within(dialog).getByText('Translated into English.')).toBeInTheDocument();
+        expect(mocks.notify).not.toHaveBeenCalled();
+    });
+
     it('re-indexes from the page More menu', async () => {
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         await openPageMenu();
         mocks.sync.mockResolvedValue(undefined);
         fireEvent.click(await screen.findByRole('menuitem', { name: 'Re-index memory files' }));
         await waitFor(() => expect(mocks.sync).toHaveBeenCalledOnce());
     });
 
-    it('keeps copy ID, version history with Compare, translate and Wrong subject in the detail More menu', async () => {
+    // About you v1.0.0 Y4: Dream, Re-index, Copy memory ID and Technical
+    // details are for developer tools only.
+    it('keeps developer items out of About you until developer tools are on', async () => {
+        render(<MemoryPage />);
+        await openPageMenu();
+        expect(await screen.findByRole('menuitem', { name: 'Import from AI tools' })).toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: 'Memory Dream' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('menuitem', { name: 'Re-index memory files' })).not.toBeInTheDocument();
+    });
+
+    it('keeps Copy memory ID and Technical details out of the detail until developer tools are on', async () => {
         render(<MemoryPage initialSelectedId={entry.id} />);
+        await screen.findByRole('heading', { name: entry.title });
+        expect(screen.queryByRole('button', { name: 'Technical details' })).not.toBeInTheDocument();
+        await openDetailMenu();
+        await screen.findAllByRole('menuitem');
+        expect(screen.queryByRole('menuitem', { name: 'Copy memory ID' })).not.toBeInTheDocument();
+    });
+
+    it('keeps copy ID, version history with Compare, translate and Wrong subject in the detail More menu', async () => {
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         await screen.findByRole('heading', { level: 2, name: entry.title });
         await openDetailMenu();
         expect(await screen.findByRole('menuitem', { name: 'Copy memory ID' })).toBeInTheDocument();
@@ -1512,20 +1631,22 @@ describe('Decision 11: everything the Memory page had stays reachable', () => {
     });
 
     it('keeps Wrong subject from the menu, per-session Not right, sentence edits and the Forget preview counts', async () => {
-        render(<MemoryPage initialSelectedId={entry.id} />);
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} />);
         await screen.findByRole('heading', { level: 2, name: entry.title });
         await openDetailMenu();
         fireEvent.click(await screen.findByRole('menuitem', { name: 'Wrong subject' }));
         expect(await screen.findByRole('dialog', { name: 'Wrong subject?' })).toBeInTheDocument();
+        // About you v1.0.0 Y24: plain words, no forget-scope internals.
+        expect(screen.getByRole('dialog', { name: 'Wrong subject?' })).toHaveTextContent(/Tell Isoform who ".+" is really about, or forget it\. Your reason isn't saved\./);
         fireEvent.click(within(screen.getByRole('dialog', { name: 'Wrong subject?' })).getByRole('button', { name: 'Cancel' }));
         fireEvent.click(await screen.findByRole('button', { name: 'Not right' }));
         expect(await screen.findByRole('dialog', { name: 'Wrong subject?' })).toBeInTheDocument();
         fireEvent.click(within(screen.getByRole('dialog', { name: 'Wrong subject?' })).getByRole('button', { name: 'Cancel' }));
-        fireEvent.click(screen.getByRole('button', { name: 'I prefer detailed replies.' }));
-        expect(screen.getByRole('textbox', { name: 'Memory point' })).toHaveValue('I prefer detailed replies.');
+        fireEvent.click(screen.getByRole('button', { name: 'You prefer detailed replies.' }));
+        expect(screen.getByRole('textbox', { name: 'Memory point' })).toHaveValue('You prefer detailed replies.');
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
         fireEvent.click(screen.getByRole('button', { name: 'Forget this' }));
-        const dialog = await screen.findByRole('dialog', { name: 'Forget this memory?' });
+        const dialog = await screen.findByRole('dialog', { name: 'Forget this?' });
         expect(await within(dialog).findByText('Stored search embeddings: 3. Saved versions: 2.')).toBeInTheDocument();
         expect(mocks.forgetEntry).not.toHaveBeenCalled();
     });
@@ -1544,21 +1665,67 @@ describe('MemoryPage with the page query cache', () => {
         pageQueryCache.set('GetMemoryEntries', [], [entry]);
         pageQueryCache.set('GetAboutYou', [], aboutFor([entry]));
         pageQueryCache.set('GetMemoryStatus', [], { files: 1, chunks: 3, vectorReady: true });
-        pageQueryCache.set('GetAboutYouPortrait', [], readyPortrait([{ text: 'Wants detailed replies', memoryIds: [entry.id] }]));
+        pageQueryCache.set('GetAboutYouPortrait', [], readyPortrait([{ text: 'You want detailed replies', memoryIds: [entry.id] }]));
         // A warm reopen has the goal lists cached too; the Goals group paints them at once.
         pageQueryCache.set('ListGoals', [], { tracking: [], done: [], held: [] });
-        const { container } = render(<MemoryPage />);
-        expect(screen.getByRole('button', { name: /Writing style.*I prefer detailed replies/, pressed: false })).toBeInTheDocument();
-        expect(screen.getByText('Wants detailed replies')).toBeInTheDocument();
+        const { container } = render(<MemoryPage devToolsUnlocked />);
+        expect(screen.getByRole('button', { name: /Writing style.*You prefer detailed replies/, pressed: false })).toBeInTheDocument();
+        expect(screen.getByText('You want detailed replies')).toBeInTheDocument();
         expect(container.querySelector('[aria-busy="true"]')).toBeNull();
         await act(async () => {});
     });
 
     it('shows the skeleton on a true first load', () => {
         mocks.getEntries.mockReturnValue(new Promise(() => undefined));
-        const { container } = render(<MemoryPage />);
+        const { container } = render(<MemoryPage devToolsUnlocked />);
         expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-        expect(screen.queryByRole('button', { name: /I prefer detailed replies/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: /You prefer detailed replies/ })).toBeNull();
+    });
+
+    it('About you v1.0.0 Y12: on a cold open the portrait paints in the same frame as the beliefs', async () => {
+        let resolvePortrait!: (value: unknown) => void;
+        mocks.getEntries.mockResolvedValue([entry]);
+        mocks.getPortrait.mockReturnValue(new Promise((resolve) => { resolvePortrait = resolve; }));
+        const { container } = render(<MemoryPage devToolsUnlocked />);
+        await act(async () => {});
+        expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+        expect(screen.queryByRole('button', { name: /You prefer detailed replies/ })).toBeNull();
+        await act(async () => {
+            resolvePortrait(readyPortrait([{ text: 'You want detailed replies', memoryIds: [entry.id] }]));
+        });
+        expect(screen.getByRole('button', { name: /Writing style.*You prefer detailed replies/, pressed: false })).toBeInTheDocument();
+        expect(screen.getByText('You want detailed replies')).toBeInTheDocument();
+        expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    });
+
+    function dayOne() {
+        const second = { ...entry, id: 'calendar', title: 'You put every plan on the calendar' };
+        mocks.getEntries.mockResolvedValue([entry, second]);
+        mocks.getAbout.mockImplementation(async () => {
+            const about = aboutFor([entry, second]);
+            return { ...about, beliefs: about.beliefs.map((belief) => ({ ...belief, source: 'assistant-history' })) };
+        });
+        pageQueryCache.set('GetFirstWeekDay', [], 0);
+        pageQueryCache.set('GetAssistantHistory', [], { enabled: true, state: 'ready', assistants: ['claude'], projects: [], beliefCount: 2, knowHowCount: 0 });
+    }
+
+    it('About you v1.0.0 Y2: on day one Check these first is the first section, and its line never says three', async () => {
+        dayOne();
+        const { container } = render(<MemoryPage />);
+        const heading = await screen.findByText('Check these first');
+        expect(screen.getByText('From your Claude Code history')).toBeInTheDocument();
+        expect(container.textContent).not.toMatch(/three/i);
+        const portrait = screen.getAllByText('Your portrait')[0];
+        expect(heading.compareDocumentPosition(portrait) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByText(/^2 beliefs from your Claude Code history\. You haven't confirmed any yet\. Stored on your computer\./)).toBeInTheDocument();
+    });
+
+    it('About you v1.0.0 Y2: the zh-CN day-one line joins its sentences without a space', async () => {
+        await i18n.changeLanguage('zh-CN');
+        dayOne();
+        render(<MemoryPage />);
+        expect(await screen.findByText('先确认这几条')).toBeInTheDocument();
+        expect(screen.getByText(/你还没有确认任何一条。存储在你的电脑上。/)).toBeInTheDocument();
     });
 
     it('drops every cached About you read on the privacy invalidation', () => {
@@ -1573,13 +1740,13 @@ describe('MemoryPage with the page query cache', () => {
     });
 
     it('a privacy sweep withdraws the hidden retained page — beliefs, portrait, search text — before the re-read lands, then a permitted read recovers', async () => {
-        mocks.getPortrait.mockResolvedValue(readyPortrait([{ text: 'Wants detailed replies', memoryIds: [entry.id] }]));
-        const view = render(<MemoryPage active={false} />);
-        expect(await screen.findByRole('button', { name: /I prefer detailed replies/ })).toBeInTheDocument();
-        expect(await screen.findByText('Wants detailed replies')).toBeInTheDocument();
+        mocks.getPortrait.mockResolvedValue(readyPortrait([{ text: 'You want detailed replies', memoryIds: [entry.id] }]));
+        const view = render(<MemoryPage devToolsUnlocked active={false} />);
+        expect(await screen.findByRole('button', { name: /You prefer detailed replies/ })).toBeInTheDocument();
+        expect(await screen.findByText('You want detailed replies')).toBeInTheDocument();
         // A remembered search narrows the list; it holds text too.
-        fireEvent.change(screen.getByRole('textbox', { name: 'Search memory text...' }), { target: { value: 'detailed' } });
-        expect(screen.getByRole('textbox', { name: 'Search memory text...' })).toHaveValue('detailed');
+        fireEvent.change(screen.getByRole('textbox', { name: 'Search what Isoform believes' }), { target: { value: 'detailed' } });
+        expect(screen.getByRole('textbox', { name: 'Search what Isoform believes' })).toHaveValue('detailed');
 
         // The sweep's re-read hangs: nothing may paint pre-transition text.
         mocks.getEntries.mockImplementation(() => new Promise(() => {}));
@@ -1587,42 +1754,42 @@ describe('MemoryPage with the page query cache', () => {
         mocks.getStatus.mockImplementation(() => new Promise(() => {}));
         mocks.getPortrait.mockImplementation(() => new Promise(() => {}));
         await emitEvent('memory:updated');
-        expect(screen.queryByRole('button', { name: /I prefer detailed replies/ })).not.toBeInTheDocument();
-        expect(screen.queryByText('Wants detailed replies')).not.toBeInTheDocument();
-        expect(screen.queryByRole('textbox', { name: 'Search memory text...' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /You prefer detailed replies/ })).not.toBeInTheDocument();
+        expect(screen.queryByText('You want detailed replies')).not.toBeInTheDocument();
+        expect(screen.queryByRole('textbox', { name: 'Search what Isoform believes' })).not.toBeInTheDocument();
 
         // Reopening while the reads are still held shows the skeleton, never
         // the withdrawn beliefs.
-        view.rerender(<MemoryPage active={true} />);
-        expect(screen.queryByRole('button', { name: /I prefer detailed replies/ })).not.toBeInTheDocument();
+        view.rerender(<MemoryPage devToolsUnlocked active={true} />);
+        expect(screen.queryByRole('button', { name: /You prefer detailed replies/ })).not.toBeInTheDocument();
 
         // A later ordinary change re-reads: what is still permitted returns.
         resetDefaults([entry]);
         await emitEvent('memory:updated');
-        expect(await screen.findByRole('button', { name: /I prefer detailed replies/ })).toBeInTheDocument();
+        expect(await screen.findByRole('button', { name: /You prefer detailed replies/ })).toBeInTheDocument();
     });
 
     it('a privacy sweep with failing reads shows the retry, never the withdrawn beliefs', async () => {
-        render(<MemoryPage />);
-        expect(await screen.findByRole('button', { name: /I prefer detailed replies/ })).toBeInTheDocument();
+        render(<MemoryPage devToolsUnlocked />);
+        expect(await screen.findByRole('button', { name: /You prefer detailed replies/ })).toBeInTheDocument();
         mocks.getEntries.mockRejectedValue(new Error('gone'));
         mocks.getAbout.mockRejectedValue(new Error('gone'));
         mocks.getStatus.mockRejectedValue(new Error('gone'));
         await emitEvent('closed-eyes:changed');
-        expect(screen.queryByRole('button', { name: /I prefer detailed replies/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /You prefer detailed replies/ })).not.toBeInTheDocument();
         expect(await screen.findByRole('alert')).toHaveTextContent('Could not load what Isoform believes about you.');
     });
 
     it('the portrait follows every privacy sweep, not just Forget', async () => {
-        mocks.getPortrait.mockResolvedValue(readyPortrait([{ text: 'Wants detailed replies', memoryIds: [entry.id] }]));
-        render(<MemoryPage />);
-        expect(await screen.findByText('Wants detailed replies')).toBeInTheDocument();
+        mocks.getPortrait.mockResolvedValue(readyPortrait([{ text: 'You want detailed replies', memoryIds: [entry.id] }]));
+        render(<MemoryPage devToolsUnlocked />);
+        expect(await screen.findByText('You want detailed replies')).toBeInTheDocument();
         mocks.getPortrait.mockImplementation(() => new Promise(() => {}));
         mocks.getEntries.mockImplementation(() => new Promise(() => {}));
         mocks.getAbout.mockImplementation(() => new Promise(() => {}));
         mocks.getStatus.mockImplementation(() => new Promise(() => {}));
         await emitEvent('permissions:changed');
-        expect(screen.queryByText('Wants detailed replies')).not.toBeInTheDocument();
+        expect(screen.queryByText('You want detailed replies')).not.toBeInTheDocument();
     });
 });
 
@@ -1654,7 +1821,7 @@ describe('MemoryPage goals group', () => {
     it('keeps a marked goal in place with Undo', async () => {
         mocks.listGoals.mockResolvedValue(GOAL_PAGE);
         mocks.moveGoal.mockResolvedValueOnce({ id: 'follow', eventId: 'e5', state: 'resolved' });
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const group = await screen.findByRole('region', { name: 'Goals' });
         const mark = await within(group).findByRole('button', { name: 'Mark done, Send Dana the notes' });
         await act(async () => { fireEvent.click(mark); });
@@ -1668,7 +1835,7 @@ describe('MemoryPage goals group', () => {
 
     it('shows the Goals group above New this week and the belief groups', async () => {
         mocks.listGoals.mockResolvedValue(GOAL_PAGE);
-        render(<MemoryPage onCreateGoal={vi.fn()} />);
+        render(<MemoryPage devToolsUnlocked />);
         const goalsGroup = await screen.findByRole('region', { name: 'Goals' });
         const review = await screen.findByRole('region', { name: 'New this week' });
         const groups = await screen.findByTestId('belief-groups');
@@ -1677,36 +1844,68 @@ describe('MemoryPage goals group', () => {
         expect(within(goalsGroup).getByText('Renew passport')).toBeInTheDocument();
         expect(within(goalsGroup).getByText('Waiting on someone')).toHaveClass('text-copper');
         expect(within(goalsGroup).getAllByText('Tracking')).toHaveLength(2);
-        expect(within(goalsGroup).getByText('Only on this computer (1)')).toBeInTheDocument();
+        expect(within(goalsGroup).getByText('Only on this computer')).toBeInTheDocument();
     });
 
+    // About you v1.0.0 Y3: no Goals section without goals; Add a goal is in More
+    // and opens a field in place, which adds the goal under Tracking at once.
     it.each([
-        ['en', 'Goals', 'Add a goal', "No goals yet. Tell Isoform what you're working toward and it keeps track here.", 'I want to set a new goal: '],
-        ['zh-CN', '目标', '添加目标', '还没有目标。告诉 Isoform 你在推进什么，它会在这里跟进。', '我想设定一个新目标：'],
-    ])('reads one empty line and offers Add a goal in %s', async (language, title, add, empty, prompt) => {
+        ['en', 'Goals', 'Add a goal', 'What are you working toward?', 'For example: Run a half marathon in March', 'Add', 'You added it today.'],
+        ['zh-CN', '目标', '添加目标', '你在为什么努力？', '例如：三月跑一个半马', '添加', '你今天添加的。'],
+    ])('adds a goal in place from More in %s', async (language, title, add, label, placeholder, addButton, added) => {
         await i18n.changeLanguage(language);
         mocks.listGoals.mockResolvedValue({ tracking: [], done: [], held: [] });
-        const onCreateGoal = vi.fn();
-        render(<MemoryPage onCreateGoal={onCreateGoal} />);
+        mocks.createGoal.mockResolvedValueOnce({ id: 'run', eventId: 'e1', state: 'active', title: 'Run a half marathon in March' });
+        render(<MemoryPage devToolsUnlocked />);
+        await waitFor(() => expect(mocks.listGoals).toHaveBeenCalled());
+        await screen.findByTestId('belief-groups');
+        expect(screen.queryByRole('region', { name: title })).not.toBeInTheDocument();
+        await openPageMenu(language === 'en' ? 'More About you actions' : '更多「关于你」操作');
+        fireEvent.click(await screen.findByRole('menuitem', { name: add }));
+        const field = await screen.findByRole('textbox', { name: label });
+        expect(field).toHaveAttribute('placeholder', placeholder);
+        fireEvent.change(field, { target: { value: 'Run a half marathon in March' } });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: addButton })); });
         const group = await screen.findByRole('region', { name: title });
-        expect(await within(group).findByTestId('goals-empty')).toHaveTextContent(empty);
-        fireEvent.click(within(group).getByRole('button', { name: add }));
-        expect(onCreateGoal).toHaveBeenCalledWith(prompt);
+        expect(within(group).getByText('Run a half marathon in March')).toBeInTheDocument();
+        expect(within(group).getByText(added)).toBeInTheDocument();
+        expect(mocks.createGoal).toHaveBeenCalledWith({ text: 'Run a half marathon in March', key: expect.any(String) });
+        expect(mocks.notify).not.toHaveBeenCalled();
     });
 
-    it('does not offer Add a goal when the page is not wired to Chat', async () => {
+    it('keeps a goal that did not save in its field, in copper, with Try again', async () => {
+        mocks.listGoals.mockResolvedValue({ tracking: [], done: [], held: [] });
+        mocks.createGoal.mockRejectedValueOnce(new Error('goal_unavailable'));
+        render(<MemoryPage devToolsUnlocked />);
+        await screen.findByTestId('belief-groups');
+        await openPageMenu();
+        fireEvent.click(await screen.findByRole('menuitem', { name: 'Add a goal' }));
+        fireEvent.change(await screen.findByRole('textbox', { name: 'What are you working toward?' }), { target: { value: 'Learn to bake bread' } });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add' })); });
+        const line = await screen.findByText("Your goal didn't save. It's still here.");
+        expect(line.closest('[role="alert"]') ?? line).toHaveClass('text-copper');
+        expect(screen.getByRole('textbox', { name: 'What are you working toward?' })).toHaveValue('Learn to bake bread');
+        const key = mocks.createGoal.mock.calls[0][0].key;
+        mocks.createGoal.mockResolvedValueOnce({ id: 'bread', eventId: 'e2', state: 'active', title: 'Learn to bake bread' });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Try again' })); });
+        expect(mocks.createGoal).toHaveBeenLastCalledWith({ text: 'Learn to bake bread', key });
+        expect(await screen.findByText('You added it today.')).toBeInTheDocument();
+    });
+
+    it('does not offer Add a goal in More once there are goals', async () => {
         mocks.listGoals.mockResolvedValue(GOAL_PAGE);
-        render(<MemoryPage />);
+        render(<MemoryPage devToolsUnlocked />);
         const group = await screen.findByRole('region', { name: 'Goals' });
         await within(group).findByText('Renew passport');
-        expect(within(group).queryByRole('button', { name: 'Add a goal' })).not.toBeInTheDocument();
+        await openPageMenu();
+        expect(screen.queryByRole('menuitem', { name: 'Add a goal' })).not.toBeInTheDocument();
     });
 
-    it('folds done goals under Done (n) until they are opened', async () => {
+    it('folds done goals under Done until they are opened', async () => {
         mocks.listGoals.mockResolvedValue(GOAL_PAGE);
-        render(<MemoryPage onCreateGoal={vi.fn()} />);
+        render(<MemoryPage devToolsUnlocked />);
         const group = await screen.findByRole('region', { name: 'Goals' });
-        const fold = await within(group).findByRole('button', { name: 'Done (1)' });
+        const fold = await within(group).findByRole('button', { name: 'Done' });
         expect(fold).toHaveAttribute('aria-expanded', 'false');
         expect(within(group).queryByText('Book the dentist')).not.toBeInTheDocument();
         fireEvent.click(fold);
@@ -1719,12 +1918,49 @@ describe('MemoryPage goals group', () => {
         mocks.getGoal.mockResolvedValue({ goal: GOAL_PAGE.tracking[0], history: [], sources: [] });
         const onOpenGoalHandled = vi.fn();
         const onTalkAboutGoal = vi.fn();
-        render(<MemoryPage initialSelectedId={entry.id} openGoalId="passport" openGoalSignal={1}
+        render(<MemoryPage devToolsUnlocked initialSelectedId={entry.id} openGoalId="passport" openGoalSignal={1}
             onOpenGoalHandled={onOpenGoalHandled} onTalkAboutGoal={onTalkAboutGoal} />);
         fireEvent.click(await screen.findByRole('button', { name: 'Talk about this goal' }));
         expect(mocks.getGoal).toHaveBeenCalledWith('passport');
         expect(onOpenGoalHandled).toHaveBeenCalledTimes(1);
         expect(onTalkAboutGoal).toHaveBeenCalledWith(GOAL_PAGE.tracking[0], "Let's talk about my goal: Renew passport");
         expect(screen.queryByRole('heading', { name: entry.title })).not.toBeInTheDocument();
+    });
+});
+
+describe('About you design review v1.0.0', () => {
+    beforeEach(async () => {
+        vi.resetAllMocks();
+        window.localStorage.clear();
+        await i18n.changeLanguage('en');
+        resetDefaults([entry]);
+        mocks.getPreview.mockResolvedValue(preview());
+    });
+
+    // Y1: with no beliefs, only the header line.
+    it.each([
+        ['en', 'Isoform writes what it learns about you here. The first notes come tonight.'],
+        ['zh-CN', 'Isoform 会把对你的了解写在这里。第一批今晚就有。'],
+    ])('reads one line on an empty page in %s', async (language, line) => {
+        await i18n.changeLanguage(language);
+        resetDefaults([]);
+        render(<MemoryPage />);
+        expect(await screen.findByText(line)).toBeInTheDocument();
+        expect(screen.queryByTestId('memory-empty-state')).not.toBeInTheDocument();
+    });
+
+    // Y8: plain words for everyone; the itemized internals only with developer tools.
+    it.each([
+        ['en', 'Forget this', 'Forget this?'],
+        ['zh-CN', '忘记这条', '忘记这一条？'],
+    ])('keeps Forget plain and its internals for developer tools in %s', async (language, action, title) => {
+        await i18n.changeLanguage(language);
+        render(<MemoryPage initialSelectedId={entry.id} />);
+        await screen.findByRole('heading', { name: entry.title });
+        fireEvent.click(screen.getByRole('button', { name: action }));
+        const dialog = await screen.findByRole('dialog', { name: title });
+        await waitFor(() => expect(mocks.getPreview).toHaveBeenCalled());
+        expect(within(dialog).queryByTestId('forget-dev-details')).not.toBeInTheDocument();
+        expect(dialog).toHaveTextContent(entry.title);
     });
 });

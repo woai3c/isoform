@@ -7,7 +7,7 @@ import type { AboutYouBelief } from '@/lib/wails-shim-app';
 import { BeliefStatusMark } from '@/components/about-you/belief-status';
 import { cn } from '@/lib/utils';
 
-import { humanMemoryText, memoryPoints, memoryKind, memoryLabel, relativeWords } from '@/lib/memory-content';
+import { beliefInSecondPerson, humanMemoryText, memoryPoints, memoryKind, memoryLabel, relativeWords } from '@/lib/memory-content';
 export { memoryText, memoryLabel } from '@/lib/memory-content';
 
 /** Calendar days avoid clock times and keep yesterday correct across DST. */
@@ -44,8 +44,10 @@ export function MemoryRow({
 }) {
     const { t } = useTranslation('memory');
     const label = memoryLabel(entry, t);
-    const firstPoint = humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '');
+    const firstPoint = beliefInSecondPerson(humanMemoryText(memoryPoints(entry.content)[0]?.text ?? ''));
     const changed = entry.updatedAt > 0 ? entry.updatedAt : entry.modTime;
+    const learned = belief?.firstLearnedAt ?? 0;
+    const unchanged = learned > 0 && changed - learned < 60_000;
     return (
         <div className={cn(
             'group rounded-lg transition-colors',
@@ -67,7 +69,7 @@ export function MemoryRow({
             </button>
             <div className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 px-2.5 pb-1.5 text-[11px] text-muted">
                 {showKind && <span className="rounded-full bg-surface-active px-2 py-0.5">{t(`kinds.${memoryKind(entry)}`)}</span>}
-                {changed > 0 && <span>{t('row.updated', { when: relativeWords(t, changed) })}</span>}
+                {changed > 0 && <span>{t(unchanged ? 'row.learned' : 'row.updated', { when: relativeWords(t, changed) })}</span>}
                 <span className="ml-auto flex items-center gap-0.5 text-muted opacity-100 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
                     <button type="button" className="inline-flex min-h-7 min-w-7 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus hover:bg-surface-active hover:text-ink" onClick={onEdit} aria-label={t('row.edit', { title: label })}>
                         <Pencil className="h-3 w-3" />

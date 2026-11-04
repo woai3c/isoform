@@ -908,6 +908,7 @@ export const RenameMeetingSpeaker = makeNoop("RenameMeetingSpeaker");
 export const ForgetVoices = makeNoop("ForgetVoices");
 export const GetRecentMeetingNotes = makeNoop("GetRecentMeetingNotes");
 export const MoveGoal = makeNoop("MoveGoal");
+export const CreateGoal = makeNoop("CreateGoal");
 export const GetGoalCheckIn = makeNoop("GetGoalCheckIn");
 export const NoteGoalCheckInShown = makeNoop("NoteGoalCheckInShown");
 export const ListGoals = makeNoop("ListGoals");

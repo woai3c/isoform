@@ -18,13 +18,19 @@ export function ConfidenceBar({ level }: { level: number }) {
     );
 }
 
+/** The status slot says only Inferred or Confirmed (v1.0.2 Y36); when a
+ * belief was learned is the footer's job, said once. */
+export function slotStatus(status: AboutYouBelief['status']): AboutYouBelief['status'] {
+    return status === 'learned_today' ? 'inferred' : status;
+}
+
 /** The confidence bar over its status word, as on each belief row. */
 export function BeliefStatusMark({ belief }: { belief: AboutYouBelief }) {
     const { t } = useTranslation('memory');
     return (
         <span className="flex flex-none flex-col items-end gap-1 pt-0.5">
             <ConfidenceBar level={belief.confidence} />
-            <span className="text-[11px] leading-none text-muted">{t(`aboutYou.status.${belief.status}`)}</span>
+            <span className="text-[11px] leading-none text-muted">{t(`aboutYou.status.${slotStatus(belief.status)}`)}</span>
         </span>
     );
 }

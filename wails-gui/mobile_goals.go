@@ -122,13 +122,24 @@ func mobileGoalAddedByYou(detail PurposeOpenLoopDetail) bool {
 	return false
 }
 
+// mobileGoalTitle gives a commitment the short name it has on Today, in Chat
+// and on the phone (thursday-polish C1); the full words stay in its detail.
+func mobileGoalTitle(kind, title string) string {
+	if kind == PurposeKindCommitment {
+		if short := commitmentShortName(title); short != "" {
+			return mobileGoalText(short)
+		}
+	}
+	return mobileGoalText(title)
+}
+
 // mobileGoalView builds the phone's view of one Purpose at now.
 func mobileGoalView(detail PurposeOpenLoopDetail, now time.Time) MobileGoalView {
 	current := detail.Current
 	view := MobileGoalView{
 		ID:         detail.OpenLoop.ID,
 		Kind:       detail.OpenLoop.Kind,
-		Title:      mobileGoalText(current.Title),
+		Title:      mobileGoalTitle(detail.OpenLoop.Kind, current.Title),
 		State:      current.LifecycleState,
 		Group:      mobileGoalGroupTracking,
 		UpdatedAt:  formatMobileBriefTime(time.UnixMilli(current.OccurredAt)),

@@ -74,6 +74,8 @@ export interface GoalsBoardOptions {
     openGoalSignal?: number;
     /** Called once the request is taken, so a later visit opens the list. */
     onOpenGoalHandled?: () => void;
+    /** About you: a failed move says so in its row (failedMoves), never in a toast. */
+    inPlaceFailures?: boolean;
 }
 
 type PendingGoalMove = { goal: GoalItemView; action: "resolve" | "forget"; eventId?: string; undoFailed?: boolean; undoing?: boolean };
@@ -82,10 +84,22 @@ const INLINE_UNDO_MS = 5_000;
 /** The goal lists with their moves, the open story and the waiting and edit
  *  dialogs. The Goals page and About you both run on it; moves go through
  *  MoveGoal, the same path as Today and the phone. */
-export function useGoalsBoard({ openGoalId, openGoalSignal, onOpenGoalHandled }: GoalsBoardOptions) {
+export function useGoalsBoard({ openGoalId, openGoalSignal, onOpenGoalHandled, inPlaceFailures = false }: GoalsBoardOptions) {
     const { t } = useTranslation("app");
     const tr: Translate = (key, options) => t(key as never, options as never) as unknown as string;
     const { page, loading, failed, refresh } = useGoals(true);
+    // A move that failed, by goal, with the same move again (Try again).
+    const [failedMoves, setFailedMoves] = useState<Partial<Record<string, () => void>>>({});
+    const clearFailed = (id: string) => setFailedMoves((current) => {
+        if (!current[id]) return current;
+        const next = { ...current };
+        delete next[id];
+        return next;
+    });
+    const moveFailed = (goal: GoalItemView, error: unknown, retry: () => void) => {
+        if (inPlaceFailures) setFailedMoves((current) => ({ ...current, [goal.id]: retry }));
+        else toast.error(tr(errorKey(error)));
+    };
     // A goal marked done or forgotten leaves its list at once, by the event the
     // page showed: the next read shows a done goal under Done, and Undo brings
     // either back.
@@ -156,12 +170,13 @@ export function useGoalsBoard({ openGoalId, openGoalSignal, onOpenGoalHandled }:
     const all = useMemo(() => [...(page?.tracking ?? []), ...(page?.done ?? []), ...(page?.held ?? [])], [page]);
 
     const plainMove = async (goal: GoalItemView, action: "reopen" | "waiting" | "revise", extra: { waitingOn?: string; title?: string; dueDate?: string; setDue?: boolean } = {}) => {
+        clearFailed(goal.id);
         try {
             await MoveGoal({ goalId: goal.id, expectedEventId: goal.eventId, action, key: newKey(), ...extra });
             refresh();
             return true;
         } catch (error) {
-            toast.error(tr(errorKey(error)));
+            moveFailed(goal, error, () => void plainMove(goal, action, extra));
             refresh();
             return false;
         }
@@ -169,6 +184,7 @@ export function useGoalsBoard({ openGoalId, openGoalSignal, onOpenGoalHandled }:
     const move = async (goal: GoalItemView, action: "resolve" | "forget") => {
         if (busyMoves.current.has(goal.id)) return false;
         busyMoves.current.add(goal.id);
+        clearFailed(goal.id);
         const generation = moveGeneration.current;
         setPendingMoves((current) => ({ ...current, [goal.id]: { goal, action } }));
         try {
@@ -187,7 +203,7 @@ export function useGoalsBoard({ openGoalId, openGoalSignal, onOpenGoalHandled }:
             if (generation !== moveGeneration.current) return false;
             busyMoves.current.delete(goal.id);
             setPendingMoves((current) => { const next = { ...current }; delete next[goal.id]; return next; });
-            toast.error(tr(errorKey(error)));
+            moveFailed(goal, error, () => void move(goal, action));
             refresh();
             return false;
         }
@@ -233,7 +249,7 @@ export function useGoalsBoard({ openGoalId, openGoalSignal, onOpenGoalHandled }:
     const opened = openId ? all.find((goal) => goal.id === openId && !isHidden(goal)) : undefined;
     return {
         page, loading, failed, refresh, tracking, done, held, all, opened, openId, setOpenId, actions,
-        waitingFor, setWaitingFor, editing, setEditing, plainMove, pendingMoves, undoMove,
+        waitingFor, setWaitingFor, editing, setEditing, plainMove, pendingMoves, undoMove, failedMoves,
     };
 }
 

@@ -39,7 +39,7 @@ describe('memory point drafts and provenance', () => {
     });
 
     it.each([
-        ['insertion before the target', original.replace('- Keep', '- I work on a phone.\n- Keep')],
+        ['insertion before the target', original.replace('- Keep', '- You work on a phone.\n- Keep')],
         ['removal before the target', original.replace('- Keep replies short.\n', '')],
         ['removal of the target', original.replace('- Use examples.\n', '')],
     ])('keeps a draft visible and blocks stale Save after %s', async (_, refreshed) => {
@@ -115,8 +115,7 @@ describe('cached detail reads', () => {
         render(detail());
         // Synchronous first render: the cached evidence row is there and no
         // aria-busy skeleton is showing.
-        expect(screen.getByText('A public fixture note.')).toBeInTheDocument();
-        expect(screen.getByText(/FixtureApp/)).toBeInTheDocument();
+        expect(screen.getByText('From your FixtureApp: A public fixture note.')).toBeInTheDocument();
         expect(document.querySelector('[aria-busy="true"]')).toBeNull();
     });
 

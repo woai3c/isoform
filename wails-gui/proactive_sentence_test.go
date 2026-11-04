@@ -279,7 +279,7 @@ func TestProactiveCommitmentSentenceShortNameKeepsReceiptReadable(t *testing.T) 
 		if err := json.Unmarshal([]byte(page.Items[0].ToolInput), &card); err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(card.Localized["en"].Body, "Calf race or exercise for AFO every day") || strings.Contains(card.Localized["en"].Body, "Make sure") {
+		if !strings.Contains(card.Localized["en"].Body, "AFO calf raises, every day") || strings.Contains(card.Localized["en"].Body, "Make sure") {
 			t.Fatalf("wrong display: %+v", card)
 		}
 		after, err := app.store.LoadStreamItem(t.Context(), id)

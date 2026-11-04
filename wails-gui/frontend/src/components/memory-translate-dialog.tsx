@@ -13,7 +13,6 @@ import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { StartTranslateAllCurrentMemoryEntries } from '../../wailsjs/go/main/App';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { notifyToast } from '@/lib/notify';
 
 type GlobalTranslateTarget = 'follow-ui' | 'zh-CN' | 'en' | 'other';
 // The batch summary arrives only as an event, so it has no generated model.
@@ -53,6 +52,10 @@ export function MemoryTranslateAllDialog({
     const [globalTranslateTarget, setGlobalTranslateTarget] = useState<GlobalTranslateTarget>('follow-ui');
     const [globalTranslateCustomLanguage, setGlobalTranslateCustomLanguage] = useState('');
     const [globalTranslateProgress, setGlobalTranslateProgress] = useState<{ done: number; total: number } | null>(null);
+    const [result, setResult] = useState<{ kind: 'done'; target: string } | { kind: 'failed' } | null>(null);
+    useEffect(() => {
+        if (open) setResult(null);
+    }, [open]);
     const currentUILanguage = normalizeUILanguage(i18n.resolvedLanguage ?? i18n.language);
     const globalTranslateTargetLabel =
         globalTranslateTarget === 'follow-ui'
@@ -73,44 +76,24 @@ export function MemoryTranslateAllDialog({
             setGlobalTranslateProgress(null);
             onDone();
 
-            if (event.error) {
-                notifyToast(
-                    t('toasts.translateFailed.title') as string,
-                    event.error,
-                    'error',
-                );
+            const summary = event.summary;
+            if (event.error || (summary && summary.failed > 0)) {
+                setResult({ kind: 'failed' });
                 return;
             }
-
-            const summary = event.summary;
             if (!summary) return;
-            notifyToast(
-                summary.failed > 0 ? t('toasts.translateFailed.title') as string : t('toasts.globalTranslated.title') as string,
-                t('toasts.globalTranslated.body', {
-                    translated: summary.translated,
-                    failed: summary.failed,
-                    total: summary.total,
-                    target: summary.targetLanguage || globalTranslateTargetLabel,
-                }) as string,
-                summary.failed > 0 ? 'error' : 'success',
-            );
+            setResult({ kind: 'done', target: summary.targetLanguage || globalTranslateTargetLabel });
         });
         return cleanup;
     }, [globalTranslateTargetLabel, onDone, setGlobalTranslating, t]);
 
     const handleGlobalTranslate = useCallback(async () => {
         if (globalTranslating) return;
-        if (globalTranslateTarget === 'other' && globalTranslateCustomLanguage.trim() === '') {
-            notifyToast(
-                t('toasts.translateFailed.title') as string,
-                t('globalTranslate.customRequired') as string,
-                'error',
-            );
-            return;
-        }
+        if (globalTranslateTarget === 'other' && globalTranslateCustomLanguage.trim() === '') return;
 
         if (entryCount === 0) return;
 
+        setResult(null);
         setGlobalTranslating(true);
         setGlobalTranslateProgress({ done: 0, total: entryCount });
         try {
@@ -119,33 +102,17 @@ export function MemoryTranslateAllDialog({
                 language: globalTranslateCustomLanguage.trim(),
             });
             setGlobalTranslateProgress({ done: 0, total: start.total });
-            onOpenChange(false);
-            notifyToast(
-                t('toasts.globalTranslateStarted.title') as string,
-                t('toasts.globalTranslateStarted.body', {
-                    total: start.total,
-                    target: start.targetLanguage || globalTranslateTargetLabel,
-                }) as string,
-                'info',
-            );
-        } catch (err: unknown) {
+        } catch {
             setGlobalTranslating(false);
             setGlobalTranslateProgress(null);
-            notifyToast(
-                t('toasts.translateFailed.title') as string,
-                err instanceof Error ? err.message : String(err),
-                'error',
-            );
+            setResult({ kind: 'failed' });
         }
     }, [
         entryCount,
         globalTranslateCustomLanguage,
         globalTranslateTarget,
-        globalTranslateTargetLabel,
         globalTranslating,
-        onOpenChange,
         setGlobalTranslating,
-        t,
     ]);
 
     return (
@@ -244,6 +211,17 @@ export function MemoryTranslateAllDialog({
                         </div>
                     )}
 
+                    {result?.kind === 'done' && (
+                        <p role="status" className="m-0 text-[12.5px] text-ink">{t('globalTranslate.result.done', { target: result.target })}</p>
+                    )}
+                    {result?.kind === 'failed' && (
+                        <p role="alert" className="m-0 flex flex-wrap items-center gap-2 text-[12.5px] text-copper">
+                            <span>{t('globalTranslate.result.failed')}</span>
+                            <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-[12.5px] text-accent hover:underline" onClick={() => void handleGlobalTranslate()}>
+                                {t('aboutYou.retry')}
+                            </button>
+                        </p>
+                    )}
                     <div className="flex items-center justify-end gap-2 pt-1">
                         <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} disabled={globalTranslating}>
                             {t('globalTranslate.cancel')}

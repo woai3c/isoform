@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    beliefInSecondPerson,
     isSystemNoiseApp,
     memoryApps,
     memoryConfirmed,
@@ -120,5 +121,38 @@ describe('memory content projection', () => {
         expect(memoryConfirmed(entry('---\nuuid: x\n---\n- Keep replies short.', 'user_edit'))).toBe(true);
         expect(memoryConfirmed(entry('---\nuuid: x\n---\n- confirmed_at: not frontmatter'))).toBe(false);
         expect(memoryConfirmed(entry('- confirmed_at: 2026-10-22T09:00:00Z'))).toBe(false);
+    });
+});
+
+describe('beliefInSecondPerson (about-you v1.0.1 Y28)', () => {
+    it.each([
+        ['Uses design reviews to find launch blockers before release', 'You use design reviews to find launch blockers before release'],
+        ['Wants public repo commits to carry the real fix messages', 'You want public repo commits to carry the real fix messages'],
+        ['Fast-merges urgent fixes after focused checks pass', 'You fast-merge urgent fixes after focused checks pass'],
+        ['Relies on short standups', 'You rely on short standups'],
+        ['Pushes fixes to a small branch first', 'You push fixes to a small branch first'],
+        ['Has a standing Friday review', 'You have a standing Friday review'],
+        ['“Prefers bun over npm”', 'You prefer bun over npm'],
+        ['I prefer bun over npm', 'You prefer bun over npm'],
+        ['I am a morning writer', 'You are a morning writer'],
+        ['My mornings are for deep work', 'Your mornings are for deep work'],
+        ['You keep emails to three sentences', 'You keep emails to three sentences'],
+        ['Tools for the Lisbon trip', 'Tools for the Lisbon trip'],
+        ['News about Maya Okafor', 'News about Maya Okafor'],
+        ['习惯在终端里用语音输入', '习惯在终端里用语音输入'],
+        // v1.0.2 Y28: every verb agrees with "you".
+        ['Keeps 8 to 11 AM free for writing and code review, and declines meetings then.', 'You keep 8 to 11 AM free for writing and code review, and decline meetings then.'],
+        ['You keep 8 to 11 AM free, and declines meetings then', 'You keep 8 to 11 AM free, and decline meetings then'],
+        ['Drafts a reply and sends it before noon', 'You draft a reply and send it before noon'],
+        ['Reviews pull requests and is quick to merge', 'You review pull requests and are quick to merge'],
+        ['Keeps notes and plans in one doc', 'You keep notes and plans in one doc'],
+        ['Guards mornings, then answers email after lunch', 'You guard mornings, then answer email after lunch'],
+    ])('%s', (input, want) => {
+        expect(beliefInSecondPerson(input)).toBe(want);
+    });
+
+    it('labels a subjectless title in second person', () => {
+        const entry = { id: 'm1', title: 'Keeps the backup hub read-only', content: '# Keeps the backup hub read-only\n- Keeps the backup hub read-only.' } as main.MemoryEntry;
+        expect(memoryLabel(entry, i18n.getFixedT('en', 'memory'))).toBe('You keep the backup hub read-only');
     });
 });

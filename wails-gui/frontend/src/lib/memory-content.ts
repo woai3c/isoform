@@ -79,6 +79,63 @@ export function memoryPoints(content: string): MemoryPoint[] {
     return points;
 }
 
+// Mirrors beliefInSecondPerson in about_you_second_person.go: a belief reads
+// in second person (about-you v1.0.1 Y28), so "Uses design reviews…" and
+// "I use design reviews…" both read "You use design reviews…".
+const SELF_VERBS = new Set(('block decline get give guard make protect put say set take think try wake answer ask attend avoid batch build call care check choose code commit debug delegate deploy design dictate draft drink edit email enjoy exercise expect favor favour find fix follow gather group handle keep lead learn like listen live log love manage meet merge monitor need open organize plan prefer prioritize push read record refactor rely reply report review run schedule send share ship sign skip sleep speak split start study talk teach tend test track travel treat trust type use value walk want watch work write').split(' '));
+const IRREGULAR_VERBS: Record<string, string> = { is: 'are', was: 'were', has: 'have', does: 'do', goes: 'go' };
+
+function baseVerb(word: string, capitalized = true): string | null {
+    if (capitalized && !/^\p{Lu}/u.test(word)) return null;
+    const lower = word.toLowerCase();
+    if (IRREGULAR_VERBS[lower]) return IRREGULAR_VERBS[lower];
+    const cut = lower.lastIndexOf('-');
+    const prefix = cut >= 0 ? lower.slice(0, cut + 1) : '';
+    const verb = lower.slice(cut + 1);
+    const candidates = [
+        verb.endsWith('ies') ? `${verb.slice(0, -3)}y` : '',
+        verb.endsWith('es') ? verb.slice(0, -2) : '',
+        verb.endsWith('s') && !verb.endsWith('ss') ? verb.slice(0, -1) : '',
+    ];
+    const base = candidates.find((candidate) => candidate && SELF_VERBS.has(candidate));
+    return base ? prefix + base : null;
+}
+
+// v1.0.2 Y28: every verb agrees with "you", so "…, and declines meetings"
+// reads "…, and decline meetings". A conjunction right after a plural noun
+// ("notes and plans") is a list, so it stays.
+function agreeWithYou(sentence: string): string {
+    if (!/^You /.test(sentence)) return sentence;
+    return sentence.replace(/(\S+)(\s+(?:and|or|but|then)\s+)(\p{Ll}[\p{L}-]*)/gu, (match, before: string, joint: string, word: string) => {
+        if (!IRREGULAR_VERBS[word] && !before.endsWith(',') && /s$/i.test(before)) return match;
+        const base = baseVerb(word, false);
+        return base ? `${before}${joint}${base}` : match;
+    });
+}
+
+export function beliefInSecondPerson(text: string): string {
+    return agreeWithYou(firstPersonToYou(text));
+}
+
+function firstPersonToYou(text: string): string {
+    let trimmed = text.trim();
+    const unquoted = trimmed.replace(/^["“”'‘’]+|["“”'‘’]+$/g, '').trim();
+    if (unquoted) trimmed = unquoted;
+    const space = trimmed.indexOf(' ');
+    if (space <= 0) return trimmed;
+    const first = trimmed.slice(0, space);
+    const rest = trimmed.slice(space + 1);
+    if (first === 'I') {
+        const [verb, ...after] = rest.split(' ');
+        const agreed = verb === 'am' ? 'are' : verb === 'was' ? 'were' : verb;
+        return ['You', agreed, ...after].join(' ');
+    }
+    if (first === "I'm" || first === 'I’m') return `You're ${rest}`;
+    if (first === 'My') return `Your ${rest}`;
+    const base = baseVerb(first);
+    return base ? `You ${base} ${rest}` : trimmed;
+}
+
 export function memoryText(entry: main.MemoryEntry): string {
     return memoryPoints(entry.content)
         .map((point) => humanMemoryText(point.text))
@@ -93,7 +150,7 @@ export function memoryLabel(
     const typeLabel =
         /^(?:(?:isoform|yansu) )?memory(?: points)?$|^user_insight$|^topic_highlight$|^deep_user_model$|^agentic_memory$|^user insights?$|^topic highlights?$|^deep user model$|^ai operational$|^a preference$|^a fact about a person$|^something i learned about you$|^记忆(?:要点)?$/i;
     if (title && entry.title !== entry.id && !typeLabel.test(title))
-        return title;
+        return beliefInSecondPerson(title);
     const heading = entry.content.match(/^# (.+)$/m)?.[1];
     if (
         heading &&
@@ -101,11 +158,10 @@ export function memoryLabel(
         heading !== entry.id &&
         humanMemoryText(heading)
     )
-        return humanMemoryText(heading);
+        return beliefInSecondPerson(humanMemoryText(heading));
     return (
-        humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '').slice(
-            0,
-            120,
+        beliefInSecondPerson(
+            humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '').slice(0, 120),
         ) || t('row.empty')
     );
 }

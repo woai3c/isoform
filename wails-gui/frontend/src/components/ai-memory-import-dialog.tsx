@@ -258,6 +258,7 @@ export function AIMemoryImportDialog({ open, onOpenChange, onImported }: AIMemor
 
     // Reset key forces PromptImportCard remount on dialog reopen
     const [resetKey, setResetKey] = useState(0);
+    const [scanAttempt, setScanAttempt] = useState(0);
 
     useEffect(() => {
         if (!open) return;
@@ -294,7 +295,7 @@ export function AIMemoryImportDialog({ open, onOpenChange, onImported }: AIMemor
             .finally(() => {
                 setScanning(false);
             });
-    }, [open]);
+    }, [open, scanAttempt]);
 
     const totalSelected = selectedFileIds.size;
     const totalFiles = useMemo(() => {
@@ -403,15 +404,15 @@ export function AIMemoryImportDialog({ open, onOpenChange, onImported }: AIMemor
                     {/* Scanning state */}
                     {scanning && (
                         <div className="flex items-center gap-3 py-8 justify-center text-muted">
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            <span className="text-sm">{t('aiMemoryImportDialog.scanning')}</span>
+                            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
                         </div>
                     )}
 
                     {scanError && (
-                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-                            {t('aiMemoryImportDialog.scanFailed', { error: scanError })}
-                        </div>
+                        <p role="alert" className="m-0 flex flex-wrap items-center gap-2 text-sm text-copper">
+                            <span>{t('aiMemoryImportDialog.scanFailed')}</span>
+                            <button type="button" className="text-accent hover:underline" onClick={() => setScanAttempt((n) => n + 1)}>{t('aiMemoryImportDialog.retry')}</button>
+                        </p>
                     )}
 
                     {!scanning && !scanError && sources.length === 0 && (

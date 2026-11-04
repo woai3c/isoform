@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Brain, ChevronDown, ChevronRight, Download, Languages, Moon, MoreHorizontal, Plus, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Languages, Moon, MoreHorizontal, Plus, RefreshCw, Target } from 'lucide-react';
 import { SearchIcon } from '@/assets/icons/SearchIcon';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { notifyToast } from '@/lib/notify';
 import {
     SearchMemory,
     SyncMemoryIndex,
@@ -27,7 +26,7 @@ import {
     type GoalItemView,
     type MemoryForgetPreview,
 } from '../lib/wails-shim-app';
-import { GetAboutYou, GetMemoryEntries, GetMemoryStatus, usePagePrivacyWithdrawal, usePageQueryRefresh } from '@/lib/page-queries';
+import { GetAboutYou, GetAboutYouPortrait, GetMemoryEntries, GetMemoryStatus, usePagePrivacyWithdrawal, usePageQueryRefresh } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { markPageContent } from '@/lib/page-switch-timing';
 import type { main } from '../../wailsjs/go/models';
@@ -44,7 +43,7 @@ import { AboutYouPortraitCard, type PortraitEvidence } from '@/components/about-
 import { NewThisWeek, answeredStatus, useBeliefReview, type ReviewItem, type ReviewResult } from '@/components/about-you/new-this-week';
 import { GoalStory, useGoalsBoard } from '@/components/goals/GoalsPage';
 import { GoalsGroup, useGoalsCopy } from '@/components/goals/GoalsGroup';
-import { MEMORY_KINDS, humanMemoryText, memoryApps, memoryKind, memoryPoints, type MemoryKind } from '@/lib/memory-content';
+import { beliefInSecondPerson, MEMORY_KINDS, humanMemoryText, memoryApps, memoryKind, memoryPoints, type MemoryKind } from '@/lib/memory-content';
 import { beliefSummary } from '@/lib/about-you';
 import { historyFound, historyName, useFirstDay } from '@/hooks/useFirstDay';
 import { MEMORY_AREAS, memoryArea, sentMessageEvidence, type MemoryArea } from '@/lib/communication';
@@ -59,7 +58,8 @@ interface MemoryPageProps {
     active?: boolean;
     /** Opens Chat with "I want to set a new goal" typed and unsent (Add a goal).
      *  Absent, the Add a goal button is not shown. */
-    onCreateGoal?: (prompt: string) => void;
+    /** Developer tools (⌘⇧⌥D): Dream, Re-index, memory IDs and Technical details show only then. */
+    devToolsUnlocked?: boolean;
     /** Opens Chat about a goal, with the goal attached (the story's Talk about). */
     onTalkAboutGoal?: (goal: GoalItemView, prompt: string) => void;
     /** A goal to open from outside (Search, a notice); a new signal opens it again. */
@@ -131,7 +131,7 @@ export function MemoryPage({
     initialSelectedId,
     escapeRef,
     active = true,
-    onCreateGoal,
+    devToolsUnlocked = false,
     onTalkAboutGoal,
     openGoalId,
     openGoalSignal,
@@ -156,7 +156,7 @@ export function MemoryPage({
     const [editRequest, setEditRequest] = useState(0);
     const [keyword, setKeyword] = useState('');
     const [searchResults, setSearchResults] = useState<main.MemorySearchResult[] | null>(null);
-    const [searching, setSearching] = useState(false);
+    const [, setSearching] = useState(false);
     const [kindFilter, setKindFilter] = useState<MemoryKind | 'all'>('all');
     const [syncing, setSyncing] = useState(false);
     const [forgetTarget, setForgetTarget] = useState<{ id: string; title: string; rejectionReason?: string } | null>(null);
@@ -168,6 +168,8 @@ export function MemoryPage({
     const [translateAllOpen, setTranslateAllOpen] = useState(false);
     const [translateAllBusy, setTranslateAllBusy] = useState(false);
     const [translating, setTranslating] = useState(false);
+    const [translateFailed, setTranslateFailed] = useState(false);
+    const [syncFailed, setSyncFailed] = useState(false);
     const [reviewOrder, setReviewOrder] = useState<string[]>([]);
     const reviewSnapshots = useRef(new Map<string, ReviewItem>());
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
@@ -183,13 +185,15 @@ export function MemoryPage({
 
     // Goals share the detail beside the list with beliefs: the board owns the
     // open goal, and the page keeps the two from being open at once.
-    const goals = useGoalsBoard({ openGoalId, openGoalSignal, onOpenGoalHandled });
+    const goals = useGoalsBoard({ openGoalId, openGoalSignal, onOpenGoalHandled, inPlaceFailures: true });
     const { setOpenId: setGoalOpenId } = goals;
     const goalOpenId = goals.openId;
     const goalOpened = goals.opened ?? null;
     const goalCopy = useGoalsCopy();
     const goalNow = new Date();
     const goalsRef = useRef<HTMLElement>(null);
+    const [addingGoal, setAddingGoal] = useState(false);
+    const hasGoals = goals.tracking.length + goals.held.length + goals.done.length > 0;
 
     useEffect(() => {
         if (initialSelectedId) {
@@ -217,8 +221,10 @@ export function MemoryPage({
         const read = ++entriesRead.current;
         // The cached GetMemoryEntries rides on the shim's export * of the
         // generated bindings, which carries no type for it yet.
-        (GetMemoryEntries() as Promise<main.MemoryEntry[]>)
-            .then((result) => {
+        // Y12: the portrait paints with the page, so the first read waits for
+        // it too; a failed portrait read still opens the page and says so.
+        Promise.all([GetMemoryEntries() as Promise<main.MemoryEntry[]>, GetAboutYouPortrait().catch(() => null)])
+            .then(([result]) => {
                 if (read !== entriesRead.current) return;
                 setEntries(result ?? []);
                 setEntriesState('ready');
@@ -329,7 +335,7 @@ export function MemoryPage({
         const belief = beliefsById.get(id);
         return {
             id,
-            text: humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '') || memoryLabel(entry, t),
+            text: beliefInSecondPerson(humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '')) || memoryLabel(entry, t),
             status: belief?.status ?? 'inferred',
             confidence: belief?.confidence ?? 0,
             sessionCount: belief?.sessionCount ?? 0,
@@ -446,7 +452,7 @@ export function MemoryPage({
             if (!entry || !belief) continue;
             const item: ReviewItem = {
                 id,
-                text: humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '') || memoryLabel(entry, t),
+                text: beliefInSecondPerson(humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '')) || memoryLabel(entry, t),
                 where: t('aboutYou.firstDay.source', {
                     assistant: belief.sourceAssistant === 'codex' ? 'Codex' : 'Claude Code',
                     date: new Date(belief.sourceAt || belief.firstLearnedAt).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' }),
@@ -480,7 +486,7 @@ export function MemoryPage({
                 const evidence = sentMessageEvidence(t, belief, entry.apps ?? [], i18n.language);
                 const item: ReviewItem = {
                     id,
-                    text: humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '') || memoryLabel(entry, t),
+                    text: beliefInSecondPerson(humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '')) || memoryLabel(entry, t),
                     where: communication
                         ? t('aboutYou.review.communicationWhere', {
                             area: t('aboutYou.areas.communication'),
@@ -501,50 +507,27 @@ export function MemoryPage({
     }, [about, beliefsById, entries, i18n.language, review.results, reviewOrder, t, checkFirstItems]);
 
     const handleForgot = useCallback(
-        (preview: MemoryForgetPreview, correctedAttribution: boolean) => {
+        (preview: MemoryForgetPreview) => {
             if (selectedId === preview.memoryId) setSelectedId(null);
             review.cancel(preview.memoryId);
             loadAll();
-            notifyToast(
-                t(correctedAttribution ? 'correction.successTitle' : 'forget.successTitle') as string,
-                t('forget.successBody', {
-                    records: t('forget.recordCount', { count: preview.items.length }),
-                    embeddings: t('forget.embeddingCount', { count: preview.embeddingCount }),
-                    versions: t('forget.versionCount', { count: preview.historyCount }),
-                    days: preview.retentionDays,
-                }) as string,
-                'success',
-            );
         },
-        [selectedId, loadAll, review, t],
+        [selectedId, loadAll, review],
     );
 
     const handleReassignAttribution = useCallback(
         async (id: string, principal: PrincipalDTO, reason: string) => {
-            try {
-                await ReassignMemoryAttribution(id, principal.id, reason);
-                loadAll();
-                notifyToast(
-                    t('rejectAttribution.reassignSuccessToast', {
-                        name: principal.displayName,
-                    }) as string,
-                    '',
-                    'success',
-                );
-            } catch (err: unknown) {
-                notifyToast(
-                    t('rejectAttribution.errorToast', { error: String(err) }) as string,
-                    '',
-                    'error',
-                );
-                throw err;
-            }
+            // A failure stays in the Wrong subject dialog, which says so.
+            await ReassignMemoryAttribution(id, principal.id, reason);
+            if (selectedId === id) setSelectedId(null);
+            loadAll();
         },
-        [loadAll, t],
+        [loadAll, selectedId],
     );
 
     const handleSelect = useCallback((id: string) => {
         setEditRequest(0);
+        setTranslateFailed(false);
         setSelectedId(id);
         setGoalOpenId(null);
     }, [setGoalOpenId]);
@@ -560,44 +543,40 @@ export function MemoryPage({
         setEditRequest((request) => request + 1);
     }, [setGoalOpenId]);
 
-    // Not quite from a portrait phrase opens the wording in the detail.
+    // Not quite from a portrait phrase asks the decided question in the detail.
     const handleNotQuite = useCallback((id: string) => {
-        const entry = entries.find((row) => row.id === id);
-        if (entry) handleEdit(entry);
-    }, [entries, handleEdit]);
+        if (!entries.some((row) => row.id === id)) return;
+        setEditRequest(0);
+        setTranslateFailed(false);
+        setSelectedId(id);
+        setGoalOpenId(null);
+        review.ask(id);
+    }, [entries, review, setGoalOpenId]);
 
     const handleSync = useCallback(() => {
         setSyncing(true);
+        setSyncFailed(false);
         SyncMemoryIndex()
             .then(loadAll)
-            .catch(() => notifyToast(t('aboutYou.reindexFailed') as string, '', 'error'))
+            .catch(() => setSyncFailed(true))
             .finally(() => setSyncing(false));
-    }, [loadAll, t]);
+    }, [loadAll]);
 
     const finishTranslation = useCallback((saved: main.MemoryEntry) => {
         loadAll();
+        setTranslateFailed(false);
         setSelectedId(saved.id);
-        notifyToast(
-            t('toasts.translated.title') as string,
-            t('toasts.translated.body') as string,
-            'success',
-        );
-    }, [loadAll, t]);
+    }, [loadAll]);
 
     const handleTranslateCurrent = useCallback(() => {
         if (!selected || translating) return;
         setTranslating(true);
+        setTranslateFailed(false);
         TranslateMemoryEntryToCurrentLanguage(selected.id)
             .then(finishTranslation)
-            .catch((err: unknown) => {
-                notifyToast(
-                    t('toasts.translateFailed.title') as string,
-                    err instanceof Error ? err.message : String(err),
-                    'error',
-                );
-            })
+            .catch(() => setTranslateFailed(true))
             .finally(() => setTranslating(false));
-    }, [finishTranslation, selected, t, translating]);
+    }, [finishTranslation, selected, translating]);
 
     // Radix asks the dialog only when the page is the top layer, so an open
     // menu or nested dialog keeps its own Escape. An open point editor
@@ -667,19 +646,29 @@ export function MemoryPage({
                     <Download />
                     {t('header.importFromAi')}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setDreamDialogOpen(true)}>
-                    <Moon />
-                    {t('aboutYou.dream')}
-                </DropdownMenuItem>
+                {goals.page && !hasGoals && (
+                    <DropdownMenuItem data-testid="menu-add-goal" onSelect={() => setAddingGoal(true)}>
+                        <Target />
+                        {t('aboutYou.goals.add')}
+                    </DropdownMenuItem>
+                )}
+                {devToolsUnlocked && (
+                    <DropdownMenuItem onSelect={() => setDreamDialogOpen(true)}>
+                        <Moon />
+                        {t('aboutYou.dream')}
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem disabled={translateAllBusy || entries.length === 0} onSelect={() => setTranslateAllOpen(true)}>
                     <Languages />
                     {t('header.globalTranslate')}
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={syncing} onSelect={handleSync}>
-                    <RefreshCw className={cn(syncing && 'motion-safe:animate-spin')} />
-                    {t('header.reindex')}
-                </DropdownMenuItem>
+                {devToolsUnlocked && (
+                    <DropdownMenuItem disabled={syncing} onSelect={handleSync}>
+                        <RefreshCw className={cn(syncing && 'motion-safe:animate-spin')} />
+                        {t('header.reindex')}
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     );
@@ -700,13 +689,13 @@ export function MemoryPage({
         );
     } else if (entriesState === 'failed') {
         beliefs = (
-            <div role="alert" className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3.5 text-[13px] text-ink">
+            <div role="alert" className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3.5 text-[13px] text-copper">
                 <span className="flex-1">{t('aboutYou.loadFailed')}</span>
                 <Button size="sm" variant="secondary" onClick={loadAll}>{t('aboutYou.retry')}</Button>
             </div>
         );
     } else if (entries.length === 0) {
-        beliefs = <MemoryEmptyState status={status} onNew={() => setNewDialogOpen(true)} />;
+        beliefs = null;
     } else {
         beliefs = (
             <section aria-label={t('aboutYou.beliefs')} className="flex flex-col gap-5">
@@ -737,9 +726,8 @@ export function MemoryPage({
                         </select>
                     </label>
                 </div>
-                {searching && <p role="status" className="m-0 text-xs text-muted">{t('sidebar.searching')}</p>}
                 {filteredEntries.length === 0 ? (
-                    <p className="m-0 py-6 text-center text-[13px] text-muted">{t('sidebar.noFilesMatch')}</p>
+                    <p className="m-0 py-6 text-center text-[13px] text-muted">{keyword.trim() ? t('sidebar.nothingMatches', { query: keyword.trim() }) : t('sidebar.noFilesMatch')}</p>
                 ) : (
                     // Groups stack at full width; each group's beliefs flow into
                     // as many columns as the width allows.
@@ -799,7 +787,7 @@ export function MemoryPage({
                             {entriesState === 'ready' && (
                                 <p className="m-0 text-sm text-muted">
                                     {historyBeliefs.length > 0 && totals.confirmed === 0 && firstDay.history
-                                        ? `${t('aboutYou.firstDay.line', { count: historyBeliefs.length, history: historyName(firstDay.history.assistants, tCommon) })} ${t('aboutYou.summary.local')}`
+                                        ? t('aboutYou.firstDay.lineWithLocal', { line: t('aboutYou.firstDay.line', { count: historyBeliefs.length, history: historyName(firstDay.history.assistants, tCommon) }), local: t('aboutYou.summary.local') })
                                         : entries.length === 0
                                         ? t('aboutYou.summary.empty')
                                         : t('aboutYou.summary.line', {
@@ -817,12 +805,27 @@ export function MemoryPage({
                         {pageMenu}
                     </header>
 
+                    {devToolsUnlocked && syncFailed && (
+                        <p role="alert" className="m-0 -mt-4 flex flex-wrap items-center gap-2 text-[12.5px] text-copper">
+                            <span>{t('aboutYou.reindexFailed')}</span>
+                            <button type="button" className="text-accent hover:underline" disabled={syncing} onClick={handleSync}>{t('aboutYou.retry')}</button>
+                        </p>
+                    )}
+
+                    <NewThisWeek
+                        items={checkFirstItems}
+                        review={review}
+                        headingId="about-you-check-first"
+                        title={t('aboutYou.firstDay.checkFirst')}
+                        hint={firstDay.history ? t('aboutYou.firstDay.checkFirstHint', { history: historyName(firstDay.history.assistants, tCommon) }) : undefined}
+                    />
+
                     {entriesState === 'ready' && entries.length > 0 && (
                         <AboutYouPortraitCard describe={describePortraitBelief} onShowBelief={handleSelect} onNotQuiteBelief={handleNotQuite} />
                     )}
 
                     {aboutFailed && !about && entriesState === 'ready' && entries.length > 0 && (
-                        <div role="alert" className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3.5 text-[13px] text-ink">
+                        <div role="alert" className="flex items-center gap-3 rounded-xl border border-border bg-panel px-4 py-3.5 text-[13px] text-copper">
                             <span className="flex-1">{t('aboutYou.aboutFailed')}</span>
                             <Button size="sm" variant="secondary" onClick={loadAbout}>{t('aboutYou.retry')}</Button>
                         </div>
@@ -833,25 +836,18 @@ export function MemoryPage({
                         now={goalNow}
                         open={!collapsedGroups.has(GOALS_GROUP)}
                         onToggle={() => toggleGroup(GOALS_GROUP)}
-                        onCreateGoal={onCreateGoal ? () => onCreateGoal(t('aboutYou.goals.createPrompt')) : undefined}
+                        adding={addingGoal}
+                        onAddingChange={setAddingGoal}
                         onOpenGoal={openGoal}
                         selectedId={goalOpenId}
                         groupRef={goalsRef}
-                    />
-
-                    <NewThisWeek
-                        items={checkFirstItems}
-                        review={review}
-                        headingId="about-you-check-first"
-                        title={t('aboutYou.firstDay.checkFirst')}
-                        hint={t('aboutYou.firstDay.checkFirstHint')}
                     />
 
                     <NewThisWeek items={reviewItems} review={review} />
 
                     {beliefs}
 
-                    {storage && (
+                    {devToolsUnlocked && storage && (
                         <Collapsible className="text-[12.5px] text-muted">
                             <CollapsibleTrigger className="group/tech flex items-center gap-1.5 rounded-md hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus">
                                 {t('aboutYou.technical.title')}
@@ -866,7 +862,7 @@ export function MemoryPage({
                                         t(storage.vectorReady ? 'aboutYou.technical.vectorActive' : 'aboutYou.technical.vectorInactive'),
                                     ].join(' · ')}
                                 </p>
-                                {status?.model && <p className="m-0 mt-1">{t('empty.modelLabel', { model: status.model })}</p>}
+                                {status?.model && <p className="m-0 mt-1">{t('aboutYou.technical.model', { model: status.model })}</p>}
                             </CollapsibleContent>
                         </Collapsible>
                     )}
@@ -898,6 +894,8 @@ export function MemoryPage({
                                 onTranslate={handleTranslateCurrent}
                                 onOpenBelief={handleSelect}
                                 onOpenActivitySession={openActivitySession}
+                                devTools={devToolsUnlocked}
+                                translateFailed={translateFailed}
                             />
                         </div>
                     </ScrollArea>
@@ -930,6 +928,7 @@ export function MemoryPage({
                 rejectionReason={forgetTarget?.rejectionReason}
                 onOpenChange={(open) => { if (!open) setForgetTarget(null); }}
                 onForgot={handleForgot}
+                devTools={devToolsUnlocked}
             />
 
             <RejectAttributionDialog
@@ -982,52 +981,6 @@ export function MemoryPage({
                 onOpenChange={setDreamDialogOpen}
                 onRunCompleted={loadAll}
             />
-        </div>
-    );
-}
-
-/** Empty state when no memory entries exist */
-function MemoryEmptyState({
-    status,
-    onNew,
-}: {
-    status: main.MemoryStoreStatus | null;
-    onNew: () => void;
-}) {
-    const { t } = useTranslation('memory');
-    const examples: { id: 'preferences' | 'projectContext' | 'instructions' | 'referenceNotes' }[] = [
-        { id: 'preferences' },
-        { id: 'projectContext' },
-        { id: 'instructions' },
-        { id: 'referenceNotes' },
-    ];
-    return (
-        <div className="flex justify-center py-10 text-muted">
-            <div className="mx-auto max-w-md text-center">
-                <Brain className="mx-auto mb-4 h-12 w-12 opacity-20" />
-                <p className="mb-2 text-sm font-medium text-ink">{t('empty.title')}</p>
-                <p className="mb-5 text-xs leading-relaxed text-muted">
-                    {t('empty.intro')}
-                </p>
-                <div className="grid grid-cols-2 gap-3 text-left">
-                    {examples.map((item) => (
-                        <div key={item.id} className="rounded-lg border border-border bg-panel px-3 py-2.5">
-                            <p className="mb-0.5 text-[11px] font-medium text-ink">{t(`empty.examples.${item.id}.label` as never) as string}</p>
-                            <p className="text-[10px] leading-relaxed text-muted">{t(`empty.examples.${item.id}.desc` as never) as string}</p>
-                        </div>
-                    ))}
-                </div>
-                {status && (
-                    <div className="mt-5 flex items-center justify-center gap-3 text-[11px] text-muted">
-                        <span>{status.vectorReady ? t('empty.vectorSearchActive') : t('empty.vectorSearchInactive')}</span>
-                        {status.model && <span>{t('empty.modelLabel', { model: status.model })}</span>}
-                    </div>
-                )}
-                <Button size="sm" variant="secondary" className="mt-4" onClick={onNew}>
-                    <Plus className="h-3 w-3" />
-                    {t('empty.createFirst')}
-                </Button>
-            </div>
         </div>
     );
 }

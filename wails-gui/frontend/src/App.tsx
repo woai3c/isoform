@@ -3731,7 +3731,7 @@ export default function App() {
                         initialSelectedId={pendingInsightMemoryId}
                         escapeRef={memoryEscapeRef}
                         active={memoryOpen}
-                        onCreateGoal={handleCreateGoalInChat}
+                        devToolsUnlocked={devToolsUnlocked}
                         onTalkAboutGoal={(goal, prompt) =>
                             briefHandlers.onStartChat(prompt, { sourceKind: "purpose", sourceId: goal.id })
                         }

@@ -1442,12 +1442,12 @@ function ActivityBelief({ entry, rowText }: { entry: main.MemoryEntry; rowText: 
                         <>
                             {result?.kind === 'confirmFailed' && <p className="text-copper" role="alert">{t('memory:aboutYou.review.confirmFailed')}</p>}
                             <div className="flex flex-wrap gap-1.5">
-                                <Button size="sm" disabled={result?.kind === 'confirming'} onClick={() => void review.confirm(entry.id)}>{t('memory:aboutYou.review.confirm')}</Button>
-                                <Button size="sm" variant="secondary" disabled={result?.kind === 'confirming'} onClick={() => review.ask(entry.id)}>{t('memory:aboutYou.review.notQuite')}</Button>
-                                <Button size="sm" variant="outline" disabled={result?.kind === 'confirming'} onClick={() => review.forget(entry.id)}>{t('memory:aboutYou.review.forget')}</Button>
+                                <Button size="sm" onClick={() => void review.confirm(entry.id)}>{t('memory:aboutYou.review.confirm')}</Button>
+                                <Button size="sm" variant="secondary" onClick={() => review.ask(entry.id)}>{t('memory:aboutYou.review.notQuite')}</Button>
+                                <Button size="sm" variant="outline" onClick={() => review.forget(entry.id)}>{t('memory:aboutYou.review.forget')}</Button>
                             </div>
                         </>
-                    ) : result?.kind === 'asking' || result?.kind === 'saving' ? <NotQuiteField item={item} review={review} /> : <ReviewOutcome item={item} review={review} />}
+                    ) : result?.kind === 'asking' || result?.kind === 'saving' || result?.kind === 'answerFailed' ? <NotQuiteField item={item} review={review} /> : <ReviewOutcome item={item} review={review} />}
                 </>
             ) : null}
         </div>
