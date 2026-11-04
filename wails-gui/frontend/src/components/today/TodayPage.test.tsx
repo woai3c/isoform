@@ -245,6 +245,9 @@ function renderToday(
 }
 
 beforeEach(() => {
+    // A brief shows in full only on its own day (R52): read the fixtures on it.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(todayNextBrief.asOf));
     resetMainChatHeldActions();
     firstDayMock.mockReturnValue({ day: null, firstDays: false, history: null, calendar: null });
     resetMainChatWaitingStore();
@@ -309,7 +312,7 @@ beforeEach(() => {
     });
 });
 
-afterEach(() => { pauseMocks.dayShape.mockResolvedValue(null); pauseMocks.dayMeeting.mockResolvedValue(null); });
+afterEach(() => { vi.useRealTimers(); pauseMocks.dayShape.mockResolvedValue(null); pauseMocks.dayMeeting.mockResolvedValue(null); });
 
 describe("TodayPage brief and finds", () => {
     it("does not load the retired news or suggestion surfaces", () => {
@@ -670,6 +673,7 @@ describe("TodayPage topic panel (RC 1 part 2)", () => {
     });
 
     beforeEach(() => {
+        vi.setSystemTime(new Date(briefWithTopics().asOf));
         mockUseTodayNews.mockReturnValue({ data: { date: "2026-10-21", status: "none", items: [], updatedAt: 0 }, loading: false, regenerate: vi.fn() });
         mockUseTodayTopics.mockReturnValue({ topics, status: "ready", refresh: vi.fn() });
         mockUseLatestBrief.mockReturnValue({
@@ -1327,6 +1331,7 @@ describe("TodayPage panel width, the Chat button and the header (Claude Design, 
         measured = null;
     });
     beforeEach(() => {
+        vi.setSystemTime(new Date(closingBrief().asOf));
         mockUseTodayNews.mockReturnValue({ data: { date: "2026-10-22", status: "none", items: [], updatedAt: 0 }, loading: false, regenerate: vi.fn() });
         mockUseTodayTopics.mockReturnValue({ topics: [], status: "ready", refresh: vi.fn() });
     });
@@ -1400,18 +1405,32 @@ describe("TodayPage panel width, the Chat button and the header (Claude Design, 
         vi.useRealTimers();
     });
 
-    it("follows the slot once the brief gives way: evening from noon, the next morning's after midnight (today-review v1.1.22 R51)", async () => {
+    it("names the morning brief on screen from noon to 6 PM (today-review v1.1.24 R54)", async () => {
         width(1200);
         const brief = closingBrief();
         const made = new Date(brief.asOf);
         vi.useFakeTimers({ toFake: ["Date"] });
         try {
-            vi.setSystemTime(new Date(made.getFullYear(), made.getMonth(), made.getDate(), 12, 0));
-            withBrief(brief);
-            const { unmount } = render(<TodayPage handlers={handlers} />);
-            await act(async () => {});
-            expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("todayBrief.slot.evening");
-            unmount();
+            for (const [hour, minute] of [[12, 0], [15, 0], [17, 59]]) {
+                vi.setSystemTime(new Date(made.getFullYear(), made.getMonth(), made.getDate(), hour, minute));
+                withBrief(brief);
+                const { unmount } = render(<TodayPage handlers={handlers} />);
+                await act(async () => {});
+                expect(screen.getByTestId("brief-card")).toBeInTheDocument();
+                expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("todayBrief.slot.morning");
+                unmount();
+            }
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("follows the slot once no brief from today is on screen: the next morning's after midnight (today-review v1.1.22 R51)", async () => {
+        width(1200);
+        const brief = closingBrief();
+        const made = new Date(brief.asOf);
+        vi.useFakeTimers({ toFake: ["Date"] });
+        try {
             vi.setSystemTime(new Date(made.getFullYear(), made.getMonth(), made.getDate() + 1, 0, 30));
             withBrief({ ...brief, slot: "evening", asOf: new Date(made.getFullYear(), made.getMonth(), made.getDate(), 18, 0).toISOString() });
             render(<TodayPage handlers={handlers} />);
@@ -1782,7 +1801,7 @@ it('resumes observation in place from the quiet footer', async () => {
 
 describe("TodayPage brief slot selects the strip date without changing the read contract", () => {
     afterEach(() => { vi.useRealTimers(); pauseMocks.dayShape.mockResolvedValue(null); });
-    it.each(["morning", "evening"])("draws the %s brief's own day with the now line when read in the evening (R44)", async (slot) => {
+    it.each(["morning", "evening"])("draws the %s brief's own day when read in the evening, with no now line after its hours (R44, R53)", async (slot) => {
         vi.useFakeTimers({ toFake: ["Date"] });
         vi.setSystemTime(new Date("2026-10-23T22:00:00-07:00"));
         const translations = createInstance();
@@ -1798,7 +1817,7 @@ describe("TodayPage brief slot selects the strip date without changing the read 
         expect(pauseMocks.dayShape).toHaveBeenCalledWith(requestedDate);
         expect(pauseMocks.dayShape.mock.calls.every((args) => args.length === 1)).toBe(true);
         {
-            expect(screen.getByTestId("today-day-now")).toHaveStyle({ left: "calc(100% - 2px)" });
+            expect(screen.queryByTestId("today-day-now")).not.toBeInTheDocument();
             for (const group of screen.getAllByTestId("today-day-event-group")) expect(group).toHaveStyle({ opacity: "0.45" });
             expect(screen.queryByTestId("today-day-hold-group")).not.toBeInTheDocument();
             expect(screen.queryByTestId("today-day-caption")).not.toBeInTheDocument();

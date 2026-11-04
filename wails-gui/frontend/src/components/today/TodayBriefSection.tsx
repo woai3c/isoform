@@ -656,6 +656,12 @@ export function TodayBriefSection({
     // A brief made before the pending slot's time is from an earlier slot.
     const pendingTime = Date.parse(view?.pendingAt ?? "");
     const earlierBrief = !brief || !Number.isFinite(pendingTime) || !(Date.parse(brief.asOf) >= pendingTime);
+    // A brief shows in full on Today only on the day it was made; from
+    // midnight it is the last brief (today-review v1.1.23 R52).
+    const madeAt = brief ? new Date(brief.asOf) : null;
+    const fromEarlierDay = !!madeAt && !Number.isNaN(madeAt.getTime())
+        && new Date(madeAt.getFullYear(), madeAt.getMonth(), madeAt.getDate()).getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const waiting = pending ?? (fromEarlierDay ? (now.getHours() < 12 ? "morning" : "evening") : null);
     const missing = view?.missing ?? [];
     const hasContent = !!view && brief !== null && !view.empty;
     const summary = view?.dailySummary;
@@ -694,7 +700,7 @@ export function TodayBriefSection({
             rows: [],
             footer: null,
         };
-    } else if (!(pending && earlierBrief) && (hasContent || view?.quiet) && brief) {
+    } else if (!(pending && earlierBrief) && !fromEarlierDay && (hasContent || view?.quiet) && brief) {
         const displayed = briefForDisplay(brief);
         parts = briefParts({
             firstBrief,
@@ -750,7 +756,7 @@ export function TodayBriefSection({
                 <SensitiveExcluded count={brief.limits?.excludedSensitiveItems ?? 0} tr={tr} />
             </div>;
         }
-    } else if (pending) {
+    } else if (waiting) {
         // This slot's brief is missing: the pending card and today's strip
         // are all there is. An earlier slot's brief is never shown as the
         // brief, and its question can't be answered (today-review v1.1.5 #1).
@@ -787,9 +793,9 @@ export function TodayBriefSection({
         };
     }
 
-    const pendingCard = pending && !(loading && !view) && !(!view && loadFailed) ? (
+    const pendingCard = waiting && !(loading && !view) && !(!view && loadFailed) ? (
         <PendingBrief
-            slot={pending}
+            slot={waiting}
             building={building}
             retryAt={view?.retryAt ?? ""}
             attempts={view?.pendingAttempts ?? 0}

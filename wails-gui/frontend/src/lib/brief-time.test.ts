@@ -81,8 +81,13 @@ describe("todayHeaderSlot (today-review v1.1.22 R51)", () => {
         expect(todayHeaderSlot("", morning, new Date(2026, 10, 4, 11, 59))).toBe("morning");
         expect(todayHeaderSlot("", evening, new Date(2026, 10, 3, 23, 59))).toBe("evening");
     });
-    it("follows the slot once the brief gives way: evening from noon, the next morning's after midnight", () => {
-        expect(todayHeaderSlot("", morning, new Date(2026, 10, 4, 12, 0))).toBe("evening");
+    it("names today's brief on screen from noon to 6 PM, not the clock's slot (v1.1.24 R54)", () => {
+        for (const hour of [12, 13, 15, 17]) {
+            expect(todayHeaderSlot("", morning, new Date(2026, 10, 4, hour, 0))).toBe("morning");
+        }
+        expect(todayHeaderSlot("", morning, new Date(2026, 10, 4, 17, 59))).toBe("morning");
+    });
+    it("follows the slot once no brief from today is on screen: the next morning's after midnight", () => {
         expect(todayHeaderSlot("", evening, new Date(2026, 10, 4, 0, 30))).toBe("morning");
         expect(todayHeaderSlot("", { slot: "morning", asOf: new Date(2026, 10, 3, 7, 0).toISOString() }, new Date(2026, 10, 4, 0, 30))).toBe("morning");
     });

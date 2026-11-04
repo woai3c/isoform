@@ -513,6 +513,41 @@ describe("TodayBriefSection while today's brief is on its way", () => {
     });
 
     it.each([
+        ["en", "Last brief: yesterday, 6:02 PM · Read it", "Read it"],
+        ["zh-CN", "上一份：昨天 18:02 · 阅读", "阅读"],
+    ])("shows yesterday's brief only as the last brief from midnight in %s (v1.1.23 R52)", async (language, last, read) => {
+        await i18n.changeLanguage(language);
+        const onOpenBrief = vi.fn();
+        const yesterday = brief({ briefId: "2026-10-14-evening", slot: "evening", localDate: "2026-10-14", asOf: new Date(2026, 9, 14, 18, 2).toISOString(),
+            narrative: [{ text: "Maya Chen moved the review to Friday.", refs: [] }] });
+        renderSection({
+            view: view({ brief: yesterday, nextAt: new Date(2026, 9, 15, 7, 0).toISOString(), nextSlot: "morning" }),
+            dayShape: { ...dayShapeFixture, hold: null }, dayShapeDate: "2026-10-15",
+            now: new Date(2026, 9, 15, 0, 30),
+            onOpenBrief,
+        });
+        const card = screen.getByTestId("brief-pending");
+        expect(screen.queryByTestId("brief-card")).not.toBeInTheDocument();
+        expect(screen.queryByText("Maya Chen moved the review to Friday.")).not.toBeInTheDocument();
+        expect(within(card).queryByTestId("brief-pending-line")).not.toBeInTheDocument();
+        expect(within(card).getByTestId("today-day-track")).toBeInTheDocument();
+        expect(within(card).getByTestId("brief-pending-last")).toHaveTextContent(last);
+        fireEvent.click(within(card).getByRole("button", { name: read }));
+        expect(onOpenBrief).toHaveBeenCalledWith("2026-10-14-evening", expect.any(String));
+        await i18n.changeLanguage("en");
+    });
+
+    it("keeps the morning brief in full through the afternoon until the next one replaces it (v1.1.23 R52)", () => {
+        renderSection({
+            view: view({ brief: brief({ narrative: [{ text: "Priya shared the launch notes.", refs: [] }] }) }),
+            now: new Date(2026, 9, 15, 16, 45),
+        });
+        expect(screen.getByTestId("brief-card")).toBeInTheDocument();
+        expect(screen.getByText("Priya shared the launch notes.")).toBeInTheDocument();
+        expect(screen.queryByTestId("brief-pending")).not.toBeInTheDocument();
+    });
+
+    it.each([
         ["en", 6, "Tried 6 times without finishing. Isoform tries again at 9:40 AM."],
         ["en", 0, "Isoform tries again at 9:40 AM."],
         ["zh-CN", 6, "试了 6 次都没完成。Isoform 会在9:40再试。"],
@@ -953,7 +988,7 @@ describe('noticed Activity navigation cards', () => {
     ] as const)("restores %s after observation resumes", (action, label) => {
         const target = { date: "2026-10-14", suggestionId: "suggestion-1", action };
         const doc = brief({ cards: [{ id: "activity", kind: "action", mode: "open_activity", label, message: "", refs: ["e1"], target }] });
-        const props = { view: view({ brief: doc }), loading: false, make: "idle" as const, nextAllowedAt: "", onMakeNow: vi.fn(), handlers: { ...handlers(), onOpenActivitySuggestion: vi.fn() } };
+        const props = { view: view({ brief: doc }), loading: false, make: "idle" as const, nextAllowedAt: "", onMakeNow: vi.fn(), handlers: { ...handlers(), onOpenActivitySuggestion: vi.fn() }, now: NOW };
         const { rerender } = render(<TodayBriefSection {...props} observationPaused={true} />);
         expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
         rerender(<TodayBriefSection {...props} observationPaused={false} />);

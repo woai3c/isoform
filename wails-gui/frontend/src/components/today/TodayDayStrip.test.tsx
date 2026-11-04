@@ -215,10 +215,9 @@ it.each(['en', 'zh-CN'])('names tomorrow and omits its marker (%s)', async (lang
     expect(screen.queryByTestId('today-day-now')).not.toBeInTheDocument();
     expect(screen.queryByTestId('today-day-caption')).not.toBeInTheDocument();
 });
-it('clamps a late same-day marker to the right edge and dims all ended events', () => {
+it('draws no now line after the strip\'s hours and dims all ended events (R53)', () => {
     render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, now: '2026-10-23T22:00:00-07:00' }} timeZone="America/Los_Angeles" />);
-    expect(screen.getByTestId('today-day-now')).toHaveAttribute('title', 'Now, 10:00 PM');
-    expect(screen.getByTestId('today-day-now')).toHaveStyle({ left: 'calc(100% - 2px)' });
+    expect(screen.queryByTestId('today-day-now')).not.toBeInTheDocument();
     expect(screen.getByTestId('today-day-hold-group')).toHaveStyle({ opacity: '0.45' });
     for (const group of screen.getAllByTestId('today-day-event-group')) expect(group).toHaveStyle({ opacity: '0.45' });
 });
@@ -230,13 +229,34 @@ it.each(['en', 'zh-CN'])('uses the requested Friday even when an overnight event
 });
 
 it.each([
-    ['2026-10-23', '2026-10-23T06:00:00-07:00', '0px'],
     ['2026-10-23', '2026-10-23T08:00:00-07:00', '0px'],
-    ['2026-10-23', '2026-10-23T19:00:00-07:00', 'calc(100% - 2px)'],
-    ['2026-10-23', '2026-10-23T23:00:00-07:00', 'calc(100% - 2px)'],
+    ['2026-10-23', '2026-10-23T18:30:00-07:00', `clamp(0px, ${(10.5 / 11) * 100}%, calc(100% - 2px))`],
 ])('keeps the same-day marker inside the strip at %s / %s', (requestedDate, now, left) => {
     render(<TodayDayStrip requestedDate={requestedDate} shape={{ ...dayShapeFixture, now }} timeZone="America/Los_Angeles" />);
     expect(screen.getByTestId('today-day-now')).toHaveStyle({ left });
+});
+it.each([
+    '2026-10-23T00:10:00-07:00',
+    '2026-10-23T06:00:00-07:00',
+    '2026-10-23T07:59:00-07:00',
+    '2026-10-23T19:00:00-07:00',
+    '2026-10-23T23:00:00-07:00',
+])('draws no now line outside the strip\'s hours at %s (R53)', (now) => {
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, now }} timeZone="America/Los_Angeles" />);
+    expect(screen.queryByTestId('today-day-now')).not.toBeInTheDocument();
+    expect(screen.getByTestId('today-day-track')).toBeInTheDocument();
+});
+it('adds the now line when the clock reaches the strip\'s first hour (R53)', () => {
+    vi.useFakeTimers();
+    try {
+        vi.setSystemTime(new Date('2026-10-23T07:58:30-07:00'));
+        render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, now: '2026-10-23T07:58:30-07:00', hold: null }} timeZone="America/Los_Angeles" />);
+        expect(screen.queryByTestId('today-day-now')).not.toBeInTheDocument();
+        act(() => { vi.advanceTimersByTime(2 * 60_000); });
+        expect(screen.getByTestId('today-day-now')).toBeInTheDocument();
+    } finally {
+        vi.useRealTimers();
+    }
 });
 it.each(['2026-10-22', '2026-10-24', '2026-10-26'])('never draws a marker on another day (%s)', (requestedDate) => {
     render(<TodayDayStrip requestedDate={requestedDate} shape={dayShapeFixture} timeZone="America/Los_Angeles" />);

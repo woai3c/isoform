@@ -98,6 +98,8 @@ function NowLine({ initialNow, start, end, layer, clock, label }: {
         setNow(initialNow);
         return activeInterval(() => setNow(Date.now()), 60_000);
     }, [initialNow]);
+    // Outside the strip's hours there is no now line (today-review v1.1.23 R53).
+    if (now < start || now >= end) return null;
     const percent = (now - start) / (end - start) * 100;
     return <span data-testid="today-day-now" className="absolute -bottom-1 -top-1 z-10 w-0.5 rounded-sm bg-accent" style={{ zIndex: layer, left: now <= start ? '0px' : now >= end ? 'calc(100% - 2px)' : `clamp(0px, ${percent}%, calc(100% - 2px))` }} title={label(clock(now))}><span aria-hidden className="absolute -left-[3px] -top-[3px] size-2 rounded-full bg-accent" /></span>;
 }

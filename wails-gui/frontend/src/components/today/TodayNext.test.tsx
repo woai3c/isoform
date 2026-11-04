@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import { TodayBriefSection } from './TodayBriefSection';
 import { TodayStatus } from './TodayStatus';
@@ -12,7 +12,14 @@ const handlers = { onStartChat: vi.fn(), onOpenTopic: vi.fn(), onOpenBriefConver
 function show(overrides = {}) {
     return render(<TodayBriefSection view={{ brief: todayNextBrief, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] }} loading={false} make="idle" nextAllowedAt="" onMakeNow={vi.fn()} handlers={handlers} dayShape={{ ...dayShapeFixture, hold: null }} dayShapeDate="2026-10-23" {...overrides} />);
 }
-beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage('en'); });
+beforeEach(async () => {
+    vi.clearAllMocks();
+    // A brief shows in full only on its own day (R52).
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(todayNextBrief.asOf));
+    await i18n.changeLanguage('en');
+});
+afterEach(() => { vi.useRealTimers(); });
 
 it('keeps paragraph and actionable chip text byte-identical, with topic buttons inside the prose', () => {
     const narrative = todayNextBrief.narrative.map((p, i) => i === 0 ? { ...p, text: `  ${p.text}\n` } : p);
