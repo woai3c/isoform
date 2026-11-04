@@ -379,7 +379,7 @@ func (a *App) menuBarView(lang string, readWaiting bool) (perfValue menuBarView,
 	view.Models = a.menuBarModels(w)
 	// The launch preload can run before startup starts the brief service.
 	if svc := a.ensureMobileBriefService(); svc != nil {
-		latest, ok := svc.LatestMobileBrief()
+		latest, ok := a.menuBarLatestBrief(svc)
 		building := false
 		if b, can := svc.(mobileBriefBuilding); can {
 			building = b.Building()
@@ -435,4 +435,15 @@ func (a *App) menuBarModels(w map[string]string) string {
 		return ""
 	}
 	return menuBarFill(w["models"], "percent", fmt.Sprint(percent))
+}
+
+// menuBarLatestBrief is the saved finished brief Today opens (#506), not a
+// rebuild through every delivery gate on each status tick.
+func (a *App) menuBarLatestBrief(svc mobileBriefSource) (MobileBriefV1, bool) {
+	if service, isService := svc.(*mobileBriefService); isService && service != nil {
+		if latest, ok, err := service.finishedLatest(); err == nil {
+			return latest, ok
+		}
+	}
+	return svc.LatestMobileBrief()
 }

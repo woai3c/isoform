@@ -28,6 +28,11 @@ static bool is_screen_locked(void) {
     CFRelease(session);
     return locked;
 }
+
+// True while the main display sleeps.
+static bool is_display_asleep(void) {
+    return CGDisplayIsAsleep(CGMainDisplayID());
+}
 */
 import "C"
 
@@ -68,6 +73,11 @@ func (c *darwinScreenCapture) CaptureRaw() ([]byte, int, int, error) {
 // IsScreenLocked returns true when the macOS lock screen or screensaver is active.
 func IsScreenLocked() bool {
 	return bool(C.is_screen_locked())
+}
+
+// IsDisplayAsleep returns true while the main display sleeps.
+func IsDisplayAsleep() bool {
+	return bool(C.is_display_asleep())
 }
 
 // ScreenDimensions returns the logical screen width and height.

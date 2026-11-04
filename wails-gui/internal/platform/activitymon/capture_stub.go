@@ -33,6 +33,11 @@ func IsScreenLocked() bool {
 	return false
 }
 
+// IsDisplayAsleep always returns false on non-darwin platforms.
+func IsDisplayAsleep() bool {
+	return false
+}
+
 // ScreenDimensions is a no-op on unsupported platforms.
 func ScreenDimensions() (int, int) {
 	return 0, 0

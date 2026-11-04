@@ -45,6 +45,7 @@ type memoryExternalSnapshot struct {
 	depsOnce  sync.Once
 	deps      []memoryReadDependencies
 	byContent map[string]int
+	byID      map[string]int
 
 	exclusionsMu  sync.Mutex
 	exclusionsFor string
@@ -233,9 +234,11 @@ func (s *memoryExternalSnapshot) readDependencies() []memoryReadDependencies {
 	s.depsOnce.Do(func() {
 		s.deps = make([]memoryReadDependencies, len(s.entries))
 		s.byContent = make(map[string]int, len(s.entries))
+		s.byID = make(map[string]int, len(s.entries))
 		for i, entry := range s.entries {
 			s.deps[i] = memoryReadDependenciesOf(entry.raw.Content)
 			s.byContent[entry.raw.Content] = i
+			s.byID[entry.raw.ID] = i
 		}
 	})
 	return s.deps
@@ -248,6 +251,16 @@ func (s *memoryExternalSnapshot) readDependenciesOf(content string) (memoryReadD
 		return memoryReadDependencies{}, false
 	}
 	return deps[i], true
+}
+
+// entryByID returns a copy of the note with id.
+func (s *memoryExternalSnapshot) entryByID(id string) (MemoryEntry, bool) {
+	s.readDependencies()
+	i, ok := s.byID[id]
+	if !ok {
+		return MemoryEntry{}, false
+	}
+	return cloneMemoryEntry(s.entries[i].raw), true
 }
 
 func (s *memoryExternalSnapshot) rawEntries() []MemoryEntry {

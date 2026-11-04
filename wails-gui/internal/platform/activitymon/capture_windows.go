@@ -311,6 +311,11 @@ func SupportsWindowCapture() bool {
 	return false
 }
 
+// IsDisplayAsleep is not detected on Windows.
+func IsDisplayAsleep() bool {
+	return false
+}
+
 // IsScreenLocked detects if the workstation is locked by checking
 // if the foreground window belongs to LogonUI.exe or if there is none.
 func IsScreenLocked() bool {

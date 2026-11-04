@@ -223,11 +223,17 @@ func (a *App) stopDoingNow() {
 	}
 }
 
+// doingNowResting reports the screen locked or the display asleep. Nobody can
+// see the menu bar then, so the loop does nothing until it wakes.
+var doingNowResting = func() bool { return activitymon.IsScreenLocked() || activitymon.IsDisplayAsleep() }
+
 func (a *App) runDoingNow(ctx context.Context, nudges <-chan struct{}) {
 	ticker := time.NewTicker(doingNowPollInterval)
 	defer ticker.Stop()
 	for {
-		a.refreshDoingNow()
+		if !doingNowResting() {
+			a.refreshDoingNow()
+		}
 		select {
 		case <-ctx.Done():
 			return

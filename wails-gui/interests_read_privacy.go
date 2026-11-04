@@ -3,11 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"wails-gui/internal/interests"
+	"wails-gui/internal/pii"
 	"wails-gui/storage"
 )
 
@@ -15,10 +18,25 @@ import (
 // input. All their original references must still authorize a model read.
 // A missing source never becomes permission to replay its old derivative.
 func (a *App) interestsReadFilter() func(interests.Interest) bool {
-	allowMemory, memoryErr := a.memoryReadFilter()
-	_, policyErr := a.activityReadPrivacyPolicy()
+	var allowMemory func(string, string) bool
+	var memoryErr, policyErr error
+	var policyOnce sync.Once
+	// Read on the first decision this filter has to work out, never for a
+	// read whose decisions are all remembered.
+	readPolicy := func() {
+		policyOnce.Do(func() {
+			allowMemory, memoryErr = a.memoryReadFilter()
+			_, policyErr = a.activityReadPrivacyPolicy()
+		})
+	}
 	checked := map[interests.Ref]bool{}
 	allowed := map[interests.Ref]bool{}
+	if a != nil {
+		if remembered := a.interestsReads.decisions(a.interestsReadKey(), time.Now()); remembered != nil {
+			checked, allowed = remembered.checked, remembered.allowed
+		}
+	}
+	var decisionsMu sync.Mutex
 	var purposes map[string]PurposeOpenLoopDetail
 	var hashes map[string]bool
 	// collectible rebuilds the search/named hashes the evidence pass would
@@ -47,6 +65,7 @@ func (a *App) interestsReadFilter() func(interests.Interest) bool {
 		return hashes
 	}
 	check := func(ref interests.Ref) bool {
+		readPolicy()
 		kind, id, ok := strings.Cut(ref.Key, ":")
 		if !ok || id == "" {
 			return false
@@ -61,7 +80,7 @@ func (a *App) interestsReadFilter() func(interests.Interest) bool {
 			if !found || err != nil || index < 0 {
 				return false
 			}
-			entry, err := a.GetMemoryEntry(memoryID)
+			entry, err := a.memoryEntryForInterestRead(memoryID)
 			return err == nil && allowMemory(entry.ID, entry.Content)
 		case interests.SourceActivity:
 			if a.activity == nil || a.activity.store == nil || policyErr != nil {
@@ -127,15 +146,94 @@ func (a *App) interestsReadFilter() func(interests.Interest) bool {
 			return false
 		}
 		for _, ref := range interest.Evidence {
-			if !checked[ref] {
-				checked[ref], allowed[ref] = true, check(ref)
+			decisionsMu.Lock()
+			seen, ok := checked[ref], allowed[ref]
+			decisionsMu.Unlock()
+			if !seen {
+				ok = check(ref)
+				decisionsMu.Lock()
+				checked[ref], allowed[ref] = true, ok
+				decisionsMu.Unlock()
 			}
-			if !allowed[ref] {
+			if !ok {
 				return false
 			}
 		}
 		return true
 	}
+}
+
+// interestsReadCache remembers interestsReadFilter's decision for each
+// evidence reference while nothing those decisions read has changed (see
+// interestsReadKey), so Today's topics re-read without collecting every
+// source again. The decisions expire after topicRefreshInterval as well:
+// search and named references age out of the collection window.
+type interestsReadCache struct {
+	mu      sync.Mutex
+	current *interestsReadDecisions
+}
+
+type interestsReadDecisions struct {
+	key              string
+	at               time.Time
+	checked, allowed map[interests.Ref]bool
+}
+
+// decisions returns the remembered decisions for key, starting new ones when
+// key changed or they expired. An empty key (a state read failed) remembers
+// nothing.
+func (c *interestsReadCache) decisions(key string, now time.Time) *interestsReadDecisions {
+	if key == "" {
+		return nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if d := c.current; d != nil && d.key == key && now.Sub(d.at) < topicRefreshInterval {
+		return d
+	}
+	c.current = &interestsReadDecisions{key: key, at: now, checked: map[interests.Ref]bool{}, allowed: map[interests.Ref]bool{}}
+	return c.current
+}
+
+// interestsReadKey stamps what the evidence checks read: the privacy epoch
+// (privacy withdrawals and the app events in mobileBriefReadInputEvents,
+// Closed Eyes and sensitive apps among them), memory writes and the current
+// memory snapshot (outside edits), Closed Eyes, the user's sensitive apps,
+// the pause log and the sessions' protection count.
+func (a *App) interestsReadKey() string {
+	ctx := context.Background()
+	snapshot, err := a.memorySnapshot()
+	if err != nil {
+		return ""
+	}
+	pauses, err := a.observationPauses()
+	if err != nil && a.store != nil {
+		return ""
+	}
+	activity, err := a.mobileBriefActivityPrivacyStamp(ctx, time.Now().UnixMilli())
+	if err != nil {
+		return ""
+	}
+	return mobileBriefModelDigest(struct {
+		Epoch, MemoryRevision uint64
+		Snapshot              string
+		ClosedEyes            bool
+		SensitiveApps         map[string]string
+		Pauses                []observationPause
+		Activity              [2]int64
+	}{mobileBriefReadEpoch.Load(), a.memoryExternalReads.revision.Load(), fmt.Sprintf("%p", snapshot), a.IsClosedEyesModeEnabled(),
+		pii.GetUserSensitiveApps(), pauses, [2]int64{activity.sessions, activity.protected}})
+}
+
+// memoryEntryForInterestRead is GetMemoryEntry from the current memory
+// snapshot, without reading the file again.
+func (a *App) memoryEntryForInterestRead(id string) (MemoryEntry, error) {
+	if snapshot, err := a.memorySnapshot(); err == nil {
+		if entry, ok := snapshot.entryByID(id); ok {
+			return entry, nil
+		}
+	}
+	return a.GetMemoryEntry(id)
 }
 
 // interestsFollowingReadFilter checks each activity identity, reusing verified
