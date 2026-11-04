@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, User as UserIcon, UserCircle, HelpCircle, Plus } from 'lucide-react';
+import { PeopleFailureLine } from '../people/people-failure';
 import {
     ListPrincipals,
     PrincipalDTO,
@@ -36,15 +37,18 @@ export function PrincipalPicker({
     const [principals, setPrincipals] = useState<PrincipalDTO[]>([]);
     const [keyword, setKeyword] = useState('');
     const [loading, setLoading] = useState(true);
+    const [failed, setFailed] = useState(false);
     const [createOpen, setCreateOpen] = useState(false);
 
     const reload = useCallback(async () => {
         setLoading(true);
+        setFailed(false);
         try {
             const rows = await ListPrincipals();
             setPrincipals(rows ?? []);
         } catch (err) {
             console.warn('[principal-picker] list failed:', err);
+            setFailed(true);
         } finally {
             setLoading(false);
         }
@@ -95,8 +99,13 @@ export function PrincipalPicker({
                 />
             </div>
             <div className="max-h-[240px] overflow-y-auto flex flex-col gap-0.5 rounded-md border border-border bg-panel/30 p-1">
-                {loading ? (
-                    <p className="px-3 py-2 text-[12px] text-muted">{t('loading')}</p>
+                {failed ? (
+                    <PeopleFailureLine className="px-3 py-2" text={t('pickerLoadFailed')} onRetry={reload} />
+                ) : loading ? (
+                    <div aria-busy="true" className="flex flex-col gap-1.5 px-3 py-2">
+                        <span className="h-3 w-1/2 animate-pulse rounded bg-surface-active" />
+                        <span className="h-3 w-2/5 animate-pulse rounded bg-surface-active" />
+                    </div>
                 ) : filtered.length === 0 ? (
                     <p className="px-3 py-2 text-[12px] text-muted">{t('pickerNoResults')}</p>
                 ) : (
@@ -129,9 +138,6 @@ export function PrincipalPicker({
                                         {t(`relationship.${p.relationship}` as never, p.relationship) as string}
                                     </span>
                                 )}
-                                <span className="text-[10px] uppercase tracking-wide text-muted/70">
-                                    {t(`kind.${p.kind}` as never, p.kind) as string}
-                                </span>
                             </button>
                         );
                     })

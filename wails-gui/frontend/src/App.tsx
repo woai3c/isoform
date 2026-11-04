@@ -3775,12 +3775,7 @@ export default function App() {
                         active={peopleOpen}
                         escapeRef={peopleEscapeRef}
                         initialSelection={peopleInitialSelection}
-                        // Brief me and Draft a reply: the main chat opens
-                        // with the words in the box, unsent (the Goals path).
-                        onPrepareChat={(prompt) => {
-                            closePeople();
-                            handleCreateGoalInChat(prompt);
-                        }}
+                        devToolsUnlocked={devToolsUnlocked}
                         onOpenActivitySession={(
                             id,
                             anchorTimestamp,

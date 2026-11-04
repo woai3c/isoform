@@ -22,6 +22,19 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
+import { PeopleFailureLine } from '../people/people-failure';
+
+/** The step that failed, named in its own words with Try again. */
+type FailedStep = 'access' | 'consent' | 'sync' | 'vcard' | 'errors' | 'remove' | 'settings';
+const FAILED_STEP_KEY: Record<FailedStep, string> = {
+    access: 'contactsImportAccessFailed',
+    consent: 'contactsImportConsentFailed',
+    sync: 'contactsSyncFailed',
+    vcard: 'contactsImportVCardFailed',
+    errors: 'contactsImportErrors',
+    remove: 'contactsImportRemoveFailed',
+    settings: 'contactsImportSettingsFailed',
+};
 
 const CONTACTS_CONSENT_VERSION = 3;
 
@@ -40,7 +53,8 @@ export function ContactsImportDialog({
     const [access, setAccess] = useState<ContactsAccessStatus | null>(null);
     const [checked, setChecked] = useState(false);
     const [busy, setBusy] = useState(false);
-    const [error, setError] = useState(false);
+    const [error, setError] = useState<FailedStep | null>(null);
+    const [checkAttempt, setCheckAttempt] = useState(0);
     const [removeOpen, setRemoveOpen] = useState(false);
 
     useEffect(() => {
@@ -48,27 +62,32 @@ export function ContactsImportDialog({
         let active = true;
         setAccess(null);
         setChecked(false);
-        setError(false);
+        setError(null);
         GetContactsAccessStatus()
             .then((value) => {
                 if (active) setAccess(value);
             })
             .catch(() => {
-                if (active) setError(true);
+                if (active) setError('access');
             });
         return () => {
             active = false;
         };
-    }, [open]);
+    }, [open, checkAttempt]);
 
     const connect = async () => {
         setBusy(true);
-        setError(false);
+        setError(null);
+        let consent: ContactsAccessStatus;
         try {
-            const consent = await AcceptContactsConsent(
-                CONTACTS_CONSENT_VERSION,
-            );
+            consent = await AcceptContactsConsent(CONTACTS_CONSENT_VERSION);
             setAccess(consent);
+        } catch {
+            setError('consent');
+            setBusy(false);
+            return;
+        }
+        try {
             const next = consent.supported && consent.permission !== 'granted'
                 ? await RequestContactsAccess()
                 : consent;
@@ -76,28 +95,32 @@ export function ContactsImportDialog({
             onImported();
             if (next.permission === 'granted') onOpenChange(false);
         } catch {
-            setError(true);
+            setError('sync');
         } finally {
             setBusy(false);
         }
     };
     const retry = async () => {
         setBusy(true);
-        setError(false);
+        setError(null);
         try {
             const next = await RequestContactsAccess();
             setAccess(next);
             onImported();
             if (next.permission === 'granted') onOpenChange(false);
         } catch {
-            setError(true);
+            setError('sync');
         } finally {
             setBusy(false);
         }
     };
+    const openSettings = () => {
+        setError(null);
+        void OpenPermissionSettings('contacts').catch(() => setError('settings'));
+    };
     const importFile = async () => {
         setBusy(true);
-        setError(false);
+        setError(null);
         try {
             const path = await PickVCardFile();
             if (!path) return;
@@ -107,32 +130,41 @@ export function ContactsImportDialog({
             );
             onImported();
             if (result.errors.length) {
-                setError(true);
+                setError('errors');
                 return;
             }
             onOpenChange(false);
         } catch {
-            setError(true);
+            setError('vcard');
         } finally {
             setBusy(false);
         }
     };
     const remove = async () => {
         setBusy(true);
-        setError(false);
+        setError(null);
         try {
             const result = await RemoveImportedContacts();
             if (result.errors.length) {
-                setError(true);
+                setError('remove');
                 return;
             }
             onImported();
             onOpenChange(false);
         } catch {
-            setError(true);
+            setError('remove');
         } finally {
             setBusy(false);
         }
+    };
+    const retryStep: Record<FailedStep, () => unknown> = {
+        access: () => setCheckAttempt((n) => n + 1),
+        consent: connect,
+        sync: retry,
+        vcard: importFile,
+        errors: importFile,
+        remove,
+        settings: openSettings,
     };
 
     return (
@@ -223,11 +255,7 @@ export function ContactsImportDialog({
                                         <Button
                                             variant="outline"
                                             disabled={busy}
-                                            onClick={() =>
-                                                void OpenPermissionSettings(
-                                                    'contacts',
-                                                ).catch(() => setError(true))
-                                            }
+                                            onClick={openSettings}
                                         >
                                             {t('contactsImportOpenSettings')}
                                         </Button>
@@ -269,9 +297,10 @@ export function ContactsImportDialog({
                             <p>{t('contactsImportUnavailable')}</p>
                         )}
                         {error && (
-                            <p role="alert" className="text-error">
-                                {t('contactsSyncFailed')}
-                            </p>
+                            <PeopleFailureLine
+                                text={t(FAILED_STEP_KEY[error] as never) as unknown as string}
+                                onRetry={retryStep[error]}
+                            />
                         )}
                         {access &&
                             (access.importedCount > 0 ||
@@ -279,7 +308,7 @@ export function ContactsImportDialog({
                                 <button
                                     type="button"
                                     disabled={busy}
-                                    className="text-left text-[12px] hover:text-error"
+                                    className="text-left text-[12px] hover:text-ink"
                                     onClick={() => setRemoveOpen(true)}
                                 >
                                     {t('contactsSyncRemove')}

@@ -1,11 +1,12 @@
-// The person detail beside the Who you know overview: who they are, the two
-// prepared requests, open loops, your history together, shared topics and
-// where Isoform saw them, then everything else folded below.
-import { useCallback, useEffect, useRef, useState } from 'react';
+// The person detail beside the Who you know overview: who they are, Brief me
+// and Draft a reply in place, what is open, your history together, shared
+// topics and where Isoform saw them, then everything else folded below. A
+// section shows only when it has something in it.
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitMerge, Link, MoreHorizontal, Pencil, Trash2, Unlink, UserPlus } from 'lucide-react';
-import { type PersonCard, type PersonDetail, type PrincipalDTO, type PrincipalWithStatsDTO } from '@/lib/wails-shim-app';
-import { GetPersonDetail } from '@/lib/page-queries';
+import { type PersonCard, type PersonDetail, type PrincipalActivitySessionDTO, type PrincipalDTO, type PrincipalWithStatsDTO } from '@/lib/wails-shim-app';
+import { GetPersonDetail, ListPrincipalActivitySessions } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { Avatar } from '../ui/avatar';
 import { Button } from '../ui/button';
@@ -16,7 +17,9 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { appLabel, dayWords, durationWords, listWords, loopChip, loopLine, preparedRequest, readWithRetry, relationshipLabel, type Translate } from './people-format';
+import { appLabel, dayWords, listWords, loopChip, loopLine, readWithRetry, relationshipLabel, togetherWords, type Translate } from './people-format';
+import { PeopleFailureLine, usePeopleDevTools } from './people-failure';
+import { PersonBriefBlock, PersonReplyDraft } from './person-brief';
 import { ActivitySessionsList, DetailFold, PersonDossier, PersonTechnicalDetails, RecentMessagesList, VoiceFingerprint } from './person-sections';
 
 export interface PersonActions {
@@ -34,7 +37,7 @@ export function PersonDetailPanel({
     entry,
     revision,
     actions,
-    onPrepareChat,
+    notice,
     onOpenActivitySession,
 }: {
     personId: string;
@@ -43,7 +46,8 @@ export function PersonDetailPanel({
     /** Bumped by the page after a change, so the detail reads again. */
     revision: number;
     actions: PersonActions;
-    onPrepareChat?: (prompt: string) => void;
+    /** A failed action on this person (delete, unlink), at the top. */
+    notice?: ReactNode;
     onOpenActivitySession?: (sessionId: string, anchorTimestamp?: number, principalName?: string) => void;
 }) {
     const { t, i18n } = useTranslation('people');
@@ -55,6 +59,33 @@ export function PersonDetailPanel({
     const [attempt, setAttempt] = useState(0);
     const reread = useCallback(() => setAttempt((n) => n + 1), []);
     const lastRevision = useRef(revision);
+    const devTools = usePeopleDevTools();
+    const [draftFor, setDraftFor] = useState<string | null>(null);
+    const peekSessions = () => pageQueryCache.peek<PrincipalActivitySessionDTO[]>('ListPrincipalActivitySessions', [personId, 50]) ?? null;
+    const [sessions, setSessions] = useState<PrincipalActivitySessionDTO[] | null>(peekSessions);
+    const [sessionsFailed, setSessionsFailed] = useState(false);
+    const [sessionsAttempt, setSessionsAttempt] = useState(0);
+
+    // Activity sessions are read along with the detail: their fold shows
+    // only when the person has at least one.
+    useEffect(() => {
+        let alive = true;
+        setSessions(peekSessions());
+        setSessionsFailed(false);
+        setDraftFor(null);
+        if (sessionsAttempt > 0) pageQueryCache.invalidate(['ListPrincipalActivitySessions'], true, [personId, 50]);
+        ListPrincipalActivitySessions(personId, 50)
+            .then((rows) => {
+                if (alive) setSessions(rows ?? []);
+            })
+            .catch(() => {
+                if (alive) setSessionsFailed(true);
+            });
+        return () => {
+            alive = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [personId, sessionsAttempt]);
 
     // A new person paints from the cache when warm (a retained selection or a
     // repeated deep link); a re-read keeps what is shown.
@@ -95,14 +126,10 @@ export function PersonDetailPanel({
     const relationship = detail?.relationship || principal?.relationship || card?.relationship || '';
     const role = relationship
         ? relationshipLabel((key) => t(key as never) as unknown as string, (key) => i18n.exists(key), relationship)
-        : kind === 'anonymous'
-          ? tr('groupAnonymous')
-          : kind
-            ? tr(`kind.${kind}`)
-            : '';
+        : kind && kind !== 'anonymous'
+          ? tr(`kind.${kind}`)
+          : '';
     const aliases = (principal?.aliases ?? []).filter((a) => a && a !== name);
-    // A person Isoform has no messages for gets the same guidance as before.
-    const notSeen = !!entry && entry.stats.totalMessages === 0 && entry.stats.recentMessages.length === 0;
 
     // The header and its More menu come from the directory row, so Edit,
     // link, merge and Delete stay reachable while the detail loads or fails.
@@ -124,15 +151,9 @@ export function PersonDetailPanel({
         return (
             <article aria-label={name} className="flex flex-col gap-5">
                 {header}
+                {notice}
                 {failed ? (
-                    <div className="flex flex-col gap-3 rounded-xl border border-border bg-panel p-4">
-                        <span className="text-[13px] text-ink">{tr('detail.loadFailed')}</span>
-                        <div>
-                            <Button variant="secondary" size="sm" onClick={reread}>
-                                {tr('overview.retry')}
-                            </Button>
-                        </div>
-                    </div>
+                    <PeopleFailureLine text={tr('detail.loadFailed')} onRetry={reread} />
                 ) : (
                     <DetailSkeleton label={tr('detail.loading')} />
                 )}
@@ -140,85 +161,88 @@ export function PersonDetailPanel({
         );
     }
 
+    const replyOwed = detail.loops.find((loop) => loop.kind === 'reply_owed');
+    // Brief me shows only when Isoform has something to say about them.
+    const canBrief =
+        !isSelf &&
+        (detail.loops.length > 0 || detail.together.length > 0 || !!detail.researchSummary || detail.messageCount > 0 || (entry?.stats.totalMessages ?? 0) > 0);
+    const summary = detail.researchSummary || (isSelf ? tr('detail.selfSummary') : '');
+
     return (
         <article aria-label={name} className="flex flex-col gap-5">
             {header}
+            {notice}
 
-            <p className={detail.researchSummary ? 'text-[14px] leading-[1.55] text-ink' : 'text-[13px] leading-[1.55] text-muted'}>
-                {detail.researchSummary || (isSelf ? tr('detail.selfSummary') : tr('detail.noSummary', { name }))}
-            </p>
+            {summary && <p className={detail.researchSummary ? 'text-[14px] leading-[1.55] text-ink' : 'text-[13px] leading-[1.55] text-muted'}>{summary}</p>}
 
-            {!isSelf && onPrepareChat && (
-                <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => onPrepareChat(preparedRequest(tr, 'brief', storedName))}>
-                        {tr('detail.brief')}
-                    </Button>
-                    <Button variant="secondary" size="sm" onClick={() => onPrepareChat(preparedRequest(tr, 'draft', storedName))}>
-                        {tr('detail.draft')}
-                    </Button>
+            {(canBrief || (!isSelf && replyOwed)) && (
+                <div className="flex flex-wrap items-start gap-2">
+                    {canBrief && <PersonBriefBlock key={personId} personId={personId} />}
+                    {!isSelf && replyOwed && draftFor === null && (
+                        <Button variant="secondary" size="sm" onClick={() => setDraftFor(replyOwed.id)}>
+                            {tr('detail.draft')}
+                        </Button>
+                    )}
                 </div>
             )}
 
-            {notSeen && (
-                <p className="rounded-lg border border-dashed border-border px-4 py-3 text-[13px] leading-relaxed text-muted">
-                    {isSelf ? tr('selfNotSeenYet') : tr('contactNotSeenYet')}
-                </p>
-            )}
-
-            <section className="flex flex-col gap-2">
-                <h3 className="text-[13px] font-semibold text-ink">{tr('detail.openLoops')}</h3>
-                {detail.loops.length === 0 ? (
-                    <p className="text-[13px] text-muted">{tr('detail.noLoops')}</p>
-                ) : (
+            {detail.loops.length > 0 && (
+                <section className="flex flex-col gap-2">
+                    <h3 className="text-[13px] font-semibold text-ink">{tr('detail.openLoops')}</h3>
                     <ul className="flex flex-col gap-2">
                         {detail.loops.map((loop) => (
-                            <li key={`${loop.kind}:${loop.id}`} className="flex items-start gap-2.5 text-[14px] text-ink">
-                                <span aria-hidden className="mt-[7px] size-1.5 shrink-0 rounded-full bg-muted" />
-                                <span className="flex min-w-0 flex-col">
-                                    <span>{loopLine(tr, loop)}</span>
-                                    {(loop.kind === 'you_owe' || loop.kind === 'waiting_on_them') && (
-                                        <span className="text-[12px] text-muted">{loopChip(tr, i18n.language, loop)}</span>
-                                    )}
+                            <li key={`${loop.kind}:${loop.id}`} className="flex flex-col text-[14px] text-ink">
+                                <span className="flex items-start gap-2.5">
+                                    <span aria-hidden className="mt-[7px] size-1.5 shrink-0 rounded-full bg-muted" />
+                                    <span className="flex min-w-0 flex-col">
+                                        <span>{loopLine(tr, loop)}</span>
+                                        {(loop.kind === 'you_owe' || loop.kind === 'waiting_on_them') && (
+                                            <span className="text-[12px] text-muted">{loopChip(tr, i18n.language, loop)}</span>
+                                        )}
+                                    </span>
                                 </span>
+                                {draftFor === loop.id && loop.kind === 'reply_owed' && (
+                                    <PersonReplyDraft personId={personId} momentId={loop.id} onClose={() => setDraftFor(null)} />
+                                )}
                             </li>
                         ))}
                     </ul>
-                )}
-            </section>
+                </section>
+            )}
 
-            <section className="flex flex-col gap-1.5">
-                <h3 className="text-[13px] font-semibold text-ink">{tr('detail.together')}</h3>
-                {detail.together.length === 0 ? (
-                    <p className="text-[13px] text-muted">{tr('detail.noTogether')}</p>
-                ) : (
+            {detail.together.length > 0 && (
+                <section className="flex flex-col gap-1.5">
+                    <h3 className="text-[13px] font-semibold text-ink">{tr('detail.together')}</h3>
                     <ul className="flex flex-col">
                         {detail.together.map((item, i) => (
                             <li key={`${item.kind}:${item.at}:${i}`} className="flex gap-3 border-b border-border-divider py-[7px]">
                                 <span className="w-16 shrink-0 text-[12px] text-muted">{dayWords(tr, i18n.language, item.at)}</span>
-                                <span className="min-w-0 text-[13px] text-ink">{togetherWords(tr, item)}</span>
+                                <span className="min-w-0 text-[13px] text-ink">{togetherWords(tr, item, name)}</span>
                             </li>
                         ))}
                     </ul>
-                )}
-            </section>
+                </section>
+            )}
 
-            <section className="flex flex-col gap-1.5">
-                <h3 className="text-[13px] font-semibold text-ink">{tr('detail.sharedTopics')}</h3>
-                {detail.sharedTopics.length === 0 ? (
-                    <p className="text-[13px] text-muted">{tr('detail.noSharedTopics')}</p>
-                ) : (
-                    <ul className="flex flex-wrap gap-1.5">
-                        {detail.sharedTopics.map((topic) => (
-                            <li key={topic.id} className="inline-flex h-[26px] items-center rounded-full border border-border bg-panel px-2.5 text-[12.5px] text-ink">
-                                {topic.name}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-                {detail.seenIn.length > 0 && (
-                    <span className="text-[12px] text-muted">{tr('detail.seenIn', { apps: listWords(i18n.language, detail.seenIn.map((app) => appLabel(tr, app))) })}</span>
-                )}
-            </section>
+            {(detail.sharedTopics.length > 0 || detail.seenIn.length > 0) && (
+                <section className="flex flex-col gap-1.5">
+                    {detail.sharedTopics.length > 0 && (
+                        <>
+                            <h3 className="text-[13px] font-semibold text-ink">{tr('detail.sharedTopics')}</h3>
+                            <ul className="flex flex-wrap gap-1.5">
+                                {detail.sharedTopics.map((topic) => (
+                                    <li key={topic.id} className="inline-flex h-[26px] items-center rounded-full border border-border bg-panel px-2.5 text-[12.5px] text-ink">
+                                        {topic.name}
+                                    </li>
+                                ))}
+                            </ul>
+                        </>
+                    )}
+                    {detail.seenIn.length > 0 && (
+                        <span className="text-[12px] text-muted">{tr('detail.seenIn', { apps: listWords(i18n.language, detail.seenIn.map((app) => appLabel(tr, app))) })}</span>
+                    )}
+                </section>
+            )}
 
             {principal?.notes && (
                 <section className="flex flex-col gap-1.5">
@@ -238,15 +262,24 @@ export function PersonDetailPanel({
                         <RecentMessagesList stats={entry.stats} />
                     </DetailFold>
                 )}
-                <DetailFold label={tr('activitySessionsLoadingHeading')}>
-                    <ActivitySessionsList principalId={personId} principalName={storedName} onOpenActivitySession={onOpenActivitySession} />
-                </DetailFold>
+                {sessionsFailed ? (
+                    <DetailFold label={tr('activitySessionsLoadingHeading')}>
+                        <PeopleFailureLine text={tr('detail.sessionsFailed')} onRetry={() => setSessionsAttempt((n) => n + 1)} />
+                    </DetailFold>
+                ) : (
+                    sessions &&
+                    sessions.length > 0 && (
+                        <DetailFold label={tr('activitySessionsLoadingHeading')} count={sessions.length}>
+                            <ActivitySessionsList sessions={sessions} principalName={storedName} onOpenActivitySession={onOpenActivitySession} />
+                        </DetailFold>
+                    )
+                )}
                 {!isSelf && (
                     <DetailFold label={tr('dossierHeading')}>
-                        <PersonDossier principalId={personId} onChanged={reread} />
+                        <PersonDossier principalId={personId} name={name} onChanged={reread} />
                     </DetailFold>
                 )}
-                {principal && (
+                {devTools && principal && (
                     <DetailFold label={tr('technical.heading')}>
                         <PersonTechnicalDetails principal={principal} stats={entry?.stats} />
                     </DetailFold>
@@ -254,19 +287,6 @@ export function PersonDetailPanel({
             </div>
         </article>
     );
-}
-
-function togetherWords(tr: Translate, item: PersonDetail['together'][number]): string {
-    switch (item.kind) {
-        case 'meeting': {
-            const title = item.title || tr('together.meetingUntitled');
-            return item.durationMs > 0 ? tr('together.withDuration', { title, duration: durationWords(tr, item.durationMs) }) : title;
-        }
-        case 'activity':
-            return item.app ? tr('together.activity', { title: item.title, app: appLabel(tr, item.app) }) : item.title;
-        default:
-            return tr('together.message', { app: appLabel(tr, item.app) });
-    }
 }
 
 function DetailSkeleton({ label }: { label: string }) {
@@ -325,7 +345,7 @@ function PersonMoreMenu({ principal, name, actions }: { principal: PrincipalDTO;
                 {!isSelf && (
                     <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem destructive onSelect={() => actions.onDelete(principal)}>
+                        <DropdownMenuItem onSelect={() => actions.onDelete(principal)}>
                             <Trash2 />
                             {tr('menu.delete')}
                         </DropdownMenuItem>

@@ -2,6 +2,7 @@
 // prepared requests. Every word comes from the `people` namespace; this file
 // only picks the key and fills it.
 import type { ContactsAccessStatus, PersonLoop } from '@/lib/wails-shim-app';
+import { computerDayClock } from '@/lib/brief-time';
 
 export type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -58,6 +59,43 @@ export function appLabel(t: Translate, app: string): string {
     return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 }
 
+type TogetherItem = { kind: string; title: string; app: string; durationMs: number; direction?: string };
+
+const CJK = /[\u3400-\u9fff]/;
+// An Activity title that opens on a past-tense verb ("Messaged Priya…",
+// "Wrote the notes…") gets its subject: you.
+const PAST_VERB =
+    /^(?:[a-z]{2,}(?<!e)ed|wrote|sent|met|read|made|took|spoke|had|saw|went|gave|built|ran|drew|told|got|did|paid|left|found|kept|brought|bought|thought|caught|sold|held|led|set|put|began|chose|heard|knew|said|sat|spent|stood|won|wore)\b/i;
+
+function youDid(t: Translate, title: string): string {
+    const value = title.trim();
+    if (CJK.test(value)) {
+        return /^[你我]/.test(value) || !value.includes('了') ? value : t('together.youDid', { what: value, lng: 'zh-CN' });
+    }
+    if (/^you\b/i.test(value) || !PAST_VERB.test(value)) return value;
+    return t('together.youDid', { what: value.charAt(0).toLowerCase() + value.slice(1), lng: 'en' });
+}
+
+function shortName(name: string): string {
+    const value = name.trim();
+    return CJK.test(value) ? value : (value.split(/\s+/)[0] ?? value);
+}
+
+/** One Together line that says who did it, the app after the dot only when the verb doesn't name it (N39, N41). */
+export function togetherWords(t: Translate, item: TogetherItem, name: string): string {
+    if (item.kind === 'meeting') {
+        const title = item.title || t('together.meetingUntitled');
+        return item.durationMs > 0 ? t('together.withDuration', { title, duration: durationWords(t, item.durationMs) }) : title;
+    }
+    const app = item.app ? appLabel(t, item.app) : '';
+    const withApp = (words: string) => (app ? t('together.activity', { title: words, app }) : words);
+    if (item.kind === 'activity') return withApp(youDid(t, item.title));
+    const who = item.direction === 'in' ? 'fromThem' : item.direction === 'out' ? 'fromYou' : 'with';
+    const person = shortName(name);
+    if (APP_WORDS[item.app.trim().toLowerCase()] === 'apps.email') return t(`together.${who}Email`, { name: person });
+    return withApp(t(`together.${who}Message`, { name: person }));
+}
+
 export function listWords(lang: string, items: string[]): string {
     if (items.length === 0) return '';
     try {
@@ -111,8 +149,10 @@ export function ageWords(t: Translate, ms: number, now = Date.now()): string {
 export function durationWords(t: Translate, ms: number): string {
     const minutes = Math.round(ms / 60_000);
     if (minutes < 60) return t('time.durationMinutes', { count: Math.max(1, minutes) });
-    const hours = Math.round((minutes / 60) * 10) / 10;
-    return t('time.durationHours', { count: hours });
+    if (minutes >= 24 * 60) return t('time.durationDays', { count: Math.round(minutes / (24 * 60)) });
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest > 0 ? t('time.durationHoursMinutes', { hours, minutes: rest }) : t('time.durationHours', { count: hours });
 }
 
 /** Replies and things you owe ask for action; the rest are quiet. */
@@ -167,32 +207,42 @@ export function headlineWords(t: Translate, counts: PeopleHeadlineCounts, openCo
 /** The words Brief me and Draft a reply put in the main chat's box. The
  *  chat adds what Isoform knows about a person it finds named in a message,
  *  so the name is the one stored on the profile. */
-export function preparedRequest(t: Translate, kind: 'brief' | 'draft', name: string): string {
-    return kind === 'brief' ? t('prompts.brief', { name }) : t('prompts.draft', { name });
+/** What Contacts' line on the page says. Waiting for the first pass says
+ *  nothing; an action (Connect, Allow access, Try again, Stop) rides along. */
+export type ContactsLine =
+    | { kind: 'none' }
+    | { kind: 'text'; text: string }
+    | { kind: 'connect' }
+    | { kind: 'resume'; text: string }
+    | { kind: 'access'; text: string }
+    | { kind: 'syncing'; text: string }
+    | { kind: 'failed'; text: string };
+
+export function contactsLine(access: ContactsAccessStatus, translate: (key: string, args?: Record<string, string>) => string, language: string): ContactsLine {
+    if (access.supported === false) return { kind: 'none' };
+    if (!access.consentAccepted) return { kind: 'connect' };
+    if (access.syncPaused) return { kind: 'resume', text: translate('people:contactsSyncPaused') };
+    if (access.permission !== 'granted') return { kind: 'access', text: translate('people:contactsSyncNeedsAccess') };
+    if (access.syncState === 'syncing') return { kind: 'syncing', text: translate('people:contactsSyncing') };
+    if (access.syncState === 'error') return { kind: 'failed', text: translate('people:contactsSyncError') };
+    const synced = contactsSyncedWords(access, translate, language);
+    return synced ? { kind: 'text', text: synced } : { kind: 'none' };
 }
 
-export function contactsStatusText(access: ContactsAccessStatus, translate: (key: string, args?: Record<string, string>) => string, language: string): string {
-    if (access.supported === false) return translate('people:contactsImportUnavailable');
-    if (!access.consentAccepted) return translate('people:contactsSyncConsent');
-    if (access.syncPaused) return translate('people:contactsSyncPaused');
-    if (access.permission !== 'granted') return translate('people:contactsSyncNeedsAccess');
-    if (access.syncState === 'syncing') return translate('people:contactsSyncing');
-    if (access.syncState === 'error') return translate('people:contactsSyncError');
-    if (!access.lastImportAt) return translate('people:contactsSyncWaiting');
+export function contactsSyncedWords(access: ContactsAccessStatus, translate: (key: string, args?: Record<string, string>) => string, language: string): string {
+    if (!access.lastImportAt) return '';
     const last = new Date(access.lastImportAt);
-    if (!Number.isFinite(last.getTime())) return translate('people:contactsSyncWaiting');
+    if (!Number.isFinite(last.getTime())) return '';
     const now = new Date();
     if (last.toDateString() === now.toDateString()) return translate(last.getHours() < 12 ? 'people:contactsSyncedMorning' : 'people:contactsSyncedToday');
-    return translate('people:contactsSyncedDate', { date: last.toLocaleDateString(language) });
+    const date = last.toLocaleDateString(language, { month: 'short', day: 'numeric', ...(last.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }) });
+    return translate('people:contactsSyncedDate', { date });
 }
 
+/** "1:05 PM", "Yesterday, 7:01 PM", "Thu, 10:58 PM": the computer's clock. */
 export function formatAbsolute(lang: string, ms: number): string {
     if (!ms) return '';
-    const d = new Date(ms);
-    if (d.getFullYear() === new Date().getFullYear()) {
-        return d.toLocaleString(lang, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-    }
-    return d.toLocaleDateString(lang, { year: 'numeric', month: 'short', day: 'numeric' });
+    return computerDayClock(new Date(ms), lang);
 }
 
 /** People reads refuse to publish when the data changed while they ran

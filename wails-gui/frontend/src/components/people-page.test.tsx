@@ -21,7 +21,19 @@ const mocks = vi.hoisted(() => ({
     sessions: vi.fn(),
     research: vi.fn(),
     voiceStatus: vi.fn(),
+    brief: vi.fn(),
+    openDraft: vi.fn(),
+    cancelDraft: vi.fn(),
+    requestAccess: vi.fn(),
+    startResearch: vi.fn(),
+    deleteResearch: vi.fn(),
+    voiceSamples: vi.fn(),
+    enroll: vi.fn(),
+    testVoice: vi.fn(),
 }));
+const firstDay = vi.hoisted(() => ({ value: { day: -1, firstDays: false, history: null, calendar: null } as Record<string, unknown> }));
+vi.mock("@/hooks/useFirstDay", () => ({ useFirstDay: () => firstDay.value }));
+vi.mock("./tasks/TaskThreadPane", () => ({ TaskThreadPane: ({ id }: { id: string }) => <div data-testid="task-thread">{`task:${id}`}</div> }));
 
 vi.mock("@/lib/wails-shim-app", () => ({
     ListPeopleOverview: mocks.overview,
@@ -37,15 +49,19 @@ vi.mock("@/lib/wails-shim-app", () => ({
     CleanupAnonymousPrincipals: mocks.cleanup,
     DeletePrincipal: mocks.deletePrincipal,
     IsClosedEyesModeEnabled: mocks.closedEyes,
-    DeletePersonResearch: vi.fn(),
+    DeletePersonResearch: mocks.deleteResearch,
     DeleteVoiceSample: vi.fn(),
-    EnrollVoiceSample: vi.fn(),
+    EnrollVoiceSample: mocks.enroll,
+    GetPersonBrief: mocks.brief,
+    OpenPersonReplyDraft: mocks.openDraft,
+    CancelTodayReplyDraft: mocks.cancelDraft,
+    RequestContactsAccess: mocks.requestAccess,
     GetPersonResearch: mocks.research,
     GetVoiceEnrollmentStatus: mocks.voiceStatus,
     ListPrincipalActivitySessions: mocks.sessions,
-    ListVoiceSamples: vi.fn().mockResolvedValue([]),
-    StartPersonResearch: vi.fn(),
-    TestVoiceMatch: vi.fn(),
+    ListVoiceSamples: mocks.voiceSamples,
+    StartPersonResearch: mocks.startResearch,
+    TestVoiceMatch: mocks.testVoice,
 }));
 
 // The page query cache installs its own invalidation listeners for some of
@@ -163,7 +179,7 @@ function world() {
         entry("sam", "contact", "Sam Rivera", { appHandles: [{ id: 7, app: "slack", handleId: "U0SAM42", displayHandle: "sam.r" }] as never }),
         entry("mei1", "anonymous", "Mei Chen ex-Stability", {}, { totalMessages: 12 }),
         entry("mei2", "anonymous", "陈美 Mei", {}, { totalMessages: 3 }),
-        entry("me", "self", "Bo Yu"),
+        entry("me", "self", "Alex Morgan"),
     ];
     const overview: PeopleOverview = {
         headline: { repliesOwed: 1, thingsOwed: 1, peopleWaitingOnYou: 1 },
@@ -175,7 +191,7 @@ function world() {
             card("sam", "contact", "Sam Rivera", [], { lastSeenAt: NOW - 30 * 24 * HOUR, lastSeenApp: "email" }),
             card("mei1", "anonymous", "Mei Chen ex-Stability"),
             card("mei2", "anonymous", "陈美 Mei"),
-            card("me", "self", "Bo Yu"),
+            card("me", "self", "Alex Morgan"),
         ],
         duplicates: [{ id: "dup-1", memberIds: ["mei1", "mei2"], suggestedTargetId: "mei1", reason: "same_handle", app: "wechat" }],
         knownCount: entries.length,
@@ -193,7 +209,7 @@ function world() {
         sam: detail("sam", "Sam Rivera"),
         mei1: detail("mei1", "Mei Chen ex-Stability"),
         mei2: detail("mei2", "陈美 Mei"),
-        me: detail("me", "Bo Yu"),
+        me: detail("me", "Alex Morgan"),
     };
     mocks.overview.mockResolvedValue(overview);
     mocks.principals.mockResolvedValue(entries);
@@ -222,6 +238,8 @@ beforeEach(async () => {
     mocks.voiceStatus.mockResolvedValue(null);
     mocks.unlink.mockResolvedValue(undefined);
     mocks.cancel.mockResolvedValue(undefined);
+    mocks.voiceSamples.mockResolvedValue([]);
+    firstDay.value = { day: -1, firstDays: false, history: null, calendar: null };
     await i18n.changeLanguage("en");
 });
 
@@ -234,7 +252,7 @@ describe("People overview", () => {
         const open = screen.getByRole("region", { name: "Open between you" });
         const cards = within(open).getAllByRole("button");
         expect(cards.map((c) => c.textContent)).toEqual([expect.stringContaining("Priya Nair"), expect.stringContaining("Marcus Hale")]);
-        expect(cards[0]).toHaveTextContent("You owe a reply · 9 h");
+        expect(cards[0]).toHaveTextContent("You owe a reply · 9h");
         expect(cards[0]).toHaveTextContent("Last: Slack,");
         expect(cards[1]).toHaveTextContent("You owe them");
         expect(cards[1]).toHaveTextContent("Countersign the SOW");
@@ -272,7 +290,7 @@ describe("People overview", () => {
         const aside = screen.getByRole("complementary", { name: "Person detail" });
         queueMicrotask(releaseDetail);
         expect(await within(aside).findByText("Your day-to-day contact at Halcyon.")).toBeInTheDocument();
-        expect(within(aside).getByText("Their email has waited 9 h for your reply")).toBeInTheDocument();
+        expect(within(aside).getByText("Their email has waited 9h for your reply")).toBeInTheDocument();
         expect(within(aside).getByText("Kickoff call · 45 min")).toBeInTheDocument();
         expect(within(aside).getByText("Halcyon ERP sync")).toBeInTheDocument();
         expect(within(aside).getByText("Seen in Email and Slack")).toBeInTheDocument();
@@ -285,7 +303,7 @@ describe("People overview", () => {
         render(<PeoplePage />);
         expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
 
-        expect(await screen.findByText("Could not load Who you know.")).toBeInTheDocument();
+        expect(await screen.findByText("Couldn't load who you know.")).toBeInTheDocument();
         // Each attempt is tried twice quietly before the page says so: the
         // mount read, plus the re-read the principals publication triggers.
         expect(mocks.overview).toHaveBeenCalledTimes(4);
@@ -352,26 +370,87 @@ describe("People overview", () => {
         await waitFor(() => expect(mocks.deletePrincipal).toHaveBeenCalledWith("priya"));
     }, MENU_TEST_TIMEOUT);
 
-    it("says when Isoform has seen no messages from a person or from you", async () => {
+    it("N10: shows no dashed box when Isoform has seen no messages from a person or from you", async () => {
         world();
         render(<PeoplePage />);
         await screen.findByRole("heading", { level: 2, name: "Priya Nair" });
-        expect(screen.queryByText(/hasn't seen messages from this person/)).not.toBeInTheDocument();
         await openPerson("Marcus Hale");
-        expect(await screen.findByText("Isoform hasn't seen messages from this person in any chat yet. Make sure their handle bindings cover the apps they use.")).toBeInTheDocument();
-        await openPerson("Bo Yu");
-        expect(await screen.findByText(/Isoform hasn't seen any chat messages attributed to you yet/)).toBeInTheDocument();
+        await within(screen.getByRole("complementary", { name: "Person detail" })).findByText("Countersign the SOW");
+        expect(screen.queryByText(/hasn't seen/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/handle bindings/)).not.toBeInTheDocument();
+        await openPerson("Alex Morgan");
+        expect(screen.queryByText(/hasn't seen any chat messages/)).not.toBeInTheDocument();
     });
 
-    it("keeps the empty Contacts hint, and no sort-out line when nobody is unidentified", async () => {
+    it("N6: a section shows only when it has something in it", async () => {
         const { entries, overview } = world();
         mocks.principals.mockResolvedValue(entries.filter((e) => e.principal.kind === "self"));
-        mocks.overview.mockResolvedValue({ ...overview, open: [], duplicates: [], everyone: overview.everyone.filter((c) => c.kind === "self"), knownCount: 1 });
+        mocks.overview.mockResolvedValue({ ...overview, headline: { repliesOwed: 0, thingsOwed: 0, peopleWaitingOnYou: 0 }, open: [], duplicates: [], everyone: overview.everyone.filter((c) => c.kind === "self"), knownCount: 1 });
         render(<PeoplePage />);
-        const everyone = await screen.findByRole("region", { name: "Everyone else" });
-        expect(everyone).toHaveTextContent("Add people you chat with regularly so their messages aren't mistaken for yours.");
+        expect(await screen.findByRole("region", { name: "You" })).toBeInTheDocument();
+        expect(screen.queryByRole("region", { name: "Everyone else" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("region", { name: "Open between you" })).not.toBeInTheDocument();
+        expect(document.body).not.toHaveTextContent(/Nothing is open between you and anyone right now|Everyone Isoform knows|Add people you chat with/);
         expect(screen.queryByText(/Isoform couldn't tell who/)).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Sort them out" })).not.toBeInTheDocument();
+    });
+
+    it("N6: the detail leaves out empty sections and the missing summary", async () => {
+        world();
+        render(<PeoplePage initialSelection={{ personId: "sam" }} />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        await within(aside).findByRole("heading", { level: 2, name: "Sam Rivera" });
+        await waitFor(() => expect(mocks.detail).toHaveBeenCalledWith("sam"));
+        await waitFor(() => expect(within(aside).queryByLabelText("Loading this person")).not.toBeInTheDocument());
+        expect(within(aside).queryByRole("heading", { name: "Open between you" })).not.toBeInTheDocument();
+        expect(within(aside).queryByRole("heading", { name: "Together" })).not.toBeInTheDocument();
+        expect(within(aside).queryByRole("heading", { name: "Shared topics" })).not.toBeInTheDocument();
+        expect(aside).not.toHaveTextContent(/Nothing open between you|has not seen you together|No shared topics|has no summary/);
+    });
+
+    it("N7: day zero says people appear as you work with them, with only You", async () => {
+        mocks.overview.mockResolvedValue({ headline: { repliesOwed: 0, thingsOwed: 0, peopleWaitingOnYou: 0 }, open: [], everyone: [], duplicates: [], knownCount: 0 });
+        mocks.principals.mockResolvedValue([]);
+        mocks.detail.mockResolvedValue(null);
+        render(<PeoplePage />);
+        expect(await screen.findByRole("heading", { level: 1, name: "People appear here as you work with them." })).toBeInTheDocument();
+        expect(document.body).not.toHaveTextContent(/0 people|No people yet|Nothing is open between you and anyone/);
+        expect(screen.getByRole("region", { name: "You" })).toBeInTheDocument();
+        expect(screen.queryByRole("region", { name: "Everyone else" })).not.toBeInTheDocument();
+        expect(within(screen.getByRole("complementary", { name: "Person detail" })).queryByRole("heading")).not.toBeInTheDocument();
+    });
+
+    it("N8: the first days name this week's calendar people, not people Isoform knows", async () => {
+        mocks.overview.mockResolvedValue({ headline: { repliesOwed: 0, thingsOwed: 0, peopleWaitingOnYou: 0 }, open: [], everyone: [], duplicates: [], knownCount: 0 });
+        mocks.principals.mockResolvedValue([]);
+        firstDay.value = {
+            day: 0,
+            firstDays: true,
+            history: null,
+            calendar: { connected: true, people: [1, 2, 3].map((n) => ({ principalId: "", name: `Guest ${n}`, email: "", title: "Sync", startAt: NOW + n * HOUR, recurring: false })) },
+        };
+        render(<PeoplePage />);
+        expect(await screen.findByRole("heading", { level: 1, name: "3 people on this week's calendar" })).toBeInTheDocument();
+        expect(screen.getByText("More appear as you work with them.")).toBeInTheDocument();
+        expect(i18n.t("people:firstDay.headline", { count: 1 })).toBe("1 person on this week's calendar");
+        expect(i18n.t("people:firstDay.headline", { count: 3, lng: "zh-CN" })).toBe("本周日历上有 3 个人");
+    });
+
+    it("N9: the search reads Search people", async () => {
+        world();
+        render(<PeoplePage />);
+        const search = await screen.findByRole("searchbox", { name: "Search people" });
+        expect(search).toHaveAttribute("placeholder", "Search people");
+        expect(i18n.t("people:overview.searchLabel", { lng: "zh-CN" })).toBe("搜索人物");
+    });
+
+    it("N24: with no profile for you, the line says why to name yourself", async () => {
+        const { entries, overview } = world();
+        mocks.principals.mockResolvedValue(entries.filter((e) => e.principal.kind !== "self"));
+        mocks.overview.mockResolvedValue({ ...overview, everyone: overview.everyone.filter((c) => c.kind !== "self") });
+        render(<PeoplePage />);
+        expect(await screen.findByText("Name yourself so Isoform can tell your messages from everyone else's.")).toBeInTheDocument();
+        expect(i18n.t("people:emptySelf", { lng: "zh-CN" })).toBe("给自己命名，Isoform 就能把你的消息和别人的分开。");
     });
 
     it("says open loops are hidden while observing is paused", async () => {
@@ -425,7 +504,9 @@ describe("Who you know lists only people Isoform can name", () => {
         });
         render(<PeoplePage />);
         const open = await screen.findByRole("region", { name: "Open between you" });
-        expect(within(open).getByRole("button", { name: /陈美 Mei.*Unidentified · 3 messages/ })).toBeInTheDocument();
+        // N11: an unnamed sender's card reads "3 messages".
+        expect(within(open).getByRole("button", { name: /陈美 Mei.*3 messages/ })).toBeInTheDocument();
+        expect(open).not.toHaveTextContent("Unidentified");
         expect(within(open).getByRole("button", { name: /Priya Nair/ })).toBeInTheDocument();
         expect(screen.queryByRole("region", { name: "Unidentified" })).not.toBeInTheDocument();
         expect(screen.queryByRole("heading", { name: /Unidentified|Seen in content/ })).not.toBeInTheDocument();
@@ -463,7 +544,8 @@ describe("Who you know lists only people Isoform can name", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Sort them out" }));
         const sheet = await screen.findByRole("dialog", { name: "Senders to sort out" });
-        expect(within(sheet).getByRole("button", { name: /Mei Chen ex-Stability.*Unidentified · 12 messages/ })).toBeInTheDocument();
+        expect(within(sheet).getByRole("button", { name: /Mei Chen ex-Stability.*12 messages/ })).toBeInTheDocument();
+        expect(sheet).not.toHaveTextContent(/Unidentified|Not seen yet/);
         expect(within(sheet).getByRole("button", { name: /陈美 Mei/ })).toBeInTheDocument();
         expect(within(sheet).queryByRole("button", { name: /Sam Rivera/ })).not.toBeInTheDocument();
 
@@ -478,35 +560,132 @@ describe("Who you know lists only people Isoform can name", () => {
         render(<PeoplePage />);
         fireEvent.click(await screen.findByRole("button", { name: "Sort them out" }));
         const sheet = await screen.findByRole("dialog", { name: "Senders to sort out" });
-        fireEvent.click(within(sheet).getByRole("button", { name: "Clean up 2 unidentified senders" }));
+        fireEvent.click(within(sheet).getByRole("button", { name: "Clean up senders" }));
         fireEvent.click(await screen.findByRole("button", { name: "Clean up" }));
         await waitFor(() => expect(mocks.cleanup).toHaveBeenCalledTimes(1));
     });
 });
 
-describe("Prepared requests", () => {
-    it("Brief me and Draft a reply put words in the main chat box and send nothing", async () => {
-        world();
-        const onPrepareChat = vi.fn();
-        render(<PeoplePage onPrepareChat={onPrepareChat} />);
-        await screen.findByRole("heading", { level: 2, name: "Priya Nair" });
+describe("N39, N41: Together says who did it, in the past tense, the app said once", () => {
+    it("a message from them and your own message about them", async () => {
+        const { details } = world();
+        details.priya = { ...details.priya, together: [
+            { at: NOW - HOUR, kind: "message", title: "", app: "email", durationMs: 0, direction: "in" },
+            { at: NOW - 2 * HOUR, kind: "message", title: "", app: "wechat", durationMs: 0, direction: "in" },
+            { at: NOW - 3 * HOUR, kind: "activity", title: "Messaged Priya Nair about the launch timing", app: "WeChat", durationMs: 60_000 },
+        ] };
+        render(<PeoplePage />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        expect(await within(aside).findByText("Priya emailed you")).toBeInTheDocument();
+        expect(within(aside).getByText("Priya messaged you · WeChat")).toBeInTheDocument();
+        expect(within(aside).getByText("You messaged Priya Nair about the launch timing · WeChat")).toBeInTheDocument();
+        expect(aside).not.toHaveTextContent(/Messaged Priya Nair ·|Priya emailed you ·|Messaged on|in WeChat/);
+    });
 
-        fireEvent.click(screen.getByRole("button", { name: "Brief me before we talk" }));
-        expect(onPrepareChat).toHaveBeenLastCalledWith(expect.stringContaining("Brief me before I talk with Priya Nair"));
-        fireEvent.click(screen.getByRole("button", { name: "Draft a reply" }));
-        expect(onPrepareChat).toHaveBeenLastCalledWith(expect.stringContaining("Draft a reply to Priya Nair"));
-        expect(onPrepareChat).toHaveBeenCalledTimes(2);
-        // Nothing else ran: no merge, delete or other write.
-        expect(mocks.merge).not.toHaveBeenCalled();
-        expect(mocks.deletePrincipal).not.toHaveBeenCalled();
+    it("zh-CN: an email from them is theirs, not 给…发了消息", async () => {
+        await i18n.changeLanguage("zh-CN");
+        try {
+            const { details } = world();
+            details.priya = { ...details.priya, name: "王晓雨", together: [
+                { at: NOW - HOUR, kind: "message", title: "", app: "email", durationMs: 0, direction: "in" },
+                { at: NOW - 2 * HOUR, kind: "activity", title: "和王晓雨聊了发布时间", app: "WeChat", durationMs: 60_000 },
+            ] };
+            render(<PeoplePage />);
+            const aside = await screen.findByRole("complementary");
+            expect(await within(aside).findByText("王晓雨给你发了邮件")).toBeInTheDocument();
+            expect(within(aside).getByText("你和王晓雨聊了发布时间 · WeChat")).toBeInTheDocument();
+            expect(aside).not.toHaveTextContent(/给 ?王晓雨 ?发了/);
+        } finally {
+            await i18n.changeLanguage("en");
+        }
+    });
+});
+
+describe("N2: Brief me and Draft a reply work in the detail", () => {
+    it("Brief me becomes the Before you talk lines in place, leaving out an empty one", async () => {
+        world();
+        mocks.brief.mockResolvedValue({ personId: "priya", youOwe: "The Q3 numbers", theyAsked: "Can we move the sync?", lastTime: "" });
+        render(<PeoplePage />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        fireEvent.click(await within(aside).findByRole("button", { name: "Brief me before we talk" }));
+        const block = await within(aside).findByRole("region", { name: "Before you talk" });
+        expect(mocks.brief).toHaveBeenCalledWith("priya");
+        expect(block).toHaveTextContent("You owe");
+        expect(block).toHaveTextContent("The Q3 numbers");
+        expect(block).toHaveTextContent("They asked");
+        expect(block).not.toHaveTextContent("Last time");
+        expect(within(aside).queryByRole("button", { name: "Brief me before we talk" })).not.toBeInTheDocument();
+        expect(mocks.openDraft).not.toHaveBeenCalled();
+    });
+
+    it("a failed brief says so in copper with Try again", async () => {
+        world();
+        mocks.brief.mockRejectedValueOnce(new Error("runner not initialized")).mockResolvedValue({ personId: "priya", youOwe: "The Q3 numbers" });
+        render(<PeoplePage />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        fireEvent.click(await within(aside).findByRole("button", { name: "Brief me before we talk" }));
+        const line = await within(aside).findByText("Couldn't write the brief.");
+        expect(line.closest('[role="alert"]')).toHaveClass("text-copper");
+        expect(aside).not.toHaveTextContent("runner not initialized");
+        fireEvent.click(within(line.closest('[role="alert"]') as HTMLElement).getByRole("button", { name: "Try again" }));
+        expect(await within(aside).findByText("The Q3 numbers")).toBeInTheDocument();
+    });
+
+    it("Draft a reply opens Today's draft under the reply owed and sends nothing", async () => {
+        world();
+        mocks.openDraft.mockResolvedValue("task-7");
+        render(<PeoplePage />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        fireEvent.click(await within(aside).findByRole("button", { name: "Draft a reply" }));
+        await waitFor(() => expect(mocks.openDraft).toHaveBeenCalledWith("priya", "reply_owed-1", expect.any(String)));
+        const item = within(aside).getByText("Their email has waited 9h for your reply").closest("li") as HTMLElement;
+        expect(await within(item).findByTestId("task-thread")).toHaveTextContent("task:task-7");
+    });
+
+    it("a draft still writing shows Writing the draft with Stop, and a failure has Try again", async () => {
+        world();
+        mocks.openDraft.mockRejectedValueOnce(new Error("no route")).mockImplementation(() => new Promise(() => {}));
+        mocks.cancelDraft.mockResolvedValue(undefined);
+        render(<PeoplePage />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        fireEvent.click(await within(aside).findByRole("button", { name: "Draft a reply" }));
+        const line = await within(aside).findByText("Couldn't finish the draft.");
+        fireEvent.click(within(line.closest('[role="alert"]') as HTMLElement).getByRole("button", { name: "Try again" }));
+        expect(await within(aside).findByText("Writing the draft")).toBeInTheDocument();
+        expect(within(aside).getByRole("button", { name: "Send" })).toBeDisabled();
+        fireEvent.click(within(aside).getByRole("button", { name: "Stop" }));
+        await waitFor(() => expect(mocks.cancelDraft).toHaveBeenCalled());
+        expect(await within(aside).findByText("Draft stopped.")).toBeInTheDocument();
+    });
+
+    it("Draft shows only when a reply is owed; Brief only when Isoform has something to say", async () => {
+        world();
+        render(<PeoplePage initialSelection={{ personId: "marcus" }} />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        await within(aside).findByText("Countersign the SOW");
+        expect(within(aside).getByRole("button", { name: "Brief me before we talk" })).toBeInTheDocument();
+        expect(within(aside).queryByRole("button", { name: "Draft a reply" })).not.toBeInTheDocument();
+        await openPerson("Sam Rivera");
+        await waitFor(() => expect(mocks.detail).toHaveBeenCalledWith("sam"));
+        await waitFor(() => expect(within(aside).queryByLabelText("Loading this person")).not.toBeInTheDocument());
+        expect(within(aside).queryByRole("button", { name: "Brief me before we talk" })).not.toBeInTheDocument();
     });
 
     it("are not offered on your own profile", async () => {
         world();
-        render(<PeoplePage onPrepareChat={vi.fn()} initialSelection="self" />);
-        expect(await screen.findByRole("heading", { level: 2, name: "Bo Yu" })).toBeInTheDocument();
+        render(<PeoplePage initialSelection="self" />);
+        expect(await screen.findByRole("heading", { level: 2, name: "Alex Morgan" })).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Brief me before we talk" })).not.toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Draft a reply" })).not.toBeInTheDocument();
+    });
+
+    it("the old Chat prompts are gone in en and zh", () => {
+        for (const lng of ["en", "zh-CN"]) {
+            expect(i18n.exists("people:prompts.brief", { lng })).toBe(false);
+            expect(i18n.exists("people:prompts.draft", { lng })).toBe(false);
+        }
+        expect(i18n.t("today:beforeYouTalk.briefMe", { lng: "zh-CN" })).toBe("交谈前为我做简报");
+        expect(i18n.t("people:detail.briefFailed", { lng: "zh-CN" })).toBe("没能写好简报。");
     });
 });
 
@@ -521,12 +700,14 @@ describe("Merge", () => {
         expect(banner).toHaveTextContent("Same WeChat account under different display names: “Mei Chen ex-Stability” and “陈美 Mei”.");
         fireEvent.click(within(banner).getByRole("button", { name: "Merge into one" }));
         await waitFor(() => expect(mocks.merge).toHaveBeenCalledWith("mei1", ["mei2"]));
-        expect(await screen.findByText("Merged 2 profiles into Mei Chen ex-Stability.")).toBeInTheDocument();
+        // N31: "Merged into {{name}}." with no check icon.
+        const receipt = await screen.findByText("Merged into Mei Chen ex-Stability.");
+        expect(receipt.closest('[role="status"]')?.querySelector("svg")).toBeNull();
         expect(await screen.findByRole("heading", { level: 2, name: "Mei Chen ex-Stability" })).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole("button", { name: "Undo" }));
         await waitFor(() => expect(mocks.undo).toHaveBeenCalledWith("m-1"));
-        await waitFor(() => expect(screen.queryByText("Merged 2 profiles into Mei Chen ex-Stability.")).not.toBeInTheDocument());
+        await waitFor(() => expect(screen.queryByText("Merged into Mei Chen ex-Stability.")).not.toBeInTheDocument());
     });
 
     it("says a failed merge changed nothing", async () => {
@@ -534,8 +715,45 @@ describe("Merge", () => {
         mocks.merge.mockRejectedValue(new Error("busy"));
         render(<PeoplePage />);
         fireEvent.click(await screen.findByRole("button", { name: "Merge into one" }));
-        expect(await screen.findByRole("alert")).toHaveTextContent("Could not merge these profiles. Nothing changed. Try again.");
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent("Couldn't merge. Nothing changed.");
+        expect(alert).toHaveClass("text-copper");
+        expect(alert).not.toHaveClass("text-error");
+        // N18: Merge reads Try again.
+        const banner = screen.getByRole("region", { name: /look like one person/ });
+        expect(within(banner).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+        expect(within(banner).queryByRole("button", { name: "Merge into one" })).not.toBeInTheDocument();
     });
+
+    it("N18: while it runs, the banner's buttons are disabled and keep their labels", async () => {
+        world();
+        mocks.notSame.mockImplementation(() => new Promise(() => {}));
+        render(<PeoplePage />);
+        const banner = await screen.findByRole("region", { name: /look like one person/ });
+        fireEvent.click(within(banner).getByRole("button", { name: "Not the same" }));
+        await waitFor(() => expect(within(banner).getByRole("button", { name: "Merge into one" })).toBeDisabled());
+        expect(within(banner).getByRole("button", { name: "Not the same" })).toBeDisabled();
+        expect(banner).not.toHaveTextContent("Merging");
+        expect(banner.querySelector(".animate-spin")).toBeNull();
+    });
+
+    it("N16: the merge dialog says who this really is and what becomes part of whom", async () => {
+        world();
+        mocks.merge.mockRejectedValueOnce(new Error("busy"));
+        render(<PeoplePage />);
+        await openPerson("Marcus Hale");
+        openMenu("More actions for Marcus Hale");
+        fireEvent.click(await screen.findByText("Merge this person into another"));
+        const dialog = await screen.findByRole("dialog", { name: /Merge Marcus Hale into/ });
+        expect(dialog).toHaveTextContent("Pick who this really is. Everything Isoform knows about them moves to that person. You can undo this.");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Pick Sam" }));
+        expect(dialog).toHaveTextContent("Marcus Hale becomes part of Sam Rivera.");
+        fireEvent.click(within(dialog).getByRole("button", { name: "Merge" }));
+        expect((await within(dialog).findByText("Couldn't merge. Nothing changed.")).closest('[role="alert"]')).toHaveClass("text-copper");
+        expect(within(dialog).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+        expect(i18n.t("people:mergePreview", { src: "A", dst: "B", lng: "zh-CN" })).toBe("「A」将并入「B」。");
+    }, MENU_TEST_TIMEOUT);
+
 
     it("keeps the store's reason when a linked profile blocks the merge", async () => {
         world();
@@ -564,7 +782,7 @@ describe("Merge", () => {
         fireEvent.click(await screen.findByRole("button", { name: "Pick Sam" }));
         fireEvent.click(screen.getByRole("button", { name: "Merge" }));
         await waitFor(() => expect(mocks.merge).toHaveBeenCalledWith("sam", ["marcus"]));
-        expect(await screen.findByText("Merged 2 profiles into Sam Rivera.")).toBeInTheDocument();
+        expect(await screen.findByText("Merged into Sam Rivera.")).toBeInTheDocument();
     }, MENU_TEST_TIMEOUT);
 });
 
@@ -618,7 +836,7 @@ describe("Everything stays reachable", () => {
         world();
         render(<PeoplePage />);
         const you = await screen.findByRole("region", { name: "You" });
-        expect(within(you).getByRole("button", { name: /Bo Yu/ })).toBeInTheDocument();
+        expect(within(you).getByRole("button", { name: /Alex Morgan/ })).toBeInTheDocument();
     });
 
     it("offers to name you when there is no profile for you yet", async () => {
@@ -645,9 +863,11 @@ describe("Everything stays reachable", () => {
         expect(screen.getByTestId("contacts-import")).toBeInTheDocument();
 
         openMenu("More Who you know actions");
-        fireEvent.click(await screen.findByText("Clean up 2 unidentified senders"));
+        fireEvent.click(await screen.findByText("Clean up senders"));
         fireEvent.click(await screen.findByRole("button", { name: "Clean up" }));
         await waitFor(() => expect(mocks.cleanup).toHaveBeenCalled());
+        // N3: no toast; the Sort them out line answers.
+        expect(await screen.findByText("Nothing needed cleaning up.")).toBeInTheDocument();
 
         const reads = mocks.overview.mock.calls.length;
         openMenu("More Who you know actions");
@@ -706,30 +926,171 @@ describe("Everything stays reachable", () => {
         fireEvent.click(within(aside).getByRole("button", { name: /Recent messages/ }));
         expect(within(aside).getByText("Can we move the sync to Oct 30?")).toBeInTheDocument();
 
-        fireEvent.click(within(aside).getByRole("button", { name: /Activity sessions/ }));
         await waitFor(() => expect(mocks.sessions).toHaveBeenCalledWith("priya", 50));
 
-        fireEvent.click(within(aside).getByRole("button", { name: /Research dossier/ }));
+        fireEvent.click(within(aside).getByRole("button", { name: /Profile/ }));
         await waitFor(() => expect(mocks.research).toHaveBeenCalledWith("priya"));
-        expect(within(aside).getByRole("button", { name: "Research" })).toBeInTheDocument();
-
-        fireEvent.click(within(aside).getByRole("button", { name: /Technical details/ }));
-        expect(within(aside).getByText("Person ID")).toBeInTheDocument();
-        expect(within(aside).getByText("Where Isoform saw them")).toBeInTheDocument();
-
-        await openPerson("Sam Rivera");
-        fireEvent.click(within(aside).getByRole("button", { name: /Technical details/ }));
-        expect(within(aside).getByText("Chat handles")).toBeInTheDocument();
-        expect(within(aside).getByText("sam.r")).toBeInTheDocument();
+        expect(await within(aside).findByRole("button", { name: "Write a profile" })).toBeInTheDocument();
+        // N13: Technical details are for developer tools only.
+        expect(within(aside).queryByRole("button", { name: /Technical details/ })).not.toBeInTheDocument();
     }, MENU_TEST_TIMEOUT);
 
-    it("your own profile keeps the voice fingerprint", async () => {
+    it("N13: with developer tools on, Technical details show the ID, accounts and where Isoform saw them", async () => {
         world();
+        render(<PeoplePage devToolsUnlocked initialSelection={{ personId: "sam" }} />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        await within(aside).findByRole("heading", { level: 2, name: "Sam Rivera" });
+        fireEvent.click(await within(aside).findByRole("button", { name: /Technical details/ }));
+        expect(within(aside).getByText("Person ID")).toBeInTheDocument();
+        expect(within(aside).getByText("sam.r")).toBeInTheDocument();
+    });
+
+    it("N1: Activity sessions fold shows only for a person with a session, read with the detail", async () => {
+        world();
+        mocks.sessions.mockImplementation(async (id: string) =>
+            id === "priya" ? [{ sessionId: "s1", startTime: new Date(new Date().setHours(13, 5, 0, 0)).getTime(), endTime: 0, appNames: [], firstSeenAt: 0, lastSeenAt: 0 }] : [],
+        );
+        render(<PeoplePage />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        const fold = await within(aside).findByRole("button", { name: /Activity sessions/ });
+        fireEvent.click(fold);
+        // N11/N23: a session with no app shows only its time, on the computer's clock.
+        expect(await within(aside).findByText("1:05 PM")).toBeInTheDocument();
+        expect(aside).not.toHaveTextContent("(unknown app)");
+        await openPerson("Marcus Hale");
+        await waitFor(() => expect(mocks.sessions).toHaveBeenCalledWith("marcus", 50));
+        expect(within(aside).queryByRole("button", { name: /Activity sessions/ })).not.toBeInTheDocument();
+        for (const lng of ["en", "zh-CN"]) expect(i18n.exists("people:activitySessionsEmpty", { lng })).toBe(false);
+    });
+
+    it("N3/N17: a failed delete says so at the top of the detail with Try again, no toast", async () => {
+        world();
+        mocks.deletePrincipal.mockRejectedValueOnce(new Error("sql: database is locked")).mockResolvedValue(undefined);
+        render(<PeoplePage />);
+        await screen.findByRole("heading", { level: 2, name: "Priya Nair" });
+        openMenu("More actions for Priya Nair");
+        fireEvent.click(await screen.findByText("Delete person"));
+        const confirm = await screen.findByRole("dialog", { name: "Delete Priya Nair?" });
+        expect(confirm).toHaveTextContent("Isoform removes this person and the chat accounts tied to them. Memories and activity that mention them keep the name.");
+        fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+        const aside = screen.getByRole("complementary", { name: "Person detail" });
+        const line = await within(aside).findByText("Couldn't delete Priya Nair.");
+        expect(line.closest('[role="alert"]')).toHaveClass("text-copper");
+        expect(document.body).not.toHaveTextContent("database is locked");
+        fireEvent.click(within(line.closest('[role="alert"]') as HTMLElement).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.deletePrincipal).toHaveBeenCalledTimes(2));
+    }, MENU_TEST_TIMEOUT);
+
+    it("N3: a failed unlink says so in place", async () => {
+        const { entries } = world();
+        entries[0].principal.contactLinked = true;
+        mocks.unlink.mockRejectedValue(new Error("x"));
+        render(<PeoplePage />);
+        await screen.findByRole("heading", { level: 2, name: "Priya Nair" });
+        openMenu("More actions for Priya Nair");
+        fireEvent.click(await screen.findByText("Unlink from contact"));
+        expect(await screen.findByText("Couldn't unlink Priya Nair from the contact.")).toBeInTheDocument();
+    }, MENU_TEST_TIMEOUT);
+
+    it("N3/N15: cleanup says what it will do; a failure keeps the confirmation open with Try again", async () => {
+        world();
+        mocks.cleanup.mockRejectedValueOnce(new Error("x")).mockResolvedValue({ scanned: 2, renamed: 1, merged: 0, crossAppMerged: 0, mergedIntoNamed: 0, prunedNonChat: 1, prunedImplausible: 0 });
+        render(<PeoplePage />);
+        await screen.findByRole("heading", { level: 2, name: "Priya Nair" });
+        openMenu("More Who you know actions");
+        fireEvent.click(await screen.findByText("Clean up senders"));
+        const confirm = await screen.findByRole("dialog", { name: "Clean up 2 senders?" });
+        for (const words of [
+            "Isoform will:",
+            "Remove non-people: newsletters, alerts and bots aren't people, so they're removed.",
+            "Tidy names: times, badges and stray message text come off their names.",
+            "Combine duplicates: senders left with the same name become one, with their messages together.",
+            "You and the people you've named stay as they are.",
+        ])
+            expect(confirm).toHaveTextContent(words);
+        fireEvent.click(within(confirm).getByRole("button", { name: "Clean up" }));
+        expect(await within(confirm).findByText("Couldn't finish cleaning up.")).toBeInTheDocument();
+        fireEvent.click(within(confirm).getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(screen.queryByRole("dialog", { name: "Clean up 2 senders?" })).not.toBeInTheDocument());
+        expect(i18n.t("people:cleanupTitle", { count: 2, lng: "zh-CN" })).toBe("清理 2 个发送者？");
+    }, MENU_TEST_TIMEOUT);
+
+    it("N12: the profile is a Profile, and a failure is copper with Try again, raw reasons only for developers", async () => {
+        world();
+        mocks.research.mockResolvedValue({ principalId: "priya", status: "failed", error: "runner not initialized", markdown: "", sources: [], researchedAt: 0 });
+        render(<PeoplePage />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        fireEvent.click(await within(aside).findByRole("button", { name: /^Profile/ }));
+        const line = await within(aside).findByText("Couldn't write the profile.");
+        expect(line.closest('[role="alert"]')).toHaveClass("text-copper");
+        expect(within(aside).getByRole("button", { name: "Try again" })).toBeInTheDocument();
+        expect(aside).not.toHaveTextContent("runner not initialized");
+        expect(aside).not.toHaveTextContent(/dossier|Research/);
+        expect(i18n.t("people:dossierHeading", { lng: "zh-CN" })).toBe("简介");
+    });
+
+    it("N12/N27: a written profile reads Written and Sources; Delete profile asks first", async () => {
+        world();
+        mocks.research.mockResolvedValue({ principalId: "priya", status: "ready", error: "", markdown: "A colleague.", sources: [{ n: 1, url: "https://example.com", title: "Example" }], researchedAt: new Date(new Date().setHours(13, 5, 33, 0)).getTime() });
+        mocks.deleteResearch.mockResolvedValue(undefined);
+        render(<PeoplePage />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        fireEvent.click(await within(aside).findByRole("button", { name: /^Profile/ }));
+        expect(await within(aside).findByText("Written 1:05 PM")).toBeInTheDocument();
+        expect(within(aside).getByText("Sources")).toBeInTheDocument();
+        expect(within(aside).getByRole("button", { name: "Update" })).toBeInTheDocument();
+        fireEvent.click(within(aside).getByRole("button", { name: "Delete profile" }));
+        const confirm = await screen.findByRole("dialog", { name: "Delete Priya Nair's profile?" });
+        fireEvent.click(within(confirm).getByRole("button", { name: "Delete" }));
+        await waitFor(() => expect(mocks.deleteResearch).toHaveBeenCalledWith("priya"));
+        expect(await within(aside).findByText("Isoform can write a short profile of them from what it knows.")).toBeInTheDocument();
+    });
+
+    it("N14: your own profile keeps Your voice, with no badge when nothing is recorded", async () => {
+        world();
+        mocks.voiceStatus.mockResolvedValue({ sampleCount: 0, modelReady: true });
         render(<PeoplePage initialSelection="self" />);
-        await screen.findByRole("heading", { level: 2, name: "Bo Yu" });
-        expect(screen.getByRole("button", { name: /Voice fingerprint/ })).toHaveAttribute("aria-expanded", "true");
+        await screen.findByRole("heading", { level: 2, name: "Alex Morgan" });
+        expect(screen.getByRole("button", { name: /Your voice/ })).toHaveAttribute("aria-expanded", "true");
         await waitFor(() => expect(mocks.voiceStatus).toHaveBeenCalledWith("me"));
-        expect(screen.getByText("Not enrolled")).toBeInTheDocument();
+        expect(await screen.findByText("Record a short sample so Isoform can tell your voice from others near your mic.")).toBeInTheDocument();
+        expect(document.body).not.toHaveTextContent(/Not enrolled|fingerprint/);
+    });
+
+    it("N14: Record and Test hide with no hint while the model isn't ready", async () => {
+        world();
+        mocks.voiceStatus.mockResolvedValue({ sampleCount: 1, modelReady: false, modelMissingHint: "Speaker model not downloaded yet" });
+        render(<PeoplePage initialSelection="self" />);
+        expect(await screen.findByText(/Isoform checks what your mic hears against your voice/)).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /Record/ })).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /Test/ })).not.toBeInTheDocument();
+        expect(document.body).not.toHaveTextContent("Speaker model");
+    });
+
+    it("N14/N3: a test answers in words; scores only with developer tools; failures in place", async () => {
+        world();
+        mocks.voiceStatus.mockResolvedValue({ sampleCount: 1, modelReady: true });
+        mocks.testVoice.mockResolvedValueOnce({ verdict: "no_match", bestScore: 0.734, threshold: 0.62, enrolledSampleHits: [] }).mockRejectedValueOnce(new Error("mic busy"));
+        mocks.enroll.mockRejectedValue(new Error("x"));
+        render(<PeoplePage initialSelection="self" />);
+        fireEvent.click(await screen.findByRole("button", { name: /Test/ }));
+        expect(await screen.findByText("Not recognized as you")).toBeInTheDocument();
+        expect(screen.getByText(/Isoform didn't recognize your voice, so it would treat it as someone else's/)).toBeInTheDocument();
+        expect(document.body).not.toHaveTextContent(/score|threshold|0\.734/);
+        fireEvent.click(screen.getByRole("button", { name: /Test/ }));
+        expect(await screen.findByText("Couldn't test your voice.")).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: /Record/ }));
+        expect(await screen.findByText("Couldn't save the recording.", {}, { timeout: 3000 })).toBeInTheDocument();
+        expect(i18n.t("people:voicePrintHeading", { lng: "zh-CN" })).toBe("你的声音");
+    });
+
+    it("N23: recent messages read on the computer's clock", async () => {
+        const { entries } = world();
+        entries[0].stats.recentMessages = [{ app: "slack", seenAt: new Date(new Date().setHours(13, 5, 0, 0)).getTime(), preview: "See you then" }] as never;
+        render(<PeoplePage />);
+        const aside = await screen.findByRole("complementary", { name: "Person detail" });
+        fireEvent.click(await within(aside).findByRole("button", { name: /Recent messages/ }));
+        expect(await within(aside).findByText("1:05 PM")).toBeInTheDocument();
     });
 });
 
@@ -758,21 +1119,74 @@ describe("People contacts", () => {
         expect(container.innerHTML).not.toContain("synthetic-native-7F3A9C");
     });
 
-    it("allows cancellation while syncing without a progress dialog", async () => {
+    it("N25: Syncing Contacts · Stop answers on its line", async () => {
         world();
-        mocks.access.mockResolvedValue({ consentAccepted: true, permission: "granted", syncState: "syncing" });
+        mocks.access.mockResolvedValue({ supported: true, consentAccepted: true, permission: "granted", syncState: "syncing", lastImportAt: "" });
         render(<PeoplePage />);
-        expect(await screen.findByRole("status")).toHaveTextContent("Syncing Contacts quietly");
-        fireEvent.click(screen.getByRole("button", { name: "Cancel Contacts sync" }));
+        expect(await screen.findByRole("status")).toHaveTextContent("Syncing Contacts");
+        expect(screen.queryByText(/quietly/)).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "Stop" }));
         await waitFor(() => expect(mocks.cancel).toHaveBeenCalled());
+        expect(await screen.findByText("Contacts sync stopped. It runs again within 6 hours.")).toBeInTheDocument();
+        expect(screen.queryByText(/sync shortly/)).not.toBeInTheDocument();
         expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
-    it("does not ask for native access on a computer without Contacts sync", async () => {
+    it("N25: a failed Stop says Contacts are still syncing, with Try again", async () => {
+        world();
+        mocks.access.mockResolvedValue({ supported: true, consentAccepted: true, permission: "granted", syncState: "syncing", lastImportAt: "" });
+        mocks.cancel.mockRejectedValueOnce(new Error("x")).mockResolvedValue(undefined);
+        render(<PeoplePage />);
+        fireEvent.click(await screen.findByRole("button", { name: "Stop" }));
+        const line = await screen.findByText("Couldn't stop. Contacts are still syncing.");
+        expect(line.closest('[role="alert"]')).toHaveClass("text-copper");
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        expect(await screen.findByText("Contacts sync stopped. It runs again within 6 hours.")).toBeInTheDocument();
+        expect(i18n.t("people:contactsSyncStopped", { lng: "zh-CN" })).toBe("通讯录同步已停止，6 小时内会再次同步。");
+    });
+
+    it("N4: a failed sync says Contacts didn't finish syncing, and Try again resumes it", async () => {
+        world();
+        mocks.access.mockResolvedValue({ supported: true, consentAccepted: true, permission: "granted", syncState: "error", lastImportAt: "" });
+        mocks.requestAccess.mockResolvedValue({ supported: true, consentAccepted: true, permission: "granted", syncState: "syncing" });
+        render(<PeoplePage />);
+        const line = await screen.findByText("Contacts didn't finish syncing.");
+        expect(line.closest('[role="alert"]')).toHaveClass("text-copper");
+        expect(document.body).not.toHaveTextContent("Check access");
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        await waitFor(() => expect(mocks.requestAccess).toHaveBeenCalled());
+        expect(i18n.t("people:contactsSyncError", { lng: "zh-CN" })).toBe("通讯录没有同步完。");
+    });
+
+    it("N20: Connect Contacts is a link to the sheet; without access the line says so with Allow access", async () => {
+        world();
+        mocks.access.mockResolvedValue({ supported: true, consentAccepted: false, permission: "not_determined", syncState: "idle", lastImportAt: "" });
+        const view = render(<PeoplePage />);
+        fireEvent.click(await screen.findByRole("button", { name: "Connect Contacts" }));
+        expect(screen.getByTestId("contacts-import")).toBeInTheDocument();
+        view.unmount();
+        resetPageQueries();
+        mocks.access.mockResolvedValue({ supported: true, consentAccepted: true, permission: "denied", syncState: "idle", lastImportAt: "" });
+        render(<PeoplePage />);
+        expect(await screen.findByText("Isoform can't read Contacts on this computer.")).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: "Allow access" }));
+        expect(screen.getByTestId("contacts-import")).toBeInTheDocument();
+    });
+
+    it("N34: waiting for the first pass says nothing", async () => {
+        world();
+        mocks.access.mockResolvedValue({ supported: true, consentAccepted: true, permission: "granted", syncState: "idle", lastImportAt: "" });
+        render(<PeoplePage />);
+        await screen.findByRole("heading", { level: 2, name: "Priya Nair" });
+        expect(document.body).not.toHaveTextContent(/Contacts will sync shortly|Contacts synced/);
+    });
+
+    it("does not show a Contacts line on a computer without Contacts sync", async () => {
         world();
         mocks.access.mockResolvedValue({ supported: false, permission: "not_applicable", consentAccepted: true });
         render(<PeoplePage />);
-        expect(await screen.findByRole("status")).toHaveTextContent("Contacts sync is not available on this computer.");
+        await screen.findByRole("heading", { level: 2, name: "Priya Nair" });
+        expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
 });
 
@@ -781,11 +1195,11 @@ describe("Chinese", () => {
         await i18n.changeLanguage("zh-CN");
         world();
         mocks.access.mockResolvedValue({ supported: true, consentAccepted: true, permission: "granted", syncState: "idle", lastImportAt: new Date(new Date().setHours(8, 0, 0, 0)).toISOString() });
-        render(<PeoplePage onPrepareChat={vi.fn()} />);
+        render(<PeoplePage />);
         expect(await screen.findByRole("heading", { level: 1, name: "你欠 1 条回复，还有 1 个人在等你" })).toBeInTheDocument();
         expect(screen.getByRole("heading", { level: 2, name: "你们之间未完成的事" })).toBeInTheDocument();
         expect(screen.getByRole("status")).toHaveTextContent("通讯录已于今天上午同步");
-        expect(await screen.findByRole("button", { name: "聊之前给我讲讲" })).toBeInTheDocument();
+        expect(await screen.findByRole("button", { name: "交谈前为我做简报" })).toBeInTheDocument();
         await act(async () => {
             await i18n.changeLanguage("en");
         });

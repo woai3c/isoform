@@ -42,3 +42,26 @@ describe('ContactLinkDialog', () => {
         expect(await screen.findByRole('alert')).not.toHaveTextContent('synthetic-native-7F3A9C');
     });
 });
+
+describe('N35: Contacts link dialog words', () => {
+    beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage('en'); });
+    it('says Linked to someone else, No contacts match., and a copper failure with Try again', async () => {
+        mocks.search.mockResolvedValue([card('Elsewhere', '', false), card('Ana')]);
+        mocks.link.mockRejectedValueOnce(new Error('x')).mockResolvedValue(undefined);
+        const linked = vi.fn();
+        render(<ContactLinkDialog personID="seen" onClose={vi.fn()} onLinked={linked} />);
+        expect(await screen.findByText('Linked to someone else')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /Ana/ }));
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent("Couldn't link this contact.");
+        expect(alert).toHaveClass('text-copper');
+        fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        await waitFor(() => expect(linked).toHaveBeenCalledOnce());
+    });
+    it('says No contacts match. without asking to connect', async () => {
+        mocks.search.mockResolvedValue([]);
+        render(<ContactLinkDialog personID="seen" onClose={vi.fn()} onLinked={vi.fn()} />);
+        expect(await screen.findByText('No contacts match.')).toBeInTheDocument();
+        expect(screen.queryByText(/Connect Contacts/)).not.toBeInTheDocument();
+    });
+});

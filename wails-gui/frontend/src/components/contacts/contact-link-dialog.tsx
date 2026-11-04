@@ -6,6 +6,7 @@ import {
     SearchImportedContacts,
     type ContactMatchDTO,
 } from '@/lib/wails-shim-app';
+import { PeopleFailureLine } from '../people/people-failure';
 import {
     Dialog,
     DialogCloseButton,
@@ -29,18 +30,19 @@ export function ContactLinkDialog({
     const [rows, setRows] = useState<ContactMatchDTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
-    const [error, setError] = useState(false);
+    const [error, setError] = useState<'load' | ContactMatchDTO | null>(null);
+    const [attempt, setAttempt] = useState(0);
     useEffect(() => {
         let active = true;
         setLoading(true);
-        setError(false);
+        setError(null);
         const timer = setTimeout(() => {
             SearchImportedContacts(personID, query)
                 .then((value) => {
                     if (active) setRows(value ?? []);
                 })
                 .catch(() => {
-                    if (active) setError(true);
+                    if (active) setError('load');
                 })
                 .finally(() => {
                     if (active) setLoading(false);
@@ -50,15 +52,15 @@ export function ContactLinkDialog({
             active = false;
             clearTimeout(timer);
         };
-    }, [personID, query]);
+    }, [personID, query, attempt]);
     const link = async (row: ContactMatchDTO) => {
         setBusy(true);
-        setError(false);
+        setError(null);
         try {
             await LinkPersonToContact(personID, row.contactId);
             onLinked();
         } catch {
-            setError(true);
+            setError(row);
         } finally {
             setBusy(false);
         }
@@ -100,9 +102,10 @@ export function ContactLinkDialog({
                         />
                     </div>
                     {error && (
-                        <p role="alert" className="text-[12px] text-error">
-                            {t('contactLinkFailed')}
-                        </p>
+                        <PeopleFailureLine
+                            text={t(error === 'load' ? 'contactLinkLoadFailed' : 'contactLinkFailed')}
+                            onRetry={() => (error === 'load' ? setAttempt((n) => n + 1) : link(error))}
+                        />
                     )}
                     <div className="flex max-h-[340px] flex-col gap-1 overflow-y-auto rounded-lg border border-border bg-panel/30 p-1">
                         {loading ? (

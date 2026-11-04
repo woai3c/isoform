@@ -6,13 +6,13 @@ import {
     useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import { Loader2, Plus, X } from 'lucide-react';
 import {
     AppHandleDTO,
     BindAppHandle,
     CreateContact,
     EnsureSelfProfile,
+    ListPrincipals,
     PrincipalDTO,
     PromoteAnonymousToContact,
     UnbindAppHandle,
@@ -26,6 +26,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from '../ui/dialog';
+import { Button } from '../ui/button';
+import { PeopleFailureLine, usePeopleDevTools } from '../people/people-failure';
+import { appLabel, maskHandleId } from '../people/people-format';
 
 // Canonical app ids users can bind handles to. Must match the chat
 // renderers in renderParsedContentSection so resolver lookups succeed.
@@ -49,6 +52,24 @@ export interface ContactEditorDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSaved: (principal: PrincipalDTO) => Promise<void> | void;
+    /** The person saved but some chat accounts did not: the list behind
+     *  updates at once while the dialog stays open with Try again. */
+    onChanged?: (principal: PrincipalDTO) => Promise<void> | void;
+}
+
+const visibleHandles = (p?: PrincipalDTO) => p?.appHandles?.filter((h) => h.app !== 'contacts' && h.app !== 'vcard') ?? [];
+const handleKey = (h: AppHandleDTO) => `${h.app.toLowerCase()}|${h.handleId}|${h.displayHandle}`;
+
+/** What is left after a save: the words under Chat accounts. */
+type SaveFailure =
+    | { kind: 'save' }
+    | { kind: 'add'; handles: AppHandleDTO[] }
+    | { kind: 'remove'; handles: AppHandleDTO[] }
+    | { kind: 'gone'; handle: AppHandleDTO };
+
+export function useAppName(): (app: string) => string {
+    const { t } = useTranslation('people');
+    return (app: string) => appLabel((key, options) => t(key as never, options as never) as unknown as string, app);
 }
 
 export function ContactEditorDialog({
@@ -57,31 +78,64 @@ export function ContactEditorDialog({
     open,
     onOpenChange,
     onSaved,
+    onChanged,
 }: ContactEditorDialogProps) {
     const { t } = useTranslation('settings');
+    const appName = useAppName();
     const [name, setName] = useState(initial?.displayName ?? '');
-    const [relationship, setRelationship] = useState(initial?.relationship ?? 'friend');
+    // No relationship until you pick one.
+    const [relationship, setRelationship] = useState(initial?.relationship ?? '');
     const [aliases, setAliases] = useState<string[]>(initial?.aliases ?? []);
-    const [handles, setHandles] = useState<AppHandleDTO[]>(initial?.appHandles?.filter((h) => h.app !== 'contacts' && h.app !== 'vcard') ?? []);
+    const [handles, setHandles] = useState<AppHandleDTO[]>(visibleHandles(initial));
     const [saving, setSaving] = useState(false);
+    const [failure, setFailure] = useState<SaveFailure | null>(null);
+    // An account that belongs to someone else asks before it moves.
+    const [moveAsk, setMoveAsk] = useState<{ handle: AppHandleDTO; other: string } | null>(null);
+    const movesAllowed = useRef(new Set<string>());
     const savedProfile = useRef<PrincipalDTO | undefined>(initial);
-    const savedHandles = useRef<AppHandleDTO[]>(initial?.appHandles?.filter((h) => h.app !== 'contacts' && h.app !== 'vcard') ?? []);
+    const savedHandles = useRef<AppHandleDTO[]>(visibleHandles(initial));
+    // The name, relationship and other names last saved; Try again saves
+    // only what is left.
+    const savedFields = useRef<string | null>(null);
 
     useEffect(() => {
         savedProfile.current = initial;
-        savedHandles.current = initial?.appHandles?.filter((h) => h.app !== 'contacts' && h.app !== 'vcard') ?? [];
+        savedHandles.current = visibleHandles(initial);
+        savedFields.current = null;
+        movesAllowed.current = new Set();
         setName(initial?.displayName ?? '');
-        setRelationship(initial?.relationship ?? 'friend');
+        setRelationship(initial?.relationship ?? '');
         setAliases(initial?.aliases ?? []);
-        setHandles(initial?.appHandles?.filter((h) => h.app !== 'contacts' && h.app !== 'vcard') ?? []);
+        setHandles(visibleHandles(initial));
+        setFailure(null);
+        setMoveAsk(null);
     }, [initial]);
 
     const save = useCallback(async () => {
         const finalName = name.trim();
         if (!finalName) return;
         setSaving(true);
+        setFailure(null);
+        const owner = mode === 'edit' || mode === 'promote' ? savedProfile.current : undefined;
+        if (mode !== 'self') {
+            // Ask before taking an account another person has.
+            const before = new Set(savedHandles.current.map(handleKey));
+            const adding = handles.filter((h) => !before.has(handleKey(h)) && !movesAllowed.current.has(handleKey(h)));
+            if (adding.length > 0) {
+                const everyone = await ListPrincipals().catch(() => [] as PrincipalDTO[]);
+                for (const h of adding) {
+                    const other = (everyone ?? []).find((p) => p.id !== owner?.id && (p.appHandles ?? []).some((x) => handleKey(x) === handleKey(h)));
+                    if (other) {
+                        setMoveAsk({ handle: h, other: other.contactName || other.displayName });
+                        setSaving(false);
+                        return;
+                    }
+                }
+            }
+        }
+        const fields = JSON.stringify([finalName, relationship, aliases]);
+        let saved: PrincipalDTO | null = null;
         try {
-            let saved: PrincipalDTO | null = null;
             if (mode === 'self') {
                 // EnsureSelfProfile is the only binding that creates/updates
                 // the singleton self principal; it takes name + aliases only.
@@ -94,22 +148,56 @@ export function ContactEditorDialog({
                 saved = await CreateContact(finalName, relationship, aliases, handles);
             } else if ((mode === 'edit' || mode === 'promote') && savedProfile.current) {
                 const profile = savedProfile.current;
-                saved = mode === 'promote' && profile.kind === 'anonymous'
-                    ? await PromoteAnonymousToContact(profile.id, finalName, relationship, aliases)
-                    : await UpdatePrincipal({ ...profile, displayName: finalName, relationship, aliases });
-                savedProfile.current = saved;
-                await syncHandles(profile.id, savedHandles.current, handles, (current) => { savedHandles.current = current; });
+                if (savedFields.current === fields) {
+                    saved = profile;
+                } else {
+                    saved = mode === 'promote' && profile.kind === 'anonymous'
+                        ? await PromoteAnonymousToContact(profile.id, finalName, relationship, aliases)
+                        : await UpdatePrincipal({ ...profile, displayName: finalName, relationship, aliases });
+                    savedProfile.current = saved;
+                    savedFields.current = fields;
+                }
             }
-            if (saved) {
-                await onSaved(saved);
-            }
-        } catch (err: unknown) {
-            toast.error(t('contacts.saveError', { error: String(err) }) as string);
+        } catch {
+            setFailure({ kind: 'save' });
             setSaving(false);
+            return;
         }
-    }, [mode, initial, name, relationship, aliases, handles, onSaved, t]);
+        if (!saved) {
+            setSaving(false);
+            return;
+        }
+        if (mode === 'edit' || mode === 'promote') {
+            const result = await syncHandleChanges(saved.id, savedHandles.current, handles, (current) => {
+                savedHandles.current = current;
+            });
+            if (result.gone || result.added.length > 0 || result.removed.length > 0) {
+                setFailure(
+                    result.gone
+                        ? { kind: 'gone', handle: result.gone }
+                        : result.added.length > 0
+                          ? { kind: 'add', handles: result.added }
+                          : { kind: 'remove', handles: result.removed },
+                );
+                setSaving(false);
+                await onChanged?.(saved);
+                return;
+            }
+        }
+        await onSaved(saved);
+    }, [mode, name, relationship, aliases, handles, onSaved, onChanged]);
 
     const isSelf = mode === 'self';
+    const handleWords = (h: AppHandleDTO) => h.displayHandle || maskHandleId(h.handleId);
+    const failureText = !failure
+        ? ''
+        : failure.kind === 'save'
+          ? t('contacts.saveFailed', { name: name.trim() })
+          : failure.kind === 'gone'
+            ? t('contacts.saveAddGone', { handle: handleWords(failure.handle) })
+            : failure.handles.length > 1
+              ? t(failure.kind === 'add' ? 'contacts.saveAddFailedMany' : 'contacts.saveRemoveFailedMany', { count: failure.handles.length })
+              : t(failure.kind === 'add' ? 'contacts.saveAddFailed' : 'contacts.saveRemoveFailed', { handle: handleWords(failure.handles[0]), app: appName(failure.handles[0].app) });
     const title =
         mode === 'self'
             ? t('contacts.selfTitle')
@@ -168,8 +256,27 @@ export function ContactEditorDialog({
                         <div className="flex flex-col gap-1.5">
                             <label className="text-[12px] text-muted">{t('contacts.fieldHandles')}</label>
                             <HandleListEditor handles={handles} onChange={setHandles} />
+                            {moveAsk && (
+                                <div role="alertdialog" aria-label={t('contacts.moveQuestion', { handle: handleWords(moveAsk.handle), other: moveAsk.other, name: name.trim() }) as string} className="flex flex-wrap items-center gap-2 text-[12.5px] text-copper">
+                                    <span>{t('contacts.moveQuestion', { handle: handleWords(moveAsk.handle), other: moveAsk.other, name: name.trim() })}</span>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => {
+                                            movesAllowed.current.add(handleKey(moveAsk.handle));
+                                            setMoveAsk(null);
+                                            void save();
+                                        }}
+                                    >
+                                        {t('contacts.move')}
+                                    </Button>
+                                    <Button size="sm" variant="quiet" onClick={() => setMoveAsk(null)}>
+                                        {t('contacts.cancel')}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
+                    {failure && <PeopleFailureLine text={failureText as string} onRetry={save} />}
                 </div>
                 <div className="flex items-center justify-end gap-2 px-6 pb-5">
                     <button
@@ -224,6 +331,45 @@ export async function syncHandles(
     }
 }
 
+const isGone = (err: unknown) => /no rows|not exist|no longer/i.test(String(err));
+
+/** syncHandles that keeps going: each account that didn't save is
+ *  returned, and the rest stay saved. gone: the person was merged or
+ *  deleted meanwhile. */
+export async function syncHandleChanges(
+    principalID: string,
+    before: AppHandleDTO[],
+    after: AppHandleDTO[],
+    onProgress: (current: AppHandleDTO[]) => void = () => {},
+): Promise<{ added: AppHandleDTO[]; removed: AppHandleDTO[]; gone?: AppHandleDTO }> {
+    const beforeMap = new Map(before.map((h) => [handleKey(h), h] as const));
+    const afterMap = new Map(after.map((h) => [handleKey(h), h] as const));
+    const added: AppHandleDTO[] = [];
+    const removed: AppHandleDTO[] = [];
+    for (const [k, h] of [...beforeMap]) {
+        if (afterMap.has(k)) continue;
+        try {
+            await UnbindAppHandle(h.id);
+            beforeMap.delete(k);
+            onProgress([...beforeMap.values()]);
+        } catch {
+            removed.push(h);
+        }
+    }
+    for (const [k, h] of afterMap) {
+        if (beforeMap.has(k)) continue;
+        try {
+            const bound = await BindAppHandle(principalID, h.app, h.handleId, h.displayHandle);
+            beforeMap.set(k, bound);
+            onProgress([...beforeMap.values()]);
+        } catch (err) {
+            if (isGone(err)) return { added, removed, gone: h };
+            added.push(h);
+        }
+    }
+    return { added, removed };
+}
+
 // ── Reusable: handle list editor ──
 
 export function HandleListEditor({
@@ -234,6 +380,8 @@ export function HandleListEditor({
     onChange: (next: AppHandleDTO[]) => void;
 }) {
     const { t } = useTranslation('settings');
+    const appName = useAppName();
+    const devTools = usePeopleDevTools();
     const [draftApp, setDraftApp] = useState(SUPPORTED_APPS[0]);
     const [draftHandleId, setDraftHandleId] = useState('');
     const [draftDisplay, setDraftDisplay] = useState('');
@@ -271,10 +419,10 @@ export function HandleListEditor({
                             key={`${h.id}-${idx}`}
                             className="flex items-center gap-2 rounded-md border border-border bg-panel/30 px-2 py-1.5 text-[12px]"
                         >
-                            <span className="font-medium text-ink/80 capitalize w-[80px]">{h.app}</span>
+                            <span className="font-medium text-ink/80 w-[80px]">{appName(h.app)}</span>
                             <span className="flex-1 text-ink truncate">
-                                {h.displayHandle || h.handleId}
-                                {h.handleId && h.displayHandle && (
+                                {h.displayHandle || (devTools ? h.handleId : maskHandleId(h.handleId))}
+                                {devTools && h.handleId && h.displayHandle && (
                                     <span className="text-muted ml-1">({h.handleId})</span>
                                 )}
                             </span>
@@ -298,7 +446,7 @@ export function HandleListEditor({
                 >
                     {SUPPORTED_APPS.map((a) => (
                         <option key={a} value={a}>
-                            {a}
+                            {appName(a)}
                         </option>
                     ))}
                 </select>
@@ -309,17 +457,20 @@ export function HandleListEditor({
                     placeholder={t('contacts.handleDisplayPlaceholder') as string}
                     className="h-8 flex-1 rounded-md border border-border bg-panel px-2 text-[12px] outline-none focus-visible:border-accent-2/60 focus-visible:ring-2 focus-visible:ring-accent-2/30"
                 />
-                <input
-                    type="text"
-                    value={draftHandleId}
-                    onChange={(e) => setDraftHandleId(e.target.value)}
-                    placeholder={t('contacts.handleIdPlaceholder') as string}
-                    className="h-8 w-[120px] rounded-md border border-border bg-panel px-2 text-[12px] outline-none focus-visible:border-accent-2/60 focus-visible:ring-2 focus-visible:ring-accent-2/30"
-                />
+                {devTools && (
+                    <input
+                        type="text"
+                        value={draftHandleId}
+                        onChange={(e) => setDraftHandleId(e.target.value)}
+                        placeholder={t('contacts.handleIdPlaceholder') as string}
+                        className="h-8 w-[120px] rounded-md border border-border bg-panel px-2 text-[12px] outline-none focus-visible:border-accent-2/60 focus-visible:ring-2 focus-visible:ring-accent-2/30"
+                    />
+                )}
                 <button
                     type="button"
                     onClick={addHandle}
                     disabled={!draftApp || (!draftDisplay.trim() && !draftHandleId.trim())}
+                    aria-label={t('contacts.addHandleAria') as string}
                     className="inline-flex items-center gap-1 h-8 px-2.5 rounded-md text-xs font-medium patina-verdigris bg-solid-btn-bg text-solid-btn-fg shadow-[var(--shadow-solid-btn)] hover:opacity-90 disabled:opacity-50 transition-opacity"
                 >
                     <Plus className="h-3 w-3" />

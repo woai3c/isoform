@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
 import { pageQueryCache } from "@/lib/query-cache";
 import { resetPageQueries } from "@/lib/page-queries";
-import type { ContactsAccessStatus, PeopleOverview, PersonDetail } from "@/lib/wails-shim-app";
+import type { ContactsAccessStatus, PeopleOverview, PersonDetail, PrincipalDTO, PrincipalWithStatsDTO } from "@/lib/wails-shim-app";
+import { readSavedPeopleView, savePeopleView } from "@/lib/people-saved-view";
 
-const fixture = vi.hoisted(() => ({ bindings: new Map<string, ReturnType<typeof vi.fn>>() }));
+const fixture = vi.hoisted(() => ({ bindings: new Map<string, ReturnType<typeof vi.fn>>(), events: new Map<string, Set<(payload?: unknown) => void>>() }));
 vi.mock("@/lib/wails-shim-app", () => new Proxy({}, {
     has: () => true,
     get: (_target, name: string) => {
@@ -14,7 +15,14 @@ vi.mock("@/lib/wails-shim-app", () => new Proxy({}, {
         return fixture.bindings.get(name);
     },
 }));
-vi.mock("../../wailsjs/runtime/runtime", () => ({ EventsOn: () => () => undefined }));
+vi.mock("../../wailsjs/runtime/runtime", () => ({
+    EventsOn: (name: string, handler: (payload?: unknown) => void) => {
+        const handlers = fixture.events.get(name) ?? new Set();
+        handlers.add(handler);
+        fixture.events.set(name, handlers);
+        return () => handlers.delete(handler);
+    },
+}));
 
 import { PeoplePage, PEOPLE_RESYNC_MS } from "./people-page";
 
@@ -54,6 +62,7 @@ beforeEach(async () => {
     await i18n.changeLanguage("en");
     resetPageQueries();
     fixture.bindings.clear();
+    fixture.events.clear();
     mockReads();
 });
 afterEach(() => resetPageQueries());
@@ -101,6 +110,83 @@ describe("Who you know page query cache", () => {
         expect(binding("ListPeopleOverview")).toHaveBeenCalledTimes(1);
         expect(binding("ListPrincipalsWithStats")).not.toHaveBeenCalled();
         expect(main.querySelector('div[aria-busy="true"]')).toBeNull();
+    });
+});
+
+// Evening walk N40: the page failed on its first open while Isoform was busy.
+// It paints at once from the saved view; only a failure with nothing to show
+// says so, in copper, with a working Try again in the accent.
+describe("Who you know first open (N40)", () => {
+    const never = () => new Promise<never>(() => {});
+    const ENTRY = {
+        principal: { id: "person", kind: "human", displayName: "Fixture person", relationship: "", notes: "", aliases: [], appHandles: [] } as unknown as PrincipalDTO,
+        stats: { principalId: "person", totalMessages: 1, firstSeenAt: 0, lastSeenAt: 0, byApp: [], recentMessages: [{ app: "wechat", seenAt: 1, preview: "the private message text" }] },
+    } as unknown as PrincipalWithStatsDTO;
+
+    it("paints the saved view at once while a slow first read runs", async () => {
+        savePeopleView(OVERVIEW, []);
+        binding("ListPeopleOverview").mockImplementation(never);
+        binding("ListPrincipalsWithStats").mockImplementation(never);
+        const { container } = render(<PeoplePage />);
+        const main = mainOf(container);
+        expect(within(main).getByText("Fixture person")).toBeInTheDocument();
+        expect(main.querySelector('div[aria-busy="true"]')).toBeNull();
+        await act(async () => {});
+        expect(binding("ListPeopleOverview")).toHaveBeenCalled();
+        expect(within(main).queryByRole("alert")).toBeNull();
+    });
+
+    it("keeps the saved view and says nothing when the read behind it fails", async () => {
+        savePeopleView(OVERVIEW, []);
+        binding("ListPeopleOverview").mockRejectedValue(new Error("busy"));
+        const { container } = render(<PeoplePage />);
+        const main = mainOf(container);
+        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
+        expect(binding("ListPeopleOverview")).toHaveBeenCalled();
+        expect(within(main).getByText("Fixture person")).toBeInTheDocument();
+        expect(within(main).queryByRole("alert")).toBeNull();
+    });
+
+    it("with nothing saved, a failed read says so in copper and Try again in the accent loads the page", async () => {
+        binding("ListPeopleOverview").mockRejectedValue(new Error("busy"));
+        const { container } = render(<PeoplePage />);
+        const main = mainOf(container);
+        const failure = await within(main).findByRole("alert");
+        expect(failure).toHaveTextContent("Couldn't load who you know.");
+        expect(failure.className).toContain("text-copper");
+        const retry = within(failure).getByRole("button", { name: "Try again" });
+        expect(retry.className).toContain("text-accent-2");
+        binding("ListPeopleOverview").mockResolvedValue(OVERVIEW);
+        await act(async () => { retry.click(); });
+        expect(await within(main).findByText("Fixture person")).toBeInTheDocument();
+        expect(within(main).queryByRole("alert")).toBeNull();
+    });
+
+    it("says so in zh-CN too", async () => {
+        await i18n.changeLanguage("zh-CN");
+        binding("ListPeopleOverview").mockRejectedValue(new Error("busy"));
+        const { container } = render(<PeoplePage />);
+        const failure = await within(mainOf(container)).findByRole("alert");
+        expect(failure).toHaveTextContent("没能加载你认识的人。");
+        expect(within(failure).getByRole("button", { name: "重试" })).toBeInTheDocument();
+    });
+
+    it("saves what it read without message text, and a privacy change drops it", async () => {
+        binding("ListPrincipalsWithStats").mockResolvedValue([ENTRY]);
+        const { container } = render(<PeoplePage />);
+        expect(await within(mainOf(container)).findByText("Fixture person")).toBeInTheDocument();
+        const saved = readSavedPeopleView();
+        expect(saved?.overview.everyone[0].name).toBe("Fixture person");
+        expect(saved?.entries[0].stats.recentMessages).toEqual([]);
+        expect(JSON.stringify(localStorage)).not.toContain("the private message text");
+        // The withdrawal drops it at once; only the sweep's own re-read may
+        // save again.
+        let afterWithdrawal: unknown = "unset";
+        act(() => {
+            for (const handler of fixture.events.get("closed-eyes:changed") ?? []) handler(true);
+            afterWithdrawal = readSavedPeopleView();
+        });
+        expect(afterWithdrawal).toBeNull();
     });
 });
 

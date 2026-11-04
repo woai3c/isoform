@@ -99,3 +99,44 @@ it('keeps removal available after consent even when a partial sync created no ne
     render(<ContactsImportDialog open onOpenChange={vi.fn()} onImported={vi.fn()} />);
     expect(await screen.findByRole('button', { name: 'Remove imported contacts' })).toBeInTheDocument();
 });
+
+describe('N21: the Contacts sheet names the step that failed, in copper, with Try again', () => {
+    beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage('en'); });
+    it('a failed access check', async () => {
+        mocks.get.mockRejectedValueOnce(new Error('x')).mockResolvedValue(initial);
+        render(<ContactsImportDialog open onOpenChange={vi.fn()} onImported={vi.fn()} />);
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent("Couldn't check Contacts access.");
+        expect(alert).toHaveClass('text-copper');
+        fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        expect(await screen.findByRole('checkbox')).toBeInTheDocument();
+    });
+    it('a failed consent save, then a failed sync start', async () => {
+        mocks.get.mockResolvedValue(initial);
+        mocks.accept.mockRejectedValueOnce(new Error('x')).mockResolvedValue({ ...initial, consentAccepted: true });
+        mocks.request.mockRejectedValue(new Error('x'));
+        render(<ContactsImportDialog open onOpenChange={vi.fn()} onImported={vi.fn()} />);
+        fireEvent.click(await screen.findByRole('checkbox'));
+        fireEvent.click(screen.getByRole('button', { name: 'Connect Contacts' }));
+        expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't save your consent. No contacts were read.");
+        fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+        expect(await screen.findByText("Couldn't turn on Contacts sync.")).toBeInTheDocument();
+    });
+    it('a failed removal', async () => {
+        mocks.get.mockResolvedValue({ ...granted, importedCount: 2 });
+        mocks.remove.mockRejectedValue(new Error('x'));
+        render(<ContactsImportDialog open onOpenChange={vi.fn()} onImported={vi.fn()} />);
+        fireEvent.click(await screen.findByRole('button', { name: 'Remove imported contacts' }));
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('people:contactsImportRemoveConfirm') }));
+        expect(await screen.findByText("Couldn't remove the imported contacts.")).toBeInTheDocument();
+        expect(screen.queryByText(/Could not update Contacts/)).not.toBeInTheDocument();
+    });
+    it('a vCard file with details that did not save', async () => {
+        mocks.get.mockResolvedValue({ ...granted, supported: false, vcardSupported: true, permission: 'not_applicable' });
+        mocks.pick.mockResolvedValue('/synthetic.vcf'); mocks.file.mockResolvedValue({ errors: ['x'] });
+        render(<ContactsImportDialog open onOpenChange={vi.fn()} onImported={vi.fn()} />);
+        fireEvent.click(await screen.findByRole('button', { name: i18n.t('people:contactsImportVCardButton') }));
+        expect(await screen.findByText("Some contact details couldn't be saved.")).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    });
+});

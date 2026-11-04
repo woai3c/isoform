@@ -1,12 +1,13 @@
 // The person detail's folded sections: everything the Who you know page showed
 // before RC 2 that the new layout keeps one click away (recent messages,
-// Activity sessions, the research dossier, the voice fingerprint, chat
-// handles and messages by app). Each section renders without its own
+// Activity sessions, the profile, your voice, and, with developer tools on,
+// chat accounts and messages by app). Each section renders without its own
 // heading; DetailFold supplies it.
 import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import { ChevronRight, FileSearch, Globe, Loader2, PenLine, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '../confirm-dialog';
+import { PeopleFailureLine, usePeopleDevTools } from './people-failure';
 import {
     DeletePersonResearch,
     DeleteVoiceSample,
@@ -21,12 +22,7 @@ import {
     type VoiceMatchResultDTO,
     type VoiceSampleDTO,
 } from '@/lib/wails-shim-app';
-import {
-    GetPersonResearch,
-    GetVoiceEnrollmentStatus,
-    ListPrincipalActivitySessions,
-    ListVoiceSamples,
-} from '@/lib/page-queries';
+import { GetPersonResearch, GetVoiceEnrollmentStatus, ListVoiceSamples } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { EventsOn } from '../../../wailsjs/runtime/runtime';
 import { MarkdownContent } from '../markdown-content';
@@ -206,67 +202,19 @@ function ByAppBars({ stats }: { stats: PrincipalStatsDTO }) {
 // ── Activity sessions ──
 
 // Every Activity session this person appeared in (most recent first); a
-// row opens the Activity page at that session.
+// row opens the Activity page at that session. The detail reads them along
+// with the person, so the fold only shows when there is at least one.
 export function ActivitySessionsList({
-    principalId,
+    sessions,
     principalName,
     onOpenActivitySession,
 }: {
-    principalId: string;
+    sessions: PrincipalActivitySessionDTO[];
     principalName: string;
     onOpenActivitySession?: (sessionId: string, anchorTimestamp?: number, principalName?: string) => void;
 }) {
     const { t, i18n } = useTranslation('people');
     const tr: Translate = (key, options) => t(key as never, options as never) as unknown as string;
-    const [sessions, setSessions] = useState<PrincipalActivitySessionDTO[] | null>(
-        // A reopened fold paints the cached rows at once; the read below
-        // revalidates them.
-        () => pageQueryCache.peek('ListPrincipalActivitySessions', [principalId, 50]) ?? null,
-    );
-    const [failed, setFailed] = useState(false);
-    const [attempt, setAttempt] = useState(0);
-
-    useEffect(() => {
-        let cancelled = false;
-        const seeded = pageQueryCache.peek<PrincipalActivitySessionDTO[]>('ListPrincipalActivitySessions', [principalId, 50]);
-        setSessions(seeded ?? null);
-        setFailed(false);
-        if (attempt > 0) pageQueryCache.invalidate(['ListPrincipalActivitySessions'], true, [principalId, 50]);
-        ListPrincipalActivitySessions(principalId, 50)
-            .then((rows) => {
-                if (!cancelled) setSessions(rows ?? []);
-            })
-            .catch(() => {
-                if (!cancelled) setFailed(true);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [principalId, attempt]);
-
-    if (failed) {
-        return (
-            <div className="flex items-center gap-3 text-[12.5px] text-ink">
-                <span>{tr('detail.sessionsFailed')}</span>
-                <Button variant="secondary" size="sm" onClick={() => setAttempt((n) => n + 1)}>
-                    {tr('overview.retry')}
-                </Button>
-            </div>
-        );
-    }
-    if (sessions === null) {
-        return (
-            <ul aria-busy="true" aria-label={tr('activitySessionsLoadingHeading')} className="flex flex-col gap-2">
-                {[0, 1, 2].map((i) => (
-                    <li key={i} className="flex flex-col gap-1.5">
-                        <span className="h-3 w-2/3 animate-pulse rounded bg-surface-active" />
-                        <span className="h-2.5 w-1/2 animate-pulse rounded bg-surface-active" />
-                    </li>
-                ))}
-            </ul>
-        );
-    }
-    if (sessions.length === 0) return <p className="text-[12px] text-muted">{tr('activitySessionsEmpty')}</p>;
     return (
         <ul className="divide-y divide-border-divider overflow-hidden rounded-lg border border-border bg-panel">
             {sessions.map((sess) => {
@@ -274,11 +222,8 @@ export function ActivitySessionsList({
                 // to a full line of system noise ("Dock, loginwindow, …").
                 const shown = sess.appNames.slice(0, 3).join(', ');
                 const extra = sess.appNames.length - 3;
-                const apps = !sess.appNames.length
-                    ? tr('activitySessionsUnknownApp')
-                    : extra > 0
-                      ? tr('activitySessionsMoreApps', { apps: shown, count: extra })
-                      : shown;
+                const apps = !sess.appNames.length ? '' : extra > 0 ? tr('activitySessionsMoreApps', { apps: shown, count: extra }) : shown;
+                const when = formatAbsolute(i18n.language, sess.startTime);
                 const interactive = !!onOpenActivitySession;
                 const Tag: 'button' | 'div' = interactive ? 'button' : 'div';
                 return (
@@ -290,12 +235,13 @@ export function ActivitySessionsList({
                         >
                             <span className="flex min-w-0 flex-1 flex-col gap-1">
                                 <span className="flex items-center gap-2 text-[12.5px] text-ink">
-                                    <span className="truncate">{apps}</span>
+                                    {/* A session with no app shows only its time. */}
+                                    <span className="truncate">{apps || when}</span>
                                     {sess.isMeeting && (
                                         <span className="rounded-full border border-border bg-panel-warm px-1.5 py-0.5 text-[11px] text-muted">{tr('activitySessionsMeetingBadge')}</span>
                                     )}
                                 </span>
-                                <span className="text-[11px] text-muted">{formatAbsolute(i18n.language, sess.startTime)}</span>
+                                {apps && <span className="text-[11px] text-muted">{when}</span>}
                             </span>
                             {interactive && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden />}
                         </Tag>
@@ -306,19 +252,19 @@ export function ActivitySessionsList({
     );
 }
 
-// ── Research dossier ──
+// ── Profile ──
 
 // ResearchStep is one action in the live trajectory: a search query, a page
 // read, or the final writing step. kind drives the icon + localized verb;
 // title is the raw query/host shown verbatim.
 type ResearchStep = { kind: string; title: string };
 
-// The AI research dossier for a person: a web-sourced Contact / Who They Are
-// / Your Relationship profile. Research runs in the background
-// (StartPersonResearch); the "people:research" event refreshes it as the
-// status changes rather than polling. onChanged lets the detail re-read its
-// summary when a run finishes or the dossier is deleted.
-export function PersonDossier({ principalId, onChanged }: { principalId: string; onChanged?: () => void }) {
+// The profile Isoform writes of a person (Contact / Who they are / Your
+// relationship), from what it knows and, with a search key, the web. It
+// runs in the background (StartPersonResearch); the "people:research" event
+// refreshes it as the status changes rather than polling. onChanged lets the
+// detail re-read its summary when a run finishes or the profile is deleted.
+export function PersonDossier({ principalId, name, onChanged }: { principalId: string; name: string; onChanged?: () => void }) {
     const { t, i18n } = useTranslation('people');
     const tr = useCallback<Translate>((key, options) => t(key as never, options as never) as unknown as string, [t]);
     const [research, setResearch] = useState<PersonResearchDTO | null>(null);
@@ -326,6 +272,9 @@ export function PersonDossier({ principalId, onChanged }: { principalId: string;
     // user sees motion during a multi-minute run instead of a static spinner.
     const [progress, setProgress] = useState<{ phase: string; detail: string } | null>(null);
     const [steps, setSteps] = useState<ResearchStep[]>([]);
+    const [failure, setFailure] = useState<'start' | 'delete' | null>(null);
+    const [failureDetail, setFailureDetail] = useState('');
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
     const load = useCallback(async () => {
         try {
@@ -336,11 +285,12 @@ export function PersonDossier({ principalId, onChanged }: { principalId: string;
     }, [principalId]);
 
     useEffect(() => {
-        // A reopened fold paints the cached dossier at once; a terminal
+        // A reopened fold paints the cached profile at once; a terminal
         // research event invalidates it before the re-read (page-queries).
         setResearch(pageQueryCache.peek<PersonResearchDTO>('GetPersonResearch', [principalId]) ?? null);
         setProgress(null);
         setSteps([]);
+        setFailure(null);
         void load();
         return EventsOn('people:research', (payload: unknown) => {
             const p = payload as { principalId?: string; status?: string; phase?: string; detail?: string; step?: { kind?: string; title?: string } } | undefined;
@@ -369,6 +319,7 @@ export function PersonDossier({ principalId, onChanged }: { principalId: string;
     const startResearch = useCallback(async () => {
         setSteps([]);
         setProgress(null);
+        setFailure(null);
         setResearch((prev) =>
             prev
                 ? { ...prev, status: 'researching' }
@@ -377,21 +328,24 @@ export function PersonDossier({ principalId, onChanged }: { principalId: string;
         try {
             await StartPersonResearch(principalId, '');
         } catch (err) {
-            toast.error(tr('dossierStartErrorToast', { error: String(err) }));
+            setFailure('start');
+            setFailureDetail(String(err));
             void load();
         }
-    }, [principalId, tr, load]);
+    }, [principalId, load]);
 
     const deleteDossier = useCallback(async () => {
+        setFailure(null);
         try {
             await DeletePersonResearch(principalId);
+            // A deleted profile goes back to its empty state.
             setResearch(null);
-            toast.success(tr('dossierDeletedToast'));
             onChanged?.();
         } catch (err) {
-            toast.error(tr('dossierStartErrorToast', { error: String(err) }));
+            setFailure('delete');
+            setFailureDetail(String(err));
         }
-    }, [principalId, tr, onChanged]);
+    }, [principalId, onChanged]);
 
     const phaseLabel = (): string => {
         switch (progress?.phase) {
@@ -436,25 +390,27 @@ export function PersonDossier({ principalId, onChanged }: { principalId: string;
         }
     };
 
+    const runFailed = status === 'failed' && !researching;
     return (
         <div className="flex flex-col gap-3">
+            {!hasDossier && !researching && !runFailed && failure !== 'start' && <p className="text-[12px] leading-relaxed text-muted">{tr('dossierEmpty')}</p>}
             <div>
                 <Button variant="outline" size="sm" onClick={() => void startResearch()} disabled={researching} aria-busy={researching}>
                     {researching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                    {researching ? tr('dossierResearching') : hasDossier ? tr('dossierRefreshButton') : tr('dossierResearchButton')}
+                    {researching ? tr('dossierResearching') : runFailed || failure === 'start' ? tr('overview.retry') : hasDossier ? tr('dossierRefreshButton') : tr('dossierResearchButton')}
                 </Button>
             </div>
-            {hasDossier ? (
+            {failure === 'start' && <PeopleFailureLine text={tr('dossierStartFailed')} detail={failureDetail} />}
+            {runFailed && <PeopleFailureLine text={tr('dossierFailed')} detail={research?.error || undefined} />}
+            {hasDossier && !researching && (
                 <div className="flex flex-col gap-3">
-                    {research!.researchedAt > 0 && (
-                        <p className="text-[11px] text-muted">{tr('dossierUpdatedAt', { when: new Date(research!.researchedAt).toLocaleString(i18n.language) })}</p>
-                    )}
+                    {research!.researchedAt > 0 && <p className="text-[11px] text-muted">{tr('dossierUpdatedAt', { when: formatAbsolute(i18n.language, research!.researchedAt) })}</p>}
                     <div className="text-ink">
                         <MarkdownContent content={research!.markdown} />
                     </div>
                     {research!.sources.length > 0 && (
                         <div className="flex flex-col gap-1.5">
-                            <h5 className="text-[12px] font-medium text-muted">{tr('dossierSourcesHeading', { count: research!.sources.length })}</h5>
+                            <h5 className="text-[12px] font-medium text-muted">{tr('dossierSourcesHeading')}</h5>
                             <ol className="flex flex-col gap-1">
                                 {research!.sources.map((src) => (
                                     <li key={src.n} className="text-[12px] leading-relaxed text-muted">
@@ -467,14 +423,14 @@ export function PersonDossier({ principalId, onChanged }: { principalId: string;
                             </ol>
                         </div>
                     )}
-                    <Button variant="destructive" size="sm" className="self-start" onClick={() => void deleteDossier()}>
+                    <Button variant="outline" size="sm" className="self-start" onClick={() => setConfirmDelete(true)}>
                         <Trash2 className="h-3.5 w-3.5" />
                         {tr('dossierDeleteButton')}
                     </Button>
+                    {failure === 'delete' && <PeopleFailureLine text={tr('dossierDeleteFailed')} detail={failureDetail} onRetry={deleteDossier} />}
                 </div>
-            ) : status === 'failed' ? (
-                <p className="text-[12px] leading-relaxed text-error">{research?.error ? `${tr('dossierFailed')}: ${research.error}` : tr('dossierFailed')}</p>
-            ) : researching ? (
+            )}
+            {researching && (
                 <div className="flex flex-col gap-2.5 py-1">
                     <div className="h-1 w-full overflow-hidden rounded-full bg-surface-active">
                         <div className="research-progress-indeterminate h-full w-1/3 rounded-full bg-accent-2/70" />
@@ -498,45 +454,52 @@ export function PersonDossier({ principalId, onChanged }: { principalId: string;
                             <span className="truncate">{phaseLabel()}</span>
                         </div>
                     )}
-                    <p className="text-[11px] leading-relaxed text-muted/70">{tr('dossierResearchingHint')}</p>
                 </div>
-            ) : (
-                <p className="text-[12px] leading-relaxed text-muted">{tr('dossierEmpty')}</p>
             )}
+            <ConfirmDialog
+                open={confirmDelete}
+                onOpenChange={setConfirmDelete}
+                title={tr('dossierDeleteTitle', { name })}
+                description={tr('dossierDeleteDescription')}
+                confirmLabel={tr('deleteConfirm')}
+                variant="danger"
+                onConfirm={() => void deleteDossier()}
+            />
         </div>
     );
 }
 
-// ── Voice fingerprint (You only) ──
+// ── Your voice (You only) ──
 
-// Mic samples the background-audio identity pipeline uses to verify "this
-// voice is actually me" on every captured speech chunk. Without enrollment
+// Mic samples the background-audio identity pipeline uses to check "this
+// voice is actually me" on every captured speech chunk. Without a sample
 // the system can't tell a coworker speaking into your mic apart from you.
 // See voice_enrollment.go for the backend.
 export function VoiceFingerprint({ principalId }: { principalId: string }) {
     const { t, i18n } = useTranslation('people');
     const tr: Translate = (key, options) => t(key as never, options as never) as unknown as string;
-    const reload = useCallback(async () => {
-        try {
-            const [s, list] = await Promise.all([GetVoiceEnrollmentStatus(principalId), ListVoiceSamples(principalId)]);
-            setStatus(s);
-            setSamples(list ?? []);
-        } catch (err: unknown) {
-            console.warn('[people] voice fingerprint reload failed:', err);
-        }
-    }, [principalId]);
-
     const [status, setStatus] = useState<VoiceEnrollmentStatusDTO | null>(
         () => pageQueryCache.peek('GetVoiceEnrollmentStatus', [principalId]) ?? null,
     );
     const [samples, setSamples] = useState<VoiceSampleDTO[]>(
         () => pageQueryCache.peek('ListVoiceSamples', [principalId]) ?? [],
     );
+    const reload = useCallback(async () => {
+        try {
+            const [s, list] = await Promise.all([GetVoiceEnrollmentStatus(principalId), ListVoiceSamples(principalId)]);
+            setStatus(s);
+            setSamples(list ?? []);
+        } catch (err: unknown) {
+            console.warn('[people] voice reload failed:', err);
+        }
+    }, [principalId]);
     const [recording, setRecording] = useState(false);
     const [recordSecondsLeft, setRecordSecondsLeft] = useState(0);
     const [testing, setTesting] = useState(false);
     const [testSecondsLeft, setTestSecondsLeft] = useState(0);
     const [testResult, setTestResult] = useState<VoiceMatchResultDTO | null>(null);
+    const [failure, setFailure] = useState<{ kind: 'record' | 'delete' | 'test'; detail: string; sampleId?: number } | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
     const enrollDurationSec = 10;
     const testDurationSec = 5;
 
@@ -546,18 +509,18 @@ export function VoiceFingerprint({ principalId }: { principalId: string }) {
 
     const handleRecord = async () => {
         if (recording) return;
+        setFailure(null);
         setRecording(true);
         setRecordSecondsLeft(enrollDurationSec);
         const tick = setInterval(() => setRecordSecondsLeft((s) => Math.max(0, s - 1)), 1000);
         try {
             await EnrollVoiceSample(principalId, enrollDurationSec);
-            // The enrollment just changed both reads; a fresh cache entry
-            // would serve the pre-enroll state.
+            // The recording just changed both reads; a fresh cache entry
+            // would serve the earlier state. A saved sample just appears.
             pageQueryCache.invalidate(['GetVoiceEnrollmentStatus', 'ListVoiceSamples'], true, [principalId]);
             await reload();
-            toast.success(tr('voicePrintEnrollSuccessToast'));
         } catch (err: unknown) {
-            toast.error(tr('voicePrintEnrollErrorToast', { error: String(err) }));
+            setFailure({ kind: 'record', detail: String(err) });
         } finally {
             clearInterval(tick);
             setRecording(false);
@@ -566,18 +529,19 @@ export function VoiceFingerprint({ principalId }: { principalId: string }) {
     };
 
     const handleDelete = async (id: number) => {
+        setFailure(null);
         try {
             await DeleteVoiceSample(id);
             pageQueryCache.invalidate(['GetVoiceEnrollmentStatus', 'ListVoiceSamples'], true, [principalId]);
             await reload();
-            toast.success(tr('voicePrintDeletedToast'));
         } catch (err: unknown) {
-            toast.error(tr('voicePrintDeleteErrorToast', { error: String(err) }));
+            setFailure({ kind: 'delete', detail: String(err), sampleId: id });
         }
     };
 
     const handleTest = async () => {
         if (testing) return;
+        setFailure(null);
         setTesting(true);
         setTestSecondsLeft(testDurationSec);
         setTestResult(null);
@@ -585,7 +549,7 @@ export function VoiceFingerprint({ principalId }: { principalId: string }) {
         try {
             setTestResult(await TestVoiceMatch(principalId, testDurationSec));
         } catch (err: unknown) {
-            toast.error(tr('voicePrintTestErrorToast', { error: String(err) }));
+            setFailure({ kind: 'test', detail: String(err) });
         } finally {
             clearInterval(tick);
             setTesting(false);
@@ -595,48 +559,43 @@ export function VoiceFingerprint({ principalId }: { principalId: string }) {
 
     const enrolled = (status?.sampleCount ?? 0) > 0;
     const modelReady = status?.modelReady ?? false;
+    const failureText = failure?.kind === 'record' ? tr('voicePrintEnrollFailed') : failure?.kind === 'delete' ? tr('voicePrintDeleteFailed') : tr('voicePrintTestFailed');
+    const retryFailure = () => {
+        if (failure?.kind === 'record') return handleRecord();
+        if (failure?.kind === 'delete' && failure.sampleId !== undefined) return handleDelete(failure.sampleId);
+        return handleTest();
+    };
 
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-medium', enrolled ? 'bg-surface-active text-ink' : 'bg-panel-warm text-muted')}>
-                    {enrolled ? tr('voicePrintBadgeEnrolled', { count: status?.sampleCount ?? 0 }) : tr('voicePrintBadgeNotEnrolled')}
-                </span>
-                <div className="flex items-center gap-2">
-                    {enrolled && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void handleTest()}
-                            disabled={testing || recording || !modelReady}
-                            aria-busy={testing}
-                            title={tr('voicePrintTestButtonTitle', { seconds: testDurationSec })}
-                        >
-                            {testing ? tr('voicePrintTesting', { seconds: testSecondsLeft }) : tr('voicePrintTestButton', { seconds: testDurationSec })}
+                {/* No badge when nothing is recorded. */}
+                {enrolled ? <span className="rounded-full bg-surface-active px-2 py-0.5 text-[11px] font-medium text-ink">{tr('voicePrintBadgeEnrolled', { count: status?.sampleCount ?? 0 })}</span> : <span />}
+                {/* When the speaker model isn't ready, Record and Test are hidden. */}
+                {modelReady && (
+                    <div className="flex items-center gap-2">
+                        {enrolled && (
+                            <Button variant="outline" size="sm" onClick={() => void handleTest()} disabled={testing || recording} aria-busy={testing}>
+                                {testing ? tr('voicePrintTesting', { seconds: testSecondsLeft }) : tr('voicePrintTestButton', { seconds: testDurationSec })}
+                            </Button>
+                        )}
+                        <Button size="sm" onClick={() => void handleRecord()} disabled={recording || testing} aria-busy={recording}>
+                            {recording ? tr('voicePrintRecording', { seconds: recordSecondsLeft }) : tr('voicePrintRecordButton', { seconds: enrollDurationSec })}
                         </Button>
-                    )}
-                    <Button
-                        size="sm"
-                        onClick={() => void handleRecord()}
-                        disabled={recording || testing || !modelReady}
-                        aria-busy={recording}
-                        title={!modelReady ? status?.modelMissingHint : tr('voicePrintRecordButtonTitle', { seconds: enrollDurationSec })}
-                    >
-                        {recording ? tr('voicePrintRecording', { seconds: recordSecondsLeft }) : tr('voicePrintRecordButton', { seconds: enrollDurationSec })}
-                    </Button>
-                </div>
+                    </div>
+                )}
             </div>
             <p className="text-[12px] leading-relaxed text-muted">{enrolled ? tr('voicePrintEnrolledHint') : tr('voicePrintEmptyHint')}</p>
-            {!modelReady && status?.modelMissingHint && <p className="text-[12px] text-warning">{status.modelMissingHint}</p>}
+            {failure && <PeopleFailureLine text={failureText} detail={failure.detail} onRetry={retryFailure} />}
             {samples.length > 0 && (
                 <ul className="divide-y divide-border-divider overflow-hidden rounded-lg border border-border bg-panel">
                     {samples.map((s) => (
                         <li key={s.id} className="flex items-center gap-3 px-3 py-2">
                             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                                 <span className="truncate text-[12px] font-medium text-ink">{s.label || tr('voicePrintSampleLabelFallback')}</span>
-                                <span className="text-[11px] text-muted">{tr('voicePrintSampleMeta', { seconds: s.audioSeconds.toFixed(1), when: formatAbsolute(i18n.language, s.capturedAt) })}</span>
+                                <span className="text-[11px] text-muted">{tr('voicePrintSampleMeta', { seconds: Math.round(s.audioSeconds), when: formatAbsolute(i18n.language, s.capturedAt) })}</span>
                             </div>
-                            <Button variant="destructive" size="icon" onClick={() => void handleDelete(s.id)} title={tr('voicePrintDeleteAria')} aria-label={tr('voicePrintDeleteAria')}>
+                            <Button variant="quiet" size="icon" onClick={() => setDeleteTarget(s.id)} title={tr('voicePrintDeleteAria')} aria-label={tr('voicePrintDeleteAria')}>
                                 <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                         </li>
@@ -644,38 +603,52 @@ export function VoiceFingerprint({ principalId }: { principalId: string }) {
                 </ul>
             )}
             {testResult && <VoiceMatchResultPanel result={testResult} />}
+            <ConfirmDialog
+                open={deleteTarget !== null}
+                onOpenChange={(open) => !open && setDeleteTarget(null)}
+                title={tr('voicePrintDeleteTitle')}
+                description={tr('voicePrintDeleteDescription')}
+                confirmLabel={tr('deleteConfirm')}
+                variant="danger"
+                onConfirm={() => {
+                    if (deleteTarget !== null) void handleDelete(deleteTarget);
+                }}
+            />
         </div>
     );
 }
 
-// The result of a single TestVoiceMatch call: the verdict, the best score
-// against the threshold, and a per-sample breakdown so the user can see
-// which clip matched best.
+// The result of a single TestVoiceMatch call: the verdict in words and,
+// with developer tools on, the best score against the threshold and a
+// per-sample breakdown.
 function VoiceMatchResultPanel({ result }: { result: VoiceMatchResultDTO }) {
     const { t, i18n } = useTranslation('people');
     const tr: Translate = (key, options) => t(key as never, options as never) as unknown as string;
+    const devTools = usePeopleDevTools();
     if (result.verdict === 'no_enrollment') {
-        return <div className="rounded-md border border-warning-border bg-warning-bg px-3 py-2 text-[12px] text-warning">{tr('voicePrintTestNoEnrollment')}</div>;
+        return <p className="text-[12px] text-copper">{tr('voicePrintTestNoEnrollment')}</p>;
     }
     const isMatch = result.verdict === 'match';
     const pct = Math.max(0, Math.min(100, Math.round(result.bestScore * 100)));
     const thresholdPct = Math.max(0, Math.min(100, Math.round(result.threshold * 100)));
     return (
-        <div className={cn('flex flex-col gap-2 rounded-md border px-3 py-2.5', isMatch ? 'border-success-border bg-success-bg' : 'border-warning-border bg-warning-bg')}>
+        <div className="flex flex-col gap-2 rounded-md border border-border bg-panel px-3 py-2.5">
             <div className="flex items-baseline justify-between gap-3">
-                <span className={cn('text-[12px] font-semibold', isMatch ? 'text-success' : 'text-warning')}>
-                    {isMatch ? tr('voicePrintTestVerdictMatch') : tr('voicePrintTestVerdictNoMatch')}
-                </span>
-                <span className="text-[11px] tabular-nums text-muted">
-                    {tr('voicePrintTestScoreLine', { score: result.bestScore.toFixed(3), threshold: result.threshold.toFixed(2) })}
-                </span>
+                <span className={cn('text-[12px] font-semibold', isMatch ? 'text-ink' : 'text-copper')}>{isMatch ? tr('voicePrintTestVerdictMatch') : tr('voicePrintTestVerdictNoMatch')}</span>
+                {devTools && (
+                    <span className="text-[11px] tabular-nums text-muted">
+                        {tr('voicePrintTestScoreLine', { score: result.bestScore.toFixed(3), threshold: result.threshold.toFixed(2) })}
+                    </span>
+                )}
             </div>
-            <div className="relative h-1.5 overflow-hidden rounded-full bg-surface-active">
-                <div className={cn('absolute inset-y-0 left-0 rounded-full', isMatch ? 'bg-success' : 'bg-warning')} style={{ width: `${pct}%` }} />
-                <div className="absolute inset-y-0 w-px bg-ink/60" style={{ left: `${thresholdPct}%` }} title={tr('voicePrintTestThresholdMarker', { threshold: result.threshold.toFixed(2) })} />
-            </div>
+            {devTools && (
+                <div className="relative h-1.5 overflow-hidden rounded-full bg-surface-active">
+                    <div className={cn('absolute inset-y-0 left-0 rounded-full', isMatch ? 'bg-success' : 'bg-warning')} style={{ width: `${pct}%` }} />
+                    <div className="absolute inset-y-0 w-px bg-ink/60" style={{ left: `${thresholdPct}%` }} title={tr('voicePrintTestThresholdMarker', { threshold: result.threshold.toFixed(2) })} />
+                </div>
+            )}
             <p className="text-[11px] leading-relaxed text-muted">{isMatch ? tr('voicePrintTestHintMatch') : tr('voicePrintTestHintNoMatch')}</p>
-            {result.enrolledSampleHits && result.enrolledSampleHits.length > 1 && (
+            {devTools && result.enrolledSampleHits && result.enrolledSampleHits.length > 1 && (
                 <Collapsible className="text-[11px] text-muted">
                     <CollapsibleTrigger className="cursor-pointer select-none rounded hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-2/40">
                         {tr('voicePrintTestPerSampleHeading', { count: result.enrolledSampleHits.length })}

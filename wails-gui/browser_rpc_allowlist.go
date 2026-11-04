@@ -168,6 +168,8 @@ var browserRPCAllowlist = map[string]bool{
 	"PostTodayClosingAnswer":             true,
 	"OpenTodayReplyDraft":                true,
 	"CancelTodayReplyDraft":              true,
+	"GetPersonBrief":                     true,
+	"OpenPersonReplyDraft":               true,
 	"AddTodayNoticedSchedule":            true,
 	"UndoTodayNoticedSchedule":           true,
 	"EditTodayNoticedSchedule":           true,

@@ -5,12 +5,12 @@
 // says they are different people, and Isoform never suggests them again.
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Loader2 } from 'lucide-react';
 import { MergePeople, NotSamePeople, UndoMerge, UndoNotSamePeople, type DuplicateGroup, type PrincipalWithStatsDTO } from '@/lib/wails-shim-app';
 import { Avatar } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
 import { appLabel, listWords, type Translate } from './people-format';
+import { PeopleFailureLine } from './people-failure';
 
 export interface MergeReceipt {
     mergeId: string;
@@ -73,7 +73,7 @@ function MergeBanner({
 }) {
     const { t, i18n } = useTranslation('people');
     const tr: Translate = (key, options) => t(key as never, options as never) as unknown as string;
-    const [state, setState] = useState<'idle' | 'merging' | 'failed' | 'linked'>('idle');
+    const [state, setState] = useState<'idle' | 'running' | 'failed' | 'linked' | 'notSameFailed'>('idle');
     const [reviewing, setReviewing] = useState(false);
 
     const unnamed = tr('unnamed');
@@ -84,7 +84,7 @@ function MergeBanner({
     const reason = group.reason === 'same_email' ? tr('merge.reasonEmail', { names: quoted }) : tr('merge.reasonHandle', { app: appLabel(tr, group.app), names: quoted });
 
     const merge = async () => {
-        setState('merging');
+        setState('running');
         try {
             const result = await MergePeople(group.suggestedTargetId, sources);
             onMerged({ mergeId: result.mergeId, count: group.memberIds.length, name: result.target?.name || targetName }, group.suggestedTargetId);
@@ -96,16 +96,17 @@ function MergeBanner({
     };
 
     const notSame = async () => {
-        setState('merging');
+        setState('running');
         try {
             await NotSamePeople(group.memberIds);
             onNotSame(group.memberIds);
         } catch {
-            setState('failed');
+            setState('notSameFailed');
         }
     };
 
-    const merging = state === 'merging';
+    // While a merge or Not the same runs, the buttons keep their labels.
+    const running = state === 'running';
     return (
         <section
             aria-label={tr('merge.title', { count: group.memberIds.length, name: targetName })}
@@ -128,23 +129,20 @@ function MergeBanner({
                     <span className="text-[13px] text-muted">{reason}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <Button size="sm" onClick={() => void merge()} disabled={merging} aria-busy={merging}>
-                        {merging && <Loader2 className="size-3.5 animate-spin" />}
-                        {merging ? tr('merge.merging') : tr('merge.mergeIntoOne')}
+                    <Button size="sm" onClick={() => void merge()} disabled={running} aria-busy={running}>
+                        {state === 'failed' ? tr('overview.retry') : tr('merge.mergeIntoOne')}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setReviewing((v) => !v)} aria-expanded={reviewing}>
+                    <Button variant="outline" size="sm" onClick={() => setReviewing((v) => !v)} aria-expanded={reviewing} disabled={running}>
                         {tr('merge.reviewEach')}
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => void notSame()} disabled={merging}>
+                    <Button variant="outline" size="sm" onClick={() => void notSame()} disabled={running}>
                         {tr('merge.notSame')}
                     </Button>
                 </div>
             </div>
-            {(state === 'failed' || state === 'linked') && (
-                <p role="alert" className="text-[12.5px] text-error">
-                    {state === 'linked' ? tr('merge.failedLinked') : tr('merge.failed')}
-                </p>
-            )}
+            {state === 'failed' && <PeopleFailureLine text={tr('merge.failed')} />}
+            {state === 'linked' && <PeopleFailureLine text={tr('merge.failedLinked')} />}
+            {state === 'notSameFailed' && <PeopleFailureLine text={tr('merge.notSameFailed')} onRetry={notSame} />}
             {reviewing && (
                 <ul className="flex flex-col border-t border-border-divider pt-2">
                     {group.memberIds.map((id) => {
@@ -159,9 +157,7 @@ function MergeBanner({
                                 >
                                     <Avatar src={entry?.principal.contactPhoto} alt="" fallback={personName(entry, '?')} size="md" />
                                     <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">{personName(entry, unnamed)}</span>
-                                    <span className="text-[12px] text-muted">
-                                        {messages > 0 ? tr('rowMessages', { count: messages }) : tr('rowNeverSeen')}
-                                    </span>
+                                    {messages > 0 && <span className="text-[12px] text-muted">{tr('rowMessages', { count: messages })}</span>}
                                     {id === group.suggestedTargetId && <span className="text-[12px] text-muted">{tr('merge.keeps')}</span>}
                                 </button>
                             </li>
@@ -190,13 +186,11 @@ export function MergeReceiptLine({ receipt, onUndone }: { receipt: MergeReceipt;
     const undoing = state === 'undoing';
     return (
         <div role="status" className="flex flex-wrap items-center gap-2 text-[13px] text-muted">
-            <Check className="size-3.5 text-success" aria-hidden />
-            <span>{tr('merge.merged', { count: receipt.count, name: receipt.name })}</span>
+            <span>{tr('merge.merged', { name: receipt.name })}</span>
             <Button variant="outline" size="sm" onClick={() => void undo()} disabled={undoing} aria-busy={undoing}>
-                {undoing && <Loader2 className="size-3 animate-spin" />}
-                {undoing ? tr('merge.undoing') : tr('merge.undo')}
+                {state === 'failed' ? tr('overview.retry') : tr('merge.undo')}
             </Button>
-            {state === 'failed' && <span className="text-error">{tr('merge.undoFailed')}</span>}
+            {state === 'failed' && <PeopleFailureLine className="basis-full" text={tr('merge.undoFailed')} />}
         </div>
     );
 }
@@ -216,14 +210,14 @@ export function NotSameReceiptLine({ ids, onUndone }: { ids: string[]; onUndone:
         }
     };
     const undoing = state === 'undoing';
+    // The banner itself becomes the answer, where Not the same was pressed.
     return (
-        <div role="status" className="answer-line flex flex-wrap items-center gap-2 text-[13px] text-muted">
-            <span>{tr('merge.notSameDone')}</span>
+        <section role="status" className="answer-line flex flex-wrap items-center gap-2 rounded-xl border border-border bg-panel px-4 py-3.5 text-[13px] text-ink shadow-[var(--shadow-card)]">
+            <span className="flex-1">{tr('merge.notSameDone')}</span>
             <Button variant="outline" size="sm" onClick={() => void undo()} disabled={undoing} aria-busy={undoing}>
-                {undoing && <Loader2 className="size-3 animate-spin" />}
-                {undoing ? tr('merge.undoing') : tr('merge.undo')}
+                {state === 'failed' ? tr('overview.retry') : tr('merge.undo')}
             </Button>
-            {state === 'failed' && <span className="text-error">{tr('merge.undoFailed')}</span>}
-        </div>
+            {state === 'failed' && <PeopleFailureLine className="basis-full" text={tr('merge.notSameUndoFailed')} />}
+        </section>
     );
 }

@@ -135,7 +135,7 @@ export function TodayBeforeYouTalkCard({ card, handlers, onDismiss, onMute, acti
     );
 }
 
-function BeforeYouTalkLine({ label, text }: { label: string; text?: string }) {
+export function BeforeYouTalkLine({ label, text }: { label: string; text?: string }) {
     if (!text?.trim()) return null;
     return (
         <div className="flex gap-2.5 text-[13.5px] leading-[1.45] text-ink">
@@ -145,7 +145,7 @@ function BeforeYouTalkLine({ label, text }: { label: string; text?: string }) {
     );
 }
 
-function lastTimeText(card: TodayBeforeYouTalk, language: string, t: (key: string, options?: Record<string, unknown>) => string): string {
+export function lastTimeText(card: Pick<TodayBeforeYouTalk, "lastTime" | "lastTimeAt" | "lastDurationMs">, language: string, t: (key: string, options?: Record<string, unknown>) => string): string {
     if (!card.lastTimeAt) return card.lastTime ?? "";
     const date = new Date(card.lastTimeAt).toLocaleDateString(language, { month: "short", day: "numeric" });
     const minutes = Math.max(1, Math.round((card.lastDurationMs ?? 0) / 60_000));

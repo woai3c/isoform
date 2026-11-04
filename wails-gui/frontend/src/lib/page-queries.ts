@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as app from '@/lib/wails-shim-app';
 import { EventsOn as RuntimeEventsOn } from '../../wailsjs/runtime/runtime';
 import { pageQueryCache } from './query-cache';
+import { clearSavedPeopleView } from './people-saved-view';
 import { onPagePrivacyCacheWithdrawal, onPagePrivacyWithdrawal, resetPagePrivacyWithdrawal } from './page-privacy-withdrawal';
 import { briefSlotKey } from './brief-time';
 import { CHAT_FIRST_PAGE_SIZE } from './chat-page-size';
@@ -105,7 +106,10 @@ const KEEP_SHOWN_EVENTS = new Set(['topics:updated', 'today-dayshape:updated', '
 export function installPageQueryEvents() {
     if (installed) return;
     installed = true;
-    cleanups.push(onPagePrivacyCacheWithdrawal(() => pageQueryCache.clear()));
+    cleanups.push(onPagePrivacyCacheWithdrawal(() => {
+        pageQueryCache.clear();
+        clearSavedPeopleView();
+    }));
     for (const [event, names] of Object.entries(eventReads)) {
         cleanups.push(RuntimeEventsOn(event, (data?: { status?: string }) => {
             if (event === 'cron:run' && data?.status === 'missed') return;
@@ -150,6 +154,7 @@ export function resetPageQueries() {
     handlers.clear();
     installed = false;
     pageQueryCache.clear();
+    clearSavedPeopleView();
 }
 
 /** Observe successful revalidation and invalidation as well as direct reads.

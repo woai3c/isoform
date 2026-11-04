@@ -353,7 +353,7 @@ func TestPersonDetailLatestMessageMetadataMeetingsAndLimit(t *testing.T) {
 		t.Fatal(got)
 	}
 	for _, row := range got.Together {
-		if row.Kind != "message" || row.Title != "" {
+		if row.Kind != "message" || row.Title != "" || row.Direction != "in" {
 			t.Fatal(row)
 		}
 	}

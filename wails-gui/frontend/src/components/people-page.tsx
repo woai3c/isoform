@@ -1,15 +1,12 @@
 // People (RC 2): ordered by what is open between you. The headline says
 // what you owe; profiles that look like one person merge with an Undo; the
-// detail beside the list prepares "Brief me before we talk" and "Draft a
-// reply" in the main chat's box. Everything the page had before stays one
+// detail beside the list briefs you and drafts a reply in place. Everything the page had before stays one
 // click away in the page's More menu, a person's More menu or the detail's
 // folded sections; senders Isoform could not name sort out in a sheet.
 import { MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { Contact, Loader2, MoreHorizontal, RefreshCw, Search, Sparkles, UserPlus, X } from 'lucide-react';
+import { Contact, Loader2, MoreHorizontal, RefreshCw, Search, Sparkles, UserPlus } from 'lucide-react';
 import {
-    CancelContactsSync,
     CleanupAnonymousPrincipals,
     DeletePrincipal,
     MergePeople,
@@ -43,7 +40,6 @@ import { CalendarPeopleSection } from './people-first-day';
 import { useFirstDay } from '@/hooks/useFirstDay';
 import {
     appLabel,
-    contactsStatusText,
     headlineWords,
     lastSeenWords,
     loopChip,
@@ -54,6 +50,9 @@ import {
     type Translate,
 } from './people/people-format';
 import { cn } from '../lib/utils';
+import { PeopleDevToolsContext, PeopleFailureLine } from './people/people-failure';
+import { ContactsStatusLine } from './people/contacts-status-line';
+import { clearSavedPeopleView, readSavedPeopleView, savePeopleView } from '../lib/people-saved-view';
 
 interface PeoplePageProps {
     /** The dialog's Escape asks the page first: true when the page stepped
@@ -71,9 +70,9 @@ interface PeoplePageProps {
      *  person (Search); a person no longer listed falls back to the usual
      *  first card. A new value applies again while the page stays mounted. */
     initialSelection?: PeopleSelection;
-    /** Brief me and Draft a reply: open the main chat with these words in
-     *  the box. Nothing is sent until the user presses Send. */
-    onPrepareChat?: (prompt: string) => void;
+    /** Technical details, voice scores, raw reasons and the account-id
+     *  field show only with developer tools on. */
+    devToolsUnlocked?: boolean;
     /** False while the dialog is closed (the content is retained after the
      *  first open): the contacts poll pauses, and a reopen re-reads whatever
      *  outlived its TTL. */
@@ -92,6 +91,7 @@ const PEOPLE_READS = ['ListPeopleOverview', 'ListPrincipalsWithStats'];
 export const PEOPLE_RESYNC_MS = 15 * 60_000;
 function invalidatePeopleReads() {
     pageQueryCache.invalidate(PEOPLE_READS);
+    clearSavedPeopleView();
 }
 
 /** Who People opens on: your own card, or one person. */
@@ -105,17 +105,22 @@ function isUnnamedKind(kind: string): boolean {
     return kind === 'anonymous' || kind === 'content_subject';
 }
 
-export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection, onPrepareChat, active = true }: PeoplePageProps) {
-    const { t, i18n } = useTranslation(['people', 'common']);
+export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection, devToolsUnlocked = false, active = true }: PeoplePageProps) {
+    const { t } = useTranslation(['people', 'common']);
     const tr = useCallback<Translate>((key, options) => t(`people:${key}` as never, options as never) as unknown as string, [t]);
     const paused = useObservationPaused() === true;
 
-    // A reopen paints the last reads from the page query cache while the
-    // cached wrappers revalidate behind it; the skeleton is for a true first
-    // load only.
-    const [overview, setOverview] = useState<PeopleOverview | null>(() => pageQueryCache.peek<PeopleOverview>('ListPeopleOverview') ?? null);
-    const [entries, setEntries] = useState<PrincipalWithStatsDTO[]>(() => pageQueryCache.peek<PrincipalWithStatsDTO[]>('ListPrincipalsWithStats') ?? []);
-    const [load, setLoad] = useState<LoadState>(() => (pageQueryCache.peek('ListPeopleOverview') !== undefined ? 'ready' : 'loading'));
+    // A reopen paints the last reads from the page query cache, and a first
+    // open after launch paints the saved view, while the reads run behind
+    // them; the skeleton is for a person's very first load only.
+    const [initial] = useState(() => {
+        const cachedOverview = pageQueryCache.peek<PeopleOverview>('ListPeopleOverview');
+        if (cachedOverview !== undefined) return { overview: cachedOverview, entries: pageQueryCache.peek<PrincipalWithStatsDTO[]>('ListPrincipalsWithStats') ?? [] };
+        return readSavedPeopleView();
+    });
+    const [overview, setOverview] = useState<PeopleOverview | null>(initial?.overview ?? null);
+    const [entries, setEntries] = useState<PrincipalWithStatsDTO[]>(initial?.entries ?? []);
+    const [load, setLoad] = useState<LoadState>(initial ? 'ready' : 'loading');
     const [refreshing, setRefreshing] = useState(false);
     const [revision, setRevision] = useState(0);
     const [selectedID, setSelectedID] = useState<string | null>(null);
@@ -140,6 +145,11 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
     const [contactsAccess, setContactsAccess] = useState<ContactsAccessStatus | null>(() => pageQueryCache.peek<ContactsAccessStatus>('GetContactsAccessStatus') ?? null);
     const [linkTarget, setLinkTarget] = useState<PrincipalDTO | null>(null);
     const [sendersOpen, setSendersOpen] = useState(false);
+    // Failures and answers in place: a person's failed delete or unlink sits
+    // at the top of their detail; cleanup answers on the "Sort them out" line.
+    const [personFailure, setPersonFailure] = useState<{ id: string; kind: 'delete' | 'unlink'; name: string; principal: PrincipalDTO } | null>(null);
+    const [cleanupFailed, setCleanupFailed] = useState(false);
+    const [cleanupDone, setCleanupDone] = useState<'cleaned' | 'nothing' | null>(null);
 
     const refreshContacts = useCallback(async () => {
         try {
@@ -151,9 +161,9 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
 
     // The overview orders people by open loops; the directory rows carry
     // what search, the groups and the actions need. A later failed re-read
-    // keeps the page on screen and says nothing. A cache-seeded page already
-    // counts as data.
-    const hasData = useRef(pageQueryCache.peek('ListPeopleOverview') !== undefined);
+    // keeps the page on screen and says nothing. A cache- or saved-seeded
+    // page already counts as data.
+    const hasData = useRef(initial !== null);
     // Reads overlap (Refresh, a Contacts sync, an edit); only the latest
     // one started may change the page.
     const readSeq = useRef(0);
@@ -167,6 +177,7 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
             setEntries(rows ?? []);
             setLoad('ready');
             hasData.current = true;
+            savePeopleView(nextOverview, rows ?? []);
             setRevision((n) => n + 1);
         } catch {
             if (seq === readSeq.current && !hasData.current) setLoad('failed');
@@ -188,6 +199,7 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
     const withdraw = useCallback(() => {
         readSeq.current++;
         hasData.current = false;
+        clearSavedPeopleView();
         setOverview(null);
         setEntries([]);
         setLoad('loading');
@@ -207,6 +219,9 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
         setContactsImportOpen(false);
         setLinkTarget(null);
         setSendersOpen(false);
+        setPersonFailure(null);
+        setCleanupFailed(false);
+        setCleanupDone(null);
     }, []);
     usePagePrivacyWithdrawal(withdraw);
 
@@ -347,13 +362,14 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
 
     const handleDelete = useCallback(
         async (p: PrincipalDTO) => {
+            setPersonFailure(null);
             try {
                 await DeletePrincipal(p.id);
                 invalidatePeopleReads();
                 if (selectedID === p.id) setSelectedID(null);
                 await reload();
-            } catch (err: unknown) {
-                toast.error(tr('errorDelete', { error: String(err) }));
+            } catch {
+                setPersonFailure({ id: p.id, kind: 'delete', name: p.contactName || p.displayName || tr('unnamed'), principal: p });
             }
         },
         [reload, selectedID, tr],
@@ -361,31 +377,21 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
 
     const handleCleanup = useCallback(async () => {
         setCleanupBusy(true);
+        setCleanupFailed(false);
         try {
             const rep = await CleanupAnonymousPrincipals();
             invalidatePeopleReads();
+            const changed = rep.renamed + rep.merged + rep.crossAppMerged + rep.mergedIntoNamed + rep.prunedNonChat + rep.prunedImplausible > 0;
+            setCleanupDone(changed ? 'cleaned' : 'nothing');
+            setCleanupOpen(false);
             await reload();
-            if (rep.renamed === 0 && rep.merged === 0 && rep.crossAppMerged === 0 && rep.mergedIntoNamed === 0 && rep.prunedNonChat === 0 && rep.prunedImplausible === 0) {
-                toast.success(tr('cleanupNoOpToast'));
-            } else {
-                toast.success(
-                    tr('cleanupSuccessToast', {
-                        scanned: rep.scanned,
-                        renamed: rep.renamed,
-                        merged: rep.merged,
-                        crossApp: rep.crossAppMerged,
-                        intoNamed: rep.mergedIntoNamed,
-                        pruned: rep.prunedNonChat + rep.prunedImplausible,
-                    }),
-                );
-            }
-        } catch (err: unknown) {
-            toast.error(tr('cleanupErrorToast', { error: String(err) }));
+        } catch {
+            // The confirmation stays open with the failure and Try again.
+            setCleanupFailed(true);
         } finally {
             setCleanupBusy(false);
-            setCleanupOpen(false);
         }
-    }, [reload, tr]);
+    }, [reload]);
 
     const merged = useCallback(
         async (next: MergeReceipt, targetID?: string) => {
@@ -405,26 +411,22 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
     // the banner: the source is hidden behind an Undo receipt, not deleted.
     const handleManualMerge = useCallback(
         async (src: PrincipalDTO, dst: PrincipalDTO) => {
-            try {
-                const result = await MergePeople(dst.id, [src.id]);
-                setMergeSource(null);
-                await merged({ mergeId: result.mergeId, count: 2, name: result.target?.name || dst.contactName || dst.displayName || tr('unnamed') }, dst.id);
-            } catch (err: unknown) {
-                toast.error(tr('mergeErrorToast', { error: String(err) }));
-                throw err;
-            }
+            const result = await MergePeople(dst.id, [src.id]);
+            setMergeSource(null);
+            await merged({ mergeId: result.mergeId, count: 2, name: result.target?.name || dst.contactName || dst.displayName || tr('unnamed') }, dst.id);
         },
         [merged, tr],
     );
 
     const unlinkContact = useCallback(
         async (p: PrincipalDTO) => {
+            setPersonFailure(null);
             try {
                 await UnlinkPersonContact(p.id);
                 invalidatePeopleReads();
                 await reload();
             } catch {
-                toast.error(tr('contactUnlinkFailed'));
+                setPersonFailure({ id: p.id, kind: 'unlink', name: p.contactName || p.displayName || tr('unnamed'), principal: p });
             }
         },
         [reload, tr],
@@ -462,8 +464,26 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
     const selectedEntry = selectedID ? byId.get(selectedID) : undefined;
     const selectedCard = selectedID ? cardsById.get(selectedID) : undefined;
     const knownCount = overview?.knownCount ?? entries.length;
+    // Day zero: nobody known and no calendar people. Only You shows.
+    const dayZero = load === 'ready' && knownCount === 0 && calendarPeople.length === 0 && groups.open.length === 0;
+    const headline = dayZero
+        ? tr('overview.dayZero')
+        : calendarPeople.length > 0 && groups.open.length === 0
+          ? tr('firstDay.headline', { count: calendarPeople.length })
+          : overview
+            ? headlineWords(tr, overview.headline, overview.open.length, paused)
+            : tr('title');
+    const subline = dayZero ? '' : calendarPeople.length > 0 ? tr('firstDay.more') : knownCount > 0 ? tr('overview.subline', { count: knownCount }) : '';
+    const failureNotice =
+        personFailure && personFailure.id === selectedID ? (
+            <PeopleFailureLine
+                text={personFailure.kind === 'delete' ? tr('errorDelete', { name: personFailure.name }) : tr('contactUnlinkFailed', { name: personFailure.name })}
+                onRetry={() => (personFailure.kind === 'delete' ? handleDelete(personFailure.principal) : unlinkContact(personFailure.principal))}
+            />
+        ) : undefined;
 
     return (
+        <PeopleDevToolsContext.Provider value={devToolsUnlocked}>
         <div className="flex h-full bg-background">
             <ScrollArea className="min-w-0 flex-1">
                 <main className="flex flex-col gap-[26px] px-10 pb-14 pt-9">
@@ -477,7 +497,7 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
                                         type="search"
                                         value={keyword}
                                         onChange={(e) => setKeyword(e.target.value)}
-                                        placeholder={tr('searchPlaceholder')}
+                                        placeholder={tr('overview.searchLabel')}
                                         aria-label={tr('overview.searchLabel')}
                                         className="h-8 w-[264px] rounded-lg border border-border bg-panel pl-8 pr-3 text-[13px] text-ink outline-none placeholder:text-muted focus-visible:border-border-focus"
                                     />
@@ -502,46 +522,24 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
                             <span aria-hidden className="mt-1 h-7 w-3/5 animate-pulse rounded-md bg-surface-active" />
                         ) : (
                             <h1 className="text-[26px] font-normal leading-[1.3] text-ink">
-                                {overview ? headlineWords(tr, overview.headline, overview.open.length, paused) : tr('title')}
+                                {headline}
                             </h1>
                         )}
-                        {load === 'ready' && (
-                            <p className="text-[14px] text-muted">
-                                {calendarPeople.length > 0 ? tr('firstDay.line', { count: calendarPeople.length }) : tr('overview.subline', { count: knownCount })}
-                            </p>
-                        )}
+                        {load === 'ready' && subline && <p className="text-[14px] text-muted">{subline}</p>}
                         {contactsAccess && (
-                            <div className="flex items-center gap-2 text-[12px] text-muted">
-                                <p role="status">{contactsStatusText(contactsAccess, (key, args) => String(t(key as never, args as never)), i18n.language)}</p>
-                                {contactsAccess.syncState === 'syncing' && (
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => void CancelContactsSync().then(() => {
-                                            pageQueryCache.invalidate(['GetContactsAccessStatus']);
-                                            return refreshContacts();
-                                        })}
-                                        aria-label={tr('contactsSyncCancel')}
-                                        className="border-transparent"
-                                    >
-                                        <X className="size-3.5" />
-                                    </Button>
-                                )}
-                            </div>
+                            <ContactsStatusLine
+                                access={contactsAccess}
+                                onOpenSheet={() => setContactsImportOpen(true)}
+                                onChanged={() => {
+                                    pageQueryCache.invalidate(['GetContactsAccessStatus']);
+                                    return refreshContacts();
+                                }}
+                            />
                         )}
                     </header>
 
                     {load === 'loading' && <OverviewSkeleton label={tr('loading')} />}
-                    {load === 'failed' && (
-                        <div className="flex flex-col gap-3 rounded-xl border border-border bg-panel p-4">
-                            <span className="text-[13px] text-ink">{tr('overview.loadFailed')}</span>
-                            <div>
-                                <Button variant="secondary" size="sm" onClick={retry}>
-                                    {tr('overview.retry')}
-                                </Button>
-                            </div>
-                        </div>
-                    )}
+                    {load === 'failed' && <PeopleFailureLine text={tr('overview.loadFailed')} onRetry={retry} />}
 
                     {load === 'ready' && results && (
                         <section aria-labelledby="people-results-h" className="flex flex-col gap-1">
@@ -594,39 +592,38 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
                                 onReview={setSelectedID}
                             />
 
-                            <section aria-labelledby="people-open-h" className="flex flex-col gap-3">
-                                <h2 id="people-open-h" className="text-[18px] font-semibold text-ink">
-                                    {tr('overview.openHeading')}
-                                </h2>
-                                {groups.open.length === 0 ? (
-                                    <p className="text-[13px] text-muted">{paused ? tr('overview.openPaused') : tr('overview.openEmpty')}</p>
-                                ) : (
+                            {groups.open.length > 0 && (
+                                <section aria-labelledby="people-open-h" className="flex flex-col gap-3">
+                                    <h2 id="people-open-h" className="text-[18px] font-semibold text-ink">
+                                        {tr('overview.openHeading')}
+                                    </h2>
                                     <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] gap-3">
                                         {groups.open.map((card) => (
                                             <OpenCard key={card.id} card={card} entry={byId.get(card.id)} selected={selectedID === card.id} landed={landedID === card.id} onSelect={setSelectedID} />
                                         ))}
                                     </div>
-                                )}
-                            </section>
+                                </section>
+                            )}
 
                             <CalendarPeopleSection people={calendarPeople} known={(id) => byId.has(id)} onSelect={setSelectedID} />
 
-                            <section aria-labelledby="people-all-h" className="flex flex-col gap-1">
-                                <h2 id="people-all-h" className="mb-2 text-[18px] font-semibold text-ink">
-                                    {tr('overview.everyoneHeading')}
-                                </h2>
-                                {groups.others.length === 0 ? (
-                                    <p className="text-[13px] leading-relaxed text-muted">
-                                        {knownCount === 0 ? tr('emptyStateDesc') : groups.hasNamed ? tr('overview.everyoneEmpty') : tr('emptyContacts')}
-                                    </p>
-                                ) : (
-                                    groups.others.map((card) => (
+                            {groups.others.length > 0 && (
+                                <section aria-labelledby="people-all-h" className="flex flex-col gap-1">
+                                    <h2 id="people-all-h" className="mb-2 text-[18px] font-semibold text-ink">
+                                        {tr('overview.everyoneHeading')}
+                                    </h2>
+                                    {groups.others.map((card) => (
                                         <PersonRow key={card.id} entry={byId.get(card.id)} card={card} selected={selectedID === card.id} landed={landedID === card.id} onSelect={setSelectedID} />
-                                    ))
-                                )}
-                            </section>
+                                    ))}
+                                </section>
+                            )}
 
-                            {senders.length > 0 && (
+                            {/* After a cleanup, the Sort them out line answers. */}
+                            {cleanupDone ? (
+                                <p role="status" className="text-[13px] text-muted">
+                                    {cleanupDone === 'cleaned' ? tr('cleanupDone') : tr('cleanupNothing')}
+                                </p>
+                            ) : senders.length > 0 && (
                                 <p className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted">
                                     <span>{tr('overview.sortLine', { count: senders.length })}</span>
                                     <Button variant="link" size="sm" className="h-auto p-0 text-[13px]" onClick={() => setSendersOpen(true)}>
@@ -668,13 +665,13 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
                                 entry={selectedEntry}
                                 revision={revision}
                                 actions={actions}
-                                onPrepareChat={onPrepareChat}
+                                notice={failureNotice}
                                 onOpenActivitySession={onOpenActivitySession}
                             />
-                        ) : load === 'ready' ? (
+                        ) : load === 'ready' && knownCount > 0 ? (
                             <div className="flex flex-col gap-2 pt-10 text-center">
-                                <h2 className="text-[14px] font-medium text-ink">{knownCount === 0 ? tr('emptyStateTitle') : tr('overview.pickHint')}</h2>
-                                <p className="text-[13px] leading-relaxed text-muted">{knownCount === 0 ? tr('emptyStateDesc') : tr('overview.pickDesc')}</p>
+                                <h2 className="text-[14px] font-medium text-ink">{tr('overview.pickHint')}</h2>
+                                <p className="text-[13px] leading-relaxed text-muted">{tr('overview.pickDesc')}</p>
                             </div>
                         ) : null}
                     </div>
@@ -718,6 +715,10 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
                         invalidatePeopleReads();
                         await reload();
                     }}
+                    onChanged={async () => {
+                        invalidatePeopleReads();
+                        await reload();
+                    }}
                 />
             )}
             {promoteTarget && (
@@ -726,6 +727,10 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
                     initial={promoteTarget}
                     open={!!promoteTarget}
                     onOpenChange={(v) => !v && setPromoteTarget(null)}
+                    onChanged={async () => {
+                        invalidatePeopleReads();
+                        await reload();
+                    }}
                     onSaved={async (saved) => {
                         setPromoteTarget(null);
                         invalidatePeopleReads();
@@ -758,7 +763,7 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
             <ConfirmDialog
                 open={!!deleteTarget}
                 onOpenChange={(v) => !v && setDeleteTarget(null)}
-                title={tr('deleteTitle', { name: deleteTarget?.displayName || tr('unnamed') })}
+                title={tr('deleteTitle', { name: deleteTarget?.contactName || deleteTarget?.displayName || tr('unnamed') })}
                 description={tr('deleteDescription')}
                 confirmLabel={tr('deleteConfirm')}
                 variant="danger"
@@ -769,34 +774,38 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
             {mergeSource && <MergePrincipalDialog source={mergeSource} onOpenChange={(v) => !v && setMergeSource(null)} onConfirm={(dst) => handleManualMerge(mergeSource, dst)} />}
             <ConfirmDialog
                 open={cleanupOpen}
-                onOpenChange={(v) => !v && !cleanupBusy && setCleanupOpen(false)}
+                onOpenChange={(v) => {
+                    if (!v && !cleanupBusy) {
+                        setCleanupOpen(false);
+                        setCleanupFailed(false);
+                    }
+                }}
                 title={tr('cleanupTitle', { count: anonymousCount })}
                 widthClass="w-[520px]"
                 description={
                     <div className="flex flex-col gap-3">
                         <p>{tr('cleanupIntro')}</p>
-                        <ol className="flex flex-col gap-1.5 pl-1">
+                        <ul className="flex flex-col gap-1.5 pl-1">
                             {(['1', '2', '3'] as const).map((n) => (
-                                <li key={n} className="flex gap-2">
-                                    <span className="shrink-0 font-medium tabular-nums text-ink/60">{n}.</span>
-                                    <span>
-                                        <span className="font-medium text-ink">{tr(`cleanupStep${n}Title`)}</span>
-                                        {' — '}
-                                        {tr(`cleanupStep${n}Body`)}
-                                    </span>
+                                <li key={n}>
+                                    <span className="font-medium text-ink">{tr(`cleanupStep${n}Title`)}</span>
+                                    {tr('cleanupStepJoin')}
+                                    {tr(`cleanupStep${n}Body`)}
                                 </li>
                             ))}
-                        </ol>
+                        </ul>
                         <p className="text-[12px] text-muted">{tr('cleanupFootnote')}</p>
                     </div>
                 }
-                confirmLabel={tr('cleanupConfirm')}
-                onConfirm={handleCleanup}
+                notice={cleanupFailed ? <PeopleFailureLine text={tr('cleanupFailed')} /> : undefined}
+                confirmLabel={cleanupFailed ? tr('overview.retry') : tr('cleanupConfirm')}
+                confirmDisabled={cleanupBusy}
+                closeOnConfirm={false}
+                onConfirm={() => void handleCleanup()}
             />
             <SendersSheet
                 open={sendersOpen && senders.length > 0}
                 onOpenChange={setSendersOpen}
-                cleanupCount={anonymousCount}
                 onCleanup={() => {
                     setSendersOpen(false);
                     setCleanupOpen(true);
@@ -818,6 +827,7 @@ export function PeoplePage({ escapeRef, onOpenActivitySession, initialSelection,
                 ))}
             </SendersSheet>
         </div>
+        </PeopleDevToolsContext.Provider>
     );
 }
 
@@ -861,7 +871,7 @@ function PageMoreMenu({
                 {anonymousCount > 0 && (
                     <DropdownMenuItem onSelect={onCleanup} disabled={cleanupBusy}>
                         <Sparkles />
-                        {tr('menu.cleanup', { count: anonymousCount })}
+                        {tr('menu.cleanup')}
                     </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onSelect={onRefresh} disabled={refreshing}>
@@ -880,9 +890,9 @@ function roleWords(tr: Translate, t: (key: string) => string, exists: (key: stri
     if (relationship) return relationshipLabel(t, exists, relationship);
     const kind = entry?.principal.kind ?? card?.kind;
     const messages = entry?.stats.totalMessages ?? 0;
-    if (kind === 'anonymous') return tr('overview.unidentifiedRole', { count: messages });
     if (kind === 'self') return tr('kind.self');
-    return messages > 0 ? tr('rowMessages', { count: messages }) : tr('rowNeverSeen');
+    // An unnamed sender reads "3 messages"; nothing recorded says nothing.
+    return messages > 0 ? tr('rowMessages', { count: messages }) : '';
 }
 
 function lastWords(tr: Translate, lang: string, card: PersonCard | undefined): string {
@@ -985,14 +995,11 @@ function PersonRow({ entry, card, selected, landed = false, onSelect }: { entry?
 function SendersSheet({
     open,
     onOpenChange,
-    cleanupCount,
     onCleanup,
     children,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    /** Every unidentified sender, which is what the cleanup covers. */
-    cleanupCount: number;
     onCleanup: () => void;
     children: React.ReactNode;
 }) {
@@ -1013,7 +1020,7 @@ function SendersSheet({
                 </ScrollArea>
                 <div className="flex shrink-0 items-center justify-end border-t border-border-subtle px-6 py-4">
                     <Button variant="secondary" size="sm" onClick={onCleanup}>
-                        {tr('menu.cleanup', { count: cleanupCount })}
+                        {tr('menu.cleanup')}
                     </Button>
                 </div>
             </SheetContent>
@@ -1053,13 +1060,17 @@ function MergePrincipalDialog({
     const { t } = useTranslation('people');
     const [target, setTarget] = useState<PrincipalDTO | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [failed, setFailed] = useState(false);
 
     const submit = async () => {
         if (!target) return;
         setSubmitting(true);
+        setFailed(false);
         try {
             await onConfirm(target);
         } catch {
+            // In place, in copper; Merge reads Try again.
+            setFailed(true);
             setSubmitting(false);
         }
     };
@@ -1069,7 +1080,7 @@ function MergePrincipalDialog({
             <DialogContent className="w-[560px]">
                 <DialogHeader className="items-start">
                     <div>
-                        <DialogTitle>{t('mergeTitle', { name: source.displayName || t('unnamed') })}</DialogTitle>
+                        <DialogTitle>{t('mergeTitle', { name: source.contactName || source.displayName || t('unnamed') })}</DialogTitle>
                         <DialogDescription className="mt-1">{t('mergeDescription')}</DialogDescription>
                     </div>
                     <DialogCloseButton />
@@ -1086,17 +1097,17 @@ function MergePrincipalDialog({
                     />
                     {target && (
                         <p className="rounded-md border border-border bg-panel-warm px-3 py-2 text-[12px] text-muted">
-                            {t('mergePreview', { src: source.displayName || t('unnamed'), dst: target.displayName || t('unnamed') })}
+                            {t('mergePreview', { src: source.contactName || source.displayName || t('unnamed'), dst: target.contactName || target.displayName || t('unnamed') })}
                         </p>
                     )}
+                    {failed && <PeopleFailureLine text={t('merge.failed')} />}
                 </div>
                 <div className="flex items-center justify-end gap-2 px-6 pb-5">
                     <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={submitting}>
                         {t('mergeCancel')}
                     </Button>
                     <Button size="sm" onClick={() => void submit()} disabled={!target || submitting || target.id === source.id} aria-busy={submitting}>
-                        {submitting && <Loader2 className="size-3 animate-spin" />}
-                        {t('mergeConfirm')}
+                        {failed ? t('overview.retry') : t('mergeConfirm')}
                     </Button>
                 </div>
             </DialogContent>

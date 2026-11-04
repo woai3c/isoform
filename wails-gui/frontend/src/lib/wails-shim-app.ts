@@ -1252,6 +1252,19 @@ export const SaveMorningBriefWeekIntent = appBinding<[briefID: string, answer: s
 export const PostMorningBriefWeekAnswer = appBinding<[briefID: string, previous: string, answer: string], void>("PostMorningBriefWeekAnswer");
 export const CancelTodayReplyDraft = appBinding<[string], void>("CancelTodayReplyDraft");
 export const OpenTodayReplyDraft = appBinding<[string, string, string, string, string], string>("OpenTodayReplyDraft");
+/** Brief me before we talk, in a person's detail on Who you know. */
+export interface PersonBrief {
+    personId: string;
+    youOwe?: string;
+    theyAsked?: string;
+    hasUnsentDraft?: boolean;
+    lastTime?: string;
+    lastTimeAt?: number;
+    lastDurationMs?: number;
+}
+export const GetPersonBrief = appBinding<[string], PersonBrief | null>("GetPersonBrief");
+/** Draft a reply in a person's detail: (personId, momentId, requestId). */
+export const OpenPersonReplyDraft = appBinding<[string, string, string], string>("OpenPersonReplyDraft");
 export const PostTodayClosingAnswer = appBinding<[briefID: string, cardID: string, shownMessage: string, previous: string], NonNullable<TodayBriefView["closingAnswer"]>>("PostTodayClosingAnswer");
 export const ChangeMorningBriefWeekIntent = appBinding<[briefID: string, previous: string, answer: string], void>("ChangeMorningBriefWeekIntent");
 export const GetYourWeekForDate = appBinding<[string], YourWeekEntry>("GetYourWeekForDate");
@@ -4705,7 +4718,7 @@ export type PersonDetail = {
     notes: string;
     researchSummary: string;
     loops: PersonLoop[];
-    together: { at: number; kind: "meeting" | "activity" | "message"; title: string; app: string; durationMs: number }[];
+    together: { at: number; kind: "meeting" | "activity" | "message"; title: string; app: string; durationMs: number; direction?: "in" | "out" | "" }[];
     sharedTopics: { id: string; name: string }[];
     seenIn: string[];
     messageCount: number;
