@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"os"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,14 +13,17 @@ import (
 	"time"
 )
 
-// memoryExternalReadCache keeps the redacted, model-facing copy of memory
-// between memory changes. Brief, chat and CLI readers ask for it many times a
-// minute; redacting every entry on each read kept Isoform busy at rest.
+// memoryExternalReadCache keeps one parsed copy of the memory folder between
+// memory changes. Brief, chat, Today, About You and CLI readers ask for memory
+// many times a minute; reading, parsing and redacting every note on each call
+// kept Isoform busy at rest.
 //
-// A snapshot is valid for one memory folder, one write revision (bumped by
-// every memory write the app makes) and one stat fingerprint of the folder
-// (catches edits made outside the app). Only the per-entry redaction and the
-// stated exclusions are cached: the read policy (Closed Eyes, corrections,
+// A snapshot is valid for one memory folder and one write revision, bumped at
+// once by every memory write the app makes. Edits made outside the app are
+// caught by a stat fingerprint of the folder (notes and .history), checked at
+// most once every memoryFolderCheckEvery, so a read with nothing changed does
+// no disk work. Raw entries are parsed once per snapshot and redacted copies
+// are made on first external read. The read policy (Closed Eyes, corrections,
 // source privacy) is evaluated again on every read.
 type memoryExternalReadCache struct {
 	revision atomic.Uint64
@@ -27,10 +32,15 @@ type memoryExternalReadCache struct {
 }
 
 type memoryExternalSnapshot struct {
+	dirKey   string
 	dir      string
 	revision uint64
 	signal   [sha256.Size]byte
-	entries  []memoryExternalEntry
+	// checked is when the folder last matched signal; guarded by the cache mu.
+	checked time.Time
+	entries []memoryExternalEntry
+
+	externalOnce sync.Once
 
 	exclusionsMu  sync.Mutex
 	exclusionsFor string
@@ -43,6 +53,27 @@ type memoryExternalEntry struct {
 	inUse    bool
 }
 
+// memoryFolderCheckEvery bounds how long an edit made outside the app can go
+// unseen. App writes do not wait for it: they bump the revision.
+const memoryFolderCheckEvery = 5 * time.Second
+
+// memoryReadNow and memoryFiles are the clock and file access of the memory
+// read path, so tests can move time and count file opens and stats.
+var (
+	memoryReadNow                  = time.Now
+	memoryFiles   memoryFileAccess = osMemoryFiles{}
+)
+
+type memoryFileAccess interface {
+	ReadDir(name string) ([]os.DirEntry, error)
+	ReadFile(name string) ([]byte, error)
+}
+
+type osMemoryFiles struct{}
+
+func (osMemoryFiles) ReadDir(name string) ([]os.DirEntry, error) { return os.ReadDir(name) }
+func (osMemoryFiles) ReadFile(name string) ([]byte, error)       { return os.ReadFile(name) }
+
 // memoryExternalReadLoad is a test hook: "entries" per memory folder read,
 // "redact" per entry redacted, "exclusions" per exclusion scan.
 var memoryExternalReadLoad func(kind string)
@@ -53,17 +84,13 @@ func recordMemoryExternalReadLoad(kind string) {
 	}
 }
 
-// invalidateMemoryExternalReads drops the cached copy at once, so a write,
-// forget or confirm is what the next reader sees.
+// invalidateMemoryExternalReads makes the next reader read the folder again,
+// so a write, forget or confirm is what it sees. It never waits for a read.
 func (a *App) invalidateMemoryExternalReads() {
 	if a == nil {
 		return
 	}
-	c := &a.memoryExternalReads
-	c.revision.Add(1)
-	c.mu.Lock()
-	c.snapshot = nil
-	c.mu.Unlock()
+	a.memoryExternalReads.revision.Add(1)
 }
 
 // memoryFolderSettle is how old every file must be before a snapshot is kept:
@@ -71,17 +98,31 @@ func (a *App) invalidateMemoryExternalReads() {
 // one tick would otherwise keep its old fingerprint.
 const memoryFolderSettle = 2 * time.Second
 
-// memoryFolderSignal fingerprints the entries GetMemoryEntries reads without
-// reading them: name, size and modification time of each live file. It also
-// returns the newest modification time.
+// memoryDirKey holds everything memoryDir resolves the folder from. Resolving
+// it checks the folder on disk (symlinks, MkdirAll), so a warm read compares
+// this key instead.
+func memoryDirKey() string {
+	return strings.Join([]string{configDirName, os.Getenv("YANSU_APP_FLAVOR"), os.Getenv("YANSU_AGENT_HOME"), os.Getenv("HOME"), os.Getenv("USERPROFILE")}, "\x00")
+}
+
+// memoryFolderSignal fingerprints what GetMemoryEntries reads without reading
+// it: name, size and modification time of each live note and of each
+// .history/<id> folder. It also returns the newest note modification time.
 func memoryFolderSignal(dir string) ([sha256.Size]byte, time.Time, error) {
 	var newest time.Time
-	files, err := os.ReadDir(dir)
+	files, err := memoryFiles.ReadDir(dir)
 	if err != nil {
 		return [sha256.Size]byte{}, newest, err
 	}
 	h := sha256.New()
 	var buf [16]byte
+	write := func(name string, info os.FileInfo) {
+		h.Write([]byte(name))
+		h.Write([]byte{0})
+		binary.LittleEndian.PutUint64(buf[:8], uint64(info.Size()))
+		binary.LittleEndian.PutUint64(buf[8:], uint64(info.ModTime().UnixNano()))
+		h.Write(buf[:])
+	}
 	for _, file := range files {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".md") || isOKFReservedMarkdownFile(file.Name()) {
 			continue
@@ -96,58 +137,99 @@ func memoryFolderSignal(dir string) ([sha256.Size]byte, time.Time, error) {
 		if info.ModTime().After(newest) {
 			newest = info.ModTime()
 		}
-		h.Write([]byte(file.Name()))
-		h.Write([]byte{0})
-		binary.LittleEndian.PutUint64(buf[:8], uint64(info.Size()))
-		binary.LittleEndian.PutUint64(buf[8:], uint64(info.ModTime().UnixNano()))
-		h.Write(buf[:])
+		write(file.Name(), info)
+	}
+	h.Write([]byte{1})
+	history, err := memoryFiles.ReadDir(filepath.Join(dir, memoryHistoryDirName))
+	if err != nil && !os.IsNotExist(err) {
+		return [sha256.Size]byte{}, newest, err
+	}
+	for _, folder := range history {
+		info, err := folder.Info()
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return [sha256.Size]byte{}, newest, err
+		}
+		write(folder.Name(), info)
 	}
 	var sum [sha256.Size]byte
 	copy(sum[:], h.Sum(nil))
 	return sum, newest, nil
 }
 
-// memoryExternalSnapshot returns the current redacted copy of memory,
-// reading and redacting the folder again only after it changed.
-func (a *App) memoryExternalSnapshot() (*memoryExternalSnapshot, error) {
+// memorySnapshot returns the current parsed copy of memory, reading the
+// folder again only after it changed.
+func (a *App) memorySnapshot() (*memoryExternalSnapshot, error) {
+	key := memoryDirKey()
+	c := &a.memoryExternalReads
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	// Taken before the read: a write that lands during it leaves a stale key,
+	// so the next reader reads again instead of keeping the older copy.
+	revision := c.revision.Load()
+	now := memoryReadNow()
+	if s := c.snapshot; s != nil && s.dirKey == key && s.revision == revision {
+		if now.Sub(s.checked) < memoryFolderCheckEvery {
+			return s, nil
+		}
+		if signal, _, err := memoryFolderSignal(s.dir); err == nil && signal == s.signal {
+			s.checked = now
+			return s, nil
+		}
+	}
 	dir, err := memoryDir()
 	if err != nil {
 		return nil, err
 	}
-	c := &a.memoryExternalReads
-	// Taken before the read: a write that lands during it leaves a stale key,
-	// so the next reader reads again instead of keeping the older copy.
-	revision := c.revision.Load()
-	checked := time.Now()
 	signal, newest, err := memoryFolderSignal(dir)
 	if err != nil {
 		return nil, err
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if s := c.snapshot; s != nil && s.dir == dir && s.revision == revision && s.signal == signal {
-		return s, nil
-	}
-	entries, err := a.GetMemoryEntries()
+	entries, err := readMemoryEntries(dir)
 	if err != nil {
 		return nil, err
 	}
 	recordMemoryExternalReadLoad("entries")
-	s := &memoryExternalSnapshot{dir: dir, revision: revision, signal: signal, entries: make([]memoryExternalEntry, 0, len(entries))}
+	s := &memoryExternalSnapshot{dirKey: key, dir: dir, revision: revision, signal: signal, checked: now, entries: make([]memoryExternalEntry, 0, len(entries))}
 	for _, entry := range entries {
-		item := memoryExternalEntry{raw: entry, inUse: memoryInUse(entry.Content)}
-		if item.inUse {
-			item.redacted = redactMemoryEntryForExternalRead(entry)
-			recordMemoryExternalReadLoad("redact")
-		}
-		s.entries = append(s.entries, item)
+		s.entries = append(s.entries, memoryExternalEntry{raw: entry})
 	}
-	if c.revision.Load() == revision && checked.Sub(newest) >= memoryFolderSettle {
+	if c.revision.Load() == revision && now.Sub(newest) >= memoryFolderSettle {
 		c.snapshot = s
 	} else {
 		c.snapshot = nil
 	}
 	return s, nil
+}
+
+// memoryExternalSnapshot returns the current snapshot with its redacted,
+// model-facing copies made.
+func (a *App) memoryExternalSnapshot() (*memoryExternalSnapshot, error) {
+	s, err := a.memorySnapshot()
+	if err != nil {
+		return nil, err
+	}
+	s.externalOnce.Do(func() {
+		for i := range s.entries {
+			entry := &s.entries[i]
+			entry.inUse = memoryInUse(entry.raw.Content)
+			if entry.inUse {
+				entry.redacted = redactMemoryEntryForExternalRead(entry.raw)
+				recordMemoryExternalReadLoad("redact")
+			}
+		}
+	})
+	return s, nil
+}
+
+func (s *memoryExternalSnapshot) rawEntries() []MemoryEntry {
+	out := make([]MemoryEntry, 0, len(s.entries))
+	for _, entry := range s.entries {
+		out = append(out, cloneMemoryEntry(entry.raw))
+	}
+	return out
 }
 
 // allowed applies the current read policy to the snapshot's entries.
@@ -191,9 +273,9 @@ func (s *memoryExternalSnapshot) statedExclusions(allowed []int) []string {
 }
 
 func cloneMemoryEntry(entry MemoryEntry) MemoryEntry {
-	entry.TopicIDs = append([]string(nil), entry.TopicIDs...)
-	entry.ActivitySessionIDs = append([]string(nil), entry.ActivitySessionIDs...)
-	entry.Apps = append([]string(nil), entry.Apps...)
+	entry.TopicIDs = slices.Clone(entry.TopicIDs)
+	entry.ActivitySessionIDs = slices.Clone(entry.ActivitySessionIDs)
+	entry.Apps = slices.Clone(entry.Apps)
 	return entry
 }
 

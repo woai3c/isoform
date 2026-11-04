@@ -190,6 +190,7 @@ func TestBriefV1110ExclusionRemakesAudioWithoutTheExcludedParts(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "brief-preference.md"), []byte("# Brief preference\n\nKeep PT out of my briefs.\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	checkMemoryFolderNow(svc.app)
 	stored, _ := svc.store.load(brief.BriefID)
 	delivered := svc.app.mobileBriefForDelivery(stored)
 	if len(delivered.Narrative) != 1 || delivered.Narrative[0].Text != "You shipped the plan." {

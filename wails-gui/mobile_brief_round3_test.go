@@ -256,6 +256,7 @@ func TestTodayRetainsInsightsWhenSourceFileReadFails(t *testing.T) {
 			if _, err := os.ReadFile(path); err == nil {
 				t.Fatal("fixture did not fail the file read")
 			}
+			checkMemoryFolderNow(rig.app)
 			// The source session's privacy gate cannot be run for an unreadable file, so
 			// the insight is not shown to the phone until the file reads again.
 			current, ok := svc.LatestMobileBrief()
@@ -265,6 +266,7 @@ func TestTodayRetainsInsightsWhenSourceFileReadFails(t *testing.T) {
 			if err := os.Remove(path); err != nil {
 				t.Fatal(err)
 			}
+			checkMemoryFolderNow(rig.app)
 			svc.LatestMobileBrief()
 			stored, _ := svc.store.currentToday()
 			if len(stored.Sections.Learned) != 0 {

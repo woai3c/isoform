@@ -105,6 +105,34 @@ type MemoryEntry struct {
 	displayApp *App
 }
 
+// memoryHistoryIDs lists the entries with at least one snapshot, by the same
+// rule as memoryEntryHasHistory, reading .history once instead of once per
+// entry.
+func memoryHistoryIDs(dir string) map[string]bool {
+	root := filepath.Join(dir, memoryHistoryDirName)
+	folders, err := memoryFiles.ReadDir(root)
+	if err != nil {
+		return nil
+	}
+	ids := map[string]bool{}
+	for _, folder := range folders {
+		if !folder.IsDir() && folder.Type()&os.ModeSymlink == 0 {
+			continue
+		}
+		files, err := memoryFiles.ReadDir(filepath.Join(root, folder.Name()))
+		if err != nil {
+			continue
+		}
+		for _, file := range files {
+			if !file.IsDir() && strings.HasSuffix(file.Name(), ".md") {
+				ids[folder.Name()] = true
+				break
+			}
+		}
+	}
+	return ids
+}
+
 // memoryEntryHasHistory returns true when the entry's history directory exists
 // and contains at least one snapshot. Uses os.ReadDir over a pure Stat because
 // the snapshot dir is created lazily on first update — an empty dir would
@@ -542,19 +570,32 @@ func (doc parsedMemoryEntryDocument) title() string {
 }
 
 // GetMemoryEntries returns all memory markdown files, newest first.
+// Reads share one parsed snapshot per memory change; callers get copies.
 func (a *App) GetMemoryEntries() (perfValue []MemoryEntry, perfErr error) {
 	defer logPageBinding("GetMemoryEntries", time.Now(), &perfValue)
-	dir, err := memoryDir()
+	if a == nil {
+		dir, err := memoryDir()
+		if err != nil {
+			return nil, err
+		}
+		return readMemoryEntries(dir)
+	}
+	snapshot, err := a.memorySnapshot()
 	if err != nil {
 		return nil, err
 	}
+	return snapshot.rawEntries(), nil
+}
 
+// readMemoryEntries reads and parses every live note in dir, newest first.
+func readMemoryEntries(dir string) ([]MemoryEntry, error) {
 	// Preserve read errors so projections distinguish unavailable sources
 	// from deleted records; a failed read is never a successful empty list.
-	entries, err := os.ReadDir(dir)
+	entries, err := memoryFiles.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
+	history := memoryHistoryIDs(dir)
 
 	var result []MemoryEntry
 	for _, e := range entries {
@@ -569,7 +610,7 @@ func (a *App) GetMemoryEntries() (perfValue []MemoryEntry, perfErr error) {
 			}
 			return nil, err
 		}
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		data, err := memoryFiles.ReadFile(filepath.Join(dir, e.Name()))
 		if err != nil {
 			if os.IsNotExist(err) {
 				// Deleted after enumeration.
@@ -600,7 +641,7 @@ func (a *App) GetMemoryEntries() (perfValue []MemoryEntry, perfErr error) {
 			Source:             fm.Source,
 			ActivitySessionIDs: memoryEvidenceSessionIDsFromDocument(doc),
 			Apps:               fm.Apps,
-			HasHistory:         memoryEntryHasHistory(dir, id),
+			HasHistory:         history[id],
 		})
 	}
 

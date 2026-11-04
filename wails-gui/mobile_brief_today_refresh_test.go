@@ -175,6 +175,7 @@ func addTodayRefreshSources(t *testing.T, rig *handoffTestRig, now time.Time) {
 	if err := os.Chtimes(path, now.Add(-time.Minute), now.Add(-time.Minute)); err != nil {
 		t.Fatal(err)
 	}
+	checkMemoryFolderNow(rig.app)
 	if _, err := rig.activity.SaveSummaryWithLanguage(now.Format("2006-01-02"), "daily", "Current day summary", "test", false, rig.app.currentUILanguage()); err != nil {
 		t.Fatal(err)
 	}

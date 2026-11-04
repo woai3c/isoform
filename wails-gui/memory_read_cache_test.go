@@ -166,12 +166,15 @@ func TestBriefMemoryCacheKeepsPrivacyAndTakesChangesAtOnce(t *testing.T) {
 		t.Fatalf("exclusions after a write = %v", got)
 	}
 
-	// So does an edit made outside the app, even a same-size one.
+	// So does an edit made outside the app, even a same-size one, by the
+	// next folder check.
+	advance := fakeMemoryReadClock(t)
 	settleMemoryFolder(t, r.dir)
 	_ = a.mobileBriefExclusions()
 	if err := os.WriteFile(filepath.Join(r.dir, "brief-preference.md"), []byte("# Brief preference\n\nKeep Harbor Chair out of my morning brief.\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	advance(memoryFolderCheckEvery)
 	if got := a.mobileBriefExclusions(); !slices.Equal(got, []string{"Harbor Chair"}) {
 		t.Fatalf("exclusions after an outside edit = %v", got)
 	}

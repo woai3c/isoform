@@ -198,6 +198,7 @@ func TestPrepareTodayChatDraftZeroCountsAndForgottenSource(t *testing.T) {
 		t.Fatalf("empty context draft: %+v, %v", draft, err)
 	}
 	writeTodayContextMemory(t, "forget", "# Atlas forgotten title\n\nAtlas forgotten body")
+	checkMemoryFolderNow(app)
 	ref := TodayChatContextRef{SourceKind: "memory", SourceID: "forget"}
 	if _, err := app.PrepareTodayChatDraft(ref); err != nil {
 		t.Fatal(err)
