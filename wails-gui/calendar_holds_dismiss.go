@@ -36,6 +36,9 @@ func (c *holdCoordinator) dismissOffer(thing HoldThing) (string, error) {
 	now := c.now()
 	id := uuid.NewString()
 	_, err := c.db.Exec(`INSERT INTO hold_offer_dismissals (id, source_kind, source_id, subject_key, local_day, dismissed_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(subject_key, local_day) DO UPDATE SET id=excluded.id, dismissed_at=excluded.dismissed_at`, id, thing.SourceKind, thing.SourceID, holdSubjectKey(thing), now.In(time.Local).Format(time.DateOnly), now.UnixMilli())
+	if err == nil {
+		c.changed("")
+	}
 	return id, err
 }
 
@@ -54,6 +57,7 @@ func (c *holdCoordinator) undoDismissOffer(id string) error {
 	if n != 1 {
 		return errors.New("dismissal can no longer be undone")
 	}
+	c.changed("")
 	return nil
 }
 

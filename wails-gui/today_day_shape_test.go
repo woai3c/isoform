@@ -188,6 +188,7 @@ func TestTodayDayShapeBindingAndPhoneContract(t *testing.T) {
 	day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 	ev := calendar.Event{ID: "meeting", Source: calendar.SourceEventKit, Title: "1:1 with Priya", Start: day.Add(14 * time.Hour), End: day.Add(15 * time.Hour), Attendees: []calendar.Attendee{{Name: "Priya"}}}
 	storeEvent(t, app.store, ev)
+	settleDayShape(t, app, day.Format("2006-01-02"))
 	desktop, err := app.GetTodayDayShape(day.Format("2006-01-02"))
 	if err != nil || len(desktop.Events) != 1 || !desktop.CalendarConnected {
 		t.Fatalf("binding=%+v %v", desktop, err)

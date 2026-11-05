@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 )
@@ -493,6 +494,7 @@ func (a *App) noticedOpenCommitmentTitles() map[string]bool {
 // saveNoticed keeps the checked suggestions from one summary generation;
 // a later generation for the date replaces them.
 func (a *App) saveNoticed(dateStr, language string, generation int, raws []noticedRaw) {
+	watch := a.noticedWriteWatch(dateStr, false)
 	items := make([]NoticedSuggestion, 0, len(raws))
 	self := a.activitySelfNames()
 	for _, raw := range raws {
@@ -535,7 +537,9 @@ func (a *App) saveNoticed(dateStr, language string, generation int, raws []notic
 		ON CONFLICT(date, language) DO UPDATE SET generation = excluded.generation, items = excluded.items, created_at = excluded.created_at`,
 		dateStr, normalizeSummaryLanguage(language), generation, string(raw), time.Now().UnixMilli()); err != nil {
 		log.Printf("[activity-noticed] saving suggestions for %s: %v", dateStr, err)
+		return
 	}
+	watch()
 }
 
 func (s *ActivityStore) noticedStored(dateStr, language string) ([]NoticedSuggestion, int, error) {
@@ -623,13 +627,21 @@ func (s *ActivityStore) dropNoticedForMoment(tx *sql.Tx, momentID string) error 
 // ── Bindings ──
 
 // GetDayNoticed returns the day's "Isoform noticed" suggestions, checked
-// against every rule now.
+// against every rule now. It stays a direct read: the result depends on
+// summaries, moments, follow-ups and rules that several stores write without
+// telling the page, so a cached copy could lag them. Writers that change the
+// result emit noticed:updated instead (see noticedWriteWatch).
 func (a *App) GetDayNoticed(dateStr string) (perfValue []NoticedSuggestion, perfErr error) {
 	defer logPageBinding("GetDayNoticed", time.Now(), &perfValue)
 	if a.activity == nil || a.activity.store == nil {
 		return []NoticedSuggestion{}, nil
 	}
-	language := a.currentUILanguage()
+	a.noticedShown.note(dateStr)
+	return a.loadDayNoticed(dateStr, a.currentUILanguage())
+}
+
+// loadDayNoticed checks the day's stored suggestions against every rule now.
+func (a *App) loadDayNoticed(dateStr, language string) ([]NoticedSuggestion, error) {
 	items, generation, err := a.activity.store.noticedStored(dateStr, language)
 	if err != nil {
 		return nil, err
@@ -646,6 +658,76 @@ func (a *App) GetDayNoticed(dateStr string) (perfValue []NoticedSuggestion, perf
 	}
 	a.secondPersonNoticed(checked)
 	return checked, nil
+}
+
+// noticedShownDays remembers the days the page has read, so a dismissal can
+// check every day that shows the same words.
+type noticedShownDays struct {
+	mu   sync.Mutex
+	days map[string]bool
+}
+
+func (s *noticedShownDays) note(dateStr string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.days == nil {
+		s.days = map[string]bool{}
+	}
+	s.days[dateStr] = true
+}
+
+// dates returns the days the page has read, plus dateStr.
+func (s *noticedShownDays) dates(dateStr string) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := []string{dateStr}
+	for day := range s.days {
+		if day != dateStr {
+			out = append(out, day)
+		}
+	}
+	return out
+}
+
+// noticedWriteWatch takes each affected day's suggestions before a write and
+// returns a func that checks them again after it. The func emits
+// noticed:updated for each day whose suggestions really changed. A dismissal
+// affects every day that shows the same words, so allDays checks every day the
+// page has read; otherwise only dateStr is checked.
+func (a *App) noticedWriteWatch(dateStr string, allDays bool) func() {
+	if a.activity == nil || a.activity.store == nil {
+		return func() {}
+	}
+	dates := []string{dateStr}
+	if allDays {
+		dates = a.noticedShown.dates(dateStr)
+	}
+	language := a.currentUILanguage()
+	before := a.noticedFingerprints(dates, language)
+	return func() {
+		after := a.noticedFingerprints(dates, language)
+		for _, date := range dates {
+			if before[date] != after[date] {
+				a.emitBrowserEvent("noticed:updated", map[string]string{"date": date})
+			}
+		}
+	}
+}
+
+// noticedFingerprints hashes each day's checked suggestions. A day that cannot
+// be read gets no fingerprint, so it never reads as a change.
+func (a *App) noticedFingerprints(dates []string, language string) map[string]string {
+	out := make(map[string]string, len(dates))
+	for _, date := range dates {
+		items, err := a.loadDayNoticed(date, language)
+		if err != nil {
+			continue
+		}
+		if fp, err := jsonFingerprint(items); err == nil {
+			out[date] = fp
+		}
+	}
+	return out
 }
 
 func (a *App) noticedByID(dateStr, id string) (NoticedSuggestion, error) {
@@ -671,7 +753,12 @@ func (a *App) DismissNoticed(dateStr, id string) error {
 	if err != nil {
 		return err
 	}
-	return a.activity.store.setNoticedDismissed(noticedDismissKeys(item), true)
+	watch := a.noticedWriteWatch(dateStr, true)
+	if err := a.activity.store.setNoticedDismissed(noticedDismissKeys(item), true); err != nil {
+		return err
+	}
+	watch()
+	return nil
 }
 
 // UndoDismissNoticed takes Not now back.
@@ -683,7 +770,12 @@ func (a *App) UndoDismissNoticed(dateStr, id string) error {
 	if err != nil {
 		return err
 	}
-	return a.activity.store.setNoticedDismissed(noticedDismissKeys(item), false)
+	watch := a.noticedWriteWatch(dateStr, true)
+	if err := a.activity.store.setNoticedDismissed(noticedDismissKeys(item), false); err != nil {
+		return err
+	}
+	watch()
+	return nil
 }
 
 func (s *ActivityStore) setNoticedDismissed(keys []string, on bool) error {
@@ -821,9 +913,11 @@ func (a *App) SaveNoticedRoutine(dateStr, id string, draft NoticedRoutineDraft) 
 	if err != nil {
 		return NoticedRoutineSaved{}, err
 	}
+	watch := a.noticedWriteWatch(dateStr, true)
 	if err := a.activity.store.setNoticedDismissed(noticedDismissKeys(item), true); err != nil {
 		log.Printf("[activity-noticed] marking a saved routine as handled: %v", err)
 	}
+	watch()
 	return saved, nil
 }
 

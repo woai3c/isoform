@@ -1,6 +1,6 @@
 import { resetMainChatHeldActions } from '@/lib/main-chat-held-action';
 import { pageQueryCache } from '@/lib/query-cache';
-import { resetPageQueries, TODAY_TOPICS_PENDING_RESYNC_MS } from '@/lib/page-queries';
+import { resetPageQueries } from '@/lib/page-queries';
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -1122,15 +1122,18 @@ describe("TodayPage main chat panel (Claude Design, 2026-10-22: never a drawer t
         expect(screen.queryByText("Atlas")).not.toBeInTheDocument();
     });
 
-    it.each(["event", "missed event"])("publishes first-run topics into the page, panel and cache after %s", async (publication) => {
+    // The "missed event" variant (a timed resync recovering a publication that
+    // preceded the listener) was removed 2026-11-04: Today reads topics on mount,
+    // on topics:updated and on show only.
+    it("publishes first-run topics into the page, panel and cache after the event", async () => {
         width(1200);
         const actual = await vi.importActual<typeof import("@/hooks/useTodayTopics")>("@/hooks/useTodayTopics");
         mockUseTodayTopics.mockImplementation(actual.useTodayTopics);
         pauseMocks.todayTopics.mockResolvedValue({ topics: [], refreshing: true, firstRun: true });
         render(<TodayPage handlers={handlers} />);
-        await act(async () => {});
+        // The topics' mount read follows the shared hook's 250 ms coalescing window.
+        await waitFor(() => expect(screen.getByTestId("today-topics-gathering")).toBeInTheDocument());
         expect(screen.queryByTestId("today-topics-empty")).not.toBeInTheDocument();
-        expect(screen.getByTestId("today-topics-gathering")).toBeInTheDocument();
         expect(within(panel()).queryByTestId("main-chat-panel-topics-refreshing")).not.toBeInTheDocument();
         await waitFor(() => expect(within(panel()).getByTestId("main-chat-panel-topics-refreshing")).toBeInTheDocument(), { timeout: 1500 });
         const editor = within(panel()).getByRole("textbox");
@@ -1144,20 +1147,12 @@ describe("TodayPage main chat panel (Claude Design, 2026-10-22: never a drawer t
         expect(within(panel()).getByTestId("main-chat-panel-topics-refreshing")).toBeInTheDocument();
         const published = { topics: [...projects, ...interests].slice(0, 12), refreshing: false, firstRun: false };
         pauseMocks.todayTopics.mockResolvedValue(published);
-        let clock: { mockRestore(): void } | undefined;
-        if (publication === "event") {
-            await act(async () => { pauseMocks.listeners.get("topics:updated")?.({}); });
-        } else {
-            // Snappy 1.0: no 2-second poll. A publication that happened before
-            // subscription is recovered by the 10-minute resync, on show.
-            clock = vi.spyOn(Date, "now").mockReturnValue(Date.now() + TODAY_TOPICS_PENDING_RESYNC_MS + 1);
-            await act(async () => { window.dispatchEvent(new Event("focus")); });
-        }
+        await act(async () => { pauseMocks.listeners.get("topics:updated")?.({}); });
         // At most six cards (today-review v1.1.4 #8).
         await waitFor(() => expect(screen.getAllByTestId("today-topic-card").map((card) => card.textContent)).toEqual(published.topics.slice(0, 6).map((topic) => expect.stringContaining(topic.name))));
-        clock?.mockRestore();
-        expect(pageQueryCache.peek("GetTodayTopics")).toEqual(published);
-        expect(screen.queryByTestId("today-topics-refreshing")).not.toBeInTheDocument();
+        // The read lands 250 ms after the event; the first six cards are the same, so wait for the cache.
+        await waitFor(() => expect(pageQueryCache.peek("GetTodayTopics")).toEqual(published));
+        await waitFor(() => expect(screen.queryByTestId("today-topics-refreshing")).not.toBeInTheDocument());
         expect(screen.queryByTestId("today-topics-loading")).not.toBeInTheDocument();
         expect(within(panel()).queryByTestId("main-chat-panel-topics-refreshing")).not.toBeInTheDocument();
         expect(within(panel()).getByRole("textbox")).toBe(editor);

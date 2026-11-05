@@ -859,7 +859,20 @@ func (s *AboutYouPortraitService) withSources(ctx context.Context, use func([]Me
 // is returned, and anything that fell below the bar is removed for good.
 func (a *App) GetAboutYouPortrait() (perfValue AboutYouPortrait, perfErr error) {
 	defer logPageBinding("GetAboutYouPortrait", time.Now(), &perfValue)
-	return a.portraitService().read()
+	value, err := a.aboutYouPortraitRefresher().Get()
+	return value, snapshotPendingIsEmpty(err)
+}
+
+func (a *App) aboutYouPortraitRefresher() *snapshotRefresher[AboutYouPortrait] {
+	return a.aboutYouSnapshots.get("", func() *snapshotRefresher[AboutYouPortrait] {
+		return newSnapshotRefresher(func() (AboutYouPortrait, error) {
+			return a.portraitService().read()
+		}, nil, func() {
+			if a.ctx != nil {
+				a.emitBrowserEvent(portraitEvent)
+			}
+		}, portraitReadMemoMaxAge).readAfterWrites().withStamp(a.portraitReadStamp)
+	})
 }
 
 func (a *App) portraitService() *AboutYouPortraitService {
@@ -1117,10 +1130,11 @@ func (a *App) portraitMemoryChanged() {
 	}
 }
 
+// emitPortraitUpdated is called by every portrait write. It no longer emits:
+// the snapshot refresh re-reads the portrait and emits portrait:updated only
+// when the value changed.
 func (a *App) emitPortraitUpdated() {
-	if a.ctx != nil {
-		a.emitBrowserEvent(portraitEvent)
-	}
+	a.aboutYouSnapshots.invalidateAll()
 }
 
 // portraitSources reads what pass 1 needs from each readable belief: its
@@ -2129,4 +2143,14 @@ func (a *App) MarkAboutYouPortraitSeen() error {
 		return nil
 	}
 	return writePortrait(path, doc)
+}
+
+// portraitReadStamp names what the portrait read depends on: the same key the
+// read's own memo uses. An empty key means the inputs are unknown.
+func (a *App) portraitReadStamp() string {
+	path, err := portraitPath()
+	if err != nil {
+		return ""
+	}
+	return a.portraitService().portraitReadKey(path)
 }

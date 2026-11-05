@@ -1,6 +1,21 @@
-import { GetTodayTopics, usePageQueryRefresh, PageEventsOn, TODAY_TOPICS_PENDING_RESYNC_MS, TODAY_TOPICS_TTL_MS } from '@/lib/page-queries';
+/*
+ * Fetch rule for Today's topics (Bo, 2026-11-04). No timer resyncs a missed publication.
+ * The Go side emits "topics:updated" on every publication and "topics:withdrawn" when
+ * topics are withdrawn. The hook reads GetTodayTopics:
+ *   - on mount: the hook registers its listeners and schedules the read in the same effect,
+ *     so a publication after this point is never missed; one before mount is already in
+ *     what the read fetches (the page-query bus drops the cached topics on every publication);
+ *   - on topics:updated and topics:withdrawn, once per coalesced burst (useChangeDrivenRead);
+ *   - once each time the window is shown (useChangeDrivenRead, and installPageQueryEvents
+ *     invalidates Today's reads on return);
+ *   - on a pin change (SIDEBAR_TOPICS_CHANGED) and on the privacy transitions below.
+ * GetTodayTopics keeps a cache lifetime (page-queries TODAY_TOPICS_TTL_MS, or the shorter
+ * TODAY_TOPICS_PENDING_RESYNC_MS while a rebuild is pending). A lifetime is not a poll: it
+ * only decides whether a mount or show read goes to the network.
+ */
+import { GetTodayTopics, PageEventsOn } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
-import { useBudgetedRefresh } from '@/lib/app-activity';
+import { useChangeDrivenRead } from '@/hooks/useChangeDrivenRead';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ListSidebarTopics, RefreshTodayTopics } from "@/lib/wails-shim-app";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
@@ -110,10 +125,9 @@ export function useTodayTopics(enabled: boolean) {
     const lastSuccessfulAt = useRef<number | null>(pageQueryCache.state('GetTodayTopics')?.at || null);
     const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
     const [status, setStatus] = useState<TodayTopicsStatus>(() => pageQueryCache.peek('GetTodayTopics') === undefined ? 'loading' : 'ready');
-    const [refreshInterval, setRefreshInterval] = useState<number | null>(() => pageQueryCache.peek<{ refreshIntervalMs?: number }>('GetTodayTopics')?.refreshIntervalMs ?? null);
     // Avoid dispatching even equal state after an unrelated parent/draft edit:
     // React may otherwise commit one bailout render before it can skip again.
-    const displayed = useRef({ topics, hasTopics, firstRun, refreshing, status, refreshInterval });
+    const displayed = useRef({ topics, hasTopics, firstRun, refreshing, status });
     // The latest read wins when two overlap (focus and a retry's event).
     const request = useRef(0);
 
@@ -124,7 +138,13 @@ export function useTodayTopics(enabled: boolean) {
             // The registry keeps the why rule (item 61): followed topics come
             // only with a reason, which Closed Eyes withholds, so Today shows
             // what it sends.
-            const response = await GetTodayTopics();
+            // A TTL-expired entry answers with its old value while the load runs
+            // (stale-while-revalidate). That load is the fresh read this hook needs,
+            // and nothing else re-reads it: the hook no longer subscribes to the bus.
+            const response = await GetTodayTopics().then(async (answered) => {
+                const load = pageQueryCache.state('GetTodayTopics')?.pending;
+                return load ? await (load as Promise<unknown>) : answered;
+            });
             const next = toTodayTopics(response);
             const nextFirstRun = !Array.isArray(response) && response?.firstRun === true;
             const pending = !Array.isArray(response) && response?.refreshing === true;
@@ -136,15 +156,13 @@ export function useTodayTopics(enabled: boolean) {
             const current = displayed.current;
             const nextTopics = pending && next.length === 0 && !clear ? current.topics : reconcileTodayTopics(current.topics, next);
             const nextHasTopics = pending && !clear ? current.hasTopics || known : known;
-            const nextInterval = !Array.isArray(response) && response?.refreshIntervalMs > 0 ? response.refreshIntervalMs : current.refreshInterval;
             // A second read can complete before React renders the first one.
             // Compare against the latest queued display as well as committed state.
-            displayed.current = { topics: nextTopics, hasTopics: nextHasTopics, firstRun: nextFirstRun, refreshing: pending, status: "ready", refreshInterval: nextInterval };
+            displayed.current = { topics: nextTopics, hasTopics: nextHasTopics, firstRun: nextFirstRun, refreshing: pending, status: "ready" };
             if (nextTopics !== current.topics) setTopics(nextTopics);
             if (nextHasTopics !== current.hasTopics) setHasTopics(nextHasTopics);
             if (nextFirstRun !== current.firstRun) setFirstRun(nextFirstRun);
             if (pending !== current.refreshing) setRefreshing(pending);
-            if (nextInterval !== current.refreshInterval) setRefreshInterval(nextInterval);
             if (current.status !== "ready") setStatus("ready");
         } catch (error) {
             if (id !== request.current) return;
@@ -157,21 +175,14 @@ export function useTodayTopics(enabled: boolean) {
         }
     }, [enabled]);
 
-    usePageQueryRefresh(['GetTodayTopics'], refresh, enabled);
-
-    // "topics:updated" drives the grid; these are only safety resyncs, never
-    // while the window is hidden or the Mac locked. Settled topics follow the
-    // backend's collection interval (2 hours of work), never under 10 minutes.
-    useBudgetedRefresh(() => pageQueryCache.invalidate(['GetTodayTopics'], false),
-        Math.max(refreshInterval ?? TODAY_TOPICS_TTL_MS, TODAY_TOPICS_PENDING_RESYNC_MS), enabled);
-    // A pending rebuild keeps the cards and the spinning icon; its publication
-    // replaces them in place. The resync covers a publication that preceded
-    // the listener or a bridge that reconnected.
-    useBudgetedRefresh(() => void refresh(), TODAY_TOPICS_PENDING_RESYNC_MS, enabled && refreshing);
+    // The reads: mount, each topics:updated or topics:withdrawn (coalesced by the
+    // shared hook), and once each time the window is shown. A pending rebuild keeps
+    // the cards and the spinning icon until its publication replaces them.
+    useChangeDrivenRead(enabled, [TOPICS_UPDATED_EVENT, 'topics:withdrawn'], refresh);
 
     useEffect(() => {
-        // Withdraw local copies as well as the cache before a gated read
-        // completes. Hidden pages must also forget pre-transition topics.
+        // Withdraw local copies as well as the cache at once. Hidden pages must
+        // also forget pre-transition topics. A withdrawal's read is the hook's.
         const clear = () => {
             ++request.current;
             setRefreshFailure(false);
@@ -181,23 +192,25 @@ export function useTodayTopics(enabled: boolean) {
             setTopics([]);
             setHasTopics(false);
             setRefreshing(true);
-            void refresh();
         };
-        const off = ['topics:withdrawn', 'memory:updated', 'closed-eyes:changed', 'background-listening:changed', 'permissions:changed', 'sensitive-apps:updated']
-            .map((event) => PageEventsOn(event, clear));
-        return () => off.forEach((stop) => stop());
+        const offWithdrawn = PageEventsOn('topics:withdrawn', clear);
+        // Privacy transitions also read at once, so nothing pre-transition is shown.
+        const offPrivacy = ['memory:updated', 'closed-eyes:changed', 'background-listening:changed', 'permissions:changed', 'sensitive-apps:updated']
+            .map((event) => PageEventsOn(event, () => { clear(); void refresh(); }));
+        return () => {
+            offWithdrawn();
+            offPrivacy.forEach((stop) => stop());
+        };
     }, [refresh]);
 
     useEffect(() => {
-        // Focus paints from the cache; the resyncs above catch up only what is
-        // past its budget.
-        void refresh();
-        window.addEventListener(SIDEBAR_TOPICS_CHANGED, refresh);
-        const offUpdated = PageEventsOn(TOPICS_UPDATED_EVENT, refresh);
-        return () => {
-            window.removeEventListener(SIDEBAR_TOPICS_CHANGED, refresh);
-            offUpdated();
+        // A pin change re-reads at once; the cache entry goes first so the read is fresh.
+        const onSidebarChanged = () => {
+            pageQueryCache.invalidate(['GetTodayTopics'], false);
+            void refresh();
         };
+        window.addEventListener(SIDEBAR_TOPICS_CHANGED, onSidebarChanged);
+        return () => window.removeEventListener(SIDEBAR_TOPICS_CHANGED, onSidebarChanged);
     }, [refresh]);
 
     const refreshExplicitly = useCallback(async () => {

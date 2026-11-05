@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetPageQueries } from "@/lib/page-queries";
 import type { TodayBeforeYouTalk } from "@/lib/wails-shim-app";
 import { useTodayBeforeYouTalk } from "./useTodayBeforeYouTalk";
+import { CHANGE_READ_COALESCE_MS } from "./useChangeDrivenRead";
 
 const runtime = vi.hoisted(() => ({ listeners: new Map<string, () => unknown>() }));
 vi.mock("../../wailsjs/runtime/runtime", () => ({
@@ -49,15 +50,29 @@ describe("useTodayBeforeYouTalk", () => {
         await waitFor(() => expect(hook.result.current.card).toBeNull());
     });
 
-    it("removes the card on the timer after its meeting ends", async () => {
+    // Was a 30 s poll that removed the card at the meeting's end (2026-11-04):
+    // the meeting-prep boundary is now a backend event, so there is no timer.
+    it("removes the card when the backend announces the meeting prep boundary, not on a timer", async () => {
         vi.useFakeTimers();
         const get = vi.fn().mockResolvedValueOnce(meeting).mockResolvedValue(null);
         (window as any).go = { main: { App: { GetTodayBeforeYouTalk: get } } };
         const hook = renderHook(() => useTodayBeforeYouTalk(true));
-        await act(async () => { await Promise.resolve(); });
+        // The mount read is one coalesced read after mount.
+        await act(async () => {
+            vi.advanceTimersByTime(CHANGE_READ_COALESCE_MS);
+            await Promise.resolve();
+            await Promise.resolve();
+        });
         expect(hook.result.current.card?.meetingId).toBe("next");
         await act(async () => {
             vi.advanceTimersByTime(30_000);
+            await Promise.resolve();
+        });
+        expect(get).toHaveBeenCalledTimes(1);
+        await act(async () => {
+            runtime.listeners.get("today-before-you-talk:updated")?.();
+            vi.advanceTimersByTime(CHANGE_READ_COALESCE_MS);
+            await Promise.resolve();
             await Promise.resolve();
         });
         expect(hook.result.current.card).toBeNull();

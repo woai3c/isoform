@@ -670,3 +670,117 @@ func TestHoldStartingReleasesOfferWithoutRemovingEvent(t *testing.T) {
 		t.Fatalf("saved=%d removed=%d", len(store.saved), len(store.removed))
 	}
 }
+
+// holds:updated is announced once per persisted transition. A call that
+// changes nothing, such as a repeated run or a reconcile of an unchanged
+// event, must stay silent so the page does not re-read for nothing.
+func TestHoldTransitionsEmitOncePerChange(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateCalendarHolds(tx); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateCalendarHoldActiveSource(tx); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateCalendarHoldDismissals(tx); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 2, 9, 0, 0, 0, time.UTC)
+	store := &fakeHoldEventStore{calendars: []holdCalendar{{ID: "work"}}}
+	var changes []string
+	coordinator := &holdCoordinator{db: db, calendar: store, now: func() time.Time { return now }, verifyCoverage: func(holdEvent) error { return nil }, onChange: func(id string) { changes = append(changes, id) }}
+	count := func(id string) int {
+		n := 0
+		for _, got := range changes {
+			if got == id {
+				n++
+			}
+		}
+		return n
+	}
+	record := holdRecord{ID: "h1", CalendarID: "work", Title: "Plan", Start: now.Add(time.Hour), End: now.Add(2 * time.Hour), SourceKind: "task", SourceID: "t1"}
+
+	// Begin persists a pending write: one transition.
+	if err := coordinator.begin(record); err != nil {
+		t.Fatal(err)
+	}
+	if got := count("h1"); got != 1 {
+		t.Fatalf("begin emitted %d times, want 1", got)
+	}
+	// Undo inside the five-second window is one transition; a second Undo is refused and silent.
+	if err := coordinator.undo("h1"); err != nil {
+		t.Fatal(err)
+	}
+	if got := count("h1"); got != 2 {
+		t.Fatalf("undo emitted %d times in total, want 2", got)
+	}
+	if err := coordinator.undo("h1"); !errors.Is(err, errHoldUnavailable) {
+		t.Fatalf("second undo = %v, want errHoldUnavailable", err)
+	}
+	if got := count("h1"); got != 2 {
+		t.Fatalf("refused undo emitted; total %d, want 2", got)
+	}
+
+	// A second hold is claimed (checking) and written (held): two transitions.
+	record.ID = "h2"
+	if err := coordinator.begin(record); err != nil {
+		t.Fatal(err)
+	}
+	now = now.Add(6 * time.Second)
+	if err := coordinator.runDue(); err != nil {
+		t.Fatal(err)
+	}
+	if got := count("h2"); got != 3 {
+		t.Fatalf("begin plus claim plus write emitted %d, want 3", got)
+	}
+	// Nothing is pending any more, so a repeated run is a no-op.
+	if err := coordinator.runDue(); err != nil {
+		t.Fatal(err)
+	}
+	if got := count("h2"); got != 3 {
+		t.Fatalf("repeated runDue emitted; total %d, want 3", got)
+	}
+
+	// Reconcile with an unchanged Calendar event is silent.
+	store.snapshots["fake-id"] = &holdEventSnapshot{EventID: "fake-id", CalendarID: "work", Title: record.Title, Start: record.Start.Format(time.RFC3339), End: record.End.Format(time.RFC3339)}
+	if err := coordinator.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := count("h2"); got != 3 {
+		t.Fatalf("unchanged reconcile emitted; total %d, want 3", got)
+	}
+	// The event vanished from Calendar: one transition to gone.
+	delete(store.snapshots, "fake-id")
+	if err := coordinator.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := count("h2"); got != 4 {
+		t.Fatalf("gone reconcile emitted; total %d, want 4", got)
+	}
+
+	// Dismissing an offer changes the list without naming one hold.
+	dismissID, err := coordinator.dismissOffer(HoldThing{SourceKind: "task", SourceID: "t9", Title: "Plan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := count(""); got != 1 {
+		t.Fatalf("dismiss emitted %d times, want 1", got)
+	}
+	if err := coordinator.undoDismissOffer(dismissID); err != nil {
+		t.Fatal(err)
+	}
+	if got := count(""); got != 2 {
+		t.Fatalf("undo dismiss emitted %d times in total, want 2", got)
+	}
+}

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GetTodayPermissionStates, OpenPermissionSettings, RecordTodayAction, RequestTodayPermission, type TodayPermissionStates } from "@/lib/wails-shim-app";
-import { EventsOn } from "../../../wailsjs/runtime/runtime";
+import { useChangeDrivenRead } from "@/hooks/useChangeDrivenRead";
 import { Button } from "@/components/ui/button";
 
 type PermissionKey = "screen_recording" | "calendars";
@@ -16,12 +16,9 @@ export function TodayPermissionControl({ permission, action, explain = false, bo
         try { setStates(await GetTodayPermissionStates()); setFailed(false); }
         catch { setStates(null); setFailed(true); }
     }, []);
-    useEffect(() => {
-        void refresh();
-        const off = EventsOn("permissions:changed", () => void refresh());
-        window.addEventListener("focus", refresh);
-        return () => { off(); window.removeEventListener("focus", refresh); };
-    }, [refresh]);
+    // One read on mount, one per permissions:changed, and one when the window is
+    // shown again (the shared rule; no focus listener of its own).
+    useChangeDrivenRead(true, ["permissions:changed"], refresh);
     const state = permission === "screen_recording" ? states?.screenRecording : states?.calendars;
     const act = async () => {
         if (busy) return;

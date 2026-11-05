@@ -1,4 +1,4 @@
-import { GetGoalCheckIn, usePageQueryRefresh, PageEventsOn as EventsOn } from '@/lib/page-queries';
+import { GetGoalCheckIn, usePageQueryRefresh } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type GoalCheckInView } from "@/lib/wails-shim-app";
@@ -24,15 +24,10 @@ export function useGoalCheckIn(enabled: boolean): { checkIn: GoalCheckInView | n
     useEffect(() => {
         if (!enabled) return;
         refresh();
-        const offGoals = EventsOn("agency:updated", refresh);
-        const offPaused = EventsOn("closed-eyes:changed", refresh);
-        const onFocus = () => { pageQueryCache.invalidate(['GetGoalCheckIn']); refresh(); };
-        window.addEventListener("focus", onFocus);
+        // agency:updated and closed-eyes:changed re-read through the page-query
+        // bus; showing the window invalidates Today's reads once (no focus read).
         return () => {
             version.current += 1;
-            offGoals();
-            offPaused();
-            window.removeEventListener("focus", onFocus);
         };
     }, [enabled, refresh]);
     return { checkIn: enabled ? checkIn : null, refresh: () => { pageQueryCache.invalidate(['GetGoalCheckIn']); return refresh(); } };

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Copy, Loader2, RefreshCw } from "lucide-react";
 import { activeInterval } from "@/lib/app-activity";
+import { useChangeDrivenRead } from "@/hooks/useChangeDrivenRead";
 import { QRCodeSVG } from "qrcode.react";
 import { SettingsFailureLine } from "@/components/settings/settings-failure";
 import { useTranslation } from "react-i18next";
@@ -44,7 +45,6 @@ import {
 import { Switch } from "./ui/switch";
 
 const STATUS_POLL_MS = 15_000;
-const SCHEDULE_POLL_MS = 60_000;
 const CODE_TICK_MS = 1_000;
 const IDLE_TICK_MS = 30_000;
 // Go zero time ("0001-01-01T00:00:00Z") marks "never"; anything before 2000 is treated as unset.
@@ -427,12 +427,13 @@ export function MobileConnectionSettings({
         [keepAwake, setError, t],
     );
 
+    // The schedule is read by useChangeDrivenRead below (mount, mobile:updated,
+    // each time the window is shown, and Go's time-boundary mobile:updated), not here.
     const refreshAll = useCallback(() => {
         void refreshStatus();
-        void refreshSchedule();
         void refreshHealth();
         void refreshKeepAwake();
-    }, [refreshHealth, refreshKeepAwake, refreshSchedule, refreshStatus]);
+    }, [refreshHealth, refreshKeepAwake, refreshStatus]);
 
     useEffect(() => {
         mounted.current = true;
@@ -440,21 +441,18 @@ export function MobileConnectionSettings({
         const unsubscribe = EventsOn("mobile:updated", () => refreshAll());
         const onFocus = () => refreshAll();
         window.addEventListener("focus", onFocus);
-        // Activity can defer a prediction without a mobile event. Keep the
-        // visible schedule current through the same versioned read as focus.
-        // The timer stops while the window is hidden or the Mac locked.
-        const stopSchedulePoll = activeInterval(() => {
-            if (document.visibilityState === "visible" && document.hasFocus()) void refreshSchedule();
-        }, SCHEDULE_POLL_MS);
         return () => {
             mounted.current = false;
             statusVersion.current += 1;
             scheduleVersion.current += 1;
             window.removeEventListener("focus", onFocus);
-            stopSchedulePoll();
             unsubscribe();
         };
-    }, [refreshAll, refreshSchedule]);
+    }, [refreshAll]);
+
+    // Activity can defer a prediction without a mobile event; Go emits
+    // mobile:updated at the prediction's time boundary. No interval.
+    useChangeDrivenRead(true, ["mobile:updated"], refreshSchedule);
 
     const connectionCode = status?.connectionCode ?? "";
     const hasCode = connectionCode !== "";

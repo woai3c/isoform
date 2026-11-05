@@ -234,6 +234,10 @@ func (a *App) clearPageSnapshots() {
 	if a == nil {
 		return
 	}
+	// Today read snapshots drop their values, so no pre-withdrawal read is served.
+	a.mobileHealthSnapshots.dropAll()
+	a.aboutYouSnapshots.dropAll()
+	a.dayShapeSnapshots.dropAll()
 	if bridge := a.mobileBridgeForUse(); bridge != nil {
 		bridge.invalidateToday()
 	}

@@ -123,9 +123,19 @@ const schedule: MobileBriefSchedule = {
     feedUrl: "",
 };
 
+/** Calls every mobile:updated listener, as the runtime does on the event. */
+function fireMobileUpdated() {
+    for (const [name, handler] of mocks.eventsOn.mock.calls) {
+        if (name === "mobile:updated") (handler as () => void)();
+    }
+}
+
 async function renderReady() {
     const view = render(<MobileConnectionSettings />);
+    // The schedule's mount read follows the shared hook's 250 ms coalescing window.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
     await waitFor(() => {
+        expect(mocks.getSchedule).toHaveBeenCalled();
         expect(screen.queryAllByText(/Checking phone connections|Loading brief settings/)).toHaveLength(0);
     });
     return view;
@@ -715,7 +725,7 @@ describe("MobileConnectionSettings component", () => {
         expect(screen.getByText("The Morning brief has failed 3 times and is being retried.")).toBeInTheDocument();
     });
 
-    it("refreshes deferred and skipped predictions every minute without losing a half-typed time", async () => {
+    it("refreshes deferred and skipped predictions on mobile:updated without losing a half-typed time, and never on a timer", async () => {
         vi.useFakeTimers();
         const focused = vi.spyOn(document, "hasFocus").mockReturnValue(true);
         const visible = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
@@ -725,22 +735,23 @@ describe("MobileConnectionSettings component", () => {
         };
         mocks.getSchedule.mockResolvedValue(current);
         try {
-            await act(async () => { render(<MobileConnectionSettings />); });
+            render(<MobileConnectionSettings />);
+            await act(async () => { await vi.advanceTimersByTimeAsync(300); });
             fireEvent.change(screen.getByLabelText("Evening"), { target: { value: "" } });
             const deferredAt = "2026-10-18T18:30:00Z";
             mocks.getSchedule.mockResolvedValue({
                 ...current, nextPredictedAt: deferredAt, timingReason: "waiting_for_activity",
             });
-            await act(async () => { await vi.advanceTimersByTimeAsync(59_000); });
+            await act(async () => { await vi.advanceTimersByTimeAsync(120_000); });
             expect(mocks.getSchedule).toHaveBeenCalledTimes(1);
-            await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+            await act(async () => { fireMobileUpdated(); await vi.advanceTimersByTimeAsync(300); });
             expect(mocks.getSchedule).toHaveBeenCalledTimes(2);
             const time = new Date(deferredAt).toLocaleTimeString("en", { hour: "numeric", minute: "2-digit" });
             expect(screen.getByText(/^Next brief:/)).toHaveTextContent(time);
             expect(screen.getByText(/^Next brief:/)).toHaveTextContent("waiting for work activity to settle");
             expect(screen.getByText("Enter a time such as 07:00.")).toBeInTheDocument();
             mocks.getSchedule.mockResolvedValue({ ...current, nextPredictedAt: "", timingReason: "no_window" });
-            await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+            await act(async () => { fireMobileUpdated(); await vi.advanceTimersByTimeAsync(300); });
             expect(screen.getByText(/^No eligible brief time:/)).toBeInTheDocument();
             expect(mocks.setSchedule).not.toHaveBeenCalled();
         } finally {
@@ -749,33 +760,30 @@ describe("MobileConnectionSettings component", () => {
         }
     });
 
-    it("polls the schedule only while focused and visible and stops on unmount", async () => {
+    it("reads the schedule when the window is shown, never on a timer, and stops on unmount", async () => {
         vi.useFakeTimers();
-        const focused = vi.spyOn(document, "hasFocus").mockReturnValue(false);
         const visible = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
         try {
             const view = render(<MobileConnectionSettings />);
-            await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+            await act(async () => { await vi.advanceTimersByTimeAsync(300); });
             expect(mocks.getSchedule).toHaveBeenCalledTimes(1);
-            focused.mockReturnValue(true);
+            await act(async () => { await vi.advanceTimersByTimeAsync(180_000); });
+            expect(mocks.getSchedule).toHaveBeenCalledTimes(1);
             visible.mockReturnValue("hidden");
-            await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
-            expect(mocks.getSchedule).toHaveBeenCalledTimes(1);
+            await act(async () => { document.dispatchEvent(new Event("visibilitychange")); await vi.advanceTimersByTimeAsync(300); });
             visible.mockReturnValue("visible");
-            await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+            await act(async () => { document.dispatchEvent(new Event("visibilitychange")); await vi.advanceTimersByTimeAsync(300); });
             expect(mocks.getSchedule).toHaveBeenCalledTimes(2);
             view.unmount();
-            await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+            await act(async () => { await vi.advanceTimersByTimeAsync(180_000); });
             expect(mocks.getSchedule).toHaveBeenCalledTimes(2);
         } finally {
-            focused.mockRestore();
             visible.mockRestore();
         }
     });
 
-    it("pauses polling during a save and ignores a poll response that predates the save", async () => {
+    it("ignores a schedule read that predates a save, and keeps the saved switch", async () => {
         vi.useFakeTimers();
-        const focused = vi.spyOn(document, "hasFocus").mockReturnValue(true);
         const visible = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
         const current = { ...schedule, enabled: true, adaptiveTiming: false };
         let resolvePoll!: (value: MobileBriefSchedule) => void;
@@ -787,18 +795,20 @@ describe("MobileConnectionSettings component", () => {
             () => new Promise<MobileBriefSchedule>((resolve) => { resolveSave = resolve; }),
         );
         try {
-            await act(async () => { render(<MobileConnectionSettings />); });
-            await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+            render(<MobileConnectionSettings />);
+            await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+            expect(mocks.getSchedule).toHaveBeenCalledTimes(1);
+            await act(async () => { fireMobileUpdated(); await vi.advanceTimersByTimeAsync(300); });
             expect(mocks.getSchedule).toHaveBeenCalledTimes(2);
+            // The read is still out when the save starts; a timer-free app sends no second read.
             fireEvent.click(screen.getByRole("switch", { name: "Adaptive timing" }));
-            await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+            await act(async () => { await vi.advanceTimersByTimeAsync(180_000); });
             expect(mocks.getSchedule).toHaveBeenCalledTimes(2);
             await act(async () => { resolveSave({ ...current, adaptiveTiming: true }); });
             await act(async () => { resolvePoll(current); });
             expect(screen.getByRole("switch", { name: "Adaptive timing" })).toBeChecked();
             expect(mocks.setSchedule).toHaveBeenCalledTimes(1);
         } finally {
-            focused.mockRestore();
             visible.mockRestore();
         }
     });
@@ -881,19 +891,16 @@ describe("MobileConnectionSettings component", () => {
         const unsubscribe = vi.fn();
         mocks.eventsOn.mockReturnValue(unsubscribe);
         const view = await renderReady();
-        const listener = mocks.eventsOn.mock.calls.find(([name]) => name === "mobile:updated")?.[1] as
-            | (() => void)
-            | undefined;
-        expect(listener).toBeDefined();
+        expect(mocks.eventsOn.mock.calls.some(([name]) => name === "mobile:updated")).toBe(true);
         await act(async () => {
-            listener?.();
+            fireMobileUpdated();
         });
         await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(2));
-        expect(mocks.getSchedule).toHaveBeenCalledTimes(2);
+        await waitFor(() => expect(mocks.getSchedule).toHaveBeenCalledTimes(2));
         fireEvent(window, new Event("focus"));
         await waitFor(() => expect(mocks.getStatus).toHaveBeenCalledTimes(3));
         view.unmount();
-        expect(unsubscribe).toHaveBeenCalledTimes(1);
+        expect(unsubscribe).toHaveBeenCalled();
     });
 
     it("polls status every 15 seconds only while an invitation is displayed", async () => {

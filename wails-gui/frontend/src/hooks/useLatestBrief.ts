@@ -118,11 +118,7 @@ export function useLatestBrief(enabled: boolean, briefId?: string, requestNonce?
             EventsOn("handoff:updated", refresh),
             EventsOn("insight:saved", refresh),
             EventsOn("memory:updated", refresh),
-            EventsOn("activity:summary-ready", refresh),
             EventsOn("deliverables:updated", refresh),
-            // A goal or follow-up added or moved (Activity's Add follow-up,
-            // the main chat's goal tools) changes "What needs your attention".
-            EventsOn("agency:updated", refresh),
         ];
         return () => {
             version.current += 1;

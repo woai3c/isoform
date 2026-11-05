@@ -1,4 +1,4 @@
-import { GetEngagementWeekSummary, GetMobileBriefHealth, usePageQueryRefresh, PageEventsOn as EventsOn } from '@/lib/page-queries';
+import { GetEngagementWeekSummary, GetMobileBriefHealth, usePageQueryRefresh } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -47,10 +47,9 @@ export function useTodayStatus(enabled: boolean): TodayStatusData {
     useEffect(() => {
         if (!enabled) return;
         refresh();
-        const unsubscribe = EventsOn("mobile:updated", refresh);
+        // mobile:updated re-reads both halves through the page-query bus (usePageQueryRefresh above).
         return () => {
             version.current += 1;
-            unsubscribe();
         };
     }, [enabled, refresh]);
 

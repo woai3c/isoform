@@ -23,16 +23,12 @@ export function useObservationPaused(): boolean | null {
                 .catch(() => {});
         };
         reload();
+        // Showing the window invalidates Today's reads (page-queries), which covers
+        // this one; focus alone does not re-read it.
         const off = EventsOn(CLOSED_EYES_CHANGED_EVENT, (next: unknown) => setPaused(Boolean(next)));
-        const onFocus = () => {
-            pageQueryCache.invalidate(['IsClosedEyesModeEnabled']);
-            reload();
-        };
-        window.addEventListener("focus", onFocus);
         return () => {
             alive = false;
             off();
-            window.removeEventListener("focus", onFocus);
         };
     }, []);
     return paused;

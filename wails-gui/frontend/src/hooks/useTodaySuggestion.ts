@@ -1,4 +1,4 @@
-import { GetTodaySuggestion, usePageQueryRefresh, PageEventsOn as EventsOn } from '@/lib/page-queries';
+import { GetTodaySuggestion, usePageQueryRefresh } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -42,10 +42,9 @@ export function useTodaySuggestion(enabled: boolean): UseTodaySuggestionResult {
     useEffect(() => {
         if (!enabled) return;
         refresh();
-        const unsubscribe = EventsOn("initiative:updated", refresh);
+        // initiative:updated re-reads through the page-query bus (usePageQueryRefresh above).
         return () => {
             version.current += 1;
-            unsubscribe();
         };
     }, [enabled, refresh]);
 

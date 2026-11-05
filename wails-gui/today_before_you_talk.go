@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"sync"
 	"time"
 
 	"wails-gui/internal/calendar"
@@ -300,4 +301,108 @@ func (a *App) DismissTodayBeforeYouTalk(meetingID string) error {
 		return errors.New("a meeting is required")
 	}
 	return a.store.SetUIState(context.Background(), todayBeforeYouTalkDismissedPrefix+meetingID, "true")
+}
+
+// todayBeforeYouTalkEvent tells the page that the meeting-prep card may have
+// come due. It fires once per boundary, never on a ticker.
+const todayBeforeYouTalkEvent = "today-before-you-talk:updated"
+
+// boundaryTimer owns one timer for the next boundary of a time-driven view.
+// Each change re-arms it. A new arm replaces the old timer, and a timer that
+// fires after being replaced does nothing. Every such view (Before you talk,
+// the brief schedule) keeps its own instance.
+type boundaryTimer struct {
+	// run serializes compute-and-arm, so the last computed state wins.
+	run   sync.Mutex
+	mu    sync.Mutex
+	seq   uint64
+	timer *time.Timer
+}
+
+func (b *boundaryTimer) arm(at time.Time, fire func()) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.seq++
+	if b.timer != nil {
+		b.timer.Stop()
+		b.timer = nil
+	}
+	if at.IsZero() {
+		return
+	}
+	seq := b.seq
+	b.timer = time.AfterFunc(time.Until(at), func() {
+		b.mu.Lock()
+		current := b.seq == seq
+		if current {
+			b.timer = nil
+		}
+		b.mu.Unlock()
+		if current {
+			fire()
+		}
+	})
+}
+
+// nextTodayBeforeYouTalkBoundary returns the earliest moment after now when a
+// meeting that the card could offer enters its prep window: start minus
+// todayBeforeYouTalkWindow. Meetings whose card has already been offered have
+// a boundary at or before now and are skipped.
+func nextTodayBeforeYouTalkBoundary(rows []storage.CalendarEventRow, now time.Time) (time.Time, bool) {
+	var next time.Time
+	found := false
+	for _, event := range rows {
+		if event.AllDay || event.DeletedAt != 0 || event.Status == "canceled" || event.MyStatus == calendar.StatusDeclined || event.EndAt <= event.StartAt || !calendarEventFromRow(event).Busy() {
+			continue
+		}
+		if todayBeforeYouTalkPerson(event) == "" {
+			continue
+		}
+		at := time.UnixMilli(event.StartAt).Add(-todayBeforeYouTalkWindow)
+		if !at.After(now) {
+			continue
+		}
+		if !found || at.Before(next) {
+			next, found = at, true
+		}
+	}
+	return next, found
+}
+
+// armTodayBeforeYouTalkBoundary re-reads the calendar and arms the timer for
+// the next boundary, or cancels it when none is in range. It runs off the
+// request path, after each calendar change and after each boundary fires.
+func (a *App) armTodayBeforeYouTalkBoundary() {
+	a.armTodayBeforeYouTalkBoundaryAfter(time.Time{})
+}
+
+// armTodayBeforeYouTalkBoundaryAfter treats at as the earliest possible now,
+// so a timer that fires a hair early (wall clock vs monotonic) cannot
+// re-arm the same boundary.
+func (a *App) armTodayBeforeYouTalkBoundaryAfter(at time.Time) {
+	if a == nil || a.store == nil {
+		return
+	}
+	boundary := &a.beforeYouTalkBoundary
+	boundary.run.Lock()
+	defer boundary.run.Unlock()
+	now := time.Now()
+	if now.Before(at) {
+		now = at
+	}
+	// One day ahead covers the next card the page would show today.
+	rows, err := a.store.ListCalendarEvents(context.Background(), now.UnixMilli(), now.Add(todayBeforeYouTalkWindow+24*time.Hour).UnixMilli(), false)
+	if err != nil {
+		boundary.arm(time.Time{}, nil)
+		return
+	}
+	next, ok := nextTodayBeforeYouTalkBoundary(rows, now)
+	if !ok {
+		boundary.arm(time.Time{}, nil)
+		return
+	}
+	boundary.arm(next, func() {
+		a.emitBrowserEvent(todayBeforeYouTalkEvent)
+		a.armTodayBeforeYouTalkBoundaryAfter(next)
+	})
 }

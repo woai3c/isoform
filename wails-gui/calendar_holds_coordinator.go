@@ -18,6 +18,18 @@ type holdCoordinator struct {
 	now            func() time.Time
 	verifyCoverage func(holdEvent) error
 	onOutcome      func(sourceKind, outcome, reason string, elapsed time.Duration)
+	// onChange hears each persisted hold transition. id is empty for a change
+	// that is not about one hold, such as an offer dismissal.
+	onChange func(id string)
+}
+
+// changed announces one persisted transition. Call it after the row's new
+// state is written, once per transition, and never for a write that changed
+// nothing.
+func (c *holdCoordinator) changed(id string) {
+	if c.onChange != nil {
+		c.onChange(id)
+	}
 }
 
 type holdRecord struct {
@@ -117,6 +129,9 @@ func (c *holdCoordinator) begin(h holdRecord) error {
 		return err
 	}
 	_, err := c.db.Exec(`INSERT INTO holds (id, calendar_id, title, start, end, source_kind, source_id, subject_key, state, created_at, write_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending_write', ?, ?)`, h.ID, h.CalendarID, h.Title, h.Start.UnixMilli(), h.End.UnixMilli(), h.SourceKind, h.SourceID, holdSubjectKey(HoldThing{SourceKind: h.SourceKind, SourceID: h.SourceID}), now.UnixMilli(), now.Add(5*time.Second).UnixMilli())
+	if err == nil {
+		c.changed(h.ID)
+	}
 	return err
 }
 
@@ -139,6 +154,7 @@ func (c *holdCoordinator) undo(id string) error {
 	if n != 1 {
 		return errHoldUnavailable
 	}
+	c.changed(id)
 	c.report(h, "undone", "")
 	return nil
 }
@@ -199,11 +215,13 @@ func (c *holdCoordinator) recoverWrites() error {
 		if len(matches) == 1 {
 			_, err = c.db.Exec(`UPDATE holds SET state = 'held', event_identifier = ?, external_identifier = ?, write_after = 0, removed_at = 0 WHERE id = ? AND state = 'checking'`, matches[0].EventIdentifier, matches[0].ExternalIdentifier, id)
 			if err == nil {
+				c.changed(id)
 				c.report(h, "held", "")
 			}
 		} else {
 			_, err = c.db.Exec(`UPDATE holds SET state = 'failed', failure_reason = 'unconfirmed' WHERE id = ? AND state = 'checking'`, id)
 			if err == nil {
+				c.changed(id)
 				c.report(h, "failed", "write_failed")
 			}
 		}
@@ -260,6 +278,7 @@ func (c *holdCoordinator) runDue() error {
 			if _, updateErr := c.db.Exec(`UPDATE holds SET state = 'failed', failure_reason = ? WHERE id = ? AND state = 'pending_write'`, reason, id); updateErr != nil {
 				return updateErr
 			}
+			c.changed(id)
 			c.report(h, "failed", reason)
 			continue
 		}
@@ -276,6 +295,7 @@ func (c *holdCoordinator) runDue() error {
 		if claimed != 1 {
 			continue
 		}
+		c.changed(id)
 		identity, err := c.saveWithRetry(h.event())
 		if err != nil || identity.EventIdentifier == "" {
 			// Preserve the in-flight state if a write may have succeeded.
@@ -287,6 +307,7 @@ func (c *holdCoordinator) runDue() error {
 				if _, updateErr := c.db.Exec(`UPDATE holds SET state = 'failed', failure_reason = ? WHERE id = ? AND state = 'checking'`, reason, id); updateErr != nil {
 					return updateErr
 				}
+				c.changed(id)
 			}
 			c.report(h, "failed", "write_failed")
 			continue
@@ -294,6 +315,7 @@ func (c *holdCoordinator) runDue() error {
 		if _, err := c.db.Exec(`UPDATE holds SET state = 'held', event_identifier = ?, external_identifier = ?, write_after = 0 WHERE id = ? AND state = 'checking'`, identity.EventIdentifier, identity.ExternalIdentifier, id); err != nil {
 			return fmt.Errorf("record saved hold: %w", err)
 		}
+		c.changed(id)
 		c.report(h, "held", "")
 	}
 	return nil
@@ -336,6 +358,9 @@ func (c *holdCoordinator) remove(id string) error {
 	if !start.Equal(h.Start) || !end.Equal(h.End) {
 		state = "moved"
 	}
+	// A move the person made in Calendar is persisted before the removal, so
+	// a failed removal leaves a visible change that the page must hear about.
+	movedBeforeRemove := state != h.State || !start.Equal(h.Start) || !end.Equal(h.End)
 	if _, err := c.db.Exec(`UPDATE holds SET event_identifier = ?, calendar_id = ?, title = ?, start = ?, end = ?, state = ? WHERE id = ? AND state IN ('held', 'moved')`, snapshot.EventID, snapshot.CalendarID, snapshot.Title, start.UnixMilli(), end.UnixMilli(), state, id); err != nil {
 		return err
 	}
@@ -345,10 +370,14 @@ func (c *holdCoordinator) remove(id string) error {
 	}
 	if err != nil {
 		c.report(h, "failed", "remove_failed")
+		if movedBeforeRemove {
+			c.changed(id)
+		}
 		return err
 	}
 	_, err = c.db.Exec(`UPDATE holds SET state = 'removed', removed_at = ? WHERE id = ?`, c.now().UnixMilli(), id)
 	if err == nil {
+		c.changed(id)
 		c.report(h, "removed", "")
 	}
 	return err
@@ -371,12 +400,14 @@ func (c *holdCoordinator) undoRemove(id string) error {
 	if _, err := c.db.Exec(`UPDATE holds SET state = 'checking' WHERE id = ? AND state = 'removed'`, id); err != nil {
 		return err
 	}
+	c.changed(id)
 	identity, err := c.saveWithRetry(event)
 	if err != nil {
 		if errors.Is(err, errHoldWriteFailed) || errors.Is(err, errCalendarNotAuthorized) || errors.Is(err, errHoldCalendarUnwritable) {
 			if _, updateErr := c.db.Exec(`UPDATE holds SET state = 'removed' WHERE id = ? AND state = 'checking'`, id); updateErr != nil {
 				return updateErr
 			}
+			c.changed(id)
 		}
 		c.report(h, "failed", "restore_failed")
 		return err
@@ -386,6 +417,7 @@ func (c *holdCoordinator) undoRemove(id string) error {
 	}
 	_, err = c.db.Exec(`UPDATE holds SET state = 'held', event_identifier = ?, external_identifier = ?, removed_at = 0 WHERE id = ?`, identity.EventIdentifier, identity.ExternalIdentifier, id)
 	if err == nil {
+		c.changed(id)
 		c.report(h, "undone", "")
 	}
 	return err
@@ -425,6 +457,7 @@ func (c *holdCoordinator) reconcile() error {
 			if _, err := c.db.Exec(`UPDATE holds SET state = 'gone' WHERE id = ?`, id); err != nil {
 				return err
 			}
+			c.changed(id)
 			continue
 		}
 		start, errStart := time.Parse(time.RFC3339, snapshot.Start)
@@ -438,9 +471,13 @@ func (c *holdCoordinator) reconcile() error {
 		}
 		// Keep the originally written title and calendar so a later Remove can
 		// recognize edits even after reconciling a moved event.
+		if state == h.State && start.Equal(h.Start) && end.Equal(h.End) && snapshot.EventID == h.EventID {
+			continue
+		}
 		if _, err := c.db.Exec(`UPDATE holds SET state = ?, event_identifier = ?, start = ?, end = ? WHERE id = ?`, state, snapshot.EventID, start.UnixMilli(), end.UnixMilli(), id); err != nil {
 			return err
 		}
+		c.changed(id)
 	}
 	return nil
 }

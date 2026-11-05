@@ -85,6 +85,7 @@ func (a *App) startHoldWorker(parent context.Context) {
 		verifyCoverage: func(event holdEvent) error {
 			return a.holdCoverageWithAccess(event, time.Now(), calendarAccessGranted())
 		},
+		onChange: a.emitHoldChanged,
 	}
 	ctx, cancel := context.WithCancel(parent)
 	done := make(chan struct{})
@@ -95,6 +96,16 @@ func (a *App) startHoldWorker(parent context.Context) {
 		defer ticker.Stop()
 		runHoldWorker(ctx, coordinator, ticker.C, holdsStoreChanged)
 	}()
+}
+
+// emitHoldChanged tells the page that a hold's state or the offer list moved.
+// id is empty when the change is not about one hold.
+func (a *App) emitHoldChanged(id string) {
+	if id == "" {
+		a.emitBrowserEvent("holds:updated")
+		return
+	}
+	a.emitBrowserEvent("holds:updated", map[string]string{"id": id})
 }
 
 func (a *App) stopHoldWorker() {

@@ -75,6 +75,42 @@ func (a *App) GetTodayDayShape(dateISO string) (perfValue TodayDayShape, perfErr
 	if err := validateTodayDayShapeDate(day, a.todayDayShapeNow()); err != nil {
 		return TodayDayShape{}, err
 	}
+	if a != nil {
+		// Establish the update baseline without delaying the strip read.
+		go a.primeTodayDayShapeUpdates()
+	}
+	shape, err := a.todayDayShapeRefresher(dateISO, day).Get()
+	if err != nil {
+		return TodayDayShape{}, snapshotPendingIsEmpty(err)
+	}
+	// The clock moves on every read; only the calendar and hold state is cached.
+	shape.Now = a.todayDayShapeNow().In(time.Local).Format(time.RFC3339)
+	return shape, nil
+}
+
+// todayDayShapeSnapshotMaxAge bounds how stale a cached strip may be before a
+// read starts a refresh (held events and the clock change with time).
+const todayDayShapeSnapshotMaxAge = 30 * time.Second
+
+func (a *App) todayDayShapeRefresher(dateISO string, day time.Time) *snapshotRefresher[TodayDayShape] {
+	return a.dayShapeSnapshots.get(dateISO, func() *snapshotRefresher[TodayDayShape] {
+		// The emit is owned by noteTodayDayShapeUpdate, which already compares
+		// the visible state of both days before it publishes today-dayshape:updated.
+		return newSnapshotRefresher(func() (TodayDayShape, error) {
+			return a.loadTodayDayShape(day)
+		}, todayDayShapeFingerprintValue, nil, todayDayShapeSnapshotMaxAge).readAfterWrites()
+	})
+}
+
+// todayDayShapeFingerprintValue hashes a shape without its moving clock.
+func todayDayShapeFingerprintValue(shape TodayDayShape) (string, error) {
+	shape.Now = ""
+	return jsonFingerprint(shape)
+}
+
+// loadTodayDayShape computes the strip for a day. It runs in the background
+// refresher, never on the binding's request path.
+func (a *App) loadTodayDayShape(day time.Time) (TodayDayShape, error) {
 	var brief MobileBriefV1
 	if a != nil && a.store != nil {
 		if svc, ok := a.ensureMobileBriefService().(*mobileBriefService); ok && svc != nil && svc.store != nil {
@@ -91,13 +127,6 @@ func (a *App) GetTodayDayShape(dateISO string) (perfValue TodayDayShape, perfErr
 				brief = current
 			}
 		}
-	}
-	if a != nil {
-		// Establish the update baseline without delaying the strip read: the
-		// fingerprint computes both days, which would otherwise double the
-		// work of this read. noteTodayDayShapeUpdate already tolerates an
-		// unset baseline.
-		go a.primeTodayDayShapeUpdates()
 	}
 	now := a.todayDayShapeNow()
 	shape, err := a.todayDayShapeAt(day, now, brief)

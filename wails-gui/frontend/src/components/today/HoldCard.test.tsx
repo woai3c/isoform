@@ -5,14 +5,14 @@ import { HoldCard } from "./HoldCard";
 
 const mocks = vi.hoisted(() => ({ record: vi.fn(async () => undefined), settings: vi.fn(), propose: vi.fn(), shape: vi.fn(), hold: vi.fn(), status: vi.fn(), undo: vi.fn(), remove: vi.fn(), restore: vi.fn(), changeCalendar: vi.fn(), dismiss: vi.fn(), undoDismiss: vi.fn(), openSettings: vi.fn(), openCalendar: vi.fn(), openURL: vi.fn(), free: vi.fn() }));
 vi.mock("@/lib/wails-shim-app", () => ({ RecordTodayAction: mocks.record, OpenPermissionSettings: mocks.openSettings, OpenExternalURL: mocks.openCalendar, DismissHoldOffer: mocks.dismiss, UndoDismissHoldOffer: mocks.undoDismiss, GetHoldSettings: mocks.settings, ProposeHold: mocks.propose, GetHoldDayShape: mocks.shape, HoldTime: mocks.hold, GetHoldStatus: mocks.status, UndoHold: mocks.undo, RemoveHold: mocks.remove, UndoRemoveHold: mocks.restore, SetHoldCalendar: mocks.changeCalendar, GetFindTimeDetails: async () => ({ ranges: await mocks.free(), checkedCalendars: [], browserOnly: [] }) }));
-vi.mock("@/lib/wails-shim-runtime", () => ({ BrowserOpenURL: mocks.openURL }));
+vi.mock("@/lib/wails-shim-runtime", () => ({ BrowserOpenURL: mocks.openURL, EventsOn: () => () => undefined }));
 vi.mock("./TodayDayStrip", () => ({ TodayDayStrip: ({ shape }: { shape: { hold: { start: string } } }) => <div data-testid="hold-strip">{shape.hold?.start}</div> }));
 const source = { thing: { title: "Q4 plan", sourceKind: "brief", sourceId: "commitments:q4" }, reason: "Due Monday." };
 const first = { start: "2026-11-02T10:00:00Z", end: "2026-11-02T11:00:00Z" };
 const second = { start: "2026-11-02T11:00:00Z", end: "2026-11-02T12:00:00Z" };
 const proposal = { id: "hold-1", thing: source.thing, calendarId: "local", slots: [first, second] };
 beforeEach(async () => {
-    vi.resetAllMocks(); await i18n.changeLanguage("en");
+    vi.resetAllMocks(); mocks.status.mockResolvedValue(undefined); await i18n.changeLanguage("en");
     mocks.settings.mockResolvedValue({ granted: true, offerHolds: true, calendarId: "local", calendars: [{ id: "local", title: "Home", sourceId: "local", sourceTitle: "On My Mac", sourceType: "local", isDefault: true }] });
     mocks.propose.mockResolvedValue(proposal);
     mocks.shape.mockResolvedValue({ calendarConnected: true, rangeStart: first.start, rangeEnd: second.end, now: first.start, events: [], hold: null });
