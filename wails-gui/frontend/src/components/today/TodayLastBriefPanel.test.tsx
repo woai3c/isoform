@@ -48,4 +48,13 @@ describe("TodayLastBriefPanel (today-review v1.1.5 #1)", () => {
         expect(mocks.byId).toHaveBeenCalledTimes(2);
         expect(onClose).not.toHaveBeenCalled();
     });
+
+    // The 2026-11-05 morning brief opened as an empty panel: its narrative was
+    // withdrawn at read time, and its remaining items were not shown.
+    it("shows the remaining items as the plain list when the narrative is withheld", async () => {
+        mocks.byId.mockResolvedValue({ brief: { briefId: "2026-11-05-morning", slot: "morning", asOf, timezone: "", narrative: [], cards: [{ id: "i1", kind: "item", mode: "speak_first", message: "Ask Priya about the lamp", refs: [] }, { id: "o", kind: "opener", mode: "speak_first", message: "Talk about this brief", refs: [] }] }, building: false, enabled: true, nextAt: "", nextSlot: "", empty: false, missing: [] });
+        render(<TodayLastBriefPanel briefId="2026-11-05-morning" onClose={vi.fn()} />);
+        expect(await screen.findByText("Ask Priya about the lamp")).toBeInTheDocument();
+        expect(screen.queryByText("Talk about this brief")).not.toBeInTheDocument();
+    });
 });

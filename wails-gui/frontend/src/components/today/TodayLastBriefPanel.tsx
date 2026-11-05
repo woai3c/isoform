@@ -42,6 +42,12 @@ export function TodayLastBriefPanel({ briefId, title: openedTitle = "", onClose 
         ? tr("todayBrief.pending.lastBriefTitle", { brief: tr(`todayBrief.slot.${kind === "morning" || kind === "evening" ? kind : "on_request"}`), day: at.toLocaleDateString(language, { weekday: "short" }), time: clockTime(at, language, tr) })
         : "";
     const paragraphs = brief?.narrative.map((paragraph) => paragraph.text?.trim() ?? "").filter(Boolean) ?? [];
+    // A narrative withdrawn or withheld at read time leaves the brief's remaining
+    // items as the plain list (the deterministic text stored with each card). The
+    // panel shows that list rather than an empty body.
+    const plainItems = paragraphs.length === 0
+        ? (brief?.cards ?? []).filter((card) => card.kind === "item").map((card) => card.message?.trim() ?? "").filter(Boolean)
+        : [];
     return (
         <aside data-testid="today-last-brief-panel" className="flex h-full min-h-0 flex-col bg-background-accent">
             <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
@@ -50,6 +56,7 @@ export function TodayLastBriefPanel({ briefId, title: openedTitle = "", onClose 
             </header>
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
                 {paragraphs.map((text, index) => <p key={index} className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{text}</p>)}
+                {plainItems.map((text, index) => <p key={`item-${index}`} className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{text}</p>)}
                 {failed && <p role="alert" data-testid="last-brief-open-failed" className="text-[13px] text-copper">{tr("todayBrief.pending.openFailed")}{" "}<button type="button" className="font-medium text-accent hover:underline" onClick={() => setAttempt((n) => n + 1)}>{tr("todayBrief.pending.tryAgain")}</button></p>}
             </div>
         </aside>
