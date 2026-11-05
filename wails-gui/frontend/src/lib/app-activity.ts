@@ -19,12 +19,21 @@ function notifyChange() {
     for (const listener of [...changeListeners]) listener(active);
 }
 
+function noticePresence() {
+    if (systemAway && typeof document !== 'undefined' && document.visibilityState !== 'hidden') systemAway = false;
+    notifyChange();
+}
+
 function install() {
     if (installed || typeof document === 'undefined') return;
     installed = true;
     wasActive = !systemAway && document.visibilityState !== 'hidden';
     document.addEventListener('visibilitychange', notifyChange);
-    window.addEventListener('focus', notifyChange);
+    window.addEventListener('focus', noticePresence);
+    // Someone using the window means the Mac is unlocked, even if the
+    // "unlocked" system event was missed (an app launched while locked).
+    window.addEventListener('pointerdown', noticePresence, true);
+    window.addEventListener('keydown', noticePresence, true);
     try {
         offSystemState = RuntimeEventsOn('system:state', (state?: unknown) => {
             systemAway = state === 'locked' || state === 'sleep';
@@ -67,7 +76,9 @@ export function resetAppActivity() {
     changeListeners.clear();
     if (installed && typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', notifyChange);
-        window.removeEventListener('focus', notifyChange);
+        window.removeEventListener('focus', noticePresence);
+        window.removeEventListener('pointerdown', noticePresence, true);
+        window.removeEventListener('keydown', noticePresence, true);
     }
     offSystemState?.();
     offSystemState = undefined;

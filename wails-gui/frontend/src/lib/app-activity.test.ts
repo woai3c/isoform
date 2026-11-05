@@ -70,6 +70,24 @@ describe('the window being looked at', () => {
         expect(appActive()).toBe(true);
     });
 
+    it('a click or key press means the Mac is unlocked even if "unlocked" was missed', async () => {
+        const refresh = vi.fn();
+        renderHook(() => useBudgetedRefresh(refresh, 10 * 60_000));
+        act(() => { runtime.listeners.get('system:state')?.('locked'); });
+        expect(appActive()).toBe(false);
+        await act(async () => { await vi.advanceTimersByTimeAsync(60 * 60_000); });
+        // No "unlocked" event arrives; the person clicks in the window.
+        act(() => { window.dispatchEvent(new Event('pointerdown')); });
+        expect(appActive()).toBe(true);
+        expect(refresh).toHaveBeenCalledTimes(1);
+        act(() => { runtime.listeners.get('system:state')?.('locked'); });
+        act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' })); });
+        expect(appActive()).toBe(true);
+        act(() => { runtime.listeners.get('system:state')?.('locked'); });
+        act(() => { window.dispatchEvent(new Event('focus')); });
+        expect(appActive()).toBe(true);
+    });
+
     it('stops a local clock while hidden and brings it current on show', async () => {
         vi.setSystemTime(new Date(2026, 9, 27, 9, 0));
         const { result } = renderHook(() => useActiveClock(60_000));
