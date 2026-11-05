@@ -15,6 +15,9 @@ import envelopeFixtures from '../../../testdata/memory-point-envelope.json';
 
 const id = 'b4c8e1a9-4f72-4b18-a19d-6f143d66e98b';
 describe('memory content projection', () => {
+    it('gives a saved subjectless belief a subject', () => {
+        expect(beliefInSecondPerson('Accepts partial pull requests when unresolved items are called out')).toBe('You accept partial pull requests when unresolved items are called out');
+    });
     it.each(envelopeFixtures)('projects only facts from legacy $name envelopes', ({ content }) => {
         expect(memoryPoints(content).map((point) => point.text)).toEqual([
             'Keep replies short.',

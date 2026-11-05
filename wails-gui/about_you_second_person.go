@@ -10,7 +10,7 @@ import (
 // ("Uses design reviews…"). Only these become "You …", so a title that
 // starts with a noun ("Tools for…", "News about…") stays as it is.
 var beliefSelfVerbs = map[string]bool{
-	"block": true, "decline": true, "get": true, "give": true, "guard": true, "make": true, "protect": true, "put": true, "say": true, "set": true, "take": true, "think": true, "try": true, "wake": true,
+	"accept": true, "block": true, "decline": true, "get": true, "give": true, "guard": true, "make": true, "protect": true, "put": true, "say": true, "set": true, "take": true, "think": true, "try": true, "wake": true,
 	"answer": true, "ask": true, "attend": true, "avoid": true, "batch": true, "build": true,
 	"call": true, "care": true, "check": true, "choose": true, "code": true, "commit": true, "compare": true,
 	"debug": true, "delegate": true, "deploy": true, "design": true, "dictate": true, "draft": true,

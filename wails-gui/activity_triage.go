@@ -1778,6 +1778,7 @@ func (c *ActivityTriager) updateActivityMemory(ctx context.Context, updateID str
 		return "", fmt.Errorf("read %s: %w", filePath, err)
 	}
 	existing := string(existingData)
+	memory.Title = beliefInSecondPerson(memory.Title)
 	candidate := buildOKFMemoryMarkdown(updateID, memory.Title, time.Now(), memorySource("activity"), memory.Dimension, memory.MemoryPoints)
 	if doc, ok := parseOKFDocument(candidate); ok {
 		sessionIDs := []string{session.ID}
@@ -2061,6 +2062,7 @@ func (c *ActivityTriager) saveActivityMemory(session ActivitySessionRow, group s
 }
 
 func (c *ActivityTriager) saveActivityMemoryContext(ctx context.Context, session ActivitySessionRow, group sessionGroup, memory *mcMemoryGenerationResponse) (string, error) {
+	memory.Title = beliefInSecondPerson(memory.Title)
 	dir, err := memoryDir()
 	if err != nil {
 		log.Printf("[triager] failed to get memory dir: %s", activityPrivateLogField("error", err.Error()))

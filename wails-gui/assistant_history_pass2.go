@@ -329,10 +329,11 @@ func (a *App) storeAssistantHistoryBeliefs(project HistoryProject, beliefs []ass
 		return 0, err
 	}
 	for _, entry := range entries {
-		existing[strings.ToLower(strings.TrimSpace(entry.Title))] = true
+		existing[strings.ToLower(strings.TrimSpace(beliefInSecondPerson(entry.Title)))] = true
 	}
 	written := 0
 	for _, belief := range beliefs {
+		belief.Text = beliefInSecondPerson(belief.Text)
 		key := strings.ToLower(strings.TrimSpace(belief.Text))
 		if existing[key] {
 			continue

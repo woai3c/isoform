@@ -103,6 +103,9 @@ func TestAssistantHistoryPassTwoStoresCheckedDrafts(t *testing.T) {
 	if found.ID == "" {
 		t.Fatalf("no history memory stored: %+v", entries)
 	}
+	if found.Title != "You run the tests before every push" {
+		t.Fatalf("history title = %q", found.Title)
+	}
 	dir, err := memoryDir()
 	if err != nil {
 		t.Fatal(err)

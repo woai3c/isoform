@@ -225,3 +225,21 @@ func TestAboutYouRound2NativeTranslationDropsOldConfirmation(t *testing.T) {
 		t.Fatal("translation retained confirmation of the old words")
 	}
 }
+
+func TestActivityBeliefTitleIsNormalizedOnWrite(t *testing.T) {
+	app := newMCPReadTestApp(t)
+	at := seedMCPReadActivity(t, app, "review-session", "Editor", "com.example.editor", "ordinary", "", "")
+	session := ActivitySessionRow{ID: "review-session", StartTime: at, AppNames: `["Editor"]`}
+	response := &mcMemoryGenerationResponse{Title: "Accepts partial pull requests when unresolved items are called out", MemoryPoints: []string{"Unresolved items are called out."}, Dimension: "user_insight"}
+	id, err := (&ActivityTriager{app: app}).saveActivityMemory(session, sessionGroup{Sessions: []ActivitySessionRow{session}}, response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := app.GetMemoryEntry(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry.Title != "You accept partial pull requests when unresolved items are called out" {
+		t.Fatalf("saved title = %q", entry.Title)
+	}
+}

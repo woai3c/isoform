@@ -23,6 +23,7 @@ const beliefs = state === 'empty' ? [] : [
     belief('mornings', 'Guards mornings for deep work', 'Keeps 8 to 11 AM free for writing and code review, and declines meetings then.'),
     belief('replies', 'Writes short replies', 'Replies to Maya Okafor and the design team in two sentences or fewer.'),
     belief('calendar', 'Puts every plan on the calendar', 'Blocks time for each plan, from release checklists to trail runs with Theo Lindqvist.'),
+    ...(state === 'y28' ? [belief('reviews', 'Accepts partial pull requests when unresolved items are called out', 'Accepts partial pull requests when unresolved items are called out.')] : []),
     ...(state === 'live' ? [belief('agents', 'Hands work to other agents and coordinates them through a hub', 'Hands work to other agents and coordinates them through a hub.')] : []),
 ];
 const about = {
@@ -31,7 +32,7 @@ const about = {
         sessionCount: state === 'v101' && row.id === 'replies' ? 0 : 9, dayCount: 6, confirmedAt: 0, source: state === 'dayone' ? 'assistant-history' : 'activity', notQuiteAt: 0, portraitCandidate: false, area: 'work',
         evidenceFirstAt: now - 12 * day, evidenceLastAt: now - day,
     })),
-    newThisWeek: state === 'live' ? ['agents'] : state === 'dayone' ? ['mornings', 'replies'] : state === 'v101' ? ['replies'] : [],
+    newThisWeek: state === 'y28' ? ['reviews'] : state === 'live' ? ['agents'] : state === 'dayone' ? ['mornings', 'replies'] : state === 'v101' ? ['replies'] : [],
     totals: { beliefs: beliefs.length, confirmed: 0 },
     storage: { files: beliefs.length, bytes: 480, chunks: 6, vectorReady: true },
 };

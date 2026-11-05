@@ -4,6 +4,7 @@ import "testing"
 
 func TestBeliefInSecondPerson(t *testing.T) {
 	cases := map[string]string{
+		"Accepts partial pull requests when unresolved items are called out":             "You accept partial pull requests when unresolved items are called out",
 		"Verifies release checksums":                                                     "You verify release checksums",
 		"Turns on Auto-fix":                                                              "You turn on Auto-fix",
 		"Queues a full check after each merge":                                           "You queue a full check after each merge",
