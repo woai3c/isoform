@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/sync/singleflight"
 	"log"
 	"net/url"
 	"os"
@@ -59,13 +60,15 @@ const sqlExcludeProtected = ` AND COALESCE(s.triage_status, '') != 'protected'`
 // ActivityStore provides SQLite-backed persistence for activity monitoring data.
 // Uses a separate DB (~/.yansu-agent/activity.db) to avoid bloating the main sessions.db.
 type ActivityStore struct {
-	db           *sql.DB
-	readDB       *sql.DB
-	readWriter   *sql.DB
-	segmentsDir  string
-	snapshotsDir string
-	eventsDir    string
-	audioDir     string
+	// repeatedOnsetFlight shares one all-time repeated-onset scan among callers.
+	repeatedOnsetFlight singleflight.Group
+	db                  *sql.DB
+	readDB              *sql.DB
+	readWriter          *sql.DB
+	segmentsDir         string
+	snapshotsDir        string
+	eventsDir           string
+	audioDir            string
 	// Revision is even while sources are stable and odd during deletion.
 	readPrivacyMu               sync.Mutex
 	readPrivacyRevision         atomic.Uint64

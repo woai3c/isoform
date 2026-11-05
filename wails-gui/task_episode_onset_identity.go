@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync/atomic"
 )
 
 const taskEpisodeRepeatedOnsetReason = "repeated_task_start"
@@ -265,13 +266,35 @@ func (s *ActivityStore) taskEpisodeRepeatedOnsetSet() (
 	return s.taskEpisodeRepeatedOnsetSetAt(0)
 }
 
+// taskEpisodeRepeatedOnsetSetContext is the all-time repeated-onset set. The
+// scan is unbounded, and every Self and interest read asked for it again: many
+// identical scans queued on the activity read pool and held it for minutes
+// (2026-11-04). Callers that arrive while a scan runs now share its result. The
+// returned map is read-only.
 func (s *ActivityStore) taskEpisodeRepeatedOnsetSetContext(ctx context.Context) (map[string]struct{}, error) {
-	index, err := s.taskEpisodeOnsetIdentityIndexAtContext(ctx, 0, 0)
+	value, err, _ := s.repeatedOnsetFlight.Do("all", func() (any, error) {
+		if repeatedOnsetScanGate != nil {
+			repeatedOnsetScanGate()
+		}
+		repeatedOnsetScans.Add(1)
+		index, err := s.taskEpisodeOnsetIdentityIndexAtContext(ctx, 0, 0)
+		if err != nil {
+			return nil, err
+		}
+		return index.repeatedEpisodeIDs(), nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	return index.repeatedEpisodeIDs(), nil
+	return value.(map[string]struct{}), nil
 }
+
+// repeatedOnsetScans counts scans actually run (tests read it). repeatedOnsetScanGate,
+// when set by a test, runs inside the scan so the test can hold it open.
+var (
+	repeatedOnsetScans    atomic.Int64
+	repeatedOnsetScanGate func()
+)
 
 func (s *ActivityStore) taskEpisodeRepeatedOnsetSetAt(
 	createdCutoffAt int64,
