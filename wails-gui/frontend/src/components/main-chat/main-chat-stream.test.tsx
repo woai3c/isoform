@@ -309,10 +309,11 @@ describe('main chat stream (RC 2 D1)', () => {
         expect(screen.getByText('What should I focus on?')).toBeInTheDocument();
     });
 
-    it('drops a day that only had routine updates when they are hidden', () => {
+    it('keeps a day that only had routine updates when they are hidden, without its fold (R63)', () => {
         renderStream([card('old-brief', 'brief_ready', 'routine', {}, { localDay: YESTERDAY }), { id: 'u', kind: 'user', content: 'Hi', localDay: TODAY }], view({ hideRoutine: true }));
-        expect(screen.queryByRole('separator', { name: 'Yesterday' })).toBeNull();
+        expect(screen.getByRole('separator', { name: 'Yesterday' })).toBeInTheDocument();
         expect(screen.getByRole('separator', { name: 'Today' })).toBeInTheDocument();
+        expect(document.querySelector('[data-main-chat-fold]')).toBeNull();
     });
 
     it('puts each card in review order: headline, sentence, draft, source, topic tag, buttons', () => {

@@ -111,12 +111,15 @@ export function routineUpdateCount(item: StreamItem): number {
 }
 
 /** One local day of the main chat: its routine rows (folded into one row)
- *  and everything else, in the order the chat holds them. */
+ *  and everything else, in the order the chat holds them. `withdrawn` counts
+ *  the thread updates the computer withdrew: they are not shown, but their
+ *  day still is (R63). */
 export interface MainChatDay {
     day: string;
     routine: StreamItem[];
     routineCount: number;
     items: StreamItem[];
+    withdrawn: number;
 }
 
 /**
@@ -126,23 +129,27 @@ export interface MainChatDay {
  * their own day's fold, wherever they sit (an updated status row moves to the
  * end of the chat but keeps its day), even a day with nothing else. A
  * conversation row never reopens an earlier day, so turns stay in order;
- * cards keep their own day even if updated later. Nothing is merged; the only rows dropped are
- * thread updates the computer withdrew (see isWithdrawnThreadUpdate).
+ * cards keep their own day even if updated later. Nothing is merged. A thread
+ * update the computer withdrew (see isWithdrawnThreadUpdate) is not shown, but
+ * its day is kept (counted in `withdrawn`), so a day never vanishes with it (R63).
  */
 export function buildMainChatDays(items: readonly StreamItem[], today: string): MainChatDay[] {
     const byDay = new Map<string, MainChatDay>();
     const section = (day: string) => {
         let found = byDay.get(day);
         if (!found) {
-            found = { day, routine: [], routineCount: 0, items: [] };
+            found = { day, routine: [], routineCount: 0, items: [], withdrawn: 0 };
             byDay.set(day, found);
         }
         return found;
     };
     let flowDay = '';
     for (const item of items) {
-        if (isWithdrawnThreadUpdate(item)) continue;
         const day = item.localDay || today;
+        if (isWithdrawnThreadUpdate(item)) {
+            section(day).withdrawn += 1;
+            continue;
+        }
         if (item.rowClass === 'routine') {
             const target = section(day);
             target.routine.push(item);

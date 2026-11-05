@@ -23,12 +23,13 @@ export type ToolResultsMap = Map<string, StreamItem>;
 
 /**
  * Which rows a day shows. A day with any row keeps its divider, even when its
- * updates are folded away: a routine-only day (a left-off card folded under a
- * newer brief) must not vanish from the stream (R63, 2026-11-05).
+ * updates are folded away or withdrawn: a routine-only day (a left-off card
+ * folded under a newer brief) or a day whose updates were all withdrawn must
+ * not vanish from the stream (R63, 2026-11-05).
  */
-export function dayRowsVisibility(day: { items: readonly unknown[]; routine: readonly unknown[] }, hideRoutine: boolean): { divider: boolean; fold: boolean } {
+export function dayRowsVisibility(day: { items: readonly unknown[]; routine: readonly unknown[]; withdrawn?: number }, hideRoutine: boolean): { divider: boolean; fold: boolean } {
     return {
-        divider: day.items.length > 0 || day.routine.length > 0,
+        divider: day.items.length > 0 || day.routine.length > 0 || (day.withdrawn ?? 0) > 0,
         fold: day.routine.length > 0 && !hideRoutine,
     };
 }
