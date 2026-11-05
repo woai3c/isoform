@@ -42,6 +42,9 @@ func sameKnowHowLessonTokens(a, b map[string]bool) bool {
 	if len(a) == 0 || len(b) == 0 {
 		return false
 	}
+	if !sameKnowHowPolarity(a, b) {
+		return false
+	}
 	shared := 0
 	for word := range a {
 		if b[word] {
@@ -63,6 +66,17 @@ func sameKnowHowLessonTokens(a, b map[string]bool) bool {
 	// they name the failure differently. Keep this narrower than a generic
 	// overlap threshold: similar titles can describe different lessons.
 	return a["retry"] && b["retry"] && a["public"] && b["public"] && a["sync"] && b["sync"] && a["ssh"] && b["ssh"] && shared >= 4
+}
+
+func sameKnowHowPolarity(a, b map[string]bool) bool {
+	// A missing negation can reverse the instruction, even when every other
+	// word matches. Never merge these on token overlap alone.
+	for _, word := range []string{"not", "never", "without", "no"} {
+		if a[word] != b[word] {
+			return false
+		}
+	}
+	return true
 }
 
 func sameKnowHowLesson(a, b string) bool {
@@ -135,7 +149,7 @@ func mergeKnowHowLessons(cards []KnowHowCard) []KnowHowCard {
 		tokens := knowHowLessonTokens(card.Title)
 		merged := false
 		for j := range lessons {
-			if !sameKnowHowLessonTokens(lessons[j].tokens, tokens) && !sameKnowHowContent(lessons[j].card, card) {
+			if !sameKnowHowPolarity(lessons[j].tokens, tokens) || (!sameKnowHowLessonTokens(lessons[j].tokens, tokens) && !sameKnowHowContent(lessons[j].card, card)) {
 				continue
 			}
 			into := &lessons[j].card
@@ -171,7 +185,7 @@ func mergeKnowHowLessons(cards []KnowHowCard) []KnowHowCard {
 // relearnKnowHow adds a moment to an already-saved copy of the same lesson
 // and returns its ID, so learning it again adds nothing new. except is the
 // entry being written, which is an update of itself rather than a copy.
-func relearnKnowHow(dir, title, except string, moment KnowHowMoment) (string, bool) {
+func relearnKnowHow(dir, title, except string, moment KnowHowMoment, sessionIDs ...string) (string, bool) {
 	tokens := knowHowLessonTokens(title)
 	if len(tokens) == 0 {
 		return "", false
@@ -217,15 +231,52 @@ func relearnKnowHow(dir, title, except string, moment KnowHowMoment) (string, bo
 		moment.At = time.Now().UnixMilli()
 	}
 	seen := okfStringSlice(doc.Frontmatter, knowHowRelearnedKey)
+	duplicate := false
 	for _, raw := range seen {
-		if prior, ok := parseKnowHowMoment(raw); ok && (prior.At == moment.At || (moment.SessionID != "" && prior.SessionID == moment.SessionID)) {
-			return match.ID, true
+		if prior, ok := parseKnowHowMoment(raw); ok && ((moment.SessionID == "" && prior.At == moment.At && prior.Assistant == moment.Assistant && prior.App == moment.App) || (moment.SessionID != "" && prior.SessionID == moment.SessionID)) {
+			duplicate = true
+			break
 		}
 	}
-	doc.Frontmatter[knowHowRelearnedKey] = append(seen, formatKnowHowMoment(moment))
+	if !duplicate {
+		doc.Frontmatter[knowHowRelearnedKey] = append(seen, formatKnowHowMoment(moment))
+	}
+	previousSessions := okfStringSlice(doc.Frontmatter, "activity_sessions")
+	allSessions := make([]string, 0, len(previousSessions)+len(sessionIDs)+1)
+	seenSessions := make(map[string]bool)
+	for _, id := range append(append(append([]string{}, previousSessions...), sessionIDs...), moment.SessionID) {
+		id = strings.TrimSpace(id)
+		if id != "" && !seenSessions[id] {
+			seenSessions[id] = true
+			allSessions = append(allSessions, id)
+		}
+	}
+	if len(allSessions) > 0 {
+		doc.Frontmatter["activity_sessions"] = allSessions
+	}
+	if duplicate && len(previousSessions) == len(allSessions) {
+		return match.ID, true
+	}
+	if err := snapshotKnowledgeFile(dir, match.ID); err != nil {
+		log.Printf("[know-how] snapshot before relearning failed: %v", err)
+		return "", false
+	}
 	if err := os.WriteFile(path, []byte(renderOKFDocument(doc.Frontmatter, doc.Body)), 0600); err != nil {
 		log.Printf("[know-how] relearned moment not saved: %v", err)
 		return "", false
 	}
 	return match.ID, true
+}
+
+// Keep the accumulated source moments when an existing lesson is rewritten.
+func preserveKnowHowMoments(content, previous string) string {
+	old, oldOK := parseOKFDocument(previous)
+	next, nextOK := parseOKFDocument(content)
+	if !oldOK || !nextOK {
+		return content
+	}
+	if moments := okfStringSlice(old.Frontmatter, knowHowRelearnedKey); len(moments) > 0 {
+		next.Frontmatter[knowHowRelearnedKey] = moments
+	}
+	return renderOKFDocument(next.Frontmatter, next.Body)
 }

@@ -1606,7 +1606,7 @@ func (c *ActivityTriager) saveKnowledge(session ActivitySessionRow, group sessio
 	if len(appNames) > 0 {
 		moment.App = appNames[0]
 	}
-	if existing, ok := relearnKnowHow(knowledgeDir, knowledge.Title, entryID, moment); ok {
+	if existing, ok := relearnKnowHow(knowledgeDir, knowledge.Title, entryID, moment, sessionIDsFromGroup(group)...); ok {
 		log.Printf("[triager] same lesson as an existing entry; added the moment: %s", activityPrivateLogField("entry", existing))
 		return existing, nil
 	}
@@ -1701,6 +1701,7 @@ func (c *ActivityTriager) updateKnowledge(session ActivitySessionRow, group sess
 	}
 	content := buildOKFKnowledgeMarkdown(knowledge.UpdateID, knowledge.Title, knowledge.Description, ts, "activity", appNames, mergedSessionIDs, knowledge.KnowledgePoints, updatedKnowHowKind(string(existingData), knowledge.Kind))
 	content = c.app.normalizeGeneratedMarkdownToCurrentUILanguage("knowledge", content)
+	content = preserveKnowHowMoments(content, string(existingData))
 	if err := os.WriteFile(filePath, []byte(content), 0600); err != nil {
 		log.Printf("[triager] failed to update knowledge file: %s %s", activityPrivateLogField("file", filePath), activityPrivateLogField("error", err.Error()))
 		return "", fmt.Errorf("write %s: %w", filePath, err)

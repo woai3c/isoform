@@ -24,11 +24,57 @@ func TestKnowHowNearDuplicateTitles(t *testing.T) {
 		{"Juniper Bakery deploys broke after repo rename", "Juniper Bakery deploys broke after the Node upgrade"},
 		{"Restart the socket", "Restart the printer"},
 		{"Retry the private sync when SSH pushes fail", "Retry the public sync when SSH pushes fail"},
+		{"Never offer a localhost relay for phone pairing", "Offer a localhost relay for phone pairing"},
 	}
 	for _, pair := range different {
 		if sameKnowHowLesson(pair[0], pair[1]) {
 			t.Errorf("%q and %q are different lessons", pair[0], pair[1])
 		}
+	}
+}
+
+func TestKnowHowRelearnKeepsAllActivitySourcesAndHistory(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	dir, err := knowledgeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := buildOKFKnowledgeMarkdown("old", "'database is locked' during merge checks", "Retry safely", time.Unix(1000, 0), "activity", []string{"Terminal"}, []string{"first"}, []string{"Retry the check"}, "fix")
+	writeKnowHowFixture(t, "old", original)
+	moment := KnowHowMoment{At: 2000000, App: "Terminal", SessionID: "second"}
+	for i := 0; i < 2; i++ {
+		id, ok := relearnKnowHow(dir, "'database is locked' during merge checks", "new", moment, "second", "third")
+		if !ok || id != "old" {
+			t.Fatalf("relearn: %q %v", id, ok)
+		}
+	}
+	app := &App{}
+	entry, err := app.GetKnowledgeEntry("old")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entry.SessionIDs) != 3 || entry.SessionIDs[0] != "first" || entry.SessionIDs[1] != "second" || entry.SessionIDs[2] != "third" {
+		t.Fatalf("sources lost or duplicated: %v", entry.SessionIDs)
+	}
+	doc, ok := parseOKFDocument(entry.Content)
+	if !ok || len(okfStringSlice(doc.Frontmatter, knowHowRelearnedKey)) != 1 || !entry.HasHistory {
+		t.Fatalf("moment or history missing: %+v", entry)
+	}
+	rewritten := buildOKFKnowledgeMarkdown("old", "Updated", "", time.Unix(3000, 0), "activity", nil, entry.SessionIDs, []string{"Retry"}, "fix")
+	kept, ok := parseOKFDocument(preserveKnowHowMoments(rewritten, entry.Content))
+	if !ok || len(okfStringSlice(kept.Frontmatter, knowHowRelearnedKey)) != 1 {
+		t.Fatal("rewrite lost relearned moment")
+	}
+}
+
+func TestKnowHowOppositeTitlesDoNotFoldIdenticalTakeaways(t *testing.T) {
+	takeaway := "The pairing relay is documented with details for the computer and phone."
+	cards := []KnowHowCard{
+		{ID: "allow", Title: "Offer a localhost relay for phone pairing", Takeaway: takeaway},
+		{ID: "deny", Title: "Never offer a localhost relay for phone pairing", Takeaway: takeaway},
+	}
+	if got := mergeKnowHowLessons(cards); len(got) != 2 {
+		t.Fatalf("opposite lessons folded: %+v", got)
 	}
 }
 

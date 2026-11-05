@@ -385,6 +385,7 @@ func (mc *MemoryGenerator) updateKnowledgeFileDetailed(
 	}
 	content := buildOKFKnowledgeMarkdown(knowledge.UpdateID, knowledge.Title, knowledge.Description, time.Now(), sourceValue, apps, sessionIDs, knowledge.KnowledgePoints, updatedKnowHowKind(string(existingData), knowledge.Kind))
 	content = mc.app.normalizeGeneratedMarkdownToCurrentUILanguage("knowledge", content)
+	content = preserveKnowHowMoments(content, string(existingData))
 	if err := os.WriteFile(filePath, []byte(content), 0600); err != nil {
 		log.Printf("[memory] failed to update knowledge file %s: %v", filePath, err)
 		return "", "", err
