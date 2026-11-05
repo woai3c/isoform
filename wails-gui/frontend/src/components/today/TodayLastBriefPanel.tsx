@@ -57,6 +57,7 @@ export function TodayLastBriefPanel({ briefId, title: openedTitle = "", onClose 
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
                 {paragraphs.map((text, index) => <p key={index} className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{text}</p>)}
                 {plainItems.map((text, index) => <p key={`item-${index}`} className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{text}</p>)}
+                {brief && paragraphs.length === 0 && plainItems.length === 0 && <p data-testid="last-brief-unreadable" className="text-[13px] text-muted">{tr("todayBrief.pending.unreadable")}</p>}
                 {failed && <p role="alert" data-testid="last-brief-open-failed" className="text-[13px] text-copper">{tr("todayBrief.pending.openFailed")}{" "}<button type="button" className="font-medium text-accent hover:underline" onClick={() => setAttempt((n) => n + 1)}>{tr("todayBrief.pending.tryAgain")}</button></p>}
             </div>
         </aside>

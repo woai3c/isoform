@@ -298,6 +298,7 @@
         "firstTitle": "你的第一份简报",
         "makingFirst": "正在根据今天的日历生成你的第一份简报…",
         "pending": {
+            "unreadable": "这份简报暂时无法显示。",
             "makingFirst": "正在根据今天的日历和你的 Claude Code 记录生成。",
             "makingMorning": "正在生成你的早间简报。",
             "makingEvening": "正在生成你的晚间简报。",

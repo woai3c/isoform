@@ -1,5 +1,10 @@
 package main
 
+import (
+	"context"
+	"log"
+)
+
 // The current brief (PROTOCOL.md section 8.1) is chosen by one rule and kept
 // in memory. It is the newest stored brief whose written text is there; with
 // none, the newest stored brief stands in. A quiet slot is never current, and
@@ -67,6 +72,12 @@ func (s *mobileBriefService) CurrentMobileBrief() (MobileBriefV1, bool) {
 	if !mobileBriefHasWrittenText(stored) || mobileBriefHasWrittenText(chosen) {
 		return chosen, true
 	}
+	// The chosen brief's words are withheld now: say why (once per brief and reason),
+	// so Today's "Last brief" line can be explained (R64, 2026-11-05).
+	if s.app != nil {
+		_, withheld := s.app.mobileBriefDeliveryContext(context.Background(), stored)
+		logCurrentBriefWithheld(stored.BriefID, withheld)
+	}
 	for _, brief := range s.store.briefs() {
 		if brief.BriefID == stored.BriefID || !mobileBriefHasWrittenText(brief) {
 			continue
@@ -76,4 +87,17 @@ func (s *mobileBriefService) CurrentMobileBrief() (MobileBriefV1, bool) {
 		}
 	}
 	return chosen, true
+}
+
+// currentBriefWithheldLogged is the last current-brief withholding logged, so a
+// brief withheld for one reason is named once, not on every read.
+var currentBriefWithheldLogged string
+
+func logCurrentBriefWithheld(briefID string, withheld mobileBriefWithholding) {
+	key := briefID + "|" + withheld.Reason + "|" + withheld.SourceKind
+	if key == currentBriefWithheldLogged {
+		return
+	}
+	currentBriefWithheldLogged = key
+	log.Printf("[mobile-brief] the current brief %s is withheld on read: reason=%s kind=%s kept=%t", briefID, withheld.Reason, withheld.SourceKind, withheld.Transient())
 }

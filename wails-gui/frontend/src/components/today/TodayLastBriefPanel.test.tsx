@@ -57,4 +57,11 @@ describe("TodayLastBriefPanel (today-review v1.1.5 #1)", () => {
         expect(await screen.findByText("Ask Priya about the lamp")).toBeInTheDocument();
         expect(screen.queryByText("Talk about this brief")).not.toBeInTheDocument();
     });
+
+    // Read it never opens an empty panel: a brief that cannot be shown says so in one line.
+    it("says in one line when a brief has nothing that can be shown", async () => {
+        mocks.byId.mockResolvedValue({ brief: { briefId: "2026-11-05-morning", slot: "morning", asOf, timezone: "", narrative: [], cards: [] }, building: false, enabled: true, nextAt: "", nextSlot: "", empty: false, missing: [] });
+        render(<TodayLastBriefPanel briefId="2026-11-05-morning" onClose={vi.fn()} />);
+        expect(await screen.findByTestId("last-brief-unreadable")).toHaveTextContent("This brief can't be shown right now.");
+    });
 });

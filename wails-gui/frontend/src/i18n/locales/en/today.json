@@ -298,6 +298,7 @@
         "firstTitle": "Your first brief",
         "makingFirst": "Making your first brief from today's calendar…",
         "pending": {
+            "unreadable": "This brief can't be shown right now.",
             "makingFirst": "Making it from today's calendar and your Claude Code history.",
             "makingMorning": "Making your morning brief now.",
             "makingEvening": "Making your evening brief now.",
