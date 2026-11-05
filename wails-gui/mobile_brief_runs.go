@@ -45,6 +45,9 @@ type mobileBriefRun struct {
 	At               string `json:"at"`
 	Attempts         int    `json:"attempts,omitempty"`
 	FailureKey       string `json:"failureKey,omitempty"`
+	// FailureText is the failure's first line, redacted and at most 200 bytes,
+	// kept with the key so the next failure of a kind can be read on the record.
+	FailureText      string `json:"failureText,omitempty"`
 	FailureCause     string `json:"failureCause,omitempty"`
 	FailureAssistant string `json:"failureAssistant,omitempty"`
 	SameFailures     int    `json:"sameFailures,omitempty"`
@@ -188,7 +191,7 @@ func (s *mobileBriefRunStore) record(run mobileBriefRun) (mobileBriefRun, error)
 		case mobileBriefRunMissed:
 			// The failed attempts stay on the record once the window closed.
 			run.Attempts = existing.Attempts
-			run.FailureKey, run.FailureCause, run.FailureAssistant, run.SameFailures = existing.FailureKey, existing.FailureCause, existing.FailureAssistant, existing.SameFailures
+			run.FailureKey, run.FailureText, run.FailureCause, run.FailureAssistant, run.SameFailures = existing.FailureKey, existing.FailureText, existing.FailureCause, existing.FailureAssistant, existing.SameFailures
 			if run.Attempts > 0 {
 				run.Reason = ""
 			}

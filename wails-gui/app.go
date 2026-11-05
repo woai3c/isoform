@@ -1963,6 +1963,10 @@ func (a *App) CancelPermission(sessionID string) error {
 	return nil
 }
 
+// errRunnerNotInitialized means the model runner has not started yet (startup).
+// A scheduled brief waits for it rather than counting a failure.
+var errRunnerNotInitialized = errors.New("runner not initialized")
+
 // FireDelayedDesktopNotification fires a native desktop toast after a 5s delay
 // from a background goroutine, so the window can be closed to the menu bar in
 // the meantime. Diagnostic tool (Dev Tools > Notifications) for reproducing the
@@ -3240,7 +3244,7 @@ func (a *App) runEphemeralClaudeModelObserved(parent context.Context, hint, prom
 	runner := a.runner
 	a.mu.Unlock()
 	if runner == nil {
-		return "", fmt.Errorf("runner not initialized")
+		return "", errRunnerNotInitialized
 	}
 
 	t := 23 * time.Second

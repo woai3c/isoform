@@ -412,6 +412,10 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 	// leave on their own; the model's text leaves whole (see below).
 	silenced := map[string]bool{}
 	quietProse := map[string]bool{}
+	// A withdrawn input removes every card and paragraph that cites it, never
+	// the whole brief while anything else is left (hub decision, 2026-11-04).
+	withdrawnInputs := map[string]bool{}
+	narrativeDropped := false
 	trimmed := false
 	// Without the model's text, the written brief is Isoform's template: each
 	// paragraph and offer names only the cards it cites, so one whose cards
@@ -589,9 +593,17 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 		} else if !silenced[ref.Ref] {
 			changed = true
 			if isInput(ref) {
-				withhold(mobileBriefWithheldSource, ref.SourceKind)
+				withdrawnInputs[ref.Ref] = true
 			}
 		}
+	}
+	citesWithdrawn := func(ids []string) bool {
+		for _, id := range ids {
+			if withdrawnInputs[id] {
+				return true
+			}
+		}
+		return false
 	}
 	// citesSilenced reports refs that are readable except for silenced ones,
 	// at least one of which they cite: such a card or paragraph announces a
@@ -785,6 +797,12 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 	}
 	var narrative []MobileBriefPara
 	for _, paragraph := range brief.Narrative {
+		if !template && citesWithdrawn(paragraph.Refs) {
+			// The model's words cite what was withdrawn: they are dropped, never
+			// edited. The plain list of the remaining items stands in for them.
+			narrativeDropped, changed = true, true
+			continue
+		}
 		if !mobileBriefValueEchoesMail(paragraph, subjects) && redactThreadOutcomeText(paragraph.Text) == paragraph.Text && citesSilenced(paragraph.Refs) {
 			trimmed = true
 			continue
@@ -819,6 +837,15 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 		if len(narrative) == 0 && brief.NarrativeStatus != "quiet" {
 			brief.Narrative, brief.NarrativeStatus = []MobileBriefPara{}, "unavailable"
 		}
+	}
+	if narrativeDropped && brief.NarrativeStatus != "quiet" {
+		brief.Narrative, brief.NarrativeStatus = []MobileBriefPara{}, "skipped"
+		// The recording speaks the words that were dropped.
+		brief.Audio = nil
+	}
+	if len(withdrawnInputs) > 0 && len(brief.Cards) == 0 && len(brief.Narrative) == 0 && len(brief.Offers) == 0 {
+		// Nothing is left to show: the whole brief is withheld.
+		withhold(mobileBriefWithheldSource, "")
 	}
 	if trimmed {
 		// The spoken recording reads every original paragraph.

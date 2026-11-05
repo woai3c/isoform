@@ -102,11 +102,20 @@ func (a *App) produceBriefReady(brief MobileBriefV1, notify bool) bool {
 		return notify
 	}
 	now := a.engagement.now()
+	// A scheduled brief built ahead of its slot is held until the slot's time,
+	// so the 6 PM brief arrives at 6 PM. One built after its time goes at once.
+	var notBefore time.Time
+	if svc, isService := a.mobileBriefSource().(*mobileBriefService); isService && svc != nil {
+		if at, ok := svc.scheduledTimeFor(brief.Slot, now); ok && at.After(now) {
+			notBefore = at
+		}
+	}
 	if !a.submitEngagementMoment("brief ready", engagement.Moment{
 		Kind:      engagement.KindBriefReady,
 		SubjectID: brief.BriefID,
 		DedupeKey: engagement.DedupeKey(engagement.KindBriefReady, brief.BriefID),
 		Stakes:    engagementBriefStakes,
+		NotBefore: notBefore,
 		ExpiresAt: now.Add(engagementBriefExpiry),
 		Params:    map[string]string{"slot": mobileBriefDisplaySlot(brief, defaultMobileBriefSettings())},
 	}) {

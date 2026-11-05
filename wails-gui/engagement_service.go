@@ -832,6 +832,31 @@ func (s *engagementService) handle(ctx context.Context, row storage.EngagementMo
 			return
 		}
 	}
+	if s.deliver.Report != nil && m.Kind == engagement.KindBriefReady {
+		// The brief is in Chat and the desktop toast says so. The Chat card is
+		// the delivery: a phone that is offline does not withhold it, and a
+		// retry never posts a second card. The phone is attempted last.
+		if !report() {
+			_ = s.store.SetEngagementMomentState(ctx, row.ID, storage.EngagementStateScheduled, "chat report",
+				storage.EngagementMomentRow{HoldUntil: now.Add(engagementRetryDelay).UnixMilli()})
+			return
+		}
+		delivered := string(engagement.ChannelDesktop)
+		if sender := s.senderFor(engagement.ChannelDesktop); sender != nil {
+			if err := sender(ctx, row, m, verdict, s.render(spec, m)); err != nil {
+				log.Printf("[engagement] %s delivery failed on desktop: %v", row.Kind, err)
+			}
+		}
+		if sender := s.senderFor(engagement.ChannelPush); sender != nil {
+			if err := sender(ctx, row, m, verdict, s.render(spec, m)); err == nil {
+				delivered += "+" + string(engagement.ChannelPush)
+			} else {
+				log.Printf("[engagement] %s delivery failed on push: %v", row.Kind, err)
+			}
+		}
+		markSent(delivered)
+		return
+	}
 	if s.deliver.Report != nil && (m.Kind == engagement.KindFirstWeek || m.Kind == engagement.KindWeeklyRecap) {
 		// The chat is the delivery. A doorbell can fail independently without
 		// withholding the welcome/recap or sending a second chat on retry.

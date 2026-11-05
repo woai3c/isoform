@@ -53,6 +53,8 @@ var _ mobileBriefSource = (*mobileBriefService)(nil)
 // and the schedule view. At most one generation runs at a time, whatever
 // triggered it.
 type mobileBriefService struct {
+	// loggedFailureKeys remembers which failure kinds were logged, once each.
+	loggedFailureKeys map[string]bool
 	app      *App
 	store    *mobileBriefStore
 	config   *mobileBriefConfigStore
@@ -441,6 +443,12 @@ func (s *mobileBriefService) checkDue(ctx context.Context) {
 		return
 	}
 	if err != nil {
+		if errors.Is(err, errRunnerNotInitialized) {
+			// The model runner has not started: wait for it, as for sign-in.
+			// Nothing is recorded and the next pass tries again.
+			log.Printf("[mobile-brief] waiting for the model runner before building the %s brief", slot)
+			return
+		}
 		if found {
 			s.recordFailure(occurrence, err)
 		} else {
@@ -645,8 +653,19 @@ func (s *mobileBriefService) recordFailure(occurrence mobileBriefSlotOccurrence,
 			cause = "signed_out"
 		}
 	}
+	text := briefFailureText(err)
+	s.mu.Lock()
+	first := !s.loggedFailureKeys[key]
+	if s.loggedFailureKeys == nil {
+		s.loggedFailureKeys = map[string]bool{}
+	}
+	s.loggedFailureKeys[key] = true
+	s.mu.Unlock()
+	if first {
+		log.Printf("[mobile-brief] %s brief failed (key %s): %s", occurrence.Slot, key[:min(len(key), 12)], text)
+	}
 	stored := s.recordRun(mobileBriefRun{BriefID: occurrence.BriefID, Slot: occurrence.Slot,
-		ScheduledAt: formatMobileBriefTime(occurrence.ScheduledAt), Status: mobileBriefRunFailed, At: formatMobileBriefTime(s.now()), FailureKey: key, FailureCause: cause, FailureAssistant: assistant})
+		ScheduledAt: formatMobileBriefTime(occurrence.ScheduledAt), Status: mobileBriefRunFailed, At: formatMobileBriefTime(s.now()), FailureKey: key, FailureText: text, FailureCause: cause, FailureAssistant: assistant})
 	if cause == "signed_out" {
 		// The route may have used a cached signed-in probe immediately before
 		// authentication failed. Do not use that stale result to resume.
@@ -1942,4 +1961,28 @@ func mobileBriefWriteJudgeFailed(err error) bool {
 		err = errors.Unwrap(err)
 	}
 	return false
+}
+
+// briefFailureText is the failure's first line for the run record and the log:
+// redacted, one line, at most 200 bytes.
+func briefFailureText(err error) string {
+	text := err.Error()
+	if i := strings.IndexByte(text, '\n'); i >= 0 {
+		text = text[:i]
+	}
+	text = strings.TrimSpace(redactActivityModelText(text))
+	if len(text) > 200 {
+		text = text[:200]
+	}
+	return text
+}
+
+// scheduledTimeFor is the configured time of a scheduled slot today. It is
+// false for on-request briefs and when the schedule has no such slot.
+func (s *mobileBriefService) scheduledTimeFor(slot string, now time.Time) (time.Time, bool) {
+	if slot != mobileBriefSlotMorning && slot != mobileBriefSlotEvening {
+		return time.Time{}, false
+	}
+	occurrence, found := s.slotOccurrence(now, s.config.load(), slot)
+	return occurrence.ScheduledAt, found
 }
