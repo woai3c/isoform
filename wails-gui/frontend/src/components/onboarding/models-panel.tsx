@@ -61,6 +61,19 @@ function selectedModels(choices: ModelChoices): SetupModel[] {
     const selected = new Set(Object.values(choices.wireChoices));
     return choices.models.filter((model) => selected.has(model.id));
 }
+/** The model a job uses in Settings. A chosen model that is not on disk is
+ * never shown as in use: the job falls back to a downloaded model of the same
+ * job (recommended first), or to none when nothing is downloaded. */
+function servingModel(
+    models: SetupModel[],
+    job: string,
+    chosen: SetupModel | undefined,
+): SetupModel | undefined {
+    if (chosen?.downloaded) return chosen;
+    return models
+        .filter((model) => model.job === job && model.downloaded)
+        .sort((a, b) => Number(b.recommended) - Number(a.recommended))[0];
+}
 
 export function ModelsPanel({
     settings = false,
@@ -288,17 +301,78 @@ export function ModelsPanel({
                         : choices.models.filter(
                               (model) => model.id === choices.choices[job],
                           );
-                const model = models[0];
+                // Settings names the model in use: the chosen one once it is
+                // on disk, else the real fallback. Setup keeps the choice.
+                const inUse =
+                    job === "always" || !settings
+                        ? models[0]
+                        : servingModel(choices.models, job, models[0]);
+                const model = inUse;
                 const downloaded =
-                    models.length > 0 &&
-                    models.every((item) => item.downloaded);
+                    settings && job !== "always"
+                        ? Boolean(inUse?.downloaded)
+                        : models.length > 0 &&
+                          models.every((item) => item.downloaded);
+                // Each model gets one row: the in-use model sits on the job row
+                // and the chosen model, when it is not in use, keeps its asset row.
+                const listed = new Set(
+                    [model?.id, ...models.map((item) => item.id)].filter(
+                        (id): id is string => Boolean(id),
+                    ),
+                );
                 const alternatives =
                     job === "always"
                         ? []
                         : choices.models.filter(
                               (item) =>
-                                  item.job === job && item.id !== model?.id,
+                                  item.job === job && !listed.has(item.id),
                           );
+                // Asset rows list the chosen model unless its row is the in-use one.
+                const assetModels =
+                    settings && job !== "always"
+                        ? models.filter((item) => item.id !== inUse?.id)
+                        : models;
+                const sizedModels =
+                    settings && job !== "always"
+                        ? inUse
+                            ? [inUse]
+                            : []
+                        : models;
+                const inUseActions =
+                    settings &&
+                    job !== "always" &&
+                    inUse &&
+                    inUse.files.length > 0 ? (
+                        <span
+                            data-testid={`model-asset-${inUse.id}`}
+                            className="flex items-center gap-2"
+                        >
+                            <span
+                                className={`setup-tag ${inUse.downloaded ? "chosen" : ""}`}
+                            >
+                                {t(downloadTag(inUse, downloads))}
+                            </span>
+                            {inUse.downloaded ? (
+                                <Button
+                                    variant="quiet"
+                                    size="sm"
+                                    disabled={busy}
+                                    onClick={() => setRemoveTarget(inUse)}
+                                >
+                                    {t("models.remove")}
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="quiet"
+                                    size="sm"
+                                    disabled={busy}
+                                    onClick={() => void review(inUse)}
+                                >
+                                    {t("models.downloadAsset")}
+                                </Button>
+                            )}
+                        </span>
+                    ) : null;
                 return (
                     <Fragment key={job}>
                         <div
@@ -309,10 +383,10 @@ export function ModelsPanel({
                                 {t(`models.jobs.${job}`)}
                             </span>
                             <span
-                                className={`flex size-4 shrink-0 items-center justify-center rounded-[4px] ${job === "always" || downloaded ? "bg-panel-warm text-muted" : "bg-accent text-solid-btn-fg"}`}
+                                className={`flex size-4 shrink-0 items-center justify-center rounded-[4px] ${job === "always" || downloaded || (settings && !inUse) ? "bg-panel-warm text-muted" : "bg-accent text-solid-btn-fg"}`}
                                 aria-hidden
                             >
-                                {job === "always" || downloaded ? (
+                                {job === "always" || downloaded || (settings && !inUse) ? (
                                     <LockKeyhole className="size-3" />
                                 ) : (
                                     <Check className="size-3" />
@@ -350,13 +424,14 @@ export function ModelsPanel({
                             <div className="flex items-center gap-2 shrink-0">
                                 <span className="text-[12.5px] text-muted">
                                     {formatBytes(
-                                        models.reduce(
+                                        sizedModels.reduce(
                                             (total, item) =>
                                                 total + (item.sizeBytes ?? 0),
                                             0,
                                         ),
                                     )}
                                 </span>
+                                {inUseActions}
                                 {job !== "always" && (
                                     <Button
                                         variant="quiet"
@@ -447,7 +522,7 @@ export function ModelsPanel({
                             </>
                         )}
                         {settings &&
-                            models.map((item) => (
+                            assetModels.map((item) => (
                                 <div
                                     key={item.id}
                                     data-testid={`model-asset-${item.id}`}

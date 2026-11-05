@@ -55,6 +55,17 @@ describe("Other AI apps", () => {
         expect(document.body.textContent).not.toMatch(/yansu|Cursor/i);
     });
 
+    it("opens the integration instructions file on the public repo, never the repo root or isoform-dev (S052)", async () => {
+        render(<OtherAIAppsPage />);
+
+        fireEvent.click(screen.getByRole("button", { name: "Open on GitHub" }));
+        await waitFor(() => expect(mocks.openURL).toHaveBeenCalledTimes(1));
+        const [url] = mocks.openURL.mock.calls[0] as [string];
+        expect(url).toBe("https://github.com/yubozhao/isoform/blob/main/docs/isoform-mcp-server.md");
+        expect(url).not.toMatch(/isoform-dev/);
+        expect(url).toMatch(/\/blob\/main\/docs\/isoform-mcp-server\.md$/);
+    });
+
     it("shows a browser that didn't open as a copper line with Try again", async () => {
         mocks.openURL.mockRejectedValueOnce(new Error("no browser")).mockResolvedValueOnce(undefined);
         render(<OtherAIAppsPage />);

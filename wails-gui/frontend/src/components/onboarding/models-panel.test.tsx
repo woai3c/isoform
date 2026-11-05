@@ -876,3 +876,56 @@ it("Settings shows its own Models card, never onboarding's continue words or a p
     expect(document.body.textContent).not.toMatch(/just continue|Settings › Storage › Models/);
     expect(screen.getAllByRole("button", { name: /^Change / }).length).toBeGreaterThan(0);
 });
+
+describe("Settings models: one row per model and an honest in-use choice (ST77)", () => {
+    function chooseLive(id: string) {
+        choices = {
+            ...choices,
+            jobs: choices.jobs.map((row) =>
+                row.job === "live" ? { ...row, chosenId: id } : row,
+            ),
+        };
+    }
+
+    it("never shows a not-downloaded chosen model as in use and keeps its Download row", async () => {
+        chooseLive("whisper");
+        render(<ModelsPanel settings />);
+        const row = await screen.findByTestId("model-job-live");
+        expect(within(row).queryByText("Whisper large-v3 turbo")).toBeNull();
+        expect(within(row).getByText("None")).toBeInTheDocument();
+        const asset = screen.getByTestId("model-asset-whisper");
+        expect(asset).toHaveTextContent("Not downloaded");
+        expect(within(asset).getByRole("button", { name: "Download" })).toBeInTheDocument();
+    });
+
+    it("falls back to the downloaded model that serves the job when the choice is not on disk", async () => {
+        chooseLive("whisper");
+        fixtureModels(choices).find((item) => item.id === "sensevoice")!.downloaded = true;
+        render(<ModelsPanel settings />);
+        const row = await screen.findByTestId("model-job-live");
+        expect(within(row).getByText("SenseVoice")).toBeInTheDocument();
+        expect(within(row).getByText("Downloaded")).toBeInTheDocument();
+        expect(within(row).queryByText("Whisper large-v3 turbo")).toBeNull();
+        expect(screen.getByTestId("model-asset-whisper")).toHaveTextContent("Not downloaded");
+    });
+
+    it("lists each model once, on its job row, when everything is downloaded", async () => {
+        fixtureModels(choices).forEach((item) => {
+            item.downloaded = true;
+        });
+        render(<ModelsPanel settings />);
+        await screen.findByTestId("model-job-live");
+        const list = document.querySelector(".setup-list") as HTMLElement;
+        for (const name of ["SenseVoice", "Qwen3-ASR 1.7B", "Kokoro", "Privacy filter", "Memory search"]) {
+            expect(within(list).getAllByText(name), name).toHaveLength(1);
+        }
+    });
+
+    it("lists a chosen model that is not on disk once, on its Download row", async () => {
+        chooseLive("whisper");
+        render(<ModelsPanel settings />);
+        await screen.findByTestId("model-job-live");
+        const list = document.querySelector(".setup-list") as HTMLElement;
+        expect(within(list).getAllByText("Whisper large-v3 turbo")).toHaveLength(1);
+    });
+});
