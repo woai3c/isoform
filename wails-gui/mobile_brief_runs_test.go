@@ -642,12 +642,22 @@ func TestMobileBriefRetryTimeDoesNotSlide(t *testing.T) {
 }
 
 func TestMobileBriefFailureRecordsProvenSignedOutCause(t *testing.T) {
-	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(7, 0)}
-	svc, _ := missedBriefRig(t, clock)
-	occurrence := mobileBriefSlotOccurrence{BriefID: "2026-10-09-morning", Slot: mobileBriefSlotMorning, ScheduledAt: clock.Now()}
-	svc.recordFailure(occurrence, &native.HTTPError{Status: 401})
-	runs := svc.runs.list()
-	if len(runs) != 1 || runs[0].FailureCause != "signed_out" {
-		t.Fatalf("runs=%+v", runs)
+	for _, tc := range []struct {
+		name, backend, cause, assistant string
+	}{
+		{"known assistant", "codex", "signed_out", "codex"},
+		{"unknown assistant", "native", "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			clock := &fakeMobileBriefClock{now: mobileBriefTestDay(7, 0)}
+			svc, _ := missedBriefRig(t, clock)
+			occurrence := mobileBriefSlotOccurrence{BriefID: "2026-10-09-morning", Slot: mobileBriefSlotMorning, ScheduledAt: clock.Now()}
+			err := mobileBriefAttributeAssistantError(&native.HTTPError{Status: 401}, tc.backend)
+			svc.recordFailure(occurrence, err)
+			runs := svc.runs.list()
+			if len(runs) != 1 || runs[0].FailureCause != tc.cause || runs[0].FailureAssistant != tc.assistant {
+				t.Fatalf("runs=%+v", runs)
+			}
+		})
 	}
 }

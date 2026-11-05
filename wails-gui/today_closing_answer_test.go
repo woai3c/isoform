@@ -24,7 +24,7 @@ func TestClosingAnswerPostsAndRejectsStaleChoice(t *testing.T) {
 		t.Fatal(err)
 	}
 	answer, err := app.PostTodayClosingAnswer(brief.BriefID, "answer-one", "No, leave it.", "")
-	if err != nil || answer.Label != "Leave it" {
+	if err != nil || answer.Label != "Not now" {
 		t.Fatalf("answer=%+v err=%v", answer, err)
 	}
 	main, err := app.store.LoadMainSession(t.Context())
@@ -43,7 +43,8 @@ func TestClosingAnswerPostsAndRejectsStaleChoice(t *testing.T) {
 		t.Fatalf("stale answer posted a row: %+v", rows)
 	}
 	delivered, ok := app.todayChatDeliveredBrief(brief.BriefID)
-	if !ok || app.todayClosingAnswer(delivered) == nil {
+	reopened := app.todayClosingAnswer(delivered)
+	if !ok || reopened == nil || reopened.Label != "Not now" {
 		t.Fatal("saved answer did not reopen")
 	}
 	if err := app.DeleteMemoryEntry("launch"); err != nil {
