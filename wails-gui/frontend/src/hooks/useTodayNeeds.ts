@@ -9,6 +9,7 @@ type Snapshot = { items: TodayNeed[]; putOff: TodayNeed[]; loading: boolean; fai
 const EMPTY: TodayNeed[] = [];
 let snapshot: Snapshot = { items: EMPTY, putOff: EMPTY, loading: true, failed: false };
 let returnTimer: ReturnType<typeof setTimeout> | undefined;
+let retryTimer: ReturnType<typeof setTimeout> | undefined;
 let request = 0;
 let cleanups: Array<() => void> = [];
 const listeners = new Set<() => void>();
@@ -50,6 +51,8 @@ export async function putOffTodayNeed(need: TodayNeed, action: "put_off" | "brin
 }
 
 export function refreshTodayNeeds() {
+    if (retryTimer !== undefined) clearTimeout(retryTimer);
+    retryTimer = undefined;
     const current = ++request;
     void Promise.resolve().then(() => waitForAppActive()).then(() => current === request ? GetNeedsYou(0) : null).then((page) => {
         if (current !== request) return;
@@ -58,7 +61,9 @@ export function refreshTodayNeeds() {
         publish({ items: page.items, putOff: page.putOff ?? EMPTY, loading: false, failed: false });
         scheduleReturn(page.nextReturnAt);
     }).catch(() => {
-        if (current === request) publish({ items: EMPTY, putOff: EMPTY, loading: false, failed: true });
+        if (current !== request) return;
+        publish({ ...snapshot, loading: false, failed: true });
+        if (listeners.size > 0) retryTimer = setTimeout(refreshTodayNeeds, 30_000);
     });
 }
 
@@ -84,6 +89,8 @@ function subscribe(listener: () => void) {
             cleanups.forEach((cleanup) => cleanup());
             cleanups = [];
             scheduleReturn(undefined);
+            if (retryTimer !== undefined) clearTimeout(retryTimer);
+            retryTimer = undefined;
             snapshot = { items: EMPTY, putOff: EMPTY, loading: true, failed: false };
         }
     };

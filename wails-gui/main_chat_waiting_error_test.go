@@ -1,11 +1,38 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestMainChatWaitingDeadlineKeepsStateAndRetries(t *testing.T) {
+	fixture, events := newWaitingStateFixture(t)
+	appendWaitingStateTestCard(t, fixture, "deadline-first", time.Now().Add(time.Hour))
+	nextMainChatWaitingEvent(t, events)
+	before := fixture.app.GetMainChatWaiting()
+	var attempts atomic.Int32
+	fixture.app.mainChatWaiting.mu.Lock()
+	fixture.app.mainChatWaiting.retryDelay = 100 * time.Millisecond
+	fixture.app.mainChatWaiting.compute = func() (MainChatWaitingState, time.Time, error) {
+		if attempts.Add(1) == 1 {
+			return MainChatWaitingState{}, time.Time{}, context.DeadlineExceeded
+		}
+		return fixture.app.computeMainChatWaiting()
+	}
+	fixture.app.mainChatWaiting.mu.Unlock()
+	fixture.app.markMainChatWaitingDirty("deadline-test")
+	waitForMainChatWaitingWorkerIdle(t, fixture.app)
+	if got := fixture.app.GetMainChatWaiting(); got.Count != before.Count || got.Revision != before.Revision {
+		t.Fatalf("deadline discarded last good state: before=%+v after=%+v", before, got)
+	}
+	state := waitForMainChatWaiting(t, fixture.app, func(state MainChatWaitingState) bool { return state.Revision > before.Revision })
+	if state.Count != before.Count || attempts.Load() < 2 {
+		t.Fatalf("retry failed to publish: state=%+v attempts=%d", state, attempts.Load())
+	}
+}
 
 func TestMainChatWaitingStateKeepsLastGoodStateOnComputeFailure(t *testing.T) {
 	fixture, events := newWaitingStateFixture(t)

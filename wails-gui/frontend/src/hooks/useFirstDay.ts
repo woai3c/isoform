@@ -20,7 +20,7 @@ export type FirstDay = {
 function useCachedRead<T>(name: string, read: () => Promise<T>, enabled = true): T | null {
     const [value, setValue] = useState<T | null>(() => pageQueryCache.peek<T>(name) ?? null);
     const load = useCallback(() => {
-        Promise.resolve().then(read).then((next) => setValue(next ?? null)).catch(() => {});
+        Promise.resolve().then(() => read()).then((next) => setValue(next ?? null)).catch(() => {});
     }, [read]);
     useEffect(() => {
         if (enabled) load();

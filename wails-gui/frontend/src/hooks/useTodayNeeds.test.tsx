@@ -49,3 +49,21 @@ it("does not read while hidden and catches up on showing", async () => {
     hook.unmount();
     visibility.mockRestore();
 });
+
+it("keeps the last good list after a failed refresh and retries", async () => {
+    mocks.get.mockResolvedValueOnce({ items: [item("a")], total: 1 })
+        .mockRejectedValueOnce(new Error("deadline"))
+        .mockResolvedValueOnce({ items: [item("b"), item("c")], total: 2 });
+    const hook = renderHook(() => useTodayNeeds());
+    await waitFor(() => expect(hook.result.current.items.map((row) => row.id)).toEqual(["a"]));
+    vi.useFakeTimers();
+    act(() => mocks.events.get("today:needs-changed")?.());
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
+    expect(hook.result.current.items.map((row) => row.id)).toEqual(["a"]);
+    expect(hook.result.current.failed).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    expect(hook.result.current.items.map((row) => row.id)).toEqual(["b", "c"]);
+    expect(hook.result.current.failed).toBe(false);
+    hook.unmount();
+    vi.useRealTimers();
+});

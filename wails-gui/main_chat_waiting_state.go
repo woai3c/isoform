@@ -41,6 +41,7 @@ type mainChatWaitingStateHolder struct {
 	retryDelay    time.Duration
 	unsubscribe   func()
 	beforeCompute func()
+	compute       func() (MainChatWaitingState, time.Time, error)
 }
 
 func (a *App) GetMainChatWaiting() (perfValue MainChatWaitingState) {
@@ -160,11 +161,15 @@ func (a *App) runMainChatWaitingWorker(reason string) {
 		generation := holder.generation
 		holder.dirty = false
 		beforeCompute := holder.beforeCompute
+		compute := holder.compute
 		holder.mu.Unlock()
 		if beforeCompute != nil {
 			beforeCompute()
 		}
-		state, nextExpiry, err := a.computeMainChatWaiting()
+		if compute == nil {
+			compute = a.computeMainChatWaiting
+		}
+		state, nextExpiry, err := compute()
 		if err != nil {
 			log.Printf("[main-chat] waiting resync failed: %s", safeLogError(err))
 			holder.mu.Lock()
@@ -269,13 +274,31 @@ func (a *App) computeMainChatWaiting() (MainChatWaitingState, time.Time, error) 
 		return out, time.Time{}, withLogStage("read main chat view", err)
 	}
 	out.SessionID = snapshot.SessionID
-	projected := a.projectMainChatRows(ctx, snapshot.Items)
+	// Conversation and report rows need no display projection for counts.
+	// Project only the system rows whose display state can change their class.
+	projected := make([]StreamItemData, len(snapshot.Items))
+	var candidates []storage.StreamItemRow
+	var indexes []int
+	for i, row := range snapshot.Items {
+		if row.Kind == "system" && (row.ToolName == mainChatProactiveTool || row.ToolName == mainChatObservationPauseTool) {
+			candidates = append(candidates, row)
+			indexes = append(indexes, i)
+		}
+	}
+	for i, item := range a.projectMainChatRows(ctx, candidates) {
+		projected[indexes[i]] = item
+	}
 	out.Conversations, out.Finished, out.Routine = mainChatTodayCounts(snapshot.Items, projected, now)
 	count, _, items := projectMainChatWaitingRows(snapshot.Items, projected, now, 5)
 	out.Count = count
 	out.Items = items
 	nextExpiry := earliestMainChatWaitingExpiry(snapshot.Items, projected, now)
-	release, err := a.projectMainChatView(ctx, out.SessionID, out.Items, now)
+	if err := ctx.Err(); err != nil {
+		return MainChatWaitingState{Items: []StreamItemData{}}, time.Time{}, withLogStage("waiting budget after projection", err)
+	}
+	// Topic membership is optional enrichment with its own budget. Exhausting
+	// it must not discard a valid count or prevent the worker from publishing.
+	release, err := a.projectMainChatView(context.Background(), out.SessionID, out.Items, now)
 	if err != nil {
 		return MainChatWaitingState{Items: []StreamItemData{}}, time.Time{}, withLogStage("project topic membership", err)
 	}
@@ -283,7 +306,7 @@ func (a *App) computeMainChatWaiting() (MainChatWaitingState, time.Time, error) 
 	for i, j := 0, len(out.Items)-1; i < j; i, j = i+1, j-1 {
 		out.Items[i], out.Items[j] = out.Items[j], out.Items[i]
 	}
-	return out, nextExpiry, withLogStage("waiting budget after projection", ctx.Err())
+	return out, nextExpiry, nil
 }
 
 func (a *App) mainChatRowsChanged(sessionID string) {
