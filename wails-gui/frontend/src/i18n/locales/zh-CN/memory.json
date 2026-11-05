@@ -324,6 +324,7 @@
         "action": "忘记这条",
         "itemAction": "忘记“{{title}}”",
         "title": "忘记这一条？",
+        "copies": "同时忘记这个想法的以下已保存副本：",
         "description": "{{title}}",
         "removes": "将永久移除",
         "kinds": {

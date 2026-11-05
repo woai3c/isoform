@@ -255,6 +255,7 @@
     "deleteDialog": {
         "title": "删除这条经验",
         "description": "删除「{{title}}」？该操作无法撤销。",
+        "copies": "同时删除这条经验的以下已保存副本：",
         "confirm": "删除"
     },
     "edit": {

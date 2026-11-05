@@ -2046,20 +2046,18 @@ describe('MemoryPage one card per idea', () => {
         expect(mocks.forgetEntry.mock.calls.map((call) => call[0]).sort()).toEqual(fiveCopies.map((row) => row.id).sort());
     });
 
-    it('forgets every copy from the New this week card after its Undo window', async () => {
-        vi.useFakeTimers({ shouldAdvanceTime: true });
-        try {
-            resetDefaults(fiveCopies);
-            mocks.getAbout.mockImplementation(async () => aboutFor(fiveCopies, { newThisWeek: fiveCopies.map((row) => row.id), area: 'communication' }));
-            render(<MemoryPage devToolsUnlocked />);
-            const review = await screen.findByRole('region', { name: 'New this week' });
-            fireEvent.click(within(review).getByRole('button', { name: 'Forget' }));
-            await act(async () => { vi.advanceTimersByTime(10_000); });
-            await waitFor(() => expect(mocks.forgetEntry).toHaveBeenCalledTimes(5));
-            expect(mocks.forgetEntry.mock.calls.map((call) => call[0]).sort()).toEqual(fiveCopies.map((row) => row.id).sort());
-        } finally {
-            vi.useRealTimers();
-        }
+    it('lists every copy from the New this week card before forgetting them all', async () => {
+        resetDefaults(fiveCopies);
+        mocks.getAbout.mockImplementation(async () => aboutFor(fiveCopies, { newThisWeek: fiveCopies.map((row) => row.id), area: 'communication' }));
+        render(<MemoryPage devToolsUnlocked />);
+        const review = await screen.findByRole('region', { name: 'New this week' });
+        fireEvent.click(within(review).getByRole('button', { name: 'Forget' }));
+        const dialog = await screen.findByRole('dialog', { name: 'Forget this?' });
+        expect(within(within(dialog).getByTestId('forget-copies')).getAllByRole('listitem')).toHaveLength(4);
+        expect(mocks.forgetEntry).not.toHaveBeenCalled();
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Forget this' }));
+        await waitFor(() => expect(mocks.forgetEntry).toHaveBeenCalledTimes(5));
+        expect(mocks.forgetEntry.mock.calls.map((call) => call[0]).sort()).toEqual(fiveCopies.map((row) => row.id).sort());
     });
 
     it('lists the evidence of every copy in the opened card', async () => {

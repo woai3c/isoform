@@ -76,6 +76,7 @@ export function useBeliefReview({
     onChanged,
     contentOf,
     copiesOf,
+    onForgetCopies,
 }: {
     onConfirmed: (saved: main.MemoryEntry) => void;
     onForgotten: (id: string) => void;
@@ -85,6 +86,8 @@ export function useBeliefReview({
     contentOf: (id: string) => string | undefined;
     /** Every saved copy of the idea a card's head stands for; an action reaches each one. */
     copiesOf?: (id: string) => string[];
+    /** Forget on a card for several copies opens the forget dialog, which lists them first. */
+    onForgetCopies?: (id: string) => void;
 }) {
     const [results, setResults] = useState<Record<string, ReviewResult>>({});
     const copiesRef = useRef(copiesOf);
@@ -160,11 +163,16 @@ export function useBeliefReview({
     runForgetRef.current = runForget;
 
     const forget = useCallback((id: string) => {
+        // Several copies go only after the dialog has listed them; a one-click forget would not show them.
+        if (idsOf(id).length > 1 && onForgetCopies) {
+            onForgetCopies(id);
+            return;
+        }
         if (timers.current.has(id)) return;
         setNow(Date.now());
         set(id, { kind: 'pending', until: Date.now() + FORGET_UNDO_MS });
         timers.current.set(id, window.setTimeout(() => void runForgetRef.current(id), FORGET_UNDO_MS));
-    }, [set]);
+    }, [idsOf, onForgetCopies, set]);
 
     /** Drop a card's state: Cancel, a pending Forget's Undo, or its belief handled elsewhere. */
     const cancel = useCallback((id: string) => {

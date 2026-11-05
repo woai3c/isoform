@@ -255,6 +255,7 @@
     "deleteDialog": {
         "title": "Delete this know-how",
         "description": "Delete “{{title}}”? This cannot be undone.",
+        "copies": "This also deletes these saved copies of the same know-how:",
         "confirm": "Delete"
     },
     "edit": {

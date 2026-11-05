@@ -189,7 +189,7 @@ export function KnowledgePage({
     const [handledPlaybookSignal, setHandledPlaybookSignal] = useState(0);
     const [handledBackSignal, setHandledBackSignal] = useState(backSignal);
     const [runState, setRunState] = useState<Record<string, PlaybookRunState>>({});
-    const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; copies: string[] } | null>(null);
     const [historyMode, setHistoryMode] = useState(false);
     const [historyVersions, setHistoryVersions] = useState<KnowledgeVersionListItem[]>([]);
     const [historySelectedTs, setHistorySelectedTs] = useState<SelectedKnowledgeVersion>(null);
@@ -1030,7 +1030,12 @@ export function KnowledgePage({
                     onCopyMarkdown={handleCopyMarkdown}
                     onTranslate={handleTranslateCurrent}
                     onHistory={() => setHistoryMode(true)}
-                    onDelete={() => setDeleteTarget({ id: selected.id, title: selected.title })}
+                    onDelete={() => setDeleteTarget({
+                        id: selected.id,
+                        title: selected.title,
+                        // Every other copy of this card goes too, so the list shows them first.
+                        copies: selectedCopies.slice(1).map((copy) => copy.title),
+                    })}
                     onOpenActivitySession={onOpenActivitySession}
                 />
             );
@@ -1240,7 +1245,19 @@ export function KnowledgePage({
                     if (!open) setDeleteTarget(null);
                 }}
                 title={t('deleteDialog.title')}
-                description={t('deleteDialog.description', { title: deleteTarget?.title ?? '' })}
+                description={(
+                    <>
+                        <span>{t('deleteDialog.description', { title: deleteTarget?.title ?? '' })}</span>
+                        {(deleteTarget?.copies.length ?? 0) > 0 && (
+                            <>
+                                <span className="mt-3 block">{t('deleteDialog.copies')}</span>
+                                <ul className="mt-1.5 list-disc pl-5">
+                                    {deleteTarget?.copies.map((copy, index) => <li key={index}>{copy}</li>)}
+                                </ul>
+                            </>
+                        )}
+                    </>
+                )}
                 confirmLabel={t('deleteDialog.confirm')}
                 variant="danger"
                 onConfirm={() => {

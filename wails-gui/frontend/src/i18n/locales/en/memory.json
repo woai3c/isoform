@@ -324,6 +324,7 @@
         "action": "Forget this",
         "itemAction": "Forget \"{{title}}\"",
         "title": "Forget this?",
+        "copies": "This also forgets these saved copies of the same idea:",
         "description": "{{title}}",
         "removes": "Will be permanently removed",
         "kinds": {

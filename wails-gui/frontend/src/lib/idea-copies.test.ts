@@ -1,67 +1,76 @@
 import { describe, expect, it } from 'vitest';
-import { groupIdeas, ideaCopyIds, ideaHead, ideaKey, uniqueBy } from './idea-copies';
+import { groupIdeas, ideaCopyIds, ideaHead, ideaWords, uniqueBy } from './idea-copies';
 
+// Invented paraphrase fixtures: the copies of one idea say it in different words.
 type Row = { id: string; title: string; savedAt: number };
 const titleOf = (row: Row) => row.title;
 const savedAtOf = (row: Row) => row.savedAt;
+const ids = (group: { copies: Row[] }) => group.copies.map((row) => row.id);
 
-describe('ideaKey', () => {
-    it('ignores case, whitespace, punctuation and word order', () => {
-        const key = ideaKey('You prefer short replies.');
-        expect(ideaKey('  you PREFER   short, replies ')).toBe(key);
-        expect(ideaKey('Short replies: you prefer')).toBe(key);
+const RELEASE_NOTES = [
+    'You want release notes to name the bugs each build fixes',
+    'You want the release notes to name each bug the build fixes',
+    'Wants release notes that name every bug fixed in the build',
+    'You want release notes naming the real bug fixes in each build',
+    'Wants the release notes to list each bug a build fixes',
+];
+
+describe('ideaWords', () => {
+    it('ignores case, punctuation, word order and plural endings', () => {
+        expect([...ideaWords('Keeps Fixtures, stubs and mocks apart.')].sort())
+            .toEqual([...ideaWords('mocks and stub fixtures: keeps apart')].sort());
     });
 
-    it('keeps different wording apart', () => {
-        expect(ideaKey('You prefer short replies')).not.toBe(ideaKey('You prefer short replies on Fridays'));
-        expect(ideaKey('You prefer short replies')).not.toBe(ideaKey('You avoid short replies'));
-    });
-
-    it('matches Chinese titles that differ only in punctuation and spacing', () => {
-        expect(ideaKey('你喜欢简短的回复。')).toBe(ideaKey('你喜欢简短的回复'));
-    });
-
-    it('returns an empty key for a title without words', () => {
-        expect(ideaKey(' - ... ')).toBe('');
+    it('keeps negations as their own words', () => {
+        expect(ideaWords('Never merges the staging branch').has('!never')).toBe(true);
+        expect(ideaWords('Merges the staging branch').has('!never')).toBe(false);
     });
 });
 
 describe('groupIdeas', () => {
-    it('folds five copies of one idea into one group, newest first', () => {
-        const rows: Row[] = [
-            { id: 'a', title: 'You prefer short replies', savedAt: 10 },
-            { id: 'b', title: 'you prefer short replies.', savedAt: 50 },
-            { id: 'c', title: 'You prefer short replies', savedAt: 30 },
-            { id: 'd', title: 'You prefer  short replies', savedAt: 20 },
-            { id: 'e', title: 'Short replies, you prefer', savedAt: 40 },
-        ];
+    it('groups paraphrases of one idea into one card, the newest copy heading it', () => {
+        const rows: Row[] = RELEASE_NOTES.map((title, index) => ({ id: `r${index}`, title, savedAt: index }));
         const groups = groupIdeas(rows, titleOf, savedAtOf);
         expect(groups).toHaveLength(1);
-        expect(ideaCopyIds(groups[0], (row) => row.id)).toEqual(['b', 'e', 'c', 'd', 'a']);
-        expect(ideaHead(groups[0])?.id).toBe('b');
+        expect(ideaCopyIds(groups[0], (row) => row.id)).toEqual(['r4', 'r3', 'r2', 'r1', 'r0']);
+        expect(ideaHead(groups[0])?.id).toBe('r4');
     });
 
-    it('keeps different titles as separate ideas in first-seen order', () => {
+    it('keeps different ideas apart even when they share one generic word', () => {
         const rows: Row[] = [
-            { id: 'x', title: 'You write in short sentences', savedAt: 3 },
-            { id: 'y', title: 'You open the daily brief first', savedAt: 2 },
-            { id: 'z', title: 'You write in short sentences', savedAt: 1 },
+            { id: 'notes', title: 'You want release notes to name the bugs each build fixes', savedAt: 3 },
+            { id: 'dark', title: 'You prefer dark mode in the evening', savedAt: 2 },
+            { id: 'deep', title: 'You schedule deep work before lunch', savedAt: 1 },
         ];
         const groups = groupIdeas(rows, titleOf, savedAtOf);
-        expect(groups.map((group) => group.copies.map((row) => row.id))).toEqual([['x', 'z'], ['y']]);
+        expect(groups.map(ids)).toEqual([['notes'], ['dark'], ['deep']]);
     });
 
-    it('picks the newest copy the view can show', () => {
+    it('does not join a negated title to its positive', () => {
         const rows: Row[] = [
-            { id: 'new', title: 'Deploy after review', savedAt: 9 },
-            { id: 'old', title: 'Deploy after review', savedAt: 1 },
+            { id: 'pos', title: 'Merges the staging branch into main after checks', savedAt: 2 },
+            { id: 'neg', title: 'Never merges the staging branch into main after checks', savedAt: 1 },
         ];
-        const [group] = groupIdeas(rows, titleOf, savedAtOf);
-        expect(ideaHead(group, (row) => row.id === 'old')?.id).toBe('old');
-        expect(ideaHead(group, () => false)).toBeUndefined();
+        expect(groupIdeas(rows, titleOf, savedAtOf)).toHaveLength(2);
     });
 
-    it('never merges titles without words', () => {
+    it('groups near-identical copies that differ only in case and punctuation', () => {
+        const rows: Row[] = [
+            { id: 'a', title: 'You want invoices to carry the payment terms.', savedAt: 2 },
+            { id: 'b', title: 'you want INVOICES to carry the payment terms', savedAt: 1 },
+        ];
+        expect(groupIdeas(rows, titleOf, savedAtOf)).toHaveLength(1);
+    });
+
+    it('groups identical titles even when they have only two words', () => {
+        const rows: Row[] = [
+            { id: 'a', title: 'Short replies', savedAt: 2 },
+            { id: 'b', title: 'short replies.', savedAt: 1 },
+        ];
+        expect(groupIdeas(rows, titleOf, savedAtOf)).toHaveLength(1);
+    });
+
+    it('keeps a title with no words as its own group', () => {
         const rows: Row[] = [
             { id: 'p', title: '...', savedAt: 1 },
             { id: 'q', title: '...', savedAt: 2 },
@@ -83,7 +92,6 @@ describe('copies strings', () => {
         const knowledgeEn = (await import('@/i18n/locales/en/knowledge.json')).default as Record<string, any>;
         const knowledgeZh = (await import('@/i18n/locales/zh-CN/knowledge.json')).default as Record<string, any>;
         expect(memoryEn.aboutYou.review.copies_other).toBe('Seen {{count}} times');
-        expect(memoryZh.aboutYou.review.copies_other).toContain('{{count}}');
         expect(memoryZh.aboutYou.review.copies_other).toBe('出现过 {{count}} 次');
         expect(knowledgeEn.reuse.copies_other).toBe('Seen {{count}} times');
         expect(knowledgeZh.reuse.copies_other).toBe('出现过 {{count}} 次');

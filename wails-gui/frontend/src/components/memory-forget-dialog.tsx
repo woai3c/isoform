@@ -17,8 +17,8 @@ import {
 } from '@/lib/wails-shim-app';
 
 interface MemoryForgetDialogProps {
-    /** copyIds: the other saved copies of the same idea (one card per idea); each is forgotten too. */
-    target: { id: string; title: string; copyIds?: string[] } | null;
+    /** copyIds and copyTexts: the other saved copies of the same idea (one card per idea), shown before each is forgotten too. */
+    target: { id: string; title: string; copyIds?: string[]; copyTexts?: string[] } | null;
     rejectionReason?: string;
     onOpenChange: (open: boolean) => void;
     onForgot: (preview: MemoryForgetPreview, correctedAttribution: boolean) => void;
@@ -93,6 +93,14 @@ export function MemoryForgetDialog({ target, rejectionReason, onOpenChange, onFo
                     <DialogCloseButton disabled={forgetting} aria-label={t('common:close')} />
                 </DialogHeader>
                 <div className="px-6 py-5 space-y-4 overflow-y-auto min-h-0 text-xs text-muted">
+                    {(target?.copyTexts?.length ?? 0) > 0 && (
+                        <div className="space-y-1.5">
+                            <p className="text-ink">{t('forget.copies')}</p>
+                            <ul className="list-disc space-y-1 pl-5 text-ink" data-testid="forget-copies">
+                                {target?.copyTexts?.map((text, index) => <li key={index}>{text}</li>)}
+                            </ul>
+                        </div>
+                    )}
                     {error && (
                         <p role="alert" className="text-copper">
                             {correctingAttribution

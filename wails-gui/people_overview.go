@@ -551,6 +551,25 @@ func (a *App) peopleLoops(ctx context.Context, rows []PrincipalWithStatsDTO, now
 			}
 		}
 	}
+	// Activity's suggested follow-ups that name a person (N48): they show as
+	// something you owe them, the same as an added follow-up, until dismissed.
+	displayNames := map[string]string{}
+	for id, p := range people {
+		displayNames[id] = p.DisplayName
+	}
+	firstCounts := peopleFirstNames(displayNames)
+	for _, line := range a.peopleNoticedFollowUps(now) {
+		for id, p := range people {
+			matched := false
+			for _, name := range line.Names {
+				matched = matched || noticedNamesPerson(name, names[id], p.DisplayName, firstCounts)
+			}
+			if !matched || loopWithTitle(out[id], line.Text) {
+				continue
+			}
+			out[id] = append(out[id], PersonLoop{ID: "noticed-" + line.ID, Kind: "you_owe", Since: line.Since, Title: line.Text})
+		}
+	}
 	for id := range out {
 		sort.Slice(out[id], func(i, j int) bool {
 			x, y := out[id][i], out[id][j]
@@ -1227,4 +1246,14 @@ func (a *App) lockPeoplePublication(ctx context.Context, expected peopleReadRevi
 		releases = append(releases, unlock)
 	}
 	return release, nil
+}
+
+// loopWithTitle reports whether a person already has an open loop with this title.
+func loopWithTitle(loops []PersonLoop, title string) bool {
+	for _, loop := range loops {
+		if loop.Title != "" && noticedNormalize(loop.Title) == noticedNormalize(title) {
+			return true
+		}
+	}
+	return false
 }

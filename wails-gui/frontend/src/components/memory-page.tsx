@@ -160,7 +160,7 @@ export function MemoryPage({
     const [, setSearching] = useState(false);
     const [kindFilter, setKindFilter] = useState<MemoryKind | 'all'>('all');
     const [syncing, setSyncing] = useState(false);
-    const [forgetTarget, setForgetTarget] = useState<{ id: string; title: string; copyIds?: string[]; rejectionReason?: string } | null>(null);
+    const [forgetTarget, setForgetTarget] = useState<{ id: string; title: string; copyIds?: string[]; copyTexts?: string[]; rejectionReason?: string } | null>(null);
     const [rejectTarget, setRejectTarget] = useState<{ id: string; title: string } | null>(null);
     const [historyFor, setHistoryFor] = useState<main.MemoryEntry | null>(null);
     const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -430,7 +430,18 @@ export function MemoryPage({
     const entriesRef = useRef(entries);
     entriesRef.current = entries;
     const contentOf = useCallback((id: string) => entriesRef.current.find((entry) => entry.id === id)?.content, []);
-    const review = useBeliefReview({ onConfirmed: handleConfirmed, onForgotten: handleForgottenInOneClick, onChanged: loadAll, contentOf, copiesOf: copyIdsOf });
+    const review = useBeliefReview({
+        onConfirmed: handleConfirmed,
+        onForgotten: handleForgottenInOneClick,
+        onChanged: loadAll,
+        contentOf,
+        copiesOf: copyIdsOf,
+        // A card for several copies is forgotten from the dialog, which lists them.
+        onForgetCopies: (id) => {
+            const entry = entriesRef.current.find((row) => row.id === id);
+            if (entry) forgetEntry(entry);
+        },
+    });
     const { cancelPending } = review;
 
     // A one-click forget runs only while its Undo is in view: closing the
@@ -654,7 +665,11 @@ export function MemoryPage({
     const forgetEntry = (entry: main.MemoryEntry) => {
         const copyIds = copyIdsOf(entry.id);
         for (const copy of copyIds) review.cancel(copy);
-        setForgetTarget({ id: entry.id, title: memoryLabel(entry, t), copyIds });
+        // Every copy is listed in the dialog before any of them is forgotten.
+        const copyTexts = copyIds.length > 1
+            ? copyIds.filter((id) => id !== entry.id).map((id) => ideaTitle(entries.find((row) => row.id === id) ?? entry))
+            : undefined;
+        setForgetTarget({ id: entry.id, title: memoryLabel(entry, t), copyIds, copyTexts });
     };
     const rejectEntry = (entry: main.MemoryEntry) => setRejectTarget({ id: entry.id, title: memoryLabel(entry, t) });
 
