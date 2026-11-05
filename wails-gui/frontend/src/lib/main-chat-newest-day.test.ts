@@ -93,3 +93,33 @@ describe('a day whose updates are withdrawn keeps its divider (R63)', () => {
         expect(rows.some((row) => row.type === 'day-fold' && row.day === '2026-11-04' && row.routineCount === 6)).toBe(true);
     });
 });
+
+/** A first-week card about a person, held back by the projection (chat v1.0.12). */
+function withheldCard(sortOrder: number, localDay: string): StreamItem {
+    return {
+        ...card(sortOrder, localDay, 'other'),
+        toolInput: { momentId: `moment-${sortOrder}`, kind: 'withheld', headline: '', body: '', state: 'expired', actionIds: [], actionLabels: {}, evidence: [], target: { kind: 'none', id: '' } },
+    } as unknown as StreamItem;
+}
+
+describe('removed and held-back updates (chat v1.0.12)', () => {
+    it('keeps a day with only a held-back card as a divider, with no removed line', () => {
+        const items: StreamItem[] = [];
+        for (let i = 0; i < 38; i++) items.push(card(300 + i, i < 20 ? '2026-10-31' : '2026-11-03', 'other'));
+        items.push(withheldCard(406, '2026-11-04'));
+        const days = buildMainChatDays(mainChatStreamRows(items), TODAY);
+        const newest = days.find((day) => day.day === '2026-11-04');
+        expect(newest).toBeDefined();
+        expect(newest!.withheld).toBe(1);
+        expect(newest!.withdrawn).toBe(0);
+        expect(dayRowsVisibility(newest!, false).divider).toBe(true);
+    });
+
+    it('says how many updates were removed under the day, singular and plural', () => {
+        const view = { surface: 'chat', today: TODAY, hideRoutine: false, topicNames: new Map(), chips: {} } as unknown as MainChatStreamView;
+        const one = renderHook(() => useStreamListModel(withdrawnNewestPage().slice(0, 38).concat([withdrawnCard(400, '2026-11-04')]), false, 0, view, false));
+        expect(one.result.current.rows).toContainEqual(expect.objectContaining({ type: 'day-removed', day: '2026-11-04', count: 1 }));
+        const six = renderHook(() => useStreamListModel(withdrawnNewestPage(), false, 0, view, false));
+        expect(six.result.current.rows).toContainEqual(expect.objectContaining({ type: 'day-removed', day: '2026-11-04', count: 6 }));
+    });
+});

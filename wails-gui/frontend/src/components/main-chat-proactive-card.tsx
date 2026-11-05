@@ -487,6 +487,9 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
             )}
             {blockedReasonKey && <p className="text-[12px] leading-relaxed text-muted">{tApp(blockedReasonKey)}</p>}
             {verificationLine && <p className="text-[12px] leading-relaxed text-muted">{verificationLine.kind === 'checks' ? tApp(verificationLine.key, { met: verificationLine.met, total: verificationLine.total }) : tApp(verificationLine.key)}</p>}
+            {message.updatedAt ? <p data-main-chat-updated className="text-[12px] leading-relaxed text-muted">{message.state === 'done'
+                ? t('mainChat.proactive.doneAt', { time: computerClock(new Date(message.updatedAt), i18n.resolvedLanguage ?? 'en') })
+                : t('mainChat.proactive.updatedAt', { time: computerClock(new Date(message.updatedAt), i18n.resolvedLanguage ?? 'en') })}</p> : null}
             {sentence && !briefCard && !retiredBriefCopy(sentence) && (detailPanel || !expandable || expanded || panelOpen) &&<p className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{sentence}</p>}
             {!briefCard && !retiredBriefCopy(message.body) && !detailPanel && (expanded || panelOpen) && message.body && message.body !== sentence && message.body !== copy.headline && (
                 <p className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{message.body}</p>

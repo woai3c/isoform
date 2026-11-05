@@ -42,24 +42,26 @@ type mainChatProactive struct {
 	OfferCount              int                 `json:"offerCount,omitempty"`
 	HoldSource              *mainChatHoldSource `json:"holdSource,omitempty"`
 	sourceHash              string
-	ReadReceipt             string                  `json:"readReceipt,omitempty"`
-	ActivityOutcomeSource   string                  `json:"activityOutcomeSource,omitempty"`
-	BriefID                 string                  `json:"briefId,omitempty"`
-	PersonName              string                  `json:"personName,omitempty"`
-	MomentID                string                  `json:"momentId"`
-	Kind                    string                  `json:"kind"`
-	Headline                string                  `json:"headline"`
-	Body                    string                  `json:"body"`
-	Draft                   bool                    `json:"draft"`
-	DraftContent            *mainChatProactiveDraft `json:"draftContent,omitempty"`
-	VoiceVersion            string                  `json:"voiceVersion,omitempty"`
-	VoiceReceipt            string                  `json:"voiceReceipt,omitempty"`
-	ActionIDs               []string                `json:"actionIds"`
-	ActionLabels            map[string]string       `json:"actionLabels"`
-	Target                  mainChatTarget          `json:"target"`
-	Evidence                []mainChatEvidenceRef   `json:"evidence"`
-	ExpiresAt               int64                   `json:"expiresAt,omitempty"`
-	State                   string                  `json:"state"`
+	ReadReceipt             string `json:"readReceipt,omitempty"`
+	ActivityOutcomeSource   string `json:"activityOutcomeSource,omitempty"`
+	// UpdatedAt is when the outcome behind this card was refreshed (unix ms); the card keeps its place (chat v1.0.12).
+	UpdatedAt    int64                   `json:"updatedAt,omitempty"`
+	BriefID      string                  `json:"briefId,omitempty"`
+	PersonName   string                  `json:"personName,omitempty"`
+	MomentID     string                  `json:"momentId"`
+	Kind         string                  `json:"kind"`
+	Headline     string                  `json:"headline"`
+	Body         string                  `json:"body"`
+	Draft        bool                    `json:"draft"`
+	DraftContent *mainChatProactiveDraft `json:"draftContent,omitempty"`
+	VoiceVersion string                  `json:"voiceVersion,omitempty"`
+	VoiceReceipt string                  `json:"voiceReceipt,omitempty"`
+	ActionIDs    []string                `json:"actionIds"`
+	ActionLabels map[string]string       `json:"actionLabels"`
+	Target       mainChatTarget          `json:"target"`
+	Evidence     []mainChatEvidenceRef   `json:"evidence"`
+	ExpiresAt    int64                   `json:"expiresAt,omitempty"`
+	State        string                  `json:"state"`
 	// SentAt is when Mail or Slack took a sent draft (unix ms).
 	SentAt     int64                            `json:"sentAt,omitempty"`
 	KindMuted  bool                             `json:"kindMuted,omitempty"`

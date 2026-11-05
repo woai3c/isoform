@@ -163,6 +163,8 @@ export interface MainChatProactivePayload {
     state: string;
     /** When Mail or Slack took a sent draft (unix ms). */
     sentAt?: number;
+    /** When the outcome behind this card was refreshed (unix ms); the card keeps its place (chat v1.0.12). */
+    updatedAt?: number;
     kindMuted?: boolean;
     items?: MainChatProactivePayload[];
     localized?: Record<string, MainChatProactiveCopy>;
@@ -335,6 +337,7 @@ function proactivePayload(raw: unknown, nested = false): MainChatProactivePayloa
         evidence: Array.isArray(payload.evidence) ? payload.evidence.filter((ref) => ref && typeof ref.kind === 'string' && typeof ref.id === 'string').map((ref) => ({ ...ref, target: proactiveTarget(payload.kind!, ref.target) })) : [],
         state: typeof payload.state === 'string' ? payload.state : 'pending',
         sentAt: typeof payload.sentAt === 'number' && payload.sentAt > 0 ? payload.sentAt : undefined,
+        updatedAt: typeof payload.updatedAt === 'number' && payload.updatedAt > 0 ? payload.updatedAt : undefined,
         kindMuted: payload.kindMuted === true,
         captureSource: typeof payload.captureSource === 'string' ? payload.captureSource : undefined,
         captureCause: typeof payload.captureCause === 'string' && payload.captureCause ? payload.captureCause : undefined,

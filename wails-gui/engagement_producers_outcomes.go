@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -54,33 +55,98 @@ func (a *App) threadOutcomeMomentAllowsRead(ctx context.Context, m engagement.Mo
 	return ok && fresh.Params["_activity_outcome"] == m.Params["_activity_outcome"] && m.Params["title"] == "" && m.Params["next_step"] == ""
 }
 
+// projectThreadOutcomeItem keeps a card whose outcome was refreshed after it was
+// written (chat v1.0.12): the card keeps its place and time and shows the newer
+// outcome, with UpdatedAt for the quiet "Updated" line. A card is withdrawn only
+// when its source is gone (forgotten, private app or window) or held for privacy.
 func (a *App) projectThreadOutcomeItem(ctx context.Context, item *mainChatProactive, lang string) bool {
 	if item.ActivityOutcomeSource == "" {
 		return false
 	}
-	if !a.threadOutcomeSourceReadable(ctx, item.ActivityOutcomeSource) || proactiveVoiceRestrictedText(item.Body) {
-		item.Kind = "thread_update_unavailable"
-		item.Draft, item.DraftContent = false, nil
-		item.VoiceVersion, item.VoiceReceipt = "", ""
-		item.Work, item.Permission = nil, nil
-		item.Evidence = nil
-		item.ActionIDs = nil
-		item.ActionLabels = nil
-		item.Localized = map[string]mainChatProactiveCopy{
-			"en":    {Headline: "Thread update unavailable.", Body: "This thread is no longer available."},
-			"zh-CN": {Headline: "工作主线更新不可用。", Body: "这条工作主线已不可用。"},
-		}
-		copy := item.Localized[lang]
-		if copy.Headline == "" {
-			copy = item.Localized["en"]
-		}
-		item.Headline, item.Body = copy.Headline, copy.Body
-		item.Target = mainChatTarget{Kind: "none"}
-		// Nothing is left to answer. Keeping the pending state would let the phone label it "Waiting on you".
-		item.State = "expired"
-		item.ActivityOutcomeSource = ""
+	if proactiveVoiceRestrictedText(item.Body) || a.IsClosedEyesModeEnabled() {
+		withdrawThreadOutcomeItem(item, lang)
+		return true
 	}
+	if a.threadOutcomeSourceReadable(ctx, item.ActivityOutcomeSource) {
+		return true
+	}
+	rowID, outcome, refreshedAt, ok := a.refreshedThreadOutcome(ctx, item.ActivityOutcomeSource)
+	if !ok {
+		withdrawThreadOutcomeItem(item, lang)
+		return true
+	}
+	applyRefreshedThreadOutcome(item, rowID, outcome, refreshedAt)
 	return true
+}
+
+// refreshedThreadOutcome reads the thread's current outcome when the thread
+// still exists and its outcome is readable (a refresh changed the outcome, so
+// the card's source hash no longer matches).
+func (a *App) refreshedThreadOutcome(ctx context.Context, sourceID string) (string, *ActivityThreadOutcome, int64, bool) {
+	if a == nil || a.activity == nil || a.activity.store == nil {
+		return "", nil, 0, false
+	}
+	at := strings.LastIndex(sourceID, ":")
+	if at < 1 {
+		return "", nil, 0, false
+	}
+	row, err := a.activity.store.GetActivityByID(strings.TrimPrefix(sourceID[:at], threadOutcomeMomentPrefix))
+	if err != nil || row == nil {
+		return "", nil, 0, false
+	}
+	outcome := a.readableThreadOutcome(ctx, *row)
+	if outcome == nil {
+		return "", nil, 0, false
+	}
+	var record activityThreadOutcomeRecord
+	if json.Unmarshal([]byte(row.threadOutcomeRecord), &record) != nil {
+		return "", nil, 0, false
+	}
+	return row.ID, outcome, record.AttemptedAt, true
+}
+
+// applyRefreshedThreadOutcome shows the newer outcome on the same card. A
+// refresh that says the thread is done (the person acted on it) marks the card done.
+func applyRefreshedThreadOutcome(item *mainChatProactive, rowID string, outcome *ActivityThreadOutcome, refreshedAt int64) {
+	body := strings.TrimSpace(outcome.Summary)
+	if next := strings.TrimSpace(outcome.NextStep); next != "" {
+		body = strings.TrimSpace(body + " Next: " + next)
+	}
+	if body == "" || proactiveVoiceRestrictedText(body) {
+		withdrawThreadOutcomeItem(item, "")
+		return
+	}
+	item.Body = body
+	item.Localized = nil
+	item.UpdatedAt = refreshedAt
+	item.ActivityOutcomeSource = threadOutcomeSourceID(rowID, outcome)
+	if outcome.State == "acted_on" {
+		item.State = "done"
+	}
+}
+
+// withdrawThreadOutcomeItem removes an outcome card from Chat: its source is gone or held.
+func withdrawThreadOutcomeItem(item *mainChatProactive, lang string) {
+	item.Kind = "thread_update_unavailable"
+	item.Draft, item.DraftContent = false, nil
+	item.VoiceVersion, item.VoiceReceipt = "", ""
+	item.Work, item.Permission = nil, nil
+	item.Evidence = nil
+	item.ActionIDs = nil
+	item.ActionLabels = nil
+	item.Localized = map[string]mainChatProactiveCopy{
+		"en":    {Headline: "Thread update unavailable.", Body: "This thread is no longer available."},
+		"zh-CN": {Headline: "工作主线更新不可用。", Body: "这条工作主线已不可用。"},
+	}
+	copy := item.Localized[lang]
+	if copy.Headline == "" {
+		copy = item.Localized["en"]
+	}
+	item.Headline, item.Body = copy.Headline, copy.Body
+	item.Target = mainChatTarget{Kind: "none"}
+	// Nothing is left to answer. Keeping the pending state would let the phone label it "Waiting on you".
+	item.State = "expired"
+	item.ActivityOutcomeSource = ""
 }
 
 func (a *App) threadOutcomeCopyParams(ctx context.Context, m engagement.Moment) (map[string]string, bool) {

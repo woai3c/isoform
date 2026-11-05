@@ -96,6 +96,12 @@ export function dayName(day: string, today: string, language: string | undefined
  * row read as noise). A newer update for the same thread arrives as its own
  * card.
  */
+/** A card the computer keeps out of Chat without a removed source (for example a
+ *  first-week card about a person): its day stays, nothing is said about it. */
+export function isWithheldCard(item: StreamItem): boolean {
+    return getMainChatProactive(item)?.kind === 'withheld';
+}
+
 export function isWithdrawnThreadUpdate(item: StreamItem): boolean {
     const card = getMainChatProactive(item);
     if (!card) return false;
@@ -119,7 +125,10 @@ export interface MainChatDay {
     routine: StreamItem[];
     routineCount: number;
     items: StreamItem[];
+    /** Updates removed because their source is gone: the day keeps a quiet line. */
     withdrawn: number;
+    /** Cards held back from Chat with no removed source: the day keeps its divider only. */
+    withheld: number;
 }
 
 /**
@@ -138,7 +147,7 @@ export function buildMainChatDays(items: readonly StreamItem[], today: string): 
     const section = (day: string) => {
         let found = byDay.get(day);
         if (!found) {
-            found = { day, routine: [], routineCount: 0, items: [], withdrawn: 0 };
+            found = { day, routine: [], routineCount: 0, items: [], withdrawn: 0, withheld: 0 };
             byDay.set(day, found);
         }
         return found;
@@ -146,6 +155,10 @@ export function buildMainChatDays(items: readonly StreamItem[], today: string): 
     let flowDay = '';
     for (const item of items) {
         const day = item.localDay || today;
+        if (isWithheldCard(item)) {
+            section(day).withheld += 1;
+            continue;
+        }
         if (isWithdrawnThreadUpdate(item)) {
             section(day).withdrawn += 1;
             continue;

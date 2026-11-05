@@ -178,8 +178,14 @@ func sourceFreeProactiveTarget(kind string) mainChatTarget {
 func (a *App) projectProactiveVoiceItem(ctx context.Context, item *mainChatProactive, lang string) bool {
 	// Older person sightings have no supported open question. Hide them on
 	// replay rather than presenting a generic first-week or sighting card.
-	if item.Kind == string(engagement.KindPersonReappeared) || (item.Kind == string(engagement.KindFirstWeek) && item.Target.Kind == "person") {
+	if item.Kind == string(engagement.KindPersonReappeared) {
 		*item = mainChatProactive{MomentID: item.MomentID, Kind: "thread_update_unavailable", Target: mainChatTarget{Kind: mainChatTargetNone}}
+		return true
+	}
+	// First-week cards are Isoform's own letters, never about a person (chat v1.0.12).
+	// Until a person card can name the person and what is open, the card is withheld: not shown, and not a removed source.
+	if item.Kind == string(engagement.KindFirstWeek) && item.Target.Kind == "person" {
+		*item = mainChatProactive{MomentID: item.MomentID, Kind: mainChatWithheldKind, State: "expired", Target: mainChatTarget{Kind: mainChatTargetNone}}
 		return true
 	}
 	if item.Kind == "first_read" {

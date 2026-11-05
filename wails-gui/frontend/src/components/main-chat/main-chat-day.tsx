@@ -20,6 +20,12 @@ export function MainChatDayDivider({ day, today }: { day: string; today: string 
     );
 }
 
+/** The quiet line a day keeps when updates were removed because their source is gone. */
+export function RemovedUpdatesLine({ day, count }: { day: string; count: number }) {
+    const { t } = useTranslation('chat');
+    return <p data-main-chat-removed={day} className="px-1 text-[12px] text-muted">{t('mainChat.view.removedUpdates', { count })}</p>;
+}
+
 const FOLD_NOTE_SEEN_KEY = 'isoform.mainChat.foldNoteSeen';
 
 /** The fold's footer note shows the first time a fold opens, then never

@@ -14,7 +14,7 @@ import type { DeliverableActions } from './stream-card';
 import { ProcessingBlock } from './processing-block';
 import { MainChatStatusRow } from './main-chat-proactive-card';
 import { MainChatAnswerChips } from './main-chat/main-chat-answer-chips';
-import { MainChatDayDivider, MainChatDayFold } from './main-chat/main-chat-day';
+import { MainChatDayDivider, MainChatDayFold, RemovedUpdatesLine } from './main-chat/main-chat-day';
 import { useMainChatStreamView, type MainChatStreamView } from './main-chat/main-chat-view-context';
 import type { StreamItem } from '@/types';
 import type { ExecutorType, GroupedStreamItem, MainChatReportTarget, Turn } from '@/lib/stream-helpers';
@@ -27,9 +27,9 @@ export type ToolResultsMap = Map<string, StreamItem>;
  * folded under a newer brief) or a day whose updates were all withdrawn must
  * not vanish from the stream (R63, 2026-11-05).
  */
-export function dayRowsVisibility(day: { items: readonly unknown[]; routine: readonly unknown[]; withdrawn?: number }, hideRoutine: boolean): { divider: boolean; fold: boolean } {
+export function dayRowsVisibility(day: { items: readonly unknown[]; routine: readonly unknown[]; withdrawn?: number; withheld?: number }, hideRoutine: boolean): { divider: boolean; fold: boolean } {
     return {
-        divider: day.items.length > 0 || day.routine.length > 0 || (day.withdrawn ?? 0) > 0,
+        divider: day.items.length > 0 || day.routine.length > 0 || (day.withdrawn ?? 0) > 0 || (day.withheld ?? 0) > 0,
         fold: day.routine.length > 0 && !hideRoutine,
     };
 }
@@ -93,6 +93,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export type StreamRow =
     | { type: 'day-divider'; key: string; day: string; today: string }
     | { type: 'day-fold'; key: string; day: string; routine: StreamItem[]; routineCount: number }
+    | { type: 'day-removed'; key: string; day: string; count: number }
     | {
           type: 'turn';
           key: string;
@@ -262,6 +263,7 @@ export function useStreamListModel(
                 const { divider, fold } = dayRowsVisibility(day, view?.hideRoutine === true);
                 if (!divider) return;
                 rows.push({ type: 'day-divider', key: `day-${day.day}`, day: day.day, today: today ?? '' });
+                if (day.withdrawn > 0) rows.push({ type: 'day-removed', key: `removed-${day.day}`, day: day.day, count: day.withdrawn });
                 if (fold) {
                     rows.push({ type: 'day-fold', key: `fold-${day.day}`, day: day.day, routine: day.routine, routineCount: day.routineCount });
                 }
@@ -330,6 +332,8 @@ function rowViewPropsEqual(prev: RowViewProps, next: RowViewProps): boolean {
     if (a.type !== b.type) return false;
     if (a.type === 'day-divider' && b.type === 'day-divider') {
         if (a.day !== b.day || a.today !== b.today) return false;
+    } else if (a.type === 'day-removed' && b.type === 'day-removed') {
+        if (a.day !== b.day || a.count !== b.count) return false;
     } else if (a.type === 'day-fold' && b.type === 'day-fold') {
         if (a.day !== b.day || a.routineCount !== b.routineCount || !sameItems(a.routine, b.routine)) return false;
     } else if (a.type === 'turn' && b.type === 'turn') {
@@ -381,6 +385,9 @@ export const StreamRowView = memo(function StreamRowView({
     const surface = useMainChatStreamView()?.surface ?? 'chat';
     if (row.type === 'day-divider') {
         return <MainChatDayDivider day={row.day} today={row.today} />;
+    }
+    if (row.type === 'day-removed') {
+        return <RemovedUpdatesLine day={row.day} count={row.count} />;
     }
     if (row.type === 'day-fold') {
         // Status lines, stop lines and started meetings are background lines;

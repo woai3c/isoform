@@ -528,6 +528,8 @@
                 "brief_missed_make_it_now": "已请求简报。"
             },
             "sourceFrom": "来自{{source}}",
+            "updatedAt": "已更新 {{time}}",
+            "doneAt": "已完成 · {{time}}",
             "sourceAt": "来自{{source}} · {{time}}",
             "leftOffIn": "停在{{app}} · {{when}}",
             "meetingStarted": "{{time}}的{{title}}",
@@ -587,6 +589,8 @@
             "foldSummary_one": "Isoform 的 {{count}} 条更新",
             "foldSummary_other": "Isoform 的 {{count}} 条更新",
             "foldNote": "例行更新会折叠在这里。可以在「设置 › 通知」中静音某一类，或让它在「今天」页显示为一行提示。",
+            "removedUpdates_one": "有 1 条更新已移除，因为它的来源已不存在。",
+            "removedUpdates_other": "有 {{count}} 条更新已移除，因为它们的来源已不存在。",
             "isoform": "Isoform",
             "briefOpenFailed": "没能打开这份简报。",
             "topicTags": "主题",

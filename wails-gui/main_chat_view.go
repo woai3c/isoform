@@ -14,6 +14,9 @@ import (
 	"wails-gui/storage"
 )
 
+// mainChatWithheldKind marks a card that is not shown and whose source is not gone.
+const mainChatWithheldKind = "withheld"
+
 type MainChatRowClass string
 
 const (
@@ -79,6 +82,9 @@ func mainChatLeftOffQuestion(card mainChatProactive) bool {
 }
 
 func mainChatProactiveRowClass(card mainChatProactive, now time.Time) MainChatRowClass {
+	if card.Kind == mainChatWithheldKind {
+		return MainChatRowRoutine
+	}
 	if !mainChatLeftOffQuestion(card) {
 		return MainChatRowRoutine
 	}
@@ -127,6 +133,9 @@ func mainChatWithdrawnThreadUpdate(input string) bool {
 	var card mainChatProactive
 	if json.Unmarshal([]byte(input), &card) != nil {
 		return false
+	}
+	if card.Kind == mainChatWithheldKind {
+		return true
 	}
 	if card.Kind == "digest" && len(card.Items) > 0 {
 		for _, child := range card.Items {

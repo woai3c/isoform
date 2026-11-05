@@ -528,6 +528,8 @@
                 "brief_missed_make_it_now": "Brief requested."
             },
             "sourceFrom": "From {{source}}",
+            "updatedAt": "Updated {{time}}",
+            "doneAt": "Done · {{time}}",
             "sourceAt": "From {{source}} · {{time}}",
             "leftOffIn": "Left off in {{app}} · {{when}}",
             "meetingStarted": "{{title}} at {{time}}",
@@ -587,6 +589,8 @@
             "foldSummary_one": "{{count}} update from Isoform",
             "foldSummary_other": "{{count}} updates from Isoform",
             "foldNote": "Routine updates fold here. Mute a kind or show it as a quiet line on Today from Settings › Notifications.",
+            "removedUpdates_one": "1 update was removed because its source is gone.",
+            "removedUpdates_other": "{{count}} updates were removed because their source is gone.",
             "isoform": "Isoform",
             "briefOpenFailed": "Couldn't open this brief.",
             "topicTags": "Topics",
