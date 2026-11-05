@@ -33,6 +33,7 @@ type mcpBriefReader struct {
 	deniedPrincipals map[string]bool
 	checked          map[string]bool
 	limited          bool
+	noticed          *mobileBriefNoticedLookup
 }
 
 type mcpBriefCachedRead struct {
@@ -59,6 +60,7 @@ func (p *mcpReadPrivacy) briefToday(result *mcpReadResult) error {
 	}
 	completed := map[string]mcpReadItem{}
 	deniedPrincipals := map[string]bool{}
+	noticed := newMobileBriefNoticedLookup(p.app)
 	// No narrative or old section detail: those can combine sources absent from
 	// their references. A meeting label is the explicitly requested exception,
 	// after every contributing source has been checked again.
@@ -67,7 +69,7 @@ func (p *mcpReadPrivacy) briefToday(result *mcpReadResult) error {
 			if err := p.ctx.Err(); err != nil {
 				return err
 			}
-			reader := &mcpBriefReader{p: p, cache: map[string]mcpBriefCachedRead{}, completed: completed, deniedPrincipals: deniedPrincipals, checked: map[string]bool{}}
+			reader := &mcpBriefReader{p: p, cache: map[string]mcpBriefCachedRead{}, completed: completed, deniedPrincipals: deniedPrincipals, noticed: noticed, checked: map[string]bool{}}
 			result.Total++
 			if len(item.Refs) > mobileBriefEvidenceLimit {
 				result.Truncated = true
@@ -196,7 +198,10 @@ func (r *mcpBriefReader) resolve(kind, id string, depth int) (mcpReadItem, bool)
 	p := r.p
 	switch kind {
 	case mobileBriefNoticedSource:
-		if item, ok := p.app.mobileBriefNoticedSuggestion(id); ok {
+		if r.noticed == nil {
+			r.noticed = newMobileBriefNoticedLookup(p.app)
+		}
+		if item, ok := r.noticed.suggestion(id); ok {
 			return mcpReadItem{Source: kind, ID: mcpReadText(id), At: item.MomentStartMs, Title: mcpReadTextPtr(item.Text)}, true
 		}
 	case taskContextSourceActivitySnapshotKind:

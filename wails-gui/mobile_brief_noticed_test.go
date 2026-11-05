@@ -381,3 +381,35 @@ func TestMobileBriefNoticedPhoneKeepsOrdinaryChat(t *testing.T) {
 		t.Fatalf("ordinary opener: %+v, %t", card, ok)
 	}
 }
+
+func TestMobileBriefNoticedLookupReadsEachDayOncePerPass(t *testing.T) {
+	app := newMobileBriefPurposeTestApp(t)
+	dates := []string{noticedTestDay, noticedTestAt(20, 0).AddDate(0, 0, -1).Format("2006-01-02")}
+	items := []NoticedSuggestion{seedBriefNoticed(t, app, dates[0], 1)[0], seedBriefNoticed(t, app, dates[1], 1)[0]}
+	calls := 0
+	lookup := newMobileBriefNoticedLookup(app)
+	lookup.read = func(date string) ([]NoticedSuggestion, error) {
+		calls++
+		return app.GetDayNoticed(date)
+	}
+	for i := 0; i < 80; i++ {
+		day := i % len(dates)
+		id := fmt.Sprintf("missing-%d", i)
+		if i < len(dates) {
+			id = items[day].ID
+		}
+		_, ok := lookup.suggestion(dates[day] + "/" + id)
+		if ok != (i < len(dates)) {
+			t.Fatalf("ref %d: readable = %v", i, ok)
+		}
+	}
+	if calls != 2 {
+		t.Fatalf("GetDayNoticed calls = %d, want 2", calls)
+	}
+	if err := app.DismissNoticed(dates[0], items[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := newMobileBriefNoticedLookup(app).suggestion(dates[0] + "/" + items[0].ID); ok {
+		t.Fatal("next pass admitted a withdrawn suggestion")
+	}
+}

@@ -32,24 +32,46 @@ func mobileBriefNoticedTarget(id, action string) (*MobileBriefActivityTarget, bo
 	return &MobileBriefActivityTarget{Date: date, SuggestionID: suggestion, Action: action}, true
 }
 
-// Every reader goes through GetDayNoticed again. A stored ref is membership,
-// never authority: Not now, an accepted follow-up, deletion, retention, a new
-// summary generation or a privacy change can all withdraw it.
-func (a *App) mobileBriefNoticedSuggestion(id string) (NoticedSuggestion, bool) {
+// Every pass reads through GetDayNoticed's current gate. A stored ref is
+// membership, never authority: privacy changes and withdrawals apply on the
+// next pass. Only repeated reads of one date within this pass are shared.
+type mobileBriefNoticedLookup struct {
+	read func(string) ([]NoticedSuggestion, error)
+	days map[string]map[string]NoticedSuggestion
+}
+
+func newMobileBriefNoticedLookup(a *App) *mobileBriefNoticedLookup {
+	lookup := &mobileBriefNoticedLookup{days: make(map[string]map[string]NoticedSuggestion)}
+	if a != nil {
+		lookup.read = a.GetDayNoticed
+	}
+	return lookup
+}
+
+func (lookup *mobileBriefNoticedLookup) suggestion(id string) (NoticedSuggestion, bool) {
 	target, ok := mobileBriefNoticedTarget(id, noticedKindFollowUp)
-	if !ok || a == nil {
+	if !ok || lookup == nil || lookup.read == nil {
 		return NoticedSuggestion{}, false
 	}
-	items, err := a.GetDayNoticed(target.Date)
-	if err != nil {
-		return NoticedSuggestion{}, false
-	}
-	for _, item := range items {
-		if item.ID == target.SuggestionID {
-			return item, true
+	items, seen := lookup.days[target.Date]
+	if !seen {
+		items = make(map[string]NoticedSuggestion)
+		day, err := lookup.read(target.Date)
+		if err == nil {
+			for _, item := range day {
+				if _, exists := items[item.ID]; !exists {
+					items[item.ID] = item
+				}
+			}
 		}
+		lookup.days[target.Date] = items
 	}
-	return NoticedSuggestion{}, false
+	item, ok := items[target.SuggestionID]
+	return item, ok
+}
+
+func (a *App) mobileBriefNoticedSuggestion(id string) (NoticedSuggestion, bool) {
+	return newMobileBriefNoticedLookup(a).suggestion(id)
 }
 
 func collectMobileBriefNoticed(a *App, in *mobileBriefInput) {

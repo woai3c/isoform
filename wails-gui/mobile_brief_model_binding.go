@@ -151,8 +151,9 @@ func (a *App) captureMobileBriefModelSources(ctx context.Context, brief MobileBr
 	sources := a.collectTodayChatSources(ctx, time.Now())
 	_, weekly := a.yourWeekForBinding(brief)
 	binding := &mobileBriefModelBinding{Version: 2, WeeklyRecap: mobileBriefModelDigest(weekly), Profile: a.mobileBriefModelProfileNotes(brief)}
+	noticed := newMobileBriefNoticedLookup(a)
 	for _, ref := range refs {
-		digest, ok := a.mobileBriefModelSourceDigest(ctx, ref, brief, sources)
+		digest, ok := a.mobileBriefModelSourceDigestWithNoticed(ctx, ref, brief, sources, noticed)
 		if !ok {
 			return nil
 		}
@@ -274,13 +275,14 @@ func (a *App) validateMobileBriefModelSourcesFrom(ctx context.Context, brief Mob
 		return false
 	}
 	known := map[string]bool{}
+	noticed := newMobileBriefNoticedLookup(a)
 	for _, source := range binding.Sources {
 		key := mobileBriefSourceKey(source.Evidence.SourceKind, source.Evidence.SourceID)
 		if known[key] || source.Digest == "" {
 			return false
 		}
 		known[key] = true
-		digest, ok := a.mobileBriefModelSourceDigest(ctx, source.Evidence, brief, sources)
+		digest, ok := a.mobileBriefModelSourceDigestWithNoticed(ctx, source.Evidence, brief, sources, noticed)
 		if !ok || digest != source.Digest {
 			return false
 		}
@@ -347,6 +349,10 @@ func (a *App) finishMobileBriefModelBindingFrom(ctx context.Context, brief *Mobi
 }
 
 func (a *App) mobileBriefModelSourceDigest(ctx context.Context, ref MobileBriefRef, brief MobileBriefV1, sources todayChatSources) (string, bool) {
+	return a.mobileBriefModelSourceDigestWithNoticed(ctx, ref, brief, sources, newMobileBriefNoticedLookup(a))
+}
+
+func (a *App) mobileBriefModelSourceDigestWithNoticed(ctx context.Context, ref MobileBriefRef, brief MobileBriefV1, sources todayChatSources, noticed *mobileBriefNoticedLookup) (string, bool) {
 	if ctx.Err() != nil || a.IsClosedEyesModeEnabled() && !pausedBriefReadAllowed(ctx) {
 		return "", false
 	}
@@ -354,7 +360,7 @@ func (a *App) mobileBriefModelSourceDigest(ctx context.Context, ref MobileBriefR
 	case "brief", todayChatBriefCardKind, "brief_item":
 		return "", false
 	case mobileBriefNoticedSource:
-		item, ok := a.mobileBriefNoticedSuggestion(ref.SourceID)
+		item, ok := noticed.suggestion(ref.SourceID)
 		if !ok {
 			return "", false
 		}
@@ -392,7 +398,7 @@ func (a *App) mobileBriefModelSourceDigest(ctx context.Context, ref MobileBriefR
 				}
 				for _, primary := range brief.Evidence {
 					if primary.Ref == item.Refs[0] && primary.SourceKind == "purpose" {
-						digest, ok := a.mobileBriefModelSourceDigest(ctx, primary, brief, sources)
+						digest, ok := a.mobileBriefModelSourceDigestWithNoticed(ctx, primary, brief, sources, noticed)
 						if !ok {
 							return "", false
 						}

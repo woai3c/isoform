@@ -464,6 +464,7 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 	case mailErr != nil:
 		withhold(mobileBriefWithheldMail, "")
 	}
+	noticed := newMobileBriefNoticedLookup(a)
 	for _, ref := range brief.Evidence {
 		calendarRefs[ref.Ref] = ref.SourceKind == mobileBriefCalendarSource
 		checked := ref
@@ -474,7 +475,7 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 		if allowed {
 			switch ref.SourceKind {
 			case mobileBriefNoticedSource:
-				_, allowed = a.mobileBriefNoticedSuggestion(ref.SourceID)
+				_, allowed = noticed.suggestion(ref.SourceID)
 			case "history":
 				// Completion removes a live card, not its synthesis dependency.
 				// Legacy unresolvable history cannot establish source authority.
