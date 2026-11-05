@@ -21,6 +21,18 @@ import type { ExecutorType, GroupedStreamItem, MainChatReportTarget, Turn } from
 
 export type ToolResultsMap = Map<string, StreamItem>;
 
+/**
+ * Which rows a day shows. A day with any row keeps its divider, even when its
+ * updates are folded away: a routine-only day (a left-off card folded under a
+ * newer brief) must not vanish from the stream (R63, 2026-11-05).
+ */
+export function dayRowsVisibility(day: { items: readonly unknown[]; routine: readonly unknown[] }, hideRoutine: boolean): { divider: boolean; fold: boolean } {
+    return {
+        divider: day.items.length > 0 || day.routine.length > 0,
+        fold: day.routine.length > 0 && !hideRoutine,
+    };
+}
+
 function isTodayContextStatus(entry: GroupedStreamItem): boolean {
     return entry.type === 'single' && isTodayContextItem(entry.item);
 }
@@ -246,10 +258,10 @@ export function useStreamListModel(
                 if (day.items.length > 0) lastDayWithRows = index;
             });
             days.forEach((day, index) => {
-                const showFold = day.routine.length > 0 && !view?.hideRoutine;
-                if (!showFold && day.items.length === 0) return;
+                const { divider, fold } = dayRowsVisibility(day, view?.hideRoutine === true);
+                if (!divider) return;
                 rows.push({ type: 'day-divider', key: `day-${day.day}`, day: day.day, today: today ?? '' });
-                if (showFold) {
+                if (fold) {
                     rows.push({ type: 'day-fold', key: `fold-${day.day}`, day: day.day, routine: day.routine, routineCount: day.routineCount });
                 }
                 if (day.items.length > 0) pushTurns(day.items, streaming && index === lastDayWithRows, day.day);
