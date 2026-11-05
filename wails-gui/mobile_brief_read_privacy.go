@@ -244,7 +244,41 @@ func (a *App) mobileBriefDelivery(brief MobileBriefV1) (MobileBriefV1, mobileBri
 	return a.mobileBriefDeliveryContext(context.Background(), brief)
 }
 
+// mobileBriefReadyBackoff is how long a read waits for a store that is still
+// opening before it withholds. A launch read can run before the mail, purpose or
+// activity store is ready (R64, 2026-11-05: withheld at 09:59:42, 3 min after the
+// start). A store that never opens is still withheld, after these waits.
+var mobileBriefReadyBackoff = []time.Duration{300 * time.Millisecond, 600 * time.Millisecond}
+
+// mobileBriefRetryNotReady runs the gate again while it withholds only because a
+// store is not ready, waiting backoff[i] before attempt i+1. Any other outcome, or a
+// cancelled context, returns at once. Privacy reasons are never retried.
+func mobileBriefRetryNotReady(ctx context.Context, backoff []time.Duration, once func() (MobileBriefV1, mobileBriefWithholding)) (MobileBriefV1, mobileBriefWithholding) {
+	brief, withheld := once()
+	for _, wait := range backoff {
+		if withheld.Reason != mobileBriefWithheldNotReady {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return brief, withheld
+		case <-time.After(wait):
+		}
+		brief, withheld = once()
+	}
+	return brief, withheld
+}
+
+// mobileBriefDeliveryContext applies the read-time gates, waiting briefly for a
+// store that is still opening (see mobileBriefRetryNotReady).
 func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV1) (MobileBriefV1, mobileBriefWithholding) {
+	return mobileBriefRetryNotReady(ctx, mobileBriefReadyBackoff, func() (MobileBriefV1, mobileBriefWithholding) {
+		return a.mobileBriefDeliveryOnce(ctx, brief)
+	})
+}
+
+// mobileBriefDeliveryOnce applies the read-time gates once.
+func (a *App) mobileBriefDeliveryOnce(ctx context.Context, brief MobileBriefV1) (MobileBriefV1, mobileBriefWithholding) {
 	staticEmpty := mobileBriefStaticEmpty(brief)
 	subjects, mailErr := mobileBriefMailSubjects(a)
 	// One read checks its refs as a batch: the work records are listed once,
