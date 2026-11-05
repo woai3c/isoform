@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Copy, Loader2, RefreshCw } from "lucide-react";
-import { describeMobileStatus } from "@/lib/mobile-status";
+import { describeMobileStatus, isLocalRelay } from "@/lib/mobile-status";
 import { activeInterval } from "@/lib/app-activity";
 import { QRCodeSVG } from "qrcode.react";
 import { SettingsFailureLine } from "@/components/settings/settings-failure";
@@ -963,7 +963,7 @@ export function MobileConnectionSettings({
                 )}
             </SettingsCard>
 
-            {status !== null && (
+            {status !== null && !(status.relayState === "connected" && !status.remoteAccess && !isLocalRelay(status.relayUrl, status.warningCode)) && (
                 <SettingsCard
                     title={t("mobileConnection.remoteAccessTitle")}
                     description={t("mobileConnection.remoteAccessDescription")}

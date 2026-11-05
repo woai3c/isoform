@@ -289,6 +289,7 @@ describe("MobileConnectionSettings component", () => {
         const status = {
             ...connectedStatus,
             relayUrl: "https://relay.example.com",
+            relayState: "offline" as const,
             remoteAccessOffReason: "saved_relay" as const,
         };
         mocks.getStatus.mockResolvedValue(status);
@@ -310,6 +311,23 @@ describe("MobileConnectionSettings component", () => {
 
         await waitFor(() => expect(mocks.enableUsingRelay).toHaveBeenCalledWith(""));
         await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+
+    it.each(["en", "zh-CN"])("does not offer remote access for a connected relay in %s", async (language) => {
+        await i18n.changeLanguage(language);
+        const copy = language === "en" ? en.mobileConnection : zh.mobileConnection;
+        mocks.getStatus.mockResolvedValue({ ...connectedStatus, relayUrl: "https://relay.example.com", remoteAccessOffReason: "saved_relay" });
+        await renderReady();
+        expect(screen.queryByRole("button", { name: copy.remoteAccessUseButton })).not.toBeInTheDocument();
+    });
+
+    it.each(["en", "zh-CN"])("describes a private relay as local in %s", async (language) => {
+        await i18n.changeLanguage(language);
+        const copy = language === "en" ? en.mobileConnection : zh.mobileConnection;
+        mocks.getStatus.mockResolvedValue({ ...connectedStatus, relayUrl: "https://192.168.1.4", relayLastSeenAt: "", remoteAccessOffReason: "saved_relay" });
+        await renderReady();
+        expect(screen.getByText(copy.statusConnectedLocalOnlyNoTime)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: copy.remoteAccessUseButton })).toBeInTheDocument();
     });
 
     it.each(["en", "zh-CN"])("shows disabled remote access without a switch button in %s", async (language) => {

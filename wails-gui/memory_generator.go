@@ -1063,7 +1063,7 @@ Respond with ONLY a JSON object (no markdown, no code fences):
 {
   "action": "create|update|skip",
   "updateId": "existing-entry-id-if-updating",
-  "title": "the belief in one short sentence, in second person, e.g. You use design reviews to find launch blockers before release",
+  "title": "the belief in one short sentence starting with You (or 你 in Chinese), with all verbs agreeing with the subject, e.g. You use design reviews to find launch blockers before release",
   "memoryPoints": ["memory point 1", "memory point 2"],
   "dimension": "user_insight|topic_highlight|deep_user_model|agentic_memory"
 }

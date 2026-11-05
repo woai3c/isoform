@@ -115,7 +115,6 @@ describe("IPhonePage", () => {
         expect(screen.getByText("Connected")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Turn off" })).toBeInTheDocument();
         expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual([
-            "Remote access",
             "Your phones",
             "Daily brief",
         ]);
@@ -131,7 +130,6 @@ describe("IPhonePage", () => {
         await renderPage();
         fireEvent.click(screen.getByRole("button", { name: /Advanced/ }));
         expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual([
-            "Remote access",
             "Your phones",
             "Daily brief",
             "Server address",

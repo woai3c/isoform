@@ -25,7 +25,7 @@ var beliefSelfVerbs = map[string]bool{
 	"speak": true, "split": true, "start": true, "study": true, "talk": true, "teach": true,
 	"tend": true, "test": true, "track": true, "travel": true, "treat": true, "trust": true,
 	"type": true, "use": true, "value": true, "walk": true, "want": true, "watch": true,
-	"work": true, "write": true,
+	"work": true, "write": true, "verify": true, "turn": true,
 }
 
 var beliefIrregularVerbs = map[string]string{"is": "are", "was": "were", "has": "have", "does": "do", "goes": "go"}

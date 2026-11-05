@@ -9,6 +9,15 @@ function relayHostname(relayUrl: string): string {
     }
 }
 
+// Loopback and private relay addresses only establish a local network path.
+export function isLocalRelay(relayUrl: string, warningCode?: string): boolean {
+    const host = relayHostname(relayUrl).toLowerCase();
+    if (warningCode === "relay_loopback" || host === "localhost" || host.endsWith(".local") || host === "[::1]") return true;
+    const parts = host.split(".").map(Number);
+    if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+    return parts[0] === 10 || parts[0] === 127 || (parts[0] === 192 && parts[1] === 168) || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31);
+}
+
 const EARLIEST_TIMESTAMP = Date.UTC(2000, 0, 1);
 
 function parseTimestamp(value: string): number | null {
@@ -41,9 +50,7 @@ export function describeMobileStatus(current: MobileStatusSummary, now: number, 
     switch (current.relayState) {
         case "connected": {
             const seenAt = parseTimestamp(current.relayLastSeenAt);
-            const host = relayHostname(current.relayUrl).toLowerCase();
-            const localOnly =
-                current.warningCode === "relay_loopback" || host === "127.0.0.1" || host === "localhost";
+            const localOnly = isLocalRelay(current.relayUrl, current.warningCode);
             const description =
                 current.remoteAccess?.state === "ready"
                     ? seenAt === null

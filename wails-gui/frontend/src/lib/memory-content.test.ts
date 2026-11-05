@@ -126,6 +126,8 @@ describe('memory content projection', () => {
 
 describe('beliefInSecondPerson (about-you v1.0.1 Y28)', () => {
     it.each([
+        ['Verifies release checksums', 'You verify release checksums'],
+        ['Turns on Auto-fix', 'You turn on Auto-fix'],
         ['Queues a full check after each merge', 'You queue a full check after each merge'],
         ['Compares recent runs with a baseline', 'You compare recent runs with a baseline'],
         ['Never lets uncertain replies replay automatically', 'You never let uncertain replies replay automatically'],
