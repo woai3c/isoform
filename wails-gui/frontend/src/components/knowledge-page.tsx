@@ -70,6 +70,7 @@ import {
     type KnowHowFilter,
     type TimeGroupKey,
 } from '@/lib/know-how';
+import { groupIdeas, ideaHead, uniqueBy, type IdeaGroup } from '@/lib/idea-copies';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import {
     DismissKnowHowMatch,
@@ -427,18 +428,51 @@ export function KnowledgePage({
         }
     }, [initialSelectedId]);
 
+    // One card per idea (W40): copies whose titles match share a card, and the
+    // groups cover every copy, so an action reaches all of them.
+    const ideaGroups = useMemo(() => groupIdeas(cards, (card) => card.title, (card) => card.savedAt), [cards]);
+    const ideaGroupOfId = useMemo(() => {
+        const byId = new Map<string, IdeaGroup<main.KnowHowCard>>();
+        for (const group of ideaGroups) {
+            for (const card of group.copies) {
+                byId.set(card.id, group);
+                for (const mergedId of card.mergedIds ?? []) byId.set(mergedId, group);
+            }
+        }
+        return byId;
+    }, [ideaGroups]);
+    /** Every stored entry behind the idea a card or any of its copies belongs to. */
+    const idsOfIdea = useCallback((id: string) => {
+        const group = ideaGroupOfId.get(id);
+        if (!group) return [id];
+        return group.copies.flatMap((card) => [card.id, ...(card.mergedIds ?? [])]);
+    }, [ideaGroupOfId]);
+    const ideaHeads = useMemo(() => ideaGroups.map((group) => group.copies[0]), [ideaGroups]);
+    const copyCounts = useMemo(() => new Map(ideaGroups.map((group) => [
+        group.copies[0].id,
+        group.copies.reduce((sum, card) => sum + 1 + (card.mergedIds?.length ?? 0), 0),
+    ])), [ideaGroups]);
     const visible = useMemo(() => {
-        const shown = cards.filter((card) =>
+        const passes = (card: main.KnowHowCard) =>
             (kind === 'all' || knowHowKind(card.kind) === kind)
-            && matchesKeyword(card, entries.get(card.id)?.content ?? '', keyword));
-        const landed = shown.findIndex((card) => card.id === landedId);
+            && matchesKeyword(card, entries.get(card.id)?.content ?? '', keyword);
+        // A group shows while any copy passes the filters; its newest passing copy heads the card.
+        const shown = ideaGroups.flatMap((group) => {
+            const head = ideaHead(group, passes);
+            return head ? [head] : [];
+        });
+        const landed = shown.findIndex((card) => card.id === landedId || (!!landedId && ideaGroupOfId.get(landedId)?.copies[0].id === card.id));
         return landed > 0 ? [shown[landed], ...shown.slice(0, landed), ...shown.slice(landed + 1)] : shown;
-    }, [cards, entries, keyword, kind, landedId]);
-    const selected = useMemo(
-        () => cards.find((card) => card.id === selectedId || (!!selectedId && card.mergedIds?.includes(selectedId))) ?? null,
-        [cards, selectedId],
+    }, [entries, ideaGroupOfId, ideaGroups, keyword, kind, landedId]);
+    // The card the detail shows is the newest copy of the idea; its moments
+    // come from every copy.
+    const selectedGroup = useMemo(
+        () => (selectedId ? ideaGroupOfId.get(selectedId) ?? null : null),
+        [ideaGroupOfId, selectedId],
     );
-    const selectedEntry = selectedId ? entries.get(selectedId) ?? null : null;
+    const selected = useMemo(() => selectedGroup?.copies[0] ?? null, [selectedGroup]);
+    const selectedCopies = selectedGroup?.copies ?? [];
+    const selectedEntry = selected ? entries.get(selected.id) ?? null : null;
     const playbookItems = useMemo(
         () => listConfirmedPlaybooks(library.sops, library.playbooks),
         [library.sops, library.playbooks],
@@ -703,8 +737,8 @@ export function KnowledgePage({
 
     const handleDelete = useCallback(
         (id: string) => {
-            // A card folded from near-duplicates deletes every copy (W40).
-            const ids = [id, ...(cards.find((card) => card.id === id)?.mergedIds ?? [])];
+            // A card for an idea deletes every copy of it (W40).
+            const ids = [...new Set(idsOfIdea(id))];
             Promise.all(ids.map((entryId) => DeleteKnowledgeEntry(entryId)))
                 .then(() => {
                     invalidateKnowledgeReads();
@@ -720,7 +754,7 @@ export function KnowledgePage({
                 })
                 .catch(() => setDetailNotice(errorNotice(t('detail.deleteFailed'), () => handleDelete(id))));
         },
-        [cards, handleCancelEdit, handleExitHistory, loadEntries, match?.entryId, selectedId, t],
+        [handleCancelEdit, handleExitHistory, idsOfIdea, loadEntries, match?.entryId, selectedId, t],
     );
 
     const handleCopyMarkdown = useCallback(() => {
@@ -987,6 +1021,7 @@ export function KnowledgePage({
             aside = (
                 <KnowHowDetail
                     card={selected}
+                    copies={selectedCopies}
                     entry={selectedEntry}
                     locale={locale}
                     translating={translating}
@@ -1031,7 +1066,7 @@ export function KnowledgePage({
             <ScrollArea className="min-w-0 flex-1">
                 <div className="flex flex-col gap-[26px] px-10 pt-9 pb-14">
                     <div className="flex flex-wrap items-start justify-between gap-4">
-                        <KnowHowHeader cards={ready ? cards : null} />
+                        <KnowHowHeader cards={ready ? ideaHeads : null} />
                         <PlaybookPageActions authorStatus={library.authorStatus} onOpenPlaybook={setSelectedPlaybookId} />
                     </div>
                     {/* A failed read keeps what is on screen; only a first read that fails says so (W21). */}
@@ -1164,11 +1199,11 @@ export function KnowledgePage({
                                     <h2 className="m-0 text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
                                         {t(`groups.${group as TimeGroupKey}`)}
                                     </h2>
-                                    <CardGrid cards={items} selectedId={selectedId} landedId={landedId} locale={locale} onSelect={handleSelect} />
+                                    <CardGrid cards={items} copyCounts={copyCounts} selectedId={selected?.id ?? null} landedId={landedId} locale={locale} onSelect={handleSelect} />
                                 </section>
                             ))
                         ) : (
-                            <CardGrid cards={visible} selectedId={selectedId} landedId={landedId} locale={locale} onSelect={handleSelect} />
+                            <CardGrid cards={visible} copyCounts={copyCounts} selectedId={selected?.id ?? null} landedId={landedId} locale={locale} onSelect={handleSelect} />
                         )
                     )}
                 </div>
@@ -1600,12 +1635,15 @@ function PageMoreMenu({
 
 function CardGrid({
     cards,
+    copyCounts,
     selectedId,
     landedId = null,
     locale,
     onSelect,
 }: {
     cards: main.KnowHowCard[];
+    /** Saved copies each card stands for, by the card's id. */
+    copyCounts: Map<string, number>;
     selectedId: string | null;
     landedId?: string | null;
     locale: string;
@@ -1617,6 +1655,7 @@ function CardGrid({
                 <KnowHowCardButton
                     key={card.id}
                     card={card}
+                    copies={copyCounts.get(card.id) ?? 1}
                     locale={locale}
                     selected={card.id === selectedId}
                     landed={card.id === landedId}
@@ -1629,12 +1668,15 @@ function CardGrid({
 
 function KnowHowCardButton({
     card,
+    copies = 1,
     locale,
     selected,
     landed = false,
     onSelect,
 }: {
     card: main.KnowHowCard;
+    /** Saved copies this card stands for; above one it reads "Seen N times". */
+    copies?: number;
     locale: string;
     selected: boolean;
     /** Just saved from the proposal: scrolled into view with the violet wash, once. */
@@ -1671,13 +1713,19 @@ function KnowHowCardButton({
             </span>
             <span className="text-[14.5px] font-semibold leading-[1.35]">{card.title}</span>
             {card.takeaway && <span className="line-clamp-3 text-[13px]">{card.takeaway}</span>}
-            {from && <span className="text-xs text-muted">{from}</span>}
+            {(from || copies > 1) && (
+                <span className="flex w-full flex-wrap items-center gap-x-2 text-xs text-muted">
+                    {from && <span>{from}</span>}
+                    {copies > 1 && <span className="ml-auto">{t('reuse.copies', { count: copies })}</span>}
+                </span>
+            )}
         </button>
     );
 }
 
 function KnowHowDetail({
     card,
+    copies = [card],
     entry,
     locale,
     translating,
@@ -1690,6 +1738,8 @@ function KnowHowDetail({
     onOpenActivitySession,
 }: {
     card: main.KnowHowCard;
+    /** Every copy of the idea, newest first; their moments are the card's sources. */
+    copies?: main.KnowHowCard[];
     entry: main.KnowledgeEntry | null;
     locale: string;
     translating: boolean;
@@ -1704,6 +1754,11 @@ function KnowHowDetail({
     const { t } = useTranslation('knowledge');
     const kind = knowHowKind(card.kind);
     const points = card.points ?? [];
+    // Sources from every copy, oldest first, each moment once.
+    const sources = uniqueBy(
+        copies.flatMap((copy) => copy.moments ?? []).sort((a, b) => a.at - b.at),
+        (moment) => `${moment.at}|${moment.assistant}|${moment.app}|${moment.sessionId}`,
+    );
     const apps = (card.apps ?? []).join(', ');
     const when = card.savedAt > 0 ? dateTimeInWords(card.savedAt, locale) : '';
     const whenLine = [when, apps].filter(Boolean).join(' · ');
@@ -1775,8 +1830,8 @@ function KnowHowDetail({
                         {whenLine && <span className="text-xs text-muted">{whenLine}</span>}
                         <span className="text-[13.5px]">{source}</span>
                     </div>
-                    {(card.moments?.length ?? 0) > 1 ? (
-                        <LessonMoments moments={card.moments} locale={locale} onOpenActivitySession={onOpenActivitySession} />
+                    {(sources.length) > 1 ? (
+                        <LessonMoments moments={sources} locale={locale} onOpenActivitySession={onOpenActivitySession} />
                     ) : (
                         entry && <EntryMoments content={entry.content} locale={locale} onOpenActivitySession={onOpenActivitySession} />
                     )}

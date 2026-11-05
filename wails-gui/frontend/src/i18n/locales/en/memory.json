@@ -661,6 +661,8 @@
             "quote": "{{text}}",
             "seen_one": "Seen once",
             "seen_other": "Seen {{count}} times",
+            "copies_one": "Seen once",
+            "copies_other": "Seen {{count}} times",
             "where": "{{seen}} · {{apps}}",
             "communicationWhere": "{{area}} · {{evidence}}",
             "confirm": "That’s me",

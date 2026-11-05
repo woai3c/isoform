@@ -30,7 +30,9 @@
     "reuse": {
         "once": "Used once",
         "twice": "Used twice",
-        "many": "Used {{count}} times"
+        "many": "Used {{count}} times",
+        "copies_one": "Seen once",
+        "copies_other": "Seen {{count}} times"
     },
     "when": {
         "today": "Today",

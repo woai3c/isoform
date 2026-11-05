@@ -1692,3 +1692,63 @@ describe('design review v1.0.0 (Thursday)', () => {
         expect(screen.getByRole('button', { name: 'Technical details' })).toBeInTheDocument();
     });
 });
+
+describe('How you do things shows one card per idea (design review v1.0.2 W40, Y33)', () => {
+    const TITLE = 'Docker cleanup needs prune first';
+    const copies = [1, 2, 3, 4, 5].map((n) => card({
+        id: `dup-${n}`,
+        kind: 'fix',
+        title: n % 2 ? TITLE : 'docker cleanup needs prune first.',
+        savedAt: now - n * DAY,
+        moments: [{ at: now - n * DAY, assistant: '', app: `App ${n}`, sessionId: `s-${n}` }] as main.KnowHowMoment[],
+    }));
+    const other = card({ id: 'other', kind: 'decision', title: 'Ship the brief before nine', savedAt: now - DAY });
+
+    beforeEach(async () => {
+        vi.resetAllMocks();
+        pageQueryCache.clear();
+        await i18n.changeLanguage('en');
+        mocks.listKnowHow.mockResolvedValue([...copies, other]);
+        mocks.getEntries.mockResolvedValue(ENTRIES);
+        mocks.listSops.mockResolvedValue([]);
+        mocks.getPlaybooks.mockResolvedValue({ plans: [], channels: null, defaultChannels: [] });
+        mocks.getSopAuthor.mockResolvedValue(null);
+        mocks.getMatch.mockResolvedValue(null);
+        mocks.getCandidate.mockResolvedValue(null);
+        mocks.dismiss.mockResolvedValue(undefined);
+        mocks.remove.mockResolvedValue(undefined);
+        mocks.listVersions.mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+        cleanup();
+    });
+
+    it('shows five copies of one lesson as one card that says Seen 5 times, and counts ideas', async () => {
+        await renderPage();
+        expect(document.querySelectorAll('[data-know-how-id]')).toHaveLength(2);
+        expect(within(cardButton('needs prune first')).getByText('Seen 5 times')).toBeInTheDocument();
+        expect(screen.getByText(/2 pieces of know-how from your work/)).toBeInTheDocument();
+    });
+
+    it('lists the sources of every copy in the opened card', async () => {
+        await renderPage();
+        await selectCard('needs prune first');
+        const moments = screen.getByRole('list', { name: 'Where it came from' });
+        const items = within(moments).getAllByRole('listitem');
+        expect(items).toHaveLength(5);
+        for (const n of [1, 2, 3, 4, 5]) expect(within(moments).getByText(new RegExp(`App ${n}`))).toBeInTheDocument();
+    });
+
+    it('deletes every copy when the card is deleted', async () => {
+        await renderPage();
+        await selectCard('needs prune first');
+        await openMenu(`More for ${TITLE}`);
+        await chooseMenuItem('Delete');
+        const dialog = await screen.findByRole('dialog');
+        await act(async () => {
+            fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+        });
+        expect(mocks.remove.mock.calls.map(([id]) => id).sort()).toEqual(['dup-1', 'dup-2', 'dup-3', 'dup-4', 'dup-5']);
+    });
+});

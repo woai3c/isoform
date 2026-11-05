@@ -26,6 +26,7 @@ export function MemoryRow({
     belief,
     showKind = true,
     selected,
+    copies = 1,
     onSelect,
     onEdit,
     onForget,
@@ -35,6 +36,8 @@ export function MemoryRow({
     entry: main.MemoryEntry;
     belief?: AboutYouBelief;
     showKind?: boolean;
+    /** Saved copies of this idea the row stands for (one card per idea). */
+    copies?: number;
     selected?: boolean;
     onSelect: () => void;
     onEdit: () => void;
@@ -70,6 +73,7 @@ export function MemoryRow({
             <div className="flex min-h-7 flex-wrap items-center gap-x-2 gap-y-1 px-2.5 pb-1.5 text-[11px] text-muted">
                 {showKind && <span className="rounded-full bg-surface-active px-2 py-0.5">{t(`kinds.${memoryKind(entry)}`)}</span>}
                 {changed > 0 && <span>{t(unchanged ? 'row.learned' : 'row.updated', { when: relativeWords(t, changed) })}</span>}
+                {copies > 1 && <span>{t('aboutYou.review.copies', { count: copies })}</span>}
                 <span className="ml-auto flex items-center gap-0.5 text-muted opacity-100 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
                     <button type="button" className="inline-flex min-h-7 min-w-7 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus hover:bg-surface-active hover:text-ink" onClick={onEdit} aria-label={t('row.edit', { title: label })}>
                         <Pencil className="h-3 w-3" />

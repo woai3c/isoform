@@ -1972,3 +1972,105 @@ describe('About you design review v1.0.0', () => {
         expect(dialog).toHaveTextContent(entry.title);
     });
 });
+
+// One card per idea while copies wait for the merge (design review v1.0.2 W40, Y33).
+function copyOf(id: string, savedAt: number, text: string): Entry {
+    return {
+        ...entry,
+        id,
+        content: `# Writing style\n- **Dimension**: user_insight\n- **Source**: activity\n\n${text}\n`,
+        updatedAt: savedAt,
+        modTime: savedAt,
+    };
+}
+
+describe('MemoryPage one card per idea', () => {
+    beforeEach(async () => {
+        vi.resetAllMocks();
+        window.localStorage.clear();
+        await i18n.changeLanguage('en');
+        mocks.getPreview.mockImplementation(async (id: string) => preview({ memoryId: id }));
+        mocks.forgetEntry.mockResolvedValue(undefined);
+        mocks.getEvidence.mockResolvedValue([]);
+        mocks.getUses.mockResolvedValue({ total: 0, lastAt: 0, surfaces: [] });
+        mocks.listVersions.mockResolvedValue([]);
+        mocks.search.mockResolvedValue([]);
+        mocks.getPortrait.mockResolvedValue(learningPortrait());
+        mocks.getExamples.mockResolvedValue([]);
+        mocks.listGoals.mockResolvedValue({ tracking: [], done: [], held: [] });
+    });
+
+    const fiveCopies = [1, 2, 3, 4, 5].map((n) => copyOf(`copy-${n}`, n * 1000, n % 2 ? 'You prefer detailed replies.' : 'you prefer detailed replies'));
+
+    it('shows five copies of one belief as one card that says Seen 5 times', async () => {
+        resetDefaults(fiveCopies);
+        mocks.getAbout.mockImplementation(async () => aboutFor(fiveCopies, { newThisWeek: fiveCopies.map((row) => row.id), area: 'communication' }));
+        render(<MemoryPage devToolsUnlocked />);
+        const review = await screen.findByRole('region', { name: 'New this week' });
+        expect(within(review).getAllByRole('article')).toHaveLength(1);
+        expect(within(review).getByText('Seen 5 times')).toBeInTheDocument();
+        const groups = await screen.findByTestId('belief-groups');
+        expect(within(groups).getAllByText('Seen 5 times')).toHaveLength(1);
+    });
+
+    it('counts ideas, not copies, in the group heading', async () => {
+        resetDefaults(fiveCopies);
+        mocks.getAbout.mockImplementation(async () => aboutFor(fiveCopies, { area: 'communication' }));
+        render(<MemoryPage devToolsUnlocked />);
+        await screen.findByTestId('belief-groups');
+        const heading = screen.getByRole('button', { name: /How you communicate/ });
+        expect(heading).toHaveTextContent(/How you communicate\s*1$/);
+    });
+
+    it('keeps different titles as separate cards and counts each idea', async () => {
+        const rows = [copyOf('short', 2000, 'You prefer short replies.'), copyOf('detailed', 1000, 'You prefer detailed replies.')];
+        resetDefaults(rows);
+        mocks.getAbout.mockImplementation(async () => aboutFor(rows, { newThisWeek: ['short', 'detailed'], area: 'communication' }));
+        render(<MemoryPage devToolsUnlocked />);
+        const review = await screen.findByRole('region', { name: 'New this week' });
+        expect(within(review).getAllByRole('article')).toHaveLength(2);
+        expect(within(review).queryAllByText(/^Seen \d+ times$/)).toHaveLength(0);
+        expect(screen.getByRole('button', { name: /How you communicate/ })).toHaveTextContent(/How you communicate\s*2$/);
+    });
+
+    it('forgets every copy when the card is forgotten from its detail', async () => {
+        resetDefaults(fiveCopies);
+        mocks.getAbout.mockImplementation(async () => aboutFor(fiveCopies, { area: 'communication' }));
+        render(<MemoryPage devToolsUnlocked initialSelectedId="copy-3" />);
+        await screen.findByRole('complementary', { name: 'Belief detail' });
+        fireEvent.click(screen.getByRole('button', { name: 'Forget this' }));
+        const dialog = await screen.findByRole('dialog', { name: 'Forget this?' });
+        await within(dialog).findByText('Detailed communication preference');
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Forget this' }));
+        await waitFor(() => expect(mocks.forgetEntry).toHaveBeenCalledTimes(5));
+        expect(mocks.forgetEntry.mock.calls.map((call) => call[0]).sort()).toEqual(fiveCopies.map((row) => row.id).sort());
+    });
+
+    it('forgets every copy from the New this week card after its Undo window', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true });
+        try {
+            resetDefaults(fiveCopies);
+            mocks.getAbout.mockImplementation(async () => aboutFor(fiveCopies, { newThisWeek: fiveCopies.map((row) => row.id), area: 'communication' }));
+            render(<MemoryPage devToolsUnlocked />);
+            const review = await screen.findByRole('region', { name: 'New this week' });
+            fireEvent.click(within(review).getByRole('button', { name: 'Forget' }));
+            await act(async () => { vi.advanceTimersByTime(10_000); });
+            await waitFor(() => expect(mocks.forgetEntry).toHaveBeenCalledTimes(5));
+            expect(mocks.forgetEntry.mock.calls.map((call) => call[0]).sort()).toEqual(fiveCopies.map((row) => row.id).sort());
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('lists the evidence of every copy in the opened card', async () => {
+        resetDefaults(fiveCopies);
+        mocks.getAbout.mockImplementation(async () => aboutFor(fiveCopies, { area: 'communication' }));
+        mocks.getEvidence.mockImplementation(async (id: string) => [{ at: Date.now() - 3600000, durationMs: 0, appName: 'Slack', text: `Evidence seen in ${id}.`, activitySessionId: '' }]);
+        render(<MemoryPage devToolsUnlocked initialSelectedId="copy-1" />);
+        const detail = await screen.findByRole('complementary', { name: 'Belief detail' });
+        await waitFor(() => expect(within(detail).getByText(/Evidence seen in copy-5/)).toBeInTheDocument());
+        for (const id of ['copy-1', 'copy-2', 'copy-3', 'copy-4']) {
+            expect(within(detail).getByText(new RegExp(`Evidence seen in ${id}`))).toBeInTheDocument();
+        }
+    });
+});

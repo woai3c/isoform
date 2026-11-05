@@ -661,6 +661,8 @@
             "quote": "{{text}}",
             "seen_one": "出现过 1 次",
             "seen_other": "出现过 {{count}} 次",
+            "copies_one": "出现过 1 次",
+            "copies_other": "出现过 {{count}} 次",
             "where": "{{seen}} · {{apps}}",
             "communicationWhere": "{{area}} · {{evidence}}",
             "confirm": "说得对",

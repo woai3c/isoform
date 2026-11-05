@@ -31,16 +31,22 @@ export type ReviewResult =
     | { kind: 'saving' }
     | { kind: 'answerFailed' }
     | { kind: 'corrected'; wording: string; undoFailed?: boolean }
-    | { kind: 'notQuite'; confirmedAt: number; undoFailed?: boolean }
+    /** copyAt: when each copy of the idea was marked, for Undo (one card, every copy). */
+    | { kind: 'notQuite'; confirmedAt: number; copyAt?: Record<string, number>; undoFailed?: boolean }
     | { kind: 'pending'; until: number }
     | { kind: 'forgetting' }
     | { kind: 'forgotten'; days: number }
     | { kind: 'forgetFailed' };
 
 export interface ReviewItem {
+    /** The card's head: the newest copy of the idea. */
     id: string;
     text: string;
     where: string;
+    /** Every saved copy of this idea, head included. Actions apply to all of them. */
+    copyIds?: string[];
+    /** How many saved copies the card stands for, shown as "Seen N times" when above one. */
+    copies?: number;
     communication?: boolean;
     /** One of the portrait's confirm rows: That's me says the portrait can use it. */
     portraitCandidate?: boolean;
@@ -69,6 +75,7 @@ export function useBeliefReview({
     onForgotten,
     onChanged,
     contentOf,
+    copiesOf,
 }: {
     onConfirmed: (saved: main.MemoryEntry) => void;
     onForgotten: (id: string) => void;
@@ -76,8 +83,13 @@ export function useBeliefReview({
     onChanged: () => void;
     /** The belief's file, for Not quite with words. */
     contentOf: (id: string) => string | undefined;
+    /** Every saved copy of the idea a card's head stands for; an action reaches each one. */
+    copiesOf?: (id: string) => string[];
 }) {
     const [results, setResults] = useState<Record<string, ReviewResult>>({});
+    const copiesRef = useRef(copiesOf);
+    copiesRef.current = copiesOf;
+    const idsOf = useCallback((id: string) => copiesRef.current?.(id) ?? [id], []);
     const [now, setNow] = useState(() => Date.now());
     const timers = useRef(new Map<string, number>());
     const set = useCallback((id: string, result: ReviewResult) => {
@@ -96,11 +108,11 @@ export function useBeliefReview({
         // The answer shows at once (Y27); a failure brings the buttons back.
         set(id, { kind: 'confirmed', wasNotQuite });
         try {
-            onConfirmed(await ConfirmMemoryEntry(id));
+            for (const copy of idsOf(id)) onConfirmed(await ConfirmMemoryEntry(copy));
         } catch {
             set(id, { kind: 'confirmFailed' });
         }
-    }, [onConfirmed, set]);
+    }, [idsOf, onConfirmed, set]);
 
     const ask = useCallback((id: string) => set(id, { kind: 'asking' }), [set]);
 
@@ -110,33 +122,40 @@ export function useBeliefReview({
         set(id, { kind: 'saving' });
         try {
             if (wording) {
-                const content = contentOf(id);
-                if (content === undefined) throw new Error('memory_unavailable');
-                const saved = await SaveMemoryEntry(id, rewordFirstPoint(content, wording));
+                for (const copy of idsOf(id)) {
+                    const content = contentOf(copy);
+                    if (content === undefined) throw new Error('memory_unavailable');
+                    onConfirmed(await SaveMemoryEntry(copy, rewordFirstPoint(content, wording)));
+                }
                 set(id, { kind: 'corrected', wording });
-                onConfirmed(saved);
             } else {
-                const confirmedAt = await NotQuiteMemoryEntry(id);
-                set(id, { kind: 'notQuite', confirmedAt });
+                const copyAt: Record<string, number> = {};
+                for (const copy of idsOf(id)) copyAt[copy] = await NotQuiteMemoryEntry(copy);
+                set(id, { kind: 'notQuite', confirmedAt: copyAt[id] ?? 0, copyAt });
                 onChanged();
             }
         } catch {
             set(id, { kind: 'answerFailed' });
         }
-    }, [contentOf, onChanged, onConfirmed, set]);
+    }, [contentOf, idsOf, onChanged, onConfirmed, set]);
 
     const runForget = useCallback(async (id: string) => {
         timers.current.delete(id);
         set(id, { kind: 'forgetting' });
         try {
-            const preview = await GetMemoryForgetPreview(id);
-            await ForgetMemoryEntry(preview.memoryId, preview.confirmationToken);
-            set(id, { kind: 'forgotten', days: preview.retentionDays });
+            // Every copy goes, so the idea cannot come back from a copy.
+            let days = 0;
+            for (const copy of idsOf(id)) {
+                const preview = await GetMemoryForgetPreview(copy);
+                await ForgetMemoryEntry(preview.memoryId, preview.confirmationToken);
+                days = preview.retentionDays;
+            }
+            set(id, { kind: 'forgotten', days });
             onForgotten(id);
         } catch {
             set(id, { kind: 'forgetFailed' });
         }
-    }, [onForgotten, set]);
+    }, [idsOf, onForgotten, set]);
     const runForgetRef = useRef(runForget);
     runForgetRef.current = runForget;
 
@@ -162,14 +181,18 @@ export function useBeliefReview({
         try {
             switch (result.kind) {
                 case 'confirmed':
-                    await UndoConfirmMemoryEntry(id);
-                    if (result.wasNotQuite) await NotQuiteMemoryEntry(id);
+                    for (const copy of idsOf(id)) {
+                        await UndoConfirmMemoryEntry(copy);
+                        if (result.wasNotQuite) await NotQuiteMemoryEntry(copy);
+                    }
                     break;
                 case 'notQuite':
-                    await UndoNotQuiteMemoryEntry(id, result.confirmedAt);
+                    for (const copy of idsOf(id)) {
+                        await UndoNotQuiteMemoryEntry(copy, result.copyAt?.[copy] ?? result.confirmedAt);
+                    }
                     break;
                 case 'corrected':
-                    onConfirmed(await UndoMemoryWording(id, result.wording));
+                    for (const copy of idsOf(id)) onConfirmed(await UndoMemoryWording(copy, result.wording));
                     break;
                 case 'pending':
                     cancel(id);
@@ -183,7 +206,7 @@ export function useBeliefReview({
             // The answer stays, and says Undo didn't save (Y15).
             if (result.kind === 'confirmed' || result.kind === 'notQuite' || result.kind === 'corrected') set(id, { ...result, undoFailed: true });
         }
-    }, [cancel, clear, onChanged, onConfirmed, results, set]);
+    }, [cancel, clear, idsOf, onChanged, onConfirmed, results, set]);
 
     /** Every pending forget: the page closed or went behind Activity. */
     const cancelPending = useCallback(() => {
@@ -437,6 +460,7 @@ function ReviewCard({ item, review }: { item: ReviewItem; review: BeliefReview }
         >
             <div className="flex items-start gap-2">
                 {item.where && <span className="min-w-0 flex-1 text-xs text-muted">{item.where}</span>}
+                {(item.copies ?? 0) > 1 && <span className="text-xs text-muted">{t('aboutYou.review.copies', { count: item.copies })}</span>}
                 {!forgetting && status !== 'learned_today' && <BeliefChip status={status} className="ml-auto" />}
             </div>
             <p id={quoteId} className={cn('m-0 text-sm leading-[1.45] text-ink break-words', forgetting && 'text-muted line-through')}>

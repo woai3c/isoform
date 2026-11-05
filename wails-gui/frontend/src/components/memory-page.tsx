@@ -47,6 +47,7 @@ import { beliefInSecondPerson, MEMORY_KINDS, humanMemoryText, memoryApps, memory
 import { beliefSummary } from '@/lib/about-you';
 import { historyFound, historyName, useFirstDay } from '@/hooks/useFirstDay';
 import { MEMORY_AREAS, memoryArea, sentMessageEvidence, type MemoryArea } from '@/lib/communication';
+import { groupIdeas, ideaCopyIds, ideaHead, type IdeaGroup } from '@/lib/idea-copies';
 
 interface MemoryPageProps {
     onOpenActivitySession?: (sessionId: string) => void;
@@ -159,7 +160,7 @@ export function MemoryPage({
     const [, setSearching] = useState(false);
     const [kindFilter, setKindFilter] = useState<MemoryKind | 'all'>('all');
     const [syncing, setSyncing] = useState(false);
-    const [forgetTarget, setForgetTarget] = useState<{ id: string; title: string; rejectionReason?: string } | null>(null);
+    const [forgetTarget, setForgetTarget] = useState<{ id: string; title: string; copyIds?: string[]; rejectionReason?: string } | null>(null);
     const [rejectTarget, setRejectTarget] = useState<{ id: string; title: string } | null>(null);
     const [historyFor, setHistoryFor] = useState<main.MemoryEntry | null>(null);
     const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -354,12 +355,40 @@ export function MemoryPage({
         });
     }, [entries, keyword, searchResults, kindFilter, t]);
 
-    const groupedEntries = useMemo<Map<MemoryArea, main.MemoryEntry[]>>(
-        () => new Map(MEMORY_AREAS.map((area): [MemoryArea, main.MemoryEntry[]] => [
+    // One card per idea (W40, Y33): saved copies whose titles match share a
+    // card. Actions reach every copy, so the groups span all entries.
+    const ideaTitle = useCallback((entry: main.MemoryEntry) => (
+        beliefInSecondPerson(humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '')) || memoryLabel(entry, t)
+    ), [t]);
+    const ideaGroups = useMemo(() => groupIdeas(entries, ideaTitle, bestTime), [entries, ideaTitle]);
+    const ideaGroupOf = useMemo(() => {
+        const byId = new Map<string, IdeaGroup<main.MemoryEntry>>();
+        for (const group of ideaGroups) for (const copy of group.copies) byId.set(copy.id, group);
+        return byId;
+    }, [ideaGroups]);
+    const copyIdsOf = useCallback((id: string) => {
+        const group = ideaGroupOf.get(id);
+        return group ? ideaCopyIds(group, (entry) => entry.id) : [id];
+    }, [ideaGroupOf]);
+    // Each shown idea: its newest copy that passes the filters, and how many copies it stands for.
+    type IdeaRow = { head: main.MemoryEntry; copies: number };
+    const groupedEntries = useMemo<Map<MemoryArea, IdeaRow[]>>(() => {
+        const shown = new Set(filteredEntries.map((entry) => entry.id));
+        const rows = ideaGroups.flatMap((group): Array<{ area: MemoryArea; row: IdeaRow }> => {
+            const head = ideaHead(group, (entry) => shown.has(entry.id));
+            if (!head) return [];
+            return [{ area: memoryArea(beliefsById.get(head.id)?.area ?? head.area), row: { head, copies: group.copies.length } }];
+        });
+        return new Map(MEMORY_AREAS.map((area): [MemoryArea, IdeaRow[]] => [
             area,
-            filteredEntries.filter((entry) => memoryArea(beliefsById.get(entry.id)?.area ?? entry.area) === area),
-        ]).filter(([, rows]) => rows.length > 0)),
-        [beliefsById, filteredEntries],
+            rows.filter((item) => item.area === area).map((item) => item.row),
+        ]).filter(([, list]) => list.length > 0));
+    }, [beliefsById, filteredEntries, ideaGroups]);
+    // Ideas, not copies: the counts the page shows.
+    const ideaCount = ideaGroups.length;
+    const confirmedIdeaCount = useMemo(
+        () => ideaGroups.filter((group) => group.copies.some((entry) => beliefsById.get(entry.id)?.status === 'confirmed')).length,
+        [beliefsById, ideaGroups],
     );
 
     const selected = useMemo(
@@ -401,7 +430,7 @@ export function MemoryPage({
     const entriesRef = useRef(entries);
     entriesRef.current = entries;
     const contentOf = useCallback((id: string) => entriesRef.current.find((entry) => entry.id === id)?.content, []);
-    const review = useBeliefReview({ onConfirmed: handleConfirmed, onForgotten: handleForgottenInOneClick, onChanged: loadAll, contentOf });
+    const review = useBeliefReview({ onConfirmed: handleConfirmed, onForgotten: handleForgottenInOneClick, onChanged: loadAll, contentOf, copiesOf: copyIdsOf });
     const { cancelPending } = review;
 
     // A one-click forget runs only while its Undo is in view: closing the
@@ -473,9 +502,11 @@ export function MemoryPage({
         const current = new Set((about?.newThisWeek ?? []).filter((id) => !checkFirstSnapshots.current.has(id)));
         const list = new Intl.ListFormat(i18n.language, { style: 'long', type: 'conjunction' });
         const items: ReviewItem[] = [];
+        const savedAt = new Map<string, number>();
         for (const id of reviewOrder) {
             const entry = entries.find((row) => row.id === id);
             if (entry && current.has(id)) {
+                savedAt.set(id, bestTime(entry));
                 const belief = beliefsById.get(id);
                 const seen = belief && belief.sessionCount > 0
                     ? t('aboutYou.review.seen', { count: belief.sessionCount })
@@ -501,10 +532,17 @@ export function MemoryPage({
                 items.push(item);
             } else if (review.results[id] && reviewSnapshots.current.has(id)) {
                 items.push(reviewSnapshots.current.get(id)!);
+                const live = entries.find((row) => row.id === id);
+                savedAt.set(id, live ? bestTime(live) : 0);
             }
         }
-        return items;
-    }, [about, beliefsById, entries, i18n.language, review.results, reviewOrder, t, checkFirstItems]);
+        // One card per idea: the newest shown copy heads it, and it stands for every copy.
+        return groupIdeas(items, (item) => item.text, (item) => savedAt.get(item.id) ?? 0).map((group) => {
+            const head = group.copies[0];
+            const copyIds = copyIdsOf(head.id);
+            return { ...head, copyIds, copies: copyIds.length };
+        });
+    }, [about, beliefsById, copyIdsOf, entries, i18n.language, review.results, reviewOrder, t, checkFirstItems]);
 
     const handleForgot = useCallback(
         (preview: MemoryForgetPreview) => {
@@ -614,8 +652,9 @@ export function MemoryPage({
 
     // The reviewed preview replaces a pending one-click forget of the same belief.
     const forgetEntry = (entry: main.MemoryEntry) => {
-        review.cancel(entry.id);
-        setForgetTarget({ id: entry.id, title: memoryLabel(entry, t) });
+        const copyIds = copyIdsOf(entry.id);
+        for (const copy of copyIds) review.cancel(copy);
+        setForgetTarget({ id: entry.id, title: memoryLabel(entry, t), copyIds });
     };
     const rejectEntry = (entry: main.MemoryEntry) => setRejectTarget({ id: entry.id, title: memoryLabel(entry, t) });
 
@@ -751,10 +790,11 @@ export function MemoryPage({
                                         <p className="m-0 pb-1 text-[12.5px] text-muted">{t('aboutYou.communication.note')}</p>
                                     )}
                                     <CollapsibleContent data-testid="belief-group-rows" className="grid gap-x-6 gap-y-1.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))]">
-                                    {rows.map((entry) => (
+                                    {rows.map(({ head: entry, copies }) => (
                                         <MemoryRow
                                             key={entry.id}
                                             entry={entry}
+                                            copies={copies}
                                             belief={withAnswer(beliefsById.get(entry.id), review.results[entry.id])}
                                             showKind
                                             selected={selectedId === entry.id}
@@ -791,11 +831,11 @@ export function MemoryPage({
                                         : entries.length === 0
                                         ? t('aboutYou.summary.empty')
                                         : t('aboutYou.summary.line', {
-                                            beliefs: beliefSummary(t, totals.beliefs || entries.length, earliest),
+                                            beliefs: beliefSummary(t, ideaCount || entries.length, earliest),
                                             confirmed: !about
                                                 ? ''
-                                                : totals.confirmed > 0
-                                                    ? t('aboutYou.summary.confirmed', { count: totals.confirmed })
+                                                : confirmedIdeaCount > 0
+                                                    ? t('aboutYou.summary.confirmed', { count: confirmedIdeaCount })
                                                     : t('aboutYou.summary.noneConfirmed'),
                                             local: t('aboutYou.summary.local'),
                                         }).replace(/\s{2,}/g, ' ')}
@@ -879,6 +919,7 @@ export function MemoryPage({
                             <MemoryDetail
                                 key={selected.id}
                                 entry={selected}
+                                copyIds={copyIdsOf(selected.id).filter((id) => id !== selected.id)}
                                 belief={beliefsById.get(selected.id)}
                                 editRequest={editRequest}
                                 onSaved={(saved) => {

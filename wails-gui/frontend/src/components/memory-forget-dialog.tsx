@@ -17,7 +17,8 @@ import {
 } from '@/lib/wails-shim-app';
 
 interface MemoryForgetDialogProps {
-    target: { id: string; title: string } | null;
+    /** copyIds: the other saved copies of the same idea (one card per idea); each is forgotten too. */
+    target: { id: string; title: string; copyIds?: string[] } | null;
     rejectionReason?: string;
     onOpenChange: (open: boolean) => void;
     onForgot: (preview: MemoryForgetPreview, correctedAttribution: boolean) => void;
@@ -62,6 +63,11 @@ export function MemoryForgetDialog({ target, rejectionReason, onOpenChange, onFo
                 await RejectMemoryAttributionWithPreview(preview.memoryId, rejectionReason, preview.confirmationToken);
             } else {
                 await ForgetMemoryEntry(preview.memoryId, preview.confirmationToken);
+                // The card stands for every copy: forget each one, so none of them comes back.
+                for (const copy of (target?.copyIds ?? []).filter((id) => id !== preview.memoryId)) {
+                    const copyPreview = await GetMemoryForgetPreview(copy);
+                    await ForgetMemoryEntry(copyPreview.memoryId, copyPreview.confirmationToken);
+                }
             }
             onForgot(preview, correctingAttribution);
             onOpenChange(false);

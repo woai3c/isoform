@@ -30,7 +30,9 @@
     "reuse": {
         "once": "用过 1 次",
         "twice": "用过 2 次",
-        "many": "用过 {{count}} 次"
+        "many": "用过 {{count}} 次",
+        "copies_one": "出现过 1 次",
+        "copies_other": "出现过 {{count}} 次"
     },
     "when": {
         "today": "今天",

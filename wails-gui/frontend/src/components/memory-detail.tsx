@@ -113,6 +113,51 @@ function SkeletonLines({ widths }: { widths: string[] }) {
 
 /** The selected belief: its points, why Isoform believes it, where it is
  *  used, and the actions to confirm, correct or forget it. */
+/** One piece of evidence behind a belief: when it was seen, and what was said. */
+function EvidenceArticle({ item, onReject }: { item: ReadableEvidence; onReject: () => void }) {
+    const { t } = useTranslation('memory');
+    const duration = durationWords(t, item.durationMs);
+    const seen = t('aboutYou.evidence.seen', { when: relativeWords(t, item.at) });
+    const said = beliefInSecondPerson(humanMemoryText(item.text));
+    const words = item.appName
+        ? t('aboutYou.evidence.from', { app: item.appName, text: said.replace(/^You(r?)\b/, 'you$1') })
+        : said;
+    return (
+        <article className="flex flex-col gap-1 rounded-lg border border-border bg-panel px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2 text-xs text-muted">
+                <span>{duration ? t('aboutYou.evidence.withDuration', { seen, duration }) : seen}</span>
+                <Button size="sm" variant="link" className="h-auto px-0" onClick={onReject}>
+                    {t('detail.notRight')}
+                </Button>
+            </div>
+            <span className="text-[13px] leading-snug text-ink">{words}</span>
+        </article>
+    );
+}
+
+/** Evidence from the other saved copies of a card's idea, newest first. */
+function CopyEvidence({ ids, onReject }: { ids: string[]; onReject: () => void }) {
+    const [rows, setRows] = useState<ReadableEvidence[]>([]);
+    const key = ids.join('\u0000');
+    useEffect(() => {
+        let current = true;
+        Promise.all(ids.map((id) => GetMemoryEvidenceReadable(id).catch(() => [] as ReadableEvidence[])))
+            .then((lists) => {
+                if (current) setRows(lists.flat().sort((a, b) => b.at - a.at));
+            });
+        return () => { current = false; };
+        // ids change with their joined key only.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key]);
+    return (
+        <>
+            {rows.map((item, index) => (
+                <EvidenceArticle key={`copy-${item.at}-${index}`} item={item} onReject={onReject} />
+            ))}
+        </>
+    );
+}
+
 export function MemoryDetail({
     entry,
     belief,
@@ -129,9 +174,12 @@ export function MemoryDetail({
     onOpenActivitySession,
     devTools = false,
     translateFailed = false,
+    copyIds = [],
 }: {
     entry: main.MemoryEntry;
     belief?: AboutYouBelief;
+    /** The other saved copies of this idea; their evidence joins the list (one card per idea). */
+    copyIds?: string[];
     editRequest: number;
     onSaved: (entry: main.MemoryEntry) => void;
     onForget: () => void;
@@ -561,28 +609,10 @@ export function MemoryDetail({
                     null
                 ) : (
                     <>
-                        {evidence.map((item, index) => {
-                            const duration = durationWords(t, item.durationMs);
-                            const seen = t('aboutYou.evidence.seen', { when: relativeWords(t, item.at) });
-                            const said = beliefInSecondPerson(humanMemoryText(item.text));
-                            const words = item.appName
-                                ? t('aboutYou.evidence.from', { app: item.appName, text: said.replace(/^You(r?)\b/, 'you$1') })
-                                : said;
-                            return (
-                                <article
-                                    key={`${item.at}-${index}`}
-                                    className="flex flex-col gap-1 rounded-lg border border-border bg-panel px-3 py-2.5"
-                                >
-                                    <div className="flex items-center justify-between gap-2 text-xs text-muted">
-                                        <span>{duration ? t('aboutYou.evidence.withDuration', { seen, duration }) : seen}</span>
-                                        <Button size="sm" variant="link" className="h-auto px-0" onClick={onReject}>
-                                            {t('detail.notRight')}
-                                        </Button>
-                                    </div>
-                                    <span className="text-[13px] leading-snug text-ink">{words}</span>
-                                </article>
-                            );
-                        })}
+                        {evidence.map((item, index) => (
+                            <EvidenceArticle key={`${item.at}-${index}`} item={item} onReject={onReject} />
+                        ))}
+                        {copyIds.length > 0 && <CopyEvidence ids={copyIds} onReject={onReject} />}
                     </>
                 )}
                 {!communication && firstSession && onOpenActivitySession && (
