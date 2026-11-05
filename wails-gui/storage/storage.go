@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -17,6 +18,11 @@ import (
 type Store struct {
 	db          *sql.DB
 	contextUses contextUseWriter
+	closeMu     sync.Mutex
+	closing     bool
+	closeOnce   sync.Once
+	closeErr    error
+	operations  sync.WaitGroup
 }
 
 // hasColumn reports whether a table contains the given column.
@@ -121,6 +127,10 @@ func newStoreWithSnapshotOptions(dbPath string, snapshots snapshotOptions) (*Sto
 	// Use a single connection so PRAGMAs persist for all queries.
 	// Desktop apps don't need connection pooling.
 	db.SetMaxOpenConns(1)
+	if _, err := db.Exec("PRAGMA busy_timeout=5000"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("set busy_timeout: %w", err)
+	}
 
 	version, err := checkSchemaVersion(db)
 	if err != nil {
@@ -140,15 +150,6 @@ func newStoreWithSnapshotOptions(dbPath string, snapshots snapshotOptions) (*Sto
 	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("enable WAL: %w", err)
-	}
-
-	// Set busy timeout so concurrent writes wait instead of returning
-	// SQLITE_BUSY immediately. 5 seconds is generous for a desktop app
-	// where the only contention is between the UI thread and background
-	// cron-job DB writes sharing a single connection.
-	if _, err := db.Exec("PRAGMA busy_timeout=5000"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("set busy_timeout: %w", err)
 	}
 
 	// Enable foreign keys.
@@ -172,17 +173,23 @@ func newStoreWithSnapshotOptions(dbPath string, snapshots snapshotOptions) (*Sto
 
 // Close closes the underlying database connection.
 func (s *Store) Close() error {
-	if s.contextUses.cancel != nil {
-		s.contextUses.cancel()
-		<-s.contextUses.done
-		s.contextUses.mu.Lock()
-		s.contextUses.closed = true
-		s.contextUses.mu.Unlock()
-	}
-	if s.db != nil {
-		return s.db.Close()
-	}
-	return nil
+	s.closeOnce.Do(func() {
+		s.closeMu.Lock()
+		s.closing = true
+		s.closeMu.Unlock()
+		s.operations.Wait()
+		if s.contextUses.cancel != nil {
+			s.contextUses.cancel()
+			<-s.contextUses.done
+			s.contextUses.mu.Lock()
+			s.contextUses.closed = true
+			s.contextUses.mu.Unlock()
+		}
+		if s.db != nil {
+			s.closeErr = s.db.Close()
+		}
+	})
+	return s.closeErr
 }
 
 // migrateDefaultWorkspaces creates a default workspace for every existing project

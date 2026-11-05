@@ -14,6 +14,96 @@ import (
 
 var ctx = context.Background()
 
+func TestSchemaCheckWaitsForSQLiteLock(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec("CREATE TABLE fixture (id INTEGER)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("BEGIN EXCLUSIVE"); err != nil {
+		t.Fatal(err)
+	}
+	defer db.Exec("ROLLBACK")
+	checked := make(chan error, 1)
+	go func() { checked <- checkExistingSchemaVersion(path) }()
+	select {
+	case err := <-checked:
+		t.Fatalf("schema check returned while locked: %v", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+	if _, err := db.Exec("COMMIT"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-checked:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("schema check did not continue after unlock")
+	}
+}
+
+func TestCloseWaitsForCheckedStreamItemConnections(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.SaveProject(ctx, ProjectRow{ID: "p", Name: "Project", Path: "/tmp/checked-close"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveSession(ctx, SessionRow{LocalID: "chat", ProjectID: "p", Label: "Chat"}); err != nil {
+		t.Fatal(err)
+	}
+	entered, release := make(chan struct{}), make(chan struct{})
+	result := make(chan error, 1)
+	go func() {
+		_, err := s.AppendStreamItemChecked(ctx, "chat", StreamItemRow{ID: "item", Kind: "user"}, func(*Store) error {
+			close(entered)
+			<-release
+			return nil
+		})
+		result <- err
+	}()
+	<-entered
+	closed := make(chan error, 1)
+	go func() { closed <- s.Close() }()
+	deadline := time.After(2 * time.Second)
+	for {
+		s.closeMu.Lock()
+		closing := s.closing
+		s.closeMu.Unlock()
+		if closing {
+			break
+		}
+		select {
+		case <-deadline:
+			close(release)
+			t.Fatal("close did not start")
+		default:
+			time.Sleep(time.Millisecond)
+		}
+	}
+	select {
+	case err := <-closed:
+		close(release)
+		t.Fatalf("close returned before the private connections closed: %v", err)
+	default:
+	}
+	if _, err := s.AppendStreamItemChecked(ctx, "chat", StreamItemRow{}, func(*Store) error { return nil }); !errors.Is(err, sql.ErrConnDone) {
+		close(release)
+		t.Fatalf("append during close: %v", err)
+	}
+	close(release)
+	if err := <-result; err != nil {
+		t.Fatal(err)
+	}
+	if err := <-closed; err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestAppendStreamItemCheckedPublishesOnlyAfterValidation(t *testing.T) {
 	s := newTestStore(t)
 	if err := s.SaveProject(ctx, ProjectRow{ID: "p", Name: "Project", Path: "/tmp/checked-project"}); err != nil {

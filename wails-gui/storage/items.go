@@ -72,6 +72,14 @@ func appendStreamItem(ctx context.Context, db streamItemWriter, sessionLocalID s
 // transaction. Borrowing it for validation would create a circular wait.
 // A rejection rolls back an uncommitted insert; it never deletes a published row.
 func (s *Store) AppendStreamItemChecked(ctx context.Context, sessionLocalID string, item StreamItemRow, validate func(readOnly *Store) error) (int, error) {
+	s.closeMu.Lock()
+	if s.closing {
+		s.closeMu.Unlock()
+		return 0, sql.ErrConnDone
+	}
+	s.operations.Add(1)
+	s.closeMu.Unlock()
+	defer s.operations.Done()
 	if validate == nil {
 		return 0, errors.New("stream item admission check is required")
 	}

@@ -1241,7 +1241,12 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 		s.app.emitBrowserEvent("brief:stored", brief.BriefID)
 		s.app.emitBrowserEvent("mobile:updated")
 		// The day's search for new finds follows the morning brief.
-		go s.app.maybeStartDailyTopicFinds("brief")
+		if s.beginWork() {
+			go func() {
+				defer s.wg.Done()
+				s.app.maybeStartDailyTopicFinds("brief")
+			}()
+		}
 	}
 	log.Printf("[mobile-brief] stored %s brief (narrative %s)", brief.Slot, brief.NarrativeStatus)
 

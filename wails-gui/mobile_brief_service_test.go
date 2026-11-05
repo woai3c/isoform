@@ -69,7 +69,7 @@ func newTestMobileBriefService(t *testing.T, clock *fakeMobileBriefClock) (*mobi
 			t.Fatal(err)
 		}
 	}
-	t.Cleanup(svc.todayRefreshWG.Wait)
+	t.Cleanup(svc.Stop)
 	svc.now = clock.Now
 	svc.sleepState = nil // Synthetic sleep observations are supplied by each test.
 	svc.location = time.UTC
@@ -554,6 +554,42 @@ func TestMobileBriefStopWaitsForTodayRefresh(t *testing.T) {
 		return b, true
 	}, nil); changed {
 		t.Fatal("a patch was accepted after Stop")
+	}
+}
+
+func TestMobileBriefStopWaitsForGeneratedAudio(t *testing.T) {
+	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(7, 0)}
+	svc, _ := newTestMobileBriefService(t, clock)
+	entered, release := make(chan struct{}), make(chan struct{})
+	var enteredOnce sync.Once
+	svc.speaker = fakeSpeaker("en", testWAV(1), nil)
+	svc.speaker.synthesize = func(context.Context, string, string) ([]byte, error) {
+		enteredOnce.Do(func() { close(entered) })
+		<-release
+		return testWAV(1), nil
+	}
+	if _, err := svc.generate(context.Background(), mobileBriefSlotMorning, mobileBriefReasonSchedule); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		close(release)
+		t.Fatal("audio synthesis did not start")
+	}
+	stopped := make(chan struct{})
+	go func() { svc.Stop(); close(stopped) }()
+	select {
+	case <-stopped:
+		close(release)
+		t.Fatal("Stop returned during audio synthesis")
+	case <-time.After(50 * time.Millisecond):
+	}
+	close(release)
+	select {
+	case <-stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Stop did not finish after audio synthesis")
 	}
 }
 

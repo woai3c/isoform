@@ -49,6 +49,9 @@ func newMemoryReadCountRig(t *testing.T) *memoryReadCountRig {
 	if _, err := svc.generate(context.Background(), mobileBriefSlotMorning, mobileBriefReasonSchedule); err != nil {
 		t.Fatal(err)
 	}
+	// The query-count probe swaps the store handles. Let the generated audio
+	// finish using them before any test installs that probe.
+	svc.wg.Wait()
 	main, err := rig.app.ensureMainChat(t.Context())
 	if err != nil {
 		t.Fatal(err)
