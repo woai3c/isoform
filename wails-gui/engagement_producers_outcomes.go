@@ -70,44 +70,44 @@ func (a *App) projectThreadOutcomeItem(ctx context.Context, item *mainChatProact
 	if a.threadOutcomeSourceReadable(ctx, item.ActivityOutcomeSource) {
 		return true
 	}
-	rowID, outcome, refreshedAt, ok := a.refreshedThreadOutcome(ctx, item.ActivityOutcomeSource)
+	rowID, rowTitle, outcome, refreshedAt, ok := a.refreshedThreadOutcome(ctx, item.ActivityOutcomeSource)
 	if !ok {
 		withdrawThreadOutcomeItem(item, lang)
 		return true
 	}
-	applyRefreshedThreadOutcome(item, rowID, outcome, refreshedAt)
+	applyRefreshedThreadOutcome(item, rowID, rowTitle, outcome, refreshedAt)
 	return true
 }
 
 // refreshedThreadOutcome reads the thread's current outcome when the thread
 // still exists and its outcome is readable (a refresh changed the outcome, so
 // the card's source hash no longer matches).
-func (a *App) refreshedThreadOutcome(ctx context.Context, sourceID string) (string, *ActivityThreadOutcome, int64, bool) {
+func (a *App) refreshedThreadOutcome(ctx context.Context, sourceID string) (string, string, *ActivityThreadOutcome, int64, bool) {
 	if a == nil || a.activity == nil || a.activity.store == nil {
-		return "", nil, 0, false
+		return "", "", nil, 0, false
 	}
 	at := strings.LastIndex(sourceID, ":")
 	if at < 1 {
-		return "", nil, 0, false
+		return "", "", nil, 0, false
 	}
 	row, err := a.activity.store.GetActivityByID(strings.TrimPrefix(sourceID[:at], threadOutcomeMomentPrefix))
 	if err != nil || row == nil {
-		return "", nil, 0, false
+		return "", "", nil, 0, false
 	}
 	outcome := a.readableThreadOutcome(ctx, *row)
 	if outcome == nil {
-		return "", nil, 0, false
+		return "", "", nil, 0, false
 	}
 	var record activityThreadOutcomeRecord
 	if json.Unmarshal([]byte(row.threadOutcomeRecord), &record) != nil {
-		return "", nil, 0, false
+		return "", "", nil, 0, false
 	}
-	return row.ID, outcome, record.AttemptedAt, true
+	return row.ID, row.Title, outcome, record.AttemptedAt, true
 }
 
 // applyRefreshedThreadOutcome shows the newer outcome on the same card. A
 // refresh that says the thread is done (the person acted on it) marks the card done.
-func applyRefreshedThreadOutcome(item *mainChatProactive, rowID string, outcome *ActivityThreadOutcome, refreshedAt int64) {
+func applyRefreshedThreadOutcome(item *mainChatProactive, rowID, rowTitle string, outcome *ActivityThreadOutcome, refreshedAt int64) {
 	body := strings.TrimSpace(outcome.Summary)
 	if next := strings.TrimSpace(outcome.NextStep); next != "" {
 		body = strings.TrimSpace(body + " Next: " + next)
@@ -116,8 +116,23 @@ func applyRefreshedThreadOutcome(item *mainChatProactive, rowID string, outcome 
 		withdrawThreadOutcomeItem(item, "")
 		return
 	}
+	// Keep the card's own title in every language. Dropping the copy would let
+	// the generic decision copy ("Work needs your permission.") take its place.
+	title := strings.TrimSpace(item.Headline)
+	if title == "" {
+		title = strings.TrimSpace(rowTitle)
+	}
+	localized := make(map[string]mainChatProactiveCopy, len(engagement.Languages))
+	for _, lang := range engagement.Languages {
+		copy := item.Localized[lang]
+		if strings.TrimSpace(copy.Headline) == "" {
+			copy.Headline = title
+		}
+		copy.Body = body
+		localized[lang] = copy
+	}
+	item.Localized = localized
 	item.Body = body
-	item.Localized = nil
 	item.UpdatedAt = refreshedAt
 	item.ActivityOutcomeSource = threadOutcomeSourceID(rowID, outcome)
 	if outcome.State == "acted_on" {
