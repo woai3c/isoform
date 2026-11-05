@@ -28,6 +28,7 @@ type TodayDailySummary struct {
 
 // TodayBriefView is Today's desktop response, not a phone document.
 type TodayBriefView struct {
+	NothingNew    bool                `json:"nothingNew,omitempty"`
 	Quiet         bool                `json:"quiet,omitempty"`
 	QuietSince    string              `json:"quietSince,omitempty"`
 	QuietScreens  *int                `json:"quietScreens,omitempty"`
@@ -208,51 +209,30 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 		now, loc = s.now(), s.location
 	}
 	latestReady := mobileBriefAsOfTime(latest)
-	// Today shows the last brief made, from when it was ready until the next
-	// slot's time (today-review v1.1.10 A), not the shared current choice
-	// that prefers written text. The live copy stands when it is that brief.
+	// Use the same stored choice as the menu bar. Later empty requests are
+	// still recorded, but cannot displace its written words.
 	snapshot, everMade, firstBrief := false, false, false
 	var quiet MobileBriefV1
 	var quietAt time.Time
+	nothingNew, seenRequest := false, false
 	if service, isService := svc.(*mobileBriefService); isService && service != nil {
-		var selected MobileBriefV1
-		var selectedAt time.Time
-		runs := service.upcomingBrief().Runs
 		for _, candidate := range service.store.briefs() {
 			everMade = true
 			ready := mobileBriefAsOfTime(candidate)
-			if run := todayBriefRecordedRunIn(runs, candidate.BriefID); run != nil {
-				if at := mobileBriefParseTime(run.At); !at.IsZero() {
-					ready = at
-				}
-			}
 			if ready.IsZero() || ready.After(now) {
 				continue
 			}
-			if candidate.NarrativeStatus == "quiet" {
-				if quietAt.IsZero() || ready.After(quietAt) {
-					quiet, quietAt = candidate, ready
-				}
-				continue
+			if candidate.NarrativeStatus == "quiet" && (quietAt.IsZero() || ready.After(quietAt)) {
+				quiet, quietAt = candidate, ready
 			}
-			if selectedAt.IsZero() || ready.After(selectedAt) {
-				selected, selectedAt = candidate, ready
+			if ok && !seenRequest && candidate.Slot == mobileBriefSlotOnRequest && ready.After(latestReady) {
+				seenRequest = true
+				nothingNew = candidate.NarrativeStatus == "quiet" || (candidate.NarrativeStatus == "skipped" && mobileBriefIsEmpty(candidate))
 			}
 		}
-		switch {
-		case !selectedAt.IsZero():
-			if !ok || latest.BriefID != selected.BriefID {
-				var readErr error
-				if latest, ok, readErr = service.finishedBrief(selected.BriefID); readErr != nil {
-					return TodayBriefView{}, readErr
-				}
-			}
-			latestReady = selectedAt
-		case ok:
-			// Before any brief is made, the day's current work is the card.
+		if ok {
 			_, stored := service.store.load(latest.BriefID)
 			snapshot = !stored
-			ok = snapshot
 		}
 	}
 	var health MobileBriefHealth
@@ -290,7 +270,7 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 					}
 				}
 			}
-			quietForSlot := !quietAt.IsZero() && !due.ScheduledAt.IsZero() && quiet.Slot != mobileBriefSlotOnRequest && !quietAt.Before(due.ScheduledAt) && (!ok || snapshot || quietAt.After(latestReady))
+			quietForSlot := (!ok || !mobileBriefHasWrittenText(latest)) && !quietAt.IsZero() && !due.ScheduledAt.IsZero() && quiet.Slot != mobileBriefSlotOnRequest && !quietAt.Before(due.ScheduledAt) && (!ok || snapshot || quietAt.After(latestReady))
 			if quietForSlot {
 				// The slot ran and had nothing to say: Today shows its quiet
 				// state, as it always has, not a pending one.
@@ -304,7 +284,7 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 				// The day's current work is real content: it stays below the
 				// first brief's card, never removed by it.
 				firstBrief = !everMade
-				ok = ok && snapshot && firstBrief
+				ok = ok && (mobileBriefHasWrittenText(latest) || snapshot && firstBrief)
 			} else if ok && !due.ScheduledAt.IsZero() && !latestReady.Before(due.ScheduledAt) {
 				health.PendingSlot, health.PendingAt, health.RetryAt, health.PendingAttempts, health.PendingCause = "", "", "", 0, ""
 			}
@@ -321,6 +301,7 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 	}
 	view := todayBriefView(now, loc, shown, ok, health, building, missing)
 	view.FirstBrief = firstBrief
+	view.NothingNew = nothingNew && view.Brief != nil && mobileBriefHasWrittenText(*view.Brief)
 	if view.Brief != nil {
 		view.BriefRun = todayBriefRecordedRun(svc, view.Brief.BriefID)
 	}

@@ -271,6 +271,10 @@ function zonedFormat(date: Date, language: string, options: Intl.DateTimeFormatO
 /** How long ago an item was first recorded, the way a person says it and as
  *  the brief does: "yesterday", "Thursday" this week, "last Thursday" in the
  *  previous one, then the date. Null for an item first seen today. */
+function hasWrittenBrief(brief: MobileBriefDocument | null): boolean {
+    return brief?.narrativeStatus === "ok" && briefHasWords(brief);
+}
+
 export function briefSinceDay(since: string | undefined, now: Date, language: string, tr: Translate, timeZone?: string): string | null {
     const at = since ? new Date(since) : null;
     if (!at || Number.isNaN(at.getTime())) return null;
@@ -662,7 +666,7 @@ export function TodayBriefSection({
     const madeAt = brief ? new Date(brief.asOf) : null;
     const fromEarlierDay = !!madeAt && !Number.isNaN(madeAt.getTime())
         && new Date(madeAt.getFullYear(), madeAt.getMonth(), madeAt.getDate()).getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const waiting = pending ?? (fromEarlierDay ? (now.getHours() < 12 ? "morning" : "evening") : null);
+    const waiting = hasWrittenBrief(brief) && !view?.firstBrief ? null : pending ?? (fromEarlierDay ? (now.getHours() < 12 ? "morning" : "evening") : null);
     const missing = view?.missing ?? [];
     const hasContent = !!view && brief !== null && !view.empty;
     const summary = view?.dailySummary;
@@ -701,7 +705,7 @@ export function TodayBriefSection({
             rows: [],
             footer: null,
         };
-    } else if (!(pending && earlierBrief) && !fromEarlierDay && (hasContent || view?.quiet) && brief) {
+    } else if ((hasWrittenBrief(brief) || (!(pending && earlierBrief) && !fromEarlierDay)) && (hasContent || view?.quiet) && brief) {
         const displayed = briefForDisplay(brief);
         parts = briefParts({
             firstBrief,
@@ -824,6 +828,7 @@ export function TodayBriefSection({
                     {(pendingCard || parts.card) && <div ref={briefSeenRef}>{pendingCard}{parts.card}</div>}
                 </div>
             ) : (pendingCard || parts.card) && <div ref={briefSeenRef}>{pendingCard}{parts.card}</div>}
+            {view?.nothingNew && brief && <p className="text-[13.5px] text-muted" role="status">{tr("todayBrief.nothingNewSince", { time: briefClockTime(view.briefRun?.status === "ok" && view.briefRun.briefId === brief.briefId && view.briefRun.at ? view.briefRun.at : brief.asOf, i18n.language, tr, brief.timezone) })}</p>}
             {beliefReview.receipt && (!hasContent || view?.quiet || !brief?.yourWeek?.learned?.some((row) => row.memoryId === beliefReview.receipt?.id)) && <TodayWeekBeliefReceipt review={beliefReview} />}
             {retryOpening && <button type="button" role="alert" className="self-start text-[12px] text-error" onClick={() => measureToday("T11", "open", "opened", () => { setRetryOpening(null); retryOpening(); })}>{tr("actions.chatOpenFailed")}</button>}
             {hasContent && view && !view.enabled ? (

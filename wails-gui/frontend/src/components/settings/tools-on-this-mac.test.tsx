@@ -63,7 +63,7 @@ describe("ToolsOnThisMacCard", () => {
 
         const gateway = screen.getByTestId("tools-gateway");
         expect(within(gateway).getByText("Assistant connection")).toBeInTheDocument();
-        expect(within(gateway).getByText(/^Built into Isoform/)).toBeInTheDocument();
+        expect(within(gateway).getByText("Connects Isoform to your assistants on this computer.")).toBeInTheDocument();
         expect(within(gateway).getByText("Running")).toBeInTheDocument();
         // The everyday card keeps the technical words for Advanced.
         expect(screen.getByTestId("tools-on-this-mac")).not.toHaveTextContent(/magpie|gateway/i);
@@ -127,7 +127,8 @@ describe("ToolsOnThisMacCard", () => {
 
         const gateway = screen.getByTestId("tools-gateway");
         expect(within(gateway).getByText("Assistant connection")).toBeInTheDocument();
-        expect(within(gateway).getByText(/Your own magpie/)).toBeInTheDocument();
+        expect(within(gateway).getByText("Connects Isoform to your assistants on this computer.")).toBeInTheDocument();
+        expect(within(gateway).queryByText(/magpie/i)).not.toBeInTheDocument();
         expect(within(gateway).getByText("Not responding")).toBeInTheDocument();
     });
 

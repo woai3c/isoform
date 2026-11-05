@@ -4,6 +4,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import type { TFunction } from "i18next";
+import { describeMobileStatus } from "@/lib/mobile-status";
 import { usageWindowLimit } from "@/lib/usage-window";
 import { SetActivityRetentionDays } from "../../../../wailsjs/go/main/App";
 import { EventsOn } from "../../../../wailsjs/runtime/runtime";
@@ -933,16 +934,13 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
         if (!brief.enabled) return { body: t("overview.briefs.off"), control };
         const times = { morning: clockTime(brief.morning, locale), evening: clockTime(brief.evening, locale) };
         const phone = view.briefs.phone;
-        const seen = phone?.lastSeenAt ? relativeTime(phone.lastSeenAt, now, locale) : null;
         return {
             body: joinSentences(
                 [
                     brief.adaptiveTiming ? t("overview.briefs.adaptive", times) : t("overview.briefs.fixed", times),
-                    phone && seen
-                        ? t("overview.briefs.phone", { name: phone.name, when: seen })
-                        : phone
-                          ? null
-                          : t("overview.briefs.noPhone"),
+                    phone && view.briefs.connection
+                        ? describeMobileStatus(view.briefs.connection, now, locale, t).description
+                        : phone ? null : t("overview.briefs.noPhone"),
                 ],
                 t,
             ),

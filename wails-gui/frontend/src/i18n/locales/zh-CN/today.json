@@ -172,6 +172,7 @@
         "done": "好了。Isoform 不会再建议这一项。"
     },
     "todayBrief": {
+        "nothingNewSince": "自你 {{time}} 的简报以来没有新内容。",
         "blindScreenLine": "这份简报只知道你的日历。让 Isoform 看到你的屏幕，它就能告诉你事情有什么进展。",
         "blindBothLine": "让 Isoform 看到你的屏幕并读取你的日历，它就能告诉你事情有什么进展，帮你安排这一天。",
         "blindScreenDenied": "macOS 拒绝了屏幕录制。在系统设置里开启后再回来。",

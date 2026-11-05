@@ -132,7 +132,9 @@ export function planDisplayName(plan: string, planName: (plan: string) => string
 }
 
 function accountDetail(account: ModelAccountView, planName: (plan: string) => string): string | null {
-    return account.plan && account.plan.trim() !== "" ? planDisplayName(account.plan, planName) : null;
+    const plan = account.plan?.trim() ?? "";
+    if (!/^(?:free|plus|pro|max|team|business|enterprise)(?:\s+\d+x)?$/i.test(plan) && plan.toLowerCase() !== "kimi-code") return null;
+    return planDisplayName(plan, planName);
 }
 
 /** Splits a magpie model id ("claude/claude-sonnet-5-5") into its provider prefix and model. */
@@ -388,8 +390,6 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
     // external CLI modes, so the agreement line is accurate in both.
     const consentInUse =
         status !== null && (managed || external) && status.consent.accepted;
-    const hasSources =
-        accounts.length > 0 || Boolean(status?.ollama) || Boolean(status?.byokRegistered);
     const errorText = status?.error?.trim() ?? "";
     const sidecarState = status !== null ? sidecarStateOf(status.sidecar, managed) : null;
 
@@ -416,6 +416,21 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
         if (isAssistantId(id)) return assistantName(id);
         return account.provider || account.name;
     };
+
+    // Only show a usage account when the provider has a recognizable name.
+    // The gateway can return internal identifiers in either provider or name.
+    const usageAccountTitle = (account: ModelAccountView): string | null => {
+        const provider = account.provider.trim();
+        const id = provider.toLowerCase();
+        if (isAssistantId(id)) return assistantName(id);
+        if (id === "kimi-code") return t("modelAccounts.kimiCode");
+        return /\s/.test(provider) ? provider : null;
+    };
+    const usageAccounts = accounts.flatMap((account) => {
+        const title = usageAccountTitle(account);
+        return title ? [{ account, title }] : [];
+    });
+    const hasSources = usageAccounts.length > 0 || Boolean(status?.ollama) || Boolean(status?.byokRegistered);
 
     /** The plain name of a routing member: the assistant, local models or the user's key. */
     const sourceName = (prefix: string, member: string): string => {
@@ -485,23 +500,28 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
         return { group, members: group?.members ?? [] };
     };
 
-    const windowLabel = (name: string) => {
+    const windowLabel = (name: string): string | null => {
         const limit = usageWindowLimit(name, t);
-        if (!limit) return name.split("·")[0].trim();
-        return limit.charAt(0).toUpperCase() + limit.slice(1);
+        if (limit) return limit.charAt(0).toUpperCase() + limit.slice(1);
+        switch (name.split("·")[0].trim().toLowerCase()) {
+            case "kimi-code": return t("modelAccounts.kimiCode");
+            default: return null;
+        }
     };
 
     const windowRowsOf = (account: ModelAccountView): WindowRow[] =>
-        (account.windows ?? []).map((quota, index) => {
+        (account.windows ?? []).flatMap((quota, index) => {
+            const label = windowLabel(quota.name);
+            if (!label) return [];
             const resetAt = parseTimestamp(quota.resetsAt);
             const refreshing = resetAt !== null && resetAt <= now;
-            return {
+            return [{
                 key: `${index}:${quota.name}`,
-                label: windowLabel(quota.name),
+                label,
                 percent: refreshing ? null : remainingPercent(quota),
                 resets: refreshing ? null : formatReset(quota.resetsAt, now, locale),
                 refreshing,
-            };
+            }];
         });
 
     const trailingOf = (account: ModelAccountView): string | null => {
@@ -713,10 +733,10 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
                         )}
                         {hasSources ? (
                             <div className="flex flex-col">
-                                {accounts.map((account, index) => (
+                                {usageAccounts.map(({ account, title }, index) => (
                                     <AccountRow
                                         key={`${index}:${account.name}`}
-                                        title={accountTitle(account)}
+                                        title={title}
                                         detail={accountDetail(account, (plan) => t("modelAccounts.planName", { plan }))}
                                         trailing={trailingOf(account)}
                                         windows={windowRowsOf(account)}

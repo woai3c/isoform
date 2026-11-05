@@ -172,6 +172,7 @@
         "done": "Done. Isoform will not suggest this again."
     },
     "todayBrief": {
+        "nothingNewSince": "Nothing new since your {{time}} brief.",
         "blindScreenLine": "This brief only knows your calendar. Let Isoform see your screen, and it can tell you what moved.",
         "blindBothLine": "Let Isoform see your screen and read your calendar so it can tell you what moved and plan your day.",
         "blindScreenDenied": "macOS said no to screen recording. Turn it on in System Settings, then come back.",

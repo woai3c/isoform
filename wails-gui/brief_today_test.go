@@ -92,25 +92,31 @@ func TestGetLatestBriefReadsTheStoredBrief(t *testing.T) {
 	}
 }
 
-func TestTodayV118FollowsLatestMadeBrief(t *testing.T) {
-	clock := &fakeMobileBriefClock{now: time.Date(2026, 10, 9, 14, 0, 0, 0, time.UTC)}
-	svc, _ := newTestMobileBriefService(t, clock)
-	svc.location = time.UTC
-	svc.app.mobileBriefSvc = svc
-	older := mobileBriefCurrentWritten(t, "2026-10-08", mobileBriefSlotEvening, 18, "Older words.")
-	newer := mobileBriefStoredBrief(t, "2026-10-09", mobileBriefSlotMorning, 9)
-	future := mobileBriefStoredBrief(t, "2026-10-09", mobileBriefSlotEvening, 18)
-	quiet := mobileBriefStoredBrief(t, "2026-10-09", mobileBriefSlotOnRequest, 11)
-	newer.AsOf, future.AsOf, quiet.AsOf = "2026-10-09T09:00:00Z", "2026-10-09T18:00:00Z", "2026-10-09T11:00:00Z"
-	quiet.NarrativeStatus = "quiet"
-	for _, brief := range []MobileBriefV1{older, newer, future, quiet} {
-		if err := svc.store.save(brief, clock.Now()); err != nil {
-			t.Fatal(err)
-		}
+func TestTodayKeepsWrittenBriefAfterEmptyRequest(t *testing.T) {
+	app, svc, older := keptTextFixture(t, "safe-recall")
+	now := svc.now().Add(time.Hour)
+	svc.now = func() time.Time { return now }
+	empty := buildMobileBriefV1(mobileBriefInput{AsOf: now.Add(-time.Minute), Slot: mobileBriefSlotOnRequest, Location: time.UTC})
+	empty.NarrativeStatus = "skipped"
+	if err := svc.store.save(empty, now); err != nil {
+		t.Fatal(err)
 	}
-	view, err := svc.app.GetLatestBrief()
-	if err != nil || view.Brief == nil || view.Brief.BriefID != newer.BriefID {
-		t.Fatalf("Today should show latest completed morning brief: %+v, %v", view.Brief, err)
+	view, err := app.GetLatestBrief()
+	if err != nil || view.Brief == nil || view.Brief.BriefID != older.BriefID || !view.NothingNew {
+		t.Fatalf("Today should keep the written brief after an empty request: %+v, %v", view, err)
+	}
+	failed := buildMobileBriefV1(mobileBriefInput{AsOf: now, Slot: mobileBriefSlotOnRequest, Location: time.UTC})
+	failed.NarrativeStatus = "unavailable"
+	if err := svc.store.save(failed, now); err != nil {
+		t.Fatal(err)
+	}
+	afterFailure, err := app.GetLatestBrief()
+	if err != nil || afterFailure.Brief == nil || afterFailure.Brief.BriefID != older.BriefID || afterFailure.NothingNew {
+		t.Fatalf("a later failed request must not claim nothing new: %+v, %v", afterFailure, err)
+	}
+	menu, ok := app.menuBarLatestBrief(svc)
+	if !ok || menu.BriefID != view.Brief.BriefID {
+		t.Fatalf("menu brief = %s, Today = %s", menu.BriefID, view.Brief.BriefID)
 	}
 }
 

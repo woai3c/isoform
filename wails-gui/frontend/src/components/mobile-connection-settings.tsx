@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Copy, Loader2, RefreshCw } from "lucide-react";
+import { describeMobileStatus } from "@/lib/mobile-status";
 import { activeInterval } from "@/lib/app-activity";
 import { QRCodeSVG } from "qrcode.react";
 import { SettingsFailureLine } from "@/components/settings/settings-failure";
@@ -520,62 +521,7 @@ export function MobileConnectionSettings({
     const connectionWarning = status?.warningCode === "relay_loopback" && status.warningHost
         ? t("mobileConnection.loopbackWarning", { host: status.warningHost })
         : null;
-    const describeStatus = (
-        current: MobileConnectionStatus,
-    ): { label: string; description: string; on: boolean } => {
-        if (!current.enabled) {
-            return {
-                label: t("mobileConnection.statusOff"),
-                description: t("mobileConnection.statusOffDescription"),
-                on: false,
-            };
-        }
-        switch (current.relayState) {
-            case "connected": {
-                const seenAt = parseTimestamp(current.relayLastSeenAt);
-                const host = relayHostname(current.relayUrl).toLowerCase();
-                const localOnly =
-                    current.warningCode === "relay_loopback" || host === "127.0.0.1" || host === "localhost";
-                const description =
-                    current.remoteAccess?.state === "ready"
-                        ? seenAt === null
-                            ? t("mobileConnection.statusConnectedRemoteNoTime")
-                            : t("mobileConnection.statusConnectedRemote", {
-                                  time: formatRelative(seenAt, now, locale),
-                              })
-                        : current.remoteAccess
-                          ? t("mobileConnection.statusConnectedRemoteNotReady")
-                          : localOnly
-                            ? seenAt === null
-                                ? t("mobileConnection.statusConnectedLocalOnlyNoTime")
-                                : t("mobileConnection.statusConnectedLocalOnly", {
-                                      time: formatRelative(seenAt, now, locale),
-                                  })
-                            : seenAt === null
-                              ? t("mobileConnection.statusConnectedNoTime")
-                              : t("mobileConnection.statusConnectedDescription", {
-                                    time: formatRelative(seenAt, now, locale),
-                                });
-                return {
-                    label: t("mobileConnection.statusConnected"),
-                    description,
-                    on: true,
-                };
-            }
-            case "offline":
-                return {
-                    label: t("mobileConnection.statusOffline"),
-                    description: t("mobileConnection.statusOfflineDescription"),
-                    on: false,
-                };
-            default:
-                return {
-                    label: t("mobileConnection.statusConnecting"),
-                    description: t("mobileConnection.statusConnectingDescription"),
-                    on: false,
-                };
-        }
-    };
+
 
     const turnOn = () => {
         const raw = relayValue.trim();
@@ -908,7 +854,7 @@ export function MobileConnectionSettings({
     const deviceName = (device: { deviceName: string }) =>
         device.deviceName || t("mobileConnection.unnamedDevice");
 
-    const connection = status ? describeStatus(status) : null;
+    const connection = status ? describeMobileStatus(status, now, locale, t) : null;
     const pendingName = pending ? deviceName(pending) : "";
     const revokeName = revokeTarget ? deviceName(revokeTarget) : "";
 

@@ -158,9 +158,7 @@ export function ToolsOnThisMacCard({
                 description={
                     !gatewayInUse
                         ? t("toolsOnThisMac.gatewayNotInUse")
-                        : user
-                          ? t("toolsOnThisMac.gatewayUser")
-                          : t("toolsOnThisMac.gatewayBundled")
+                        : t("toolsOnThisMac.gatewayDescription")
                 }
                 control={chip}
             />

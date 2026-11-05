@@ -488,7 +488,7 @@ describe("TodayPage brief and finds", () => {
         mockUseTodayNews.mockReturnValue({ data: { date: "2026-10-27", status: "none", items: [], updatedAt: 0 }, loading: false, regenerate: vi.fn() });
         mockUseLatestBrief.mockReturnValue({
             view: {
-                brief: { ...todayNextBrief, briefId: "2026-10-27-on_request-061052", slot: "on_request", displaySlot: undefined, asOf: new Date(2026, 9, 27, 6, 10).toISOString() },
+                brief: { ...todayNextBrief, briefId: "2026-10-27-on_request-061052", slot: "on_request", displaySlot: undefined, narrative: [], narrativeStatus: "unavailable", asOf: new Date(2026, 9, 27, 6, 10).toISOString() },
                 building: false, enabled: true, nextAt: "", nextSlot: "", empty: false, missing: [],
                 pendingSlot: "morning", pendingAt: new Date(2026, 9, 27, 7, 0).toISOString(),
             },

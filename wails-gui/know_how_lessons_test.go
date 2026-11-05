@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -30,6 +31,82 @@ func TestKnowHowNearDuplicateTitles(t *testing.T) {
 		if sameKnowHowLesson(pair[0], pair[1]) {
 			t.Errorf("%q and %q are different lessons", pair[0], pair[1])
 		}
+	}
+}
+
+func TestKnowHowRelearnPreservesNewDetailsAndSources(t *testing.T) {
+	for _, pair := range [][2]string{
+		{"The state-store race fix", "The fix for the state store race"},
+		{"The Spotlight base-checkout failure", "The base checkout Spotlight failure"},
+		{"The gh pr edit fallback", "The fallback for gh pr edit"},
+	} {
+		t.Run(pair[0], func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			dir, err := knowledgeDir()
+			if err != nil {
+				t.Fatal(err)
+			}
+			original := buildOKFKnowledgeMarkdown("old", pair[0], "Original lesson", time.Unix(1000, 0), "activity", nil, []string{"first"}, []string{"Original detail"}, "fix")
+			writeKnowHowFixture(t, "old", original)
+			moment := KnowHowMoment{At: 2000000, SessionID: "second"}
+			for i := 0; i < 2; i++ {
+				id, ok := relearnKnowHowWithPoints(dir, pair[1], "new", moment, []string{"Original detail", "New detail"}, "second")
+				if !ok || id != "old" {
+					t.Fatalf("relearn = %q %v", id, ok)
+				}
+			}
+			entry, err := (&App{}).GetKnowledgeEntry("old")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Count(entry.Content, "- New detail") != 1 || !strings.Contains(entry.Content, "- Original detail") || !entry.HasHistory {
+				t.Fatalf("details or backup lost: %+v", entry)
+			}
+			if len(entry.SessionIDs) != 2 || entry.SessionIDs[1] != "second" {
+				t.Fatalf("source lineage lost: %v", entry.SessionIDs)
+			}
+		})
+	}
+}
+
+func TestAddKnowHowPointsKeepsFollowingSection(t *testing.T) {
+	body := "## Key Insights\n\n- First\n\n## Other\n\nKeep this.\n"
+	got, changed := addKnowHowPoints(body, []string{"First", "Second"})
+	if !changed || !strings.Contains(got, "- First\n- Second\n\n## Other\n\nKeep this.") {
+		t.Fatalf("unexpected body: %q", got)
+	}
+}
+
+func TestKnowHowRelearnThroughGeneratorsKeepsDetails(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	app := newTranslationTestApp(t, &memoryTranslationFakeRunner{})
+	first := ActivitySessionRow{ID: "first-session", StartTime: time.Now().UnixMilli(), AppNames: `["Terminal"]`}
+	second := ActivitySessionRow{ID: "second-session", StartTime: first.StartTime + 1000, AppNames: `["Terminal"]`}
+	triager := &ActivityTriager{app: app}
+	id, err := triager.saveKnowledge(first, sessionGroup{Sessions: []ActivitySessionRow{first}}, &knowledgeGenerationResponse{Title: "The state-store race fix", KnowledgePoints: []string{"First detail"}, Kind: "fix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := triager.saveKnowledge(second, sessionGroup{Sessions: []ActivitySessionRow{second}}, &knowledgeGenerationResponse{Title: "The fix for the state store race", KnowledgePoints: []string{"Second detail"}, Kind: "fix"})
+	if err != nil || updated != id {
+		t.Fatalf("triage created a copy: id=%q err=%v", updated, err)
+	}
+	generator := &MemoryGenerator{app: app}
+	updated = generator.saveKnowledgeFile(memorySourceConversation, "conversation-1", &knowledgeGenerationResponse{Title: "State store race fix", KnowledgePoints: []string{"Third detail"}, Kind: "fix"})
+	if updated != id {
+		t.Fatalf("generator created a copy: id=%q", updated)
+	}
+	entry, err := app.GetKnowledgeEntry(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, detail := range []string{"First detail", "Second detail", "Third detail"} {
+		if !strings.Contains(entry.Content, detail) {
+			t.Errorf("missing %q in %s", detail, entry.Content)
+		}
+	}
+	if len(entry.SessionIDs) != 2 || !entry.HasHistory {
+		t.Fatalf("missing source lineage or history: %+v", entry)
 	}
 }
 

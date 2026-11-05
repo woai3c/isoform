@@ -243,6 +243,9 @@ func TestSettingsOverviewMatchesItsSources(t *testing.T) {
 	if view.Briefs.Phone == nil || view.Briefs.Phone.Name != phoneSource.Devices[0].DeviceName || view.Briefs.Phone.LastSeenAt != phoneSource.Devices[0].LastSeenAt {
 		t.Fatalf("briefs phone: %+v", view.Briefs.Phone)
 	}
+	if view.Briefs.Connection == nil || view.Briefs.Connection.Enabled != phoneSource.Enabled || view.Briefs.Connection.RelayState != phoneSource.RelayState || view.Briefs.Connection.RelayURL != phoneSource.RelayURL || view.Briefs.Connection.WarningCode != phoneSource.WarningCode {
+		t.Fatalf("briefs connection differs from Phone: %+v vs %+v", view.Briefs.Connection, phoneSource)
+	}
 
 	if len(view.Ignores.Apps) != 1 || view.Ignores.Apps[0].Name != "Journal" || view.Ignores.Apps[0].BundleID != "com.apple.journal" {
 		t.Fatalf("ignores: %+v", view.Ignores.Apps)

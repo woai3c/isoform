@@ -143,6 +143,7 @@ function makeOverview(overrides: Partial<SettingsOverviewView> = {}): SettingsOv
             eveningAt: "18:00",
             adaptive: true,
             phone: { name: "iPhone 17", lastSeenAt: "2026-10-22T14:59:00Z" },
+            connection: { enabled: true, relayState: "connected", relayLastSeenAt: "", relayUrl: "https://relay.example.com", warningCode: "" } as NonNullable<SettingsOverviewView["briefs"]["connection"]>,
         },
         ignores: { apps: [] },
         worthALook: [],
@@ -239,9 +240,23 @@ describe("OverviewPage", () => {
         expect(row("Keeps")).toHaveTextContent(", up to 10 GB in all, 2.4 GB used.");
         expect(within(row("Keeps")).getByRole("progressbar", { name: "2.4 GB of 10 GB used" })).toHaveAttribute("aria-valuenow", "24");
         expect(row("Briefs")).toHaveTextContent(
-            /Your brief comes around 7:00\sAM and 6:00\sPM, timed to when you start and finish\. It reaches iPhone 17, last seen 1 minute ago\./,
+            /Your brief comes around 7:00\sAM and 6:00\sPM, timed to when you start and finish\. Your phone can reach this computer wherever you are\./,
         );
         expect(row("Ignores")).toHaveTextContent("No apps are ignored yet. Password managers are always hidden.");
+    });
+
+    it.each(["en", "zh-CN"])("uses the Phone connection status for a paired phone in %s (ST81)", async (language) => {
+        await i18n.changeLanguage(language);
+        try {
+            const view = makeOverview();
+            view.briefs.connection = { ...view.briefs.connection!, relayState: "offline" };
+            mocks.overview.mockResolvedValue(view);
+            render(<OverviewPage onOpenPage={vi.fn()} />);
+            await waitFor(() => expect(document.body).toHaveTextContent(i18n.t("settings:mobileConnection.statusOfflineDescription")));
+            expect(document.body).not.toHaveTextContent(/It reaches iPhone 17/);
+        } finally {
+            await i18n.changeLanguage("en");
+        }
     });
 
     it("names only the sources and learning switches that are on", async () => {

@@ -1159,6 +1159,7 @@ export interface TodayBriefView {
     weekAnswer?: { weekStart: string; answer: string };
     closingAnswer?: { cardId: string; label: string; questionDigest: string };
     quiet?: boolean;
+    nothingNew?: boolean;
     quietSince?: string;
     quietScreens?: number;
     /** Local activity text; never part of the stored or paired-phone brief. */
@@ -6049,6 +6050,7 @@ export interface SettingsOverviewView {
         eveningAt: string;
         adaptive: boolean;
         phone: { name: string; lastSeenAt: string } | null;
+        connection: Pick<MobileConnectionStatus, "enabled" | "relayUrl" | "relayState" | "relayLastSeenAt" | "warningCode" | "remoteAccess"> | null;
     };
     ignores: { apps: { name: string; bundleId: string }[] };
     worthALook: SettingsOverviewIssue[];

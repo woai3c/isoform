@@ -124,10 +124,21 @@ type SettingsOverviewKeeps struct {
 // and the paired phone the briefs reach — nil when no phone is paired. The
 // times are empty while the brief service is not up yet.
 type SettingsOverviewBriefs struct {
-	MorningAt string                 `json:"morningAt"`
-	EveningAt string                 `json:"eveningAt"`
-	Adaptive  bool                   `json:"adaptive"`
-	Phone     *SettingsOverviewPhone `json:"phone"`
+	MorningAt  string                      `json:"morningAt"`
+	EveningAt  string                      `json:"eveningAt"`
+	Adaptive   bool                        `json:"adaptive"`
+	Phone      *SettingsOverviewPhone      `json:"phone"`
+	Connection *SettingsOverviewConnection `json:"connection"`
+}
+
+// SettingsOverviewConnection contains only the phone status fields needed by Overview.
+type SettingsOverviewConnection struct {
+	Enabled       bool                    `json:"enabled"`
+	RelayURL      string                  `json:"relayUrl"`
+	RelayState    string                  `json:"relayState"`
+	RelayLastSeen string                  `json:"relayLastSeenAt"`
+	WarningCode   string                  `json:"warningCode,omitempty"`
+	RemoteAccess  *MobileRemoteAccessView `json:"remoteAccess,omitempty"`
 }
 
 // SettingsOverviewPhone is the paired phone seen most recently.
@@ -268,6 +279,8 @@ func (a *App) readOverviewSources() overviewSources {
 	}
 	if status, err := a.GetMobileConnectionStatus(); err == nil {
 		src.mobile = status
+	} else {
+		src.unavailable = append(src.unavailable, "briefs")
 	}
 	return src
 }
@@ -418,7 +431,10 @@ func (a *App) settingsOverviewKeeps() (SettingsOverviewKeeps, error) {
 // most recently (the phone field of the connection status is shared with the
 // phone_same_network_only issue through src.mobile).
 func (a *App) settingsOverviewBriefs(status MobileConnectionStatus) (SettingsOverviewBriefs, error) {
-	out := SettingsOverviewBriefs{}
+	out := SettingsOverviewBriefs{Connection: &SettingsOverviewConnection{
+		Enabled: status.Enabled, RelayURL: status.RelayURL, RelayState: status.RelayState,
+		RelayLastSeen: status.RelayLastSeen, WarningCode: status.WarningCode, RemoteAccess: status.RemoteAccess,
+	}}
 	schedule, scheduleErr := a.GetMobileBriefSchedule()
 	if scheduleErr == nil {
 		out.MorningAt = schedule.Morning

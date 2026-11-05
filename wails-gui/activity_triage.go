@@ -1606,8 +1606,9 @@ func (c *ActivityTriager) saveKnowledge(session ActivitySessionRow, group sessio
 	if len(appNames) > 0 {
 		moment.App = appNames[0]
 	}
-	if existing, ok := relearnKnowHow(knowledgeDir, knowledge.Title, entryID, moment, sessionIDsFromGroup(group)...); ok {
+	if existing, ok := relearnKnowHowWithPoints(knowledgeDir, knowledge.Title, entryID, moment, knowledge.KnowledgePoints, sessionIDsFromGroup(group)...); ok {
 		log.Printf("[triager] same lesson as an existing entry; added the moment: %s", activityPrivateLogField("entry", existing))
+		c.app.markMemoryDirty("activity-knowledge-relearned")
 		return existing, nil
 	}
 	unlock := memoryFileLocks.Acquire("knowledge:" + entryID)

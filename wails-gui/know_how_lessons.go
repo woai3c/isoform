@@ -186,6 +186,12 @@ func mergeKnowHowLessons(cards []KnowHowCard) []KnowHowCard {
 // and returns its ID, so learning it again adds nothing new. except is the
 // entry being written, which is an update of itself rather than a copy.
 func relearnKnowHow(dir, title, except string, moment KnowHowMoment, sessionIDs ...string) (string, bool) {
+	return relearnKnowHowWithPoints(dir, title, except, moment, nil, sessionIDs...)
+}
+
+// Preserve newly learned details as well as the source moment. A match is not
+// evidence that the new extraction contains no additional information.
+func relearnKnowHowWithPoints(dir, title, except string, moment KnowHowMoment, points []string, sessionIDs ...string) (string, bool) {
 	tokens := knowHowLessonTokens(title)
 	if len(tokens) == 0 {
 		return "", false
@@ -254,7 +260,9 @@ func relearnKnowHow(dir, title, except string, moment KnowHowMoment, sessionIDs 
 	if len(allSessions) > 0 {
 		doc.Frontmatter["activity_sessions"] = allSessions
 	}
-	if duplicate && len(previousSessions) == len(allSessions) {
+	body, addedPoints := addKnowHowPoints(doc.Body, points)
+	doc.Body = body
+	if duplicate && len(previousSessions) == len(allSessions) && !addedPoints {
 		return match.ID, true
 	}
 	if err := snapshotKnowledgeFile(dir, match.ID); err != nil {
@@ -266,6 +274,38 @@ func relearnKnowHow(dir, title, except string, moment KnowHowMoment, sessionIDs 
 		return "", false
 	}
 	return match.ID, true
+}
+
+func addKnowHowPoints(body string, points []string) (string, bool) {
+	known := make(map[string]bool)
+	for _, line := range strings.Split(body, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "- ") {
+			known[strings.ToLower(strings.TrimSpace(strings.TrimPrefix(line, "- ")))] = true
+		}
+	}
+	var added []string
+	for _, point := range points {
+		point = strings.TrimSpace(point)
+		key := strings.ToLower(point)
+		if point != "" && !known[key] {
+			known[key] = true
+			added = append(added, "- "+point)
+		}
+	}
+	if len(added) == 0 {
+		return body, false
+	}
+	const heading = "## Key Insights"
+	start := strings.Index(body, heading)
+	if start < 0 {
+		return strings.TrimSpace(body) + "\n\n" + heading + "\n\n" + strings.Join(added, "\n") + "\n", true
+	}
+	end := len(body)
+	if next := strings.Index(body[start+len(heading):], "\n## "); next >= 0 {
+		end = start + len(heading) + next
+	}
+	return strings.TrimRight(body[:end], "\n") + "\n" + strings.Join(added, "\n") + "\n" + body[end:], true
 }
 
 // Keep the accumulated source moments when an existing lesson is rewritten.

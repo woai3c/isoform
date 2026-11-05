@@ -394,7 +394,8 @@ func (a *App) storeAssistantHistoryKnowHow(project HistoryProject, items []assis
 		if _, err := os.Stat(path); err == nil {
 			continue
 		}
-		if _, ok := relearnKnowHow(dir, item.Title, id, KnowHowMoment{At: item.At.UnixMilli(), Assistant: item.Assistant}); ok {
+		if _, ok := relearnKnowHowWithPoints(dir, item.Title, id, KnowHowMoment{At: item.At.UnixMilli(), Assistant: item.Assistant}, []string{item.Takeaway}); ok {
+			a.markMemoryDirty("assistant-history-relearned")
 			continue
 		}
 		content := buildOKFKnowledgeMarkdown(id, item.Title, item.Takeaway, now, item.Source, []string{project.Name}, nil, []string{item.Takeaway}, item.Kind)

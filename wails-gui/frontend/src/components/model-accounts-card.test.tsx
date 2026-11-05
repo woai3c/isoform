@@ -513,6 +513,32 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
         }
     });
 
+    it.each(["en", "zh-CN"])("names known usage and hides unknown internal identifiers in %s (ST19)", async (language) => {
+        await i18n.changeLanguage(language);
+        try {
+            mocks.getStatus.mockResolvedValue(statusWith({ accounts: [claudeAccount({ windows: [
+                { name: "kimi-code", used: 1, remaining: 2, resetsAt: inHours(2) },
+                { name: "unknown-internal-id", used: 1, remaining: 2, resetsAt: inHours(2) },
+            ] })] }));
+            render(<ModelAccountsSettings ownKeyForm={null} />);
+            expect(await screen.findByText("Kimi Code")).toBeInTheDocument();
+            expect(document.body).not.toHaveTextContent(/kimi-code|unknown-internal-id/);
+            expect(screen.getAllByRole("progressbar")).toHaveLength(1);
+        } finally {
+            await i18n.changeLanguage("en");
+        }
+    });
+
+    it("names the Kimi provider and hides an account without a display name", async () => {
+        mocks.getStatus.mockResolvedValue(statusWith({ accounts: [
+            codexAccount({ provider: "kimi-code", name: "kimi-code", plan: "unknown-plan-id" }),
+            codexAccount({ provider: "unknown-internal-id", name: "unknown-internal-id" }),
+        ] }));
+        await renderPage();
+        expect(within(cardOf("Usage left")).getByText("Kimi Code")).toBeInTheDocument();
+        expect(document.body).not.toHaveTextContent(/kimi-code|unknown-internal-id|unknown-plan-id|Unknown Plan Id/);
+    });
+
     it("hides the stale number and bar for a window whose reset time has passed", async () => {
         mocks.getStatus.mockResolvedValue(
             statusWith({
