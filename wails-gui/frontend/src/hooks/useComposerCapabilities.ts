@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GetComputerUseAppAccessSnapshot } from '@/lib/wails-shim-app';
+import { activeInterval, appActive } from '@/lib/app-activity';
 import {
     GoogleIcon,
     SlackIcon,
@@ -85,14 +86,17 @@ export function useComposerCapabilities(): {
     }, [t]);
 
     useEffect(() => {
-        refresh();
+        // A hidden or locked window makes no calls: the mount read waits for
+        // the window, and the poll pauses while it is away and reads once when
+        // it is shown again (activeInterval).
+        if (appActive()) refresh();
         // Permission changes happen in System Settings; refresh on focus.
         window.addEventListener('focus', refresh);
         // Also poll so lock/unlock and permission changes converge in place.
-        const id = window.setInterval(refresh, 15_000);
+        const stop = activeInterval(refresh, 15_000);
         return () => {
             window.removeEventListener('focus', refresh);
-            window.clearInterval(id);
+            stop();
         };
     }, [refresh]);
 
