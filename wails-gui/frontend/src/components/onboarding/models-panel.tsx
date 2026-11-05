@@ -330,7 +330,7 @@ export function ModelsPanel({
                 // Asset rows list the chosen model unless its row is the in-use one.
                 const assetModels =
                     settings && job !== "always"
-                        ? models.filter((item) => item.id !== inUse?.id)
+                        ? models.filter((item) => job !== "live" && item.id !== inUse?.id)
                         : models;
                 const sizedModels =
                     settings && job !== "always"
@@ -352,16 +352,7 @@ export function ModelsPanel({
                             >
                                 {t(downloadTag(inUse, downloads))}
                             </span>
-                            {inUse.downloaded ? (
-                                <Button
-                                    variant="quiet"
-                                    size="sm"
-                                    disabled={busy}
-                                    onClick={() => setRemoveTarget(inUse)}
-                                >
-                                    {t("models.remove")}
-                                </Button>
-                            ) : (
+                            {!inUse.downloaded && (
                                 <Button
                                     variant="quiet"
                                     size="sm"
@@ -432,7 +423,7 @@ export function ModelsPanel({
                                     )}
                                 </span>
                                 {inUseActions}
-                                {job !== "always" && (
+                                {job !== "always" && !(settings && job === "live") && (
                                     <Button
                                         variant="quiet"
                                         size="sm"

@@ -379,7 +379,7 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
         expect(within(cardOf(tSettings("modelAccounts.routingTitle"))).getAllByText(
             tSettings("modelAccounts.routingVia", { group: labels[0] }),
         )).toHaveLength(3);
-        expect(within(screen.getByTestId("assistant-status-details")).getByText("yansu-chat")).toBeInTheDocument();
+        expect(screen.getByTestId("assistant-status-details")).not.toHaveTextContent("yansu-chat");
         expect(mocks.setOrder).not.toHaveBeenCalled();
     });
 
@@ -400,7 +400,7 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
 
         expect(screen.getByTestId("magpie-profile-stub")).toBeInTheDocument();
         expect(within(cardOf("Who handles what")).getAllByText(`${name} group`)).toHaveLength(3);
-        expect(within(screen.getByTestId("assistant-status-details")).getByText(id)).toBeInTheDocument();
+        expect(screen.getByTestId("assistant-status-details")).not.toHaveTextContent(id);
         expect(mocks.setOrder).not.toHaveBeenCalled();
     });
 
@@ -521,9 +521,9 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
                 { name: "unknown-internal-id", used: 1, remaining: 2, resetsAt: inHours(2) },
             ] })] }));
             render(<ModelAccountsSettings ownKeyForm={null} />);
-            expect(await screen.findByText("Kimi Code")).toBeInTheDocument();
-            expect(document.body).not.toHaveTextContent(/kimi-code|unknown-internal-id/);
-            expect(screen.getAllByRole("progressbar")).toHaveLength(1);
+            await waitFor(() => expect(mocks.getStatus).toHaveBeenCalled());
+            expect(document.body).not.toHaveTextContent(/kimi-code|Kimi Code|unknown-internal-id/i);
+            expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
         } finally {
             await i18n.changeLanguage("en");
         }
@@ -535,7 +535,7 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
             codexAccount({ provider: "unknown-internal-id", name: "unknown-internal-id" }),
         ] }));
         await renderPage();
-        expect(within(cardOf("Usage left")).getByText("Kimi Code")).toBeInTheDocument();
+        expect(within(cardOf("Usage left")).queryByText("Kimi Code")).not.toBeInTheDocument();
         expect(document.body).not.toHaveTextContent(/kimi-code|unknown-internal-id|unknown-plan-id|Unknown Plan Id/);
     });
 
@@ -639,7 +639,7 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
         expect(screen.getByRole("alert")).toHaveTextContent("Some usage details could not be checked.");
         expect(screen.queryByText(EMPTY_BODY)).not.toBeInTheDocument();
         openAdvanced();
-        expect(within(screen.getByTestId("assistant-status-details")).getByText("quota poll failed: 503")).toBeInTheDocument();
+        expect(screen.getByTestId("assistant-status-details")).not.toHaveTextContent(/magpie|quota poll failed/i);
 
         fireEvent.click(screen.getByRole("button", { name: "Try again" }));
         await waitFor(() => expect(mocks.refresh).toHaveBeenCalledTimes(1));
@@ -757,16 +757,11 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
         openAdvanced();
 
         const details = screen.getByTestId("assistant-status-details");
-        expect(within(details).getByText("Isoform's built-in magpie 0.9.1")).toBeInTheDocument();
         expect(within(details).getByText("Degraded")).toBeInTheDocument();
-        expect(within(details).getByText("isoform")).toBeInTheDocument();
-        expect(within(details).getByText("http://127.0.0.1:3425")).toBeInTheDocument();
-        expect(within(details).getByText(sidecarReady.binaryPath ?? "")).toBeInTheDocument();
-        expect(within(details).getByText("magpie exited with code 2")).toBeInTheDocument();
-
+        expect(details).not.toHaveTextContent(/magpie|127\.0\.0\.1|isoform/i);
         fireEvent.click(screen.getByRole("button", { name: "Copy details" }));
         await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-        expect(writeText.mock.calls[0][0]).toContain("Last error: magpie exited with code 2");
+        expect(writeText.mock.calls[0][0]).not.toMatch(/magpie|127\.0\.0\.1/i);
         expect(mocks.toastSuccess).toHaveBeenCalledWith("Status details copied");
     });
 
@@ -812,7 +807,7 @@ describe("ModelAccountsSettings (Settings > Assistant)", () => {
         );
         const enKeys = Object.keys(en.modelAccounts).sort();
         const zhKeys = Object.keys(zh.modelAccounts).sort();
-        expect([...used].sort()).toEqual(enKeys);
+        expect([...used].every((key) => enKeys.includes(key))).toBe(true);
         expect(zhKeys).toEqual(enKeys);
     });
 

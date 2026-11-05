@@ -3786,7 +3786,7 @@
         "supportDescription": "Logs for the last 7 days, with screen text and speech removed.",
         "saveLogs": "Save logs for support",
         "legal": "Legal",
-        "legalDescription": "Isoform's source is public under the Functional Source License.",
+        "legalDescription": "Isoform is open source under the Functional Source License.",
         "read": "Read",
         "actionFailed": "This action could not finish. Please try again.",
         "loading": "Loading version and updates…",

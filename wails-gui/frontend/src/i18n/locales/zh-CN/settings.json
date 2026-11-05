@@ -3786,7 +3786,7 @@
         "supportDescription": "最近 7 天的日志，已移除屏幕文字和语音。",
         "saveLogs": "保存支持日志",
         "legal": "法律信息",
-        "legalDescription": "Isoform 的源代码以 Functional Source License 公开。",
+        "legalDescription": "Isoform 根据 Functional Source License 开源。",
         "read": "阅读",
         "actionFailed": "此操作未能完成。请重试。",
         "loading": "正在加载版本和更新…",

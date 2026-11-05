@@ -347,14 +347,14 @@ export function AboutUpdates() {
                     title={t("aboutPolish.legal")}
                     description={t("aboutPolish.legalDescription")}
                     control={
-                        <>
+                        <div className="flex items-center whitespace-nowrap">
                             <Button size="sm" variant="link" onClick={() => void perform(() => OpenExternalURL(LICENSE_URL))}>
                                 {t("aboutPolish.license")}
                             </Button>
                             <Button size="sm" variant="link" onClick={() => void perform(() => OpenExternalURL(PRIVACY_URL))}>
                                 {t("aboutPolish.privacy")}
                             </Button>
-                        </>
+                        </div>
                     }
                 />
             </div>

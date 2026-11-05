@@ -423,7 +423,6 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
         const provider = account.provider.trim();
         const id = provider.toLowerCase();
         if (isAssistantId(id)) return assistantName(id);
-        if (id === "kimi-code") return t("modelAccounts.kimiCode");
         return /\s/.test(provider) ? provider : null;
     };
     const usageAccounts = accounts.flatMap((account) => {
@@ -504,7 +503,6 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
         const limit = usageWindowLimit(name, t);
         if (limit) return limit.charAt(0).toUpperCase() + limit.slice(1);
         switch (name.split("·")[0].trim().toLowerCase()) {
-            case "kimi-code": return t("modelAccounts.kimiCode");
             default: return null;
         }
     };
@@ -600,25 +598,7 @@ export function ModelAccountsSettings({ ownKeyForm }: { ownKeyForm: ReactNode })
 
     const detailRows: Array<[string, string]> = [];
     if (status !== null) {
-        const version = (install?.version || status.sidecar.version || "").trim();
-        detailRows.push([
-            t("modelAccounts.detailsGateway"),
-            (userMagpie
-                ? t("modelAccounts.detailsGatewayUser", { version })
-                : t("modelAccounts.detailsGatewayBundled", { version })
-            ).trim(),
-        ]);
         if (sidecarState) detailRows.push([t("modelAccounts.detailsState"), sidecarLabel(sidecarState)]);
-        detailRows.push([t("modelAccounts.detailsGroup"), activeGroupId || t("modelAccounts.detailsNone")]);
-        if (install?.serverUrl) detailRows.push([t("modelAccounts.detailsAddress"), install.serverUrl]);
-        const program = install?.binaryPath || status.sidecar.binaryPath;
-        if (program) detailRows.push([t("modelAccounts.detailsProgram"), program]);
-        if (install?.configDir) detailRows.push([t("modelAccounts.detailsConfig"), install.configDir]);
-        const lastErrors = [...new Set([(status.sidecar.lastError ?? "").trim(), errorText].filter(Boolean))];
-        detailRows.push([
-            t("modelAccounts.detailsLastError"),
-            lastErrors.length > 0 ? lastErrors.join("\n") : t("modelAccounts.detailsNone"),
-        ]);
     }
 
     // Isoform runs the gateway: who answers, and each agent's model and

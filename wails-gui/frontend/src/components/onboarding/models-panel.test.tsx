@@ -168,24 +168,8 @@ describe("shared setup and Settings models", () => {
         unmount();
         render(<ModelsPanel settings />);
         expect(await screen.findAllByText("Downloaded")).toHaveLength(6);
-        fireEvent.click(
-            within(screen.getByTestId("model-asset-sensevoice")).getByRole(
-                "button",
-                { name: "Remove" },
-            ),
-        );
+        expect(within(screen.getByTestId("model-job-live")).queryByRole("button", { name: /Change|Remove/ })).not.toBeInTheDocument();
         expect(mocks.remove).not.toHaveBeenCalled();
-        const confirm = await screen.findByRole("dialog");
-        expect(confirm).toHaveTextContent("217 MB");
-        expect(confirm).toHaveTextContent(
-            "unavailable until you download it again",
-        );
-        fireEvent.click(
-            within(confirm).getByRole("button", { name: "Remove" }),
-        );
-        await waitFor(() =>
-            expect(mocks.remove).toHaveBeenCalledWith("sensevoice"),
-        );
         expect(screen.getByText(choices.modelsFolder)).toBeInTheDocument();
     });
     it("refreshes download state from backend events", async () => {
@@ -364,27 +348,11 @@ it("atomically displays and confirms the successful source replacement", async (
     await waitFor(() => expect(mocks.start).toHaveBeenCalledWith(replacement));
 });
 
-it("confirms removal of an installed alternative and cancellation never removes it", async () => {
-    choices.jobs[0].alternatives.find(
-        (model) => model.id === "parakeet",
-    )!.downloaded = true;
+it("does not offer live model alternatives in Settings", async () => {
+    choices.jobs[0].alternatives.find((model) => model.id === "parakeet")!.downloaded = true;
     render(<ModelsPanel settings />);
-    fireEvent.click(
-        await screen.findByRole("button", {
-            name: "Change Live, while you talk",
-        }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-    let dialog = await screen.findByRole("dialog");
-    expect(dialog).toHaveTextContent("Parakeet TDT v2");
-    expect(dialog).toHaveTextContent("572 MB");
-    expect(mocks.remove).not.toHaveBeenCalled();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
-    expect(mocks.remove).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-    dialog = await screen.findByRole("dialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Remove" }));
-    await waitFor(() => expect(mocks.remove).toHaveBeenCalledWith("parakeet"));
+    const row = await screen.findByTestId("model-job-live");
+    expect(within(row).queryByRole("button", { name: /Change|Remove/ })).not.toBeInTheDocument();
 });
 
 it("lists sizes, installed states and removal for both Always on assets and the speaker pack", async () => {
@@ -893,9 +861,7 @@ describe("Settings models: one row per model and an honest in-use choice (ST77)"
         const row = await screen.findByTestId("model-job-live");
         expect(within(row).queryByText("Whisper large-v3 turbo")).toBeNull();
         expect(within(row).getByText("None")).toBeInTheDocument();
-        const asset = screen.getByTestId("model-asset-whisper");
-        expect(asset).toHaveTextContent("Not downloaded");
-        expect(within(asset).getByRole("button", { name: "Download" })).toBeInTheDocument();
+        expect(screen.queryByTestId("model-asset-whisper")).not.toBeInTheDocument();
     });
 
     it("falls back to the downloaded model that serves the job when the choice is not on disk", async () => {
@@ -906,7 +872,7 @@ describe("Settings models: one row per model and an honest in-use choice (ST77)"
         expect(within(row).getByText("SenseVoice")).toBeInTheDocument();
         expect(within(row).getByText("Downloaded")).toBeInTheDocument();
         expect(within(row).queryByText("Whisper large-v3 turbo")).toBeNull();
-        expect(screen.getByTestId("model-asset-whisper")).toHaveTextContent("Not downloaded");
+        expect(screen.queryByTestId("model-asset-whisper")).not.toBeInTheDocument();
     });
 
     it("lists each model once, on its job row, when everything is downloaded", async () => {
@@ -926,6 +892,6 @@ describe("Settings models: one row per model and an honest in-use choice (ST77)"
         render(<ModelsPanel settings />);
         await screen.findByTestId("model-job-live");
         const list = document.querySelector(".setup-list") as HTMLElement;
-        expect(within(list).getAllByText("Whisper large-v3 turbo")).toHaveLength(1);
+        expect(within(list).queryByText("Whisper large-v3 turbo")).not.toBeInTheDocument();
     });
 });

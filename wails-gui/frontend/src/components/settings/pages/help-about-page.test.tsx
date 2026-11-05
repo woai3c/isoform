@@ -94,6 +94,15 @@ describe("Settings About", () => {
         expect(discord).toHaveClass("text-ink", "border-border", "bg-background");
         expect(discord.querySelector("svg")).toHaveAttribute("fill", "currentColor");
     });
+    it("shows the legal wording and links together in Chinese", async () => {
+        await i18n.changeLanguage("zh-CN");
+        render(<HelpAboutPage onReplayOnboarding={vi.fn()} />);
+        expect(await screen.findByText("Isoform 根据 Functional Source License 开源。")).toBeInTheDocument();
+        const license = screen.getByRole("button", { name: i18n.t("settings:aboutPolish.license") });
+        const privacy = screen.getByRole("button", { name: i18n.t("settings:aboutPolish.privacy") });
+        expect(license.parentElement).toBe(privacy.parentElement);
+        expect(license.parentElement).toHaveClass("whitespace-nowrap");
+    });
     it("shows board rows, build details, paired phone, Get help with its email row outside Advanced (ST26), and recovery controls", async () => {
         const setup = vi.fn();
         render(<HelpAboutPage onReplayOnboarding={setup} />);
@@ -110,6 +119,11 @@ describe("Settings About", () => {
         expect(
             screen.getByText(/Mac mini · macOS 26.1 · paired with My phone/),
         ).toBeInTheDocument();
+        expect(screen.getByText("Isoform is open source under the Functional Source License.")).toBeInTheDocument();
+        const license = screen.getByRole("button", { name: "License" });
+        const privacy = screen.getByRole("button", { name: "Privacy" });
+        expect(license.parentElement).toBe(privacy.parentElement);
+        expect(license.parentElement).toHaveClass("whitespace-nowrap");
         expect(screen.getByText(/1.3 GB/)).toBeInTheDocument();
         expect(screen.getByText("Email support")).toBeInTheDocument();
         expect(
