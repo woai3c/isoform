@@ -86,9 +86,9 @@ describe('Isoform noticed', () => {
         await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(2));
         for (let i = 0; i < 100; i++) await pageQueryCache.read('pressure', [i], async () => i);
         view.rerender(<><ActivityNoticed dateStr={DAY} onOpenMoment={vi.fn()} /><ActivityNoticed dateStr={otherDay} onOpenMoment={vi.fn()} /></>);
-        await act(async () => { await Promise.all([...(fixture.listeners.get('activity:summary-ready') ?? [])].map((fn) => fn(undefined))); });
-        await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(4));
-        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+        await act(async () => { await Promise.all([...(fixture.listeners.get('noticed:updated') ?? [])].map((fn) => fn({ date: DAY }))); });
+        await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(4), { timeout: 2000 });
+        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
         expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(4);
     });
 
@@ -233,14 +233,23 @@ describe('Isoform noticed', () => {
         expect(await screen.findByRole('status')).toHaveTextContent('Saved to Knowledge.');
     });
 
-    it('reads the suggestions again when a new summary is ready or a follow-up changes', async () => {
+    it('reads the suggestions again when the backend says this day changed', async () => {
         render(<ActivityNoticed dateStr={DAY} onOpenMoment={vi.fn()} />);
         await screen.findByText('Isoform noticed');
-        for (const event of ['activity:summary-ready', 'agency:updated']) {
-            const before = binding('GetDayNoticed').mock.calls.length;
+        const before = binding('GetDayNoticed').mock.calls.length;
+        act(() => fixture.listeners.get('noticed:updated')?.forEach((fn) => fn({ date: DAY })));
+        await waitFor(() => expect(binding('GetDayNoticed').mock.calls.length).toBeGreaterThan(before), { timeout: 2000 });
+    });
+
+    it('does not read the suggestions for a summary or a goal change alone', async () => {
+        render(<ActivityNoticed dateStr={DAY} onOpenMoment={vi.fn()} />);
+        await screen.findByText('Isoform noticed');
+        const before = binding('GetDayNoticed').mock.calls.length;
+        for (const event of ['activity:summary-ready', 'agency:updated', 'activity:activities-updated']) {
             act(() => fixture.listeners.get(event)?.forEach((fn) => fn(DAY)));
-            await waitFor(() => expect(binding('GetDayNoticed').mock.calls.length).toBeGreaterThan(before));
         }
+        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
+        expect(binding('GetDayNoticed').mock.calls.length).toBe(before);
     });
 
     it('translates the box and the routine draft into Chinese', async () => {

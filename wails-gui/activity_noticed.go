@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sync"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -645,7 +646,45 @@ func (a *App) GetDayNoticed(dateStr string) (perfValue []NoticedSuggestion, perf
 		checked = []NoticedSuggestion{}
 	}
 	a.secondPersonNoticed(checked)
+	// The page re-reads on noticed:updated only when the day's set really
+	// changed since it was last published. A read that finds the same set emits
+	// nothing, so reads cannot feed each other.
+	if fp, fpErr := noticedSetFingerprint(checked); fpErr == nil && noticedPublished.changed(dateStr, fp) {
+		a.emitBrowserEvent("noticed:updated", map[string]string{"date": dateStr})
+	}
 	return checked, nil
+}
+
+// noticedSetFingerprint hashes a day's suggestions as read.
+func noticedSetFingerprint(items []NoticedSuggestion) (string, error) {
+	raw, err := json.Marshal(items)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+// noticedPublished remembers the fingerprint of each day's suggestions as last
+// read, so a real change (and only a real change) is announced.
+var noticedPublished noticedPublications
+
+type noticedPublications struct {
+	mu   sync.Mutex
+	last map[string]string
+}
+
+// changed records fp for date and reports whether it differs from the value
+// seen before. The first sighting is a baseline, not a change.
+func (p *noticedPublications) changed(date, fp string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.last == nil {
+		p.last = map[string]string{}
+	}
+	prior, seen := p.last[date]
+	p.last[date] = fp
+	return seen && prior != fp
 }
 
 func (a *App) noticedByID(dateStr, id string) (NoticedSuggestion, error) {

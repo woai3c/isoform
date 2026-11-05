@@ -54,7 +54,10 @@ on(['topics:updated', 'topics:withdrawn'], ['GetTodayTopics']);
 on(['activity:session-saved', 'calendar:synced'], ['GetCaptureCounts']);
 on(['agency:updated'], ['GetGoalCheckIn', 'ListGoals']);
 // The Noticed strip re-reads when a summary lands or a follow-up changes.
-on(['activity:summary-ready', 'agency:updated', 'activity:activities-updated'], ['GetDayNoticed']);
+// The Noticed strip re-reads only when its own set really changes: the backend
+// emits noticed:updated only then. agency:updated and activity:activities-updated
+// fire constantly at launch, and every read they caused returned the same rows.
+on(['noticed:updated'], ['GetDayNoticed']);
 on(['session:items-appended'], ['LoadStreamItemsPage', 'ListMainChatAnswerChips']);
 on(['main-chat:chips'], ['ListMainChatAnswerChips']);
 on(['main-chat:waiting-changed'], ['ListMainChatWaitingItems']);
@@ -99,6 +102,27 @@ export function PageEventsOn(event: string, handler: (...args: any[]) => void) {
     handlers.set(event, set);
     return () => { set.delete(handler); };
 }
+// Bursts of one event (noticed:updated for several days at once) invalidate
+// their readers once per window, not once per event.
+const COALESCED_EVENTS = new Set(['noticed:updated']);
+export const COALESCE_EVENT_MS = 250;
+function coalesceEvent(event: string, names: string[]): () => void {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let last: unknown;
+    const flush = () => {
+        timer = undefined;
+        pageQueryCache.invalidate(names, true);
+        void dispatch(event, last);
+    };
+    const off = RuntimeEventsOn(event, (data?: unknown) => {
+        last = data;
+        if (timer === undefined) timer = setTimeout(flush, COALESCE_EVENT_MS);
+    });
+    return () => {
+        if (timer !== undefined) clearTimeout(timer);
+        off();
+    };
+}
 let installed = false;
 const cleanups: (() => void)[] = [];
 // Publications and progress keep the last checked display while their
@@ -118,6 +142,10 @@ export function installPageQueryEvents() {
         clearSavedPeopleView();
     }));
     for (const [event, names] of Object.entries(eventReads)) {
+        if (COALESCED_EVENTS.has(event)) {
+            cleanups.push(coalesceEvent(event, names));
+            continue;
+        }
         cleanups.push(RuntimeEventsOn(event, (data?: { status?: string }) => {
             if (event === 'cron:run' && data?.status === 'missed') return;
             // Publications keep the last checked display available to a

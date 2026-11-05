@@ -47,6 +47,15 @@ func (a *App) pageSnapshotAllowed() bool {
 	return a != nil && a.store != nil && !a.IsClosedEyesModeEnabled() && (a.ctx == nil || a.ctx.Err() == nil)
 }
 
+// permissionViewChanged compares a stored view with a fresh probe. Both sides
+// are normalised the same way: a nil and an empty Items list are the same
+// answer. Comparing a stored clone against a raw probe read as a change on
+// every refresh and emitted permissions:changed, which re-read every settings
+// page and refreshed again (the storm of 2026-11-04).
+func permissionViewChanged(prior, next PlatformPermissions) bool {
+	return !reflect.DeepEqual(clonePlatformPermissions(prior), clonePlatformPermissions(next))
+}
+
 func clonePlatformPermissions(view PlatformPermissions) PlatformPermissions {
 	view.Items = append([]PermissionItem(nil), view.Items...)
 	return view
@@ -203,7 +212,7 @@ func (a *App) refreshPagePermissions(probe func() PlatformPermissions, generatio
 	if c.stopped || c.generation != generation || !a.pageSnapshotAllowed() {
 		return
 	}
-	changed := c.value != nil && !reflect.DeepEqual(c.value.View, view)
+	changed := c.value != nil && permissionViewChanged(c.value.View, view)
 	saved := &pagePermissionSnapshot{Version: 2, Build: pagePermissionBuildIdentity(), Schema: pagePermissionSnapshotSchema, Binding: "GetPlatformPermissions", Args: []string{}, At: time.Now(), View: clonePlatformPermissions(view)}
 	c.value = saved
 	if path := c.path; path != "" {
