@@ -1032,7 +1032,18 @@ func (a *App) topicFindsView() TopicFindsView {
 	view.RanAt = state.Finds.RanAt
 	// The line under the section names the top interests, and nothing while
 	// the model has named none: a stray phrase is not worth showing.
-	topicsView := svc.view()
+	// Finds need only the names, not the interests' why lines. Read the
+	// interests once: view() reads them a second time to attach those lines.
+	ranked, topicState := svc.rankedPhrases(false)
+	hasInterests := false
+	if topicState.enabled() && svc.interests != nil {
+		if list := svc.interests(); len(list) > 0 {
+			ranked = interestTopics(list)
+			hasInterests = true
+		}
+	}
+	topicsView := userTopics(ranked, topicState)
+	topicsView.Interests = topicsView.Enabled && hasInterests
 	for i, t := range topicsView.Topics {
 		if i >= topicFindsTopics || !topicsView.Interests {
 			break

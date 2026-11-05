@@ -28,6 +28,20 @@ func testInterest(id, name, why string, queries ...string) interests.Interest {
 	}
 }
 
+func TestTopicFindsReadsInterestsOnce(t *testing.T) {
+	app := newTopicFindsTestApp(t)
+	svc := app.topicsSvc()
+	reads := 0
+	svc.interests = func() []interests.Interest {
+		reads++
+		return []interests.Interest{testInterest("i-orchard", "Orchard planning", "You plan an orchard.")}
+	}
+	view := app.topicFindsView()
+	if reads != 1 || len(view.Topics) != 1 || view.Topics[0] != "Orchard planning" {
+		t.Fatalf("reads = %d, view = %+v", reads, view)
+	}
+}
+
 func TestYourTopicsListsInterestsAndFallsBackToPhrases(t *testing.T) {
 	app := newTopicFindsTestApp(t)
 	app.interestsSvc().now = func() time.Time { return topicTestNow }
