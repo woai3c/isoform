@@ -387,6 +387,9 @@ func (a *App) emitBrowserEvent(eventName string, data ...interface{}) {
 	switch eventName {
 	case "mobile:updated":
 		a.mobileHealthSnapshots.invalidateAll()
+	case "agency:updated":
+		// A goal closed or reopened changes which recording the brief may play.
+		a.mobileHealthSnapshots.invalidateAll()
 	case "brief:stored":
 		a.mobileHealthSnapshots.invalidateAll()
 		a.dayShapeSnapshots.invalidateAll()
