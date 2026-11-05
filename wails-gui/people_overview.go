@@ -290,7 +290,37 @@ func (a *App) personSharedTopics(ctx context.Context, p storage.PrincipalRow, re
 // ListPeopleOverview returns the complete directory, ordered by readable loops.
 func (a *App) ListPeopleOverview() (perfValue PeopleOverview, perfErr error) {
 	defer logPageBinding("ListPeopleOverview", time.Now(), &perfValue)
-	ctx := context.Background()
+	// A write during the read changes the revision it was checked against, and the
+	// activity database changes constantly: retry that one case briefly, then fail.
+	return retryPeopleRead(func() (PeopleOverview, error) {
+		return a.listPeopleOverviewOnce(context.Background())
+	}, peopleOverviewReadAttempts, peopleOverviewRetryWait)
+}
+
+// retryPeopleRead runs read again only when a concurrent write invalidated it; any
+// other error, or success, returns at once. After attempts it returns the last error.
+func retryPeopleRead(read func() (PeopleOverview, error), attempts int, wait time.Duration) (PeopleOverview, error) {
+	var value PeopleOverview
+	var err error
+	for attempt := 0; attempt < attempts; attempt++ {
+		value, err = read()
+		if !errors.Is(err, storage.ErrReadRevisionChanged) {
+			return value, err
+		}
+		time.Sleep(wait)
+	}
+	return PeopleOverview{}, err
+}
+
+// peopleOverviewReadAttempts and peopleOverviewRetryWait bound the retry of a read
+// that a concurrent write invalidated (2026-11-05: "source database changed before
+// publication", rows=0 at 14:25 and 14:38).
+const (
+	peopleOverviewReadAttempts = 3
+	peopleOverviewRetryWait    = 150 * time.Millisecond
+)
+
+func (a *App) listPeopleOverviewOnce(ctx context.Context) (PeopleOverview, error) {
 	stamp, err := a.peopleReadStamp(ctx)
 	if err != nil {
 		return PeopleOverview{}, err
