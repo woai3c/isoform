@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log"
 	"strings"
 	"testing"
 )
@@ -25,7 +27,7 @@ func TestMorningBriefJudgesRunSeparately(t *testing.T) {
 }
 
 func TestMorningBriefJudgeRejectsInvalidVerdict(t *testing.T) {
-	for _, raw := range []string{`{"critique":"ok"}`, `{"critique":"","pass":true}`, `{"critique":"ok","pass":true} {}`, `{"critique":"ok","pass":true,"extra":1}`} {
+	for _, raw := range []string{`{"critique":"ok"}`, `{"critique":"ok","pass":true} {}`, `{"critique":"ok","pass":"uncertain"}`} {
 		if _, err := judgeMorningBrief(context.Background(), morningBriefJudgeInput{}, func(context.Context, string) (string, error) { return raw, nil }); err == nil {
 			t.Fatalf("accepted verdict %s", raw)
 		}
@@ -193,5 +195,34 @@ func TestMorningBriefJudgeFailureLogsSafeCause(t *testing.T) {
 	logged := safeLogError(err)
 	if !strings.Contains(logged, "invalid judge response") || strings.Contains(logged, "private response") {
 		t.Fatalf("unsafe or missing cause: %s", logged)
+	}
+}
+
+func TestMorningBriefJudgeAcceptsFormattedCritiques(t *testing.T) {
+	for _, raw := range []string{
+		`{"critique":"First line.\nSecond line.","pass":false,"explanation":"extra"}`,
+		`{"critique":"` + strings.Repeat("word ", 100) + `","pass":"fail"}`,
+	} {
+		got, err := parseMorningBriefJudgment(raw)
+		if err != nil || got.Pass == nil || *got.Pass || got.Critique == "" || strings.ContainsAny(got.Critique, "\r\n") || len([]rune(got.Critique)) > 300 {
+			t.Fatalf("verdict=%+v error=%v", got, err)
+		}
+	}
+}
+
+func TestMorningBriefJudgeParseReasonRedactsResponse(t *testing.T) {
+	var output bytes.Buffer
+	previous := log.Writer()
+	log.SetOutput(&output)
+	t.Cleanup(func() { log.SetOutput(previous) })
+	_, err := judgeMorningBrief(context.Background(), morningBriefJudgeInput{}, func(context.Context, string) (string, error) {
+		return `{"critique":"private project name","pass":"unknown"}`, nil
+	})
+	logged := safeLogError(err)
+	if !strings.Contains(logged, "pass must be a boolean verdict") || strings.Contains(logged, "private project name") {
+		t.Fatalf("unexpected reason: %s", logged)
+	}
+	if text := output.String(); !strings.Contains(text, "pass must be a boolean verdict") || !strings.Contains(text, "values:[redacted]") || strings.Contains(text, "private project name") {
+		t.Fatalf("unsafe diagnostic: %s", text)
 	}
 }

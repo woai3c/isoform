@@ -389,26 +389,48 @@ func (a *App) projectStreamItems(items []StreamItemData) {
 	a.projectStreamItemsContext(context.Background(), items)
 }
 
+type waitingProjectionTimingKey struct{}
+
 func (a *App) projectStreamItemsContext(ctx context.Context, items []StreamItemData) {
-	a.projectOpenAnswers(items)
-	a.projectLegacyWeekAnswer(ctx, items)
+	timed, _ := ctx.Value(waitingProjectionTimingKey{}).(bool)
+	var timings [10]time.Duration
+	measure := func(index int, fn func()) {
+		if !timed {
+			fn()
+			return
+		}
+		start := time.Now()
+		fn()
+		timings[index] += time.Since(start)
+	}
+	measure(0, func() { a.projectOpenAnswers(items) })
+	measure(1, func() { a.projectLegacyWeekAnswer(ctx, items) })
 	language := a.modelDisplayLanguage()
 	briefDisplay := a.mainChatBriefDisplayProjector()
 	captureDisplay := a.mainChatCaptureProjector(ctx)
 	briefMissed := a.mainChatBriefMissedProjector(ctx)
 	for i := range items {
 		item := &items[i]
-		item.Content, item.ToolInput = a.projectProactiveVoiceDelivery(ctx, item.ToolName, item.Content, item.ToolInput)
-		item.ToolInput = localizedMainChatToolInput(item.ToolName, item.ToolInput)
-		item.ToolInput = a.projectMainChatEngagementPrefs(item.ToolName, item.ToolInput)
-		item.Content = pii.DisplayModelText(item.Content, language)
-		item.ToolInput = displayModelToolInput(item.ToolName, item.ToolInput, language)
-		item.ToolInput = briefDisplay(item.ToolName, item.ToolInput)
-		item.ToolInput = captureDisplay(item.ToolName, item.ToolInput)
-		item.ToolInput = briefMissed(item.ToolName, item.ToolInput)
-		if item.ToolName == mainChatObservationPauseTool {
-			item.ToolInput = a.projectObservationPause(item.ToolInput)
-		}
+		measure(2, func() {
+			item.Content, item.ToolInput = a.projectProactiveVoiceDelivery(ctx, item.ToolName, item.Content, item.ToolInput)
+		})
+		measure(3, func() { item.ToolInput = localizedMainChatToolInput(item.ToolName, item.ToolInput) })
+		measure(4, func() { item.ToolInput = a.projectMainChatEngagementPrefs(item.ToolName, item.ToolInput) })
+		measure(5, func() {
+			item.Content = pii.DisplayModelText(item.Content, language)
+			item.ToolInput = displayModelToolInput(item.ToolName, item.ToolInput, language)
+		})
+		measure(6, func() { item.ToolInput = briefDisplay(item.ToolName, item.ToolInput) })
+		measure(7, func() { item.ToolInput = captureDisplay(item.ToolName, item.ToolInput) })
+		measure(8, func() { item.ToolInput = briefMissed(item.ToolName, item.ToolInput) })
+		measure(9, func() {
+			if item.ToolName == mainChatObservationPauseTool {
+				item.ToolInput = a.projectObservationPause(item.ToolInput)
+			}
+		})
+	}
+	if timed {
+		log.Printf("[main-chat] waiting visible projection timing answers=%s legacy=%s voice=%s locale=%s prefs=%s privacy=%s brief=%s capture=%s missed=%s pause=%s", timings[0], timings[1], timings[2], timings[3], timings[4], timings[5], timings[6], timings[7], timings[8], timings[9])
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"wails-gui/internal/engagement"
 	"wails-gui/storage"
 )
 
@@ -269,36 +270,59 @@ func (a *App) computeMainChatWaiting() (MainChatWaitingState, time.Time, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	ctx = withMainChatReadMemo(ctx)
+	step := time.Now()
 	snapshot, err := a.store.ReadMainChatView(ctx, start.UnixMilli())
+	readTime := time.Since(step)
 	if err != nil {
+		log.Printf("[main-chat] waiting resync timing read=%s (failed)", readTime)
 		return out, time.Time{}, withLogStage("read main chat view", err)
 	}
 	out.SessionID = snapshot.SessionID
-	// Conversation and report rows need no display projection for counts.
-	// Project only the system rows whose display state can change their class.
+	// Classify with only the display changes that can affect a row's class.
+	// Full copy, receipt and brief enrichment is needed only for visible cards.
+	step = time.Now()
 	projected := make([]StreamItemData, len(snapshot.Items))
-	var candidates []storage.StreamItemRow
-	var indexes []int
 	for i, row := range snapshot.Items {
-		if row.Kind == "system" && (row.ToolName == mainChatProactiveTool || row.ToolName == mainChatObservationPauseTool) {
-			candidates = append(candidates, row)
-			indexes = append(indexes, i)
+		if row.Kind != "system" {
+			continue
+		}
+		switch row.ToolName {
+		case mainChatProactiveTool:
+			projected[i].ToolInput = a.projectMainChatWaitingClass(ctx, row.ToolInput)
+		case mainChatObservationPauseTool:
+			projected[i].ToolInput = a.projectObservationPause(row.ToolInput)
 		}
 	}
-	for i, item := range a.projectMainChatRows(ctx, candidates) {
-		projected[indexes[i]] = item
-	}
+	classTime := time.Since(step)
+	step = time.Now()
 	out.Conversations, out.Finished, out.Routine = mainChatTodayCounts(snapshot.Items, projected, now)
-	count, _, items := projectMainChatWaitingRows(snapshot.Items, projected, now, 5)
+	count, ids, _ := projectMainChatWaitingRows(snapshot.Items, projected, now, 5)
 	out.Count = count
-	out.Items = items
 	nextExpiry := earliestMainChatWaitingExpiry(snapshot.Items, projected, now)
+	countTime := time.Since(step)
+	step = time.Now()
+	selected := make([]storage.StreamItemRow, 0, len(ids))
+	wanted := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		wanted[id] = true
+	}
+	for _, row := range snapshot.Items {
+		if wanted[row.ID] {
+			selected = append(selected, row)
+		}
+	}
+	visible := a.projectMainChatRows(context.WithValue(ctx, waitingProjectionTimingKey{}, true), selected)
+	_, _, out.Items = projectMainChatWaitingRows(selected, visible, now, 5)
+	visibleTime := time.Since(step)
+	log.Printf("[main-chat] waiting resync timing read=%s classify=%s counts=%s visible=%s rows=%d selected=%d", readTime, classTime, countTime, visibleTime, len(snapshot.Items), len(selected))
 	if err := ctx.Err(); err != nil {
 		return MainChatWaitingState{Items: []StreamItemData{}}, time.Time{}, withLogStage("waiting budget after projection", err)
 	}
 	// Topic membership is optional enrichment with its own budget. Exhausting
 	// it must not discard a valid count or prevent the worker from publishing.
+	step = time.Now()
 	release, err := a.projectMainChatView(context.Background(), out.SessionID, out.Items, now)
+	log.Printf("[main-chat] waiting resync timing topics=%s", time.Since(step))
 	if err != nil {
 		return MainChatWaitingState{Items: []StreamItemData{}}, time.Time{}, withLogStage("project topic membership", err)
 	}
@@ -307,6 +331,49 @@ func (a *App) computeMainChatWaiting() (MainChatWaitingState, time.Time, error) 
 		out.Items[i], out.Items[j] = out.Items[j], out.Items[i]
 	}
 	return out, nextExpiry, nil
+}
+
+// Only these display transformations can change mainChatRowClassForDisplay.
+// Keep content projection on the normal path before a card is exposed.
+func (a *App) projectMainChatWaitingClass(ctx context.Context, input string) string {
+	if len(input) > mobileChatPageBudget {
+		return ""
+	}
+	var card mainChatProactive
+	if json.Unmarshal([]byte(input), &card) != nil || card.MomentID == "" || card.Kind == "" {
+		return ""
+	}
+	var project func(*mainChatProactive, bool)
+	project = func(item *mainChatProactive, nested bool) {
+		if item.Kind == string(engagement.KindPersonReappeared) || item.Kind == string(engagement.KindFirstWeek) && item.Target.Kind == "person" {
+			item.Kind = "thread_update_unavailable"
+			return
+		}
+		if item.Kind == "first_read" {
+			// A top-level first read contributes no count whether available or
+			// withdrawn. Inside a digest it can affect the envelope class.
+			if nested {
+				a.projectFirstRead(ctx, item, a.currentUILanguage())
+			}
+			return
+		}
+		if item.Kind == string(engagement.KindWeeklyRecap) && strings.TrimSpace(item.BriefID) == "" && !(item.Target.Kind == mainChatTargetToday && mobileValidBriefID(item.Target.ID)) {
+			item.Kind = "thread_update_unavailable"
+			return
+		}
+		if item.ActivityOutcomeSource != "" {
+			a.projectThreadOutcomeItem(ctx, item, a.currentUILanguage())
+		}
+		for i := range item.Items {
+			project(&item.Items[i], true)
+		}
+	}
+	project(&card, false)
+	raw, err := json.Marshal(card)
+	if err != nil {
+		return ""
+	}
+	return a.projectMainChatEngagementPrefs(mainChatProactiveTool, string(raw))
 }
 
 func (a *App) mainChatRowsChanged(sessionID string) {

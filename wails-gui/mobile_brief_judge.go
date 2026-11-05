@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -75,19 +76,58 @@ func judgeMorningBrief(ctx context.Context, input morningBriefJudgeInput, call f
 }
 
 func parseMorningBriefJudgment(raw string) (morningBriefJudgment, error) {
-	decoder := json.NewDecoder(strings.NewReader(stripMobileBriefCodeFence(raw)))
-	decoder.DisallowUnknownFields()
-	var verdict morningBriefJudgment
-	if err := decoder.Decode(&verdict); err != nil {
-		return verdict, err
+	body := stripMobileBriefCodeFence(raw)
+	decoder := json.NewDecoder(strings.NewReader(body))
+	var reply struct {
+		Critique string          `json:"critique"`
+		Pass     json.RawMessage `json:"pass"`
+	}
+	if err := decoder.Decode(&reply); err != nil {
+		return morningBriefJudgment{}, morningBriefJudgmentError("response is not a JSON object", body)
 	}
 	var trailing any
-	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) || verdict.Pass == nil || strings.TrimSpace(verdict.Critique) == "" ||
-		len(verdict.Critique) > 300 || strings.ContainsAny(verdict.Critique, "\r\n") || !mobileBriefCopySafe(verdict.Critique) ||
-		redactThreadOutcomeText(verdict.Critique) != verdict.Critique {
-		return verdict, errors.New("invalid brief judgment")
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return morningBriefJudgment{}, morningBriefJudgmentError("extra text after JSON object", body)
 	}
-	return verdict, nil
+	var pass bool
+	if err := json.Unmarshal(reply.Pass, &pass); err != nil || string(reply.Pass) == "null" {
+		var word string
+		if json.Unmarshal(reply.Pass, &word) != nil {
+			return morningBriefJudgment{}, morningBriefJudgmentError("pass must be a boolean verdict", body)
+		}
+		switch strings.ToLower(strings.TrimSpace(word)) {
+		case "true", "pass":
+			pass = true
+		case "false", "fail":
+			pass = false
+		default:
+			return morningBriefJudgment{}, morningBriefJudgmentError("pass must be a boolean verdict", body)
+		}
+	}
+	// Critiques are internal revision guidance, not published brief copy.
+	// Normalize model formatting and remove sensitive material before reuse.
+	critique := strings.Join(strings.Fields(redactThreadOutcomeText(reply.Critique)), " ")
+	runes := []rune(critique)
+	if len(runes) > 300 {
+		critique = string(runes[:300])
+	}
+	if critique == "" || !mobileBriefCopySafe(critique) {
+		critique = "Review this judgment against the brief and its sources."
+	}
+	return morningBriefJudgment{Critique: critique, Pass: &pass}, nil
+}
+
+// Log a structural excerpt, never model prose or arbitrary field names.
+func morningBriefJudgmentError(reason, body string) error {
+	var fields map[string]json.RawMessage
+	excerpt := "[unparsed content redacted]"
+	if json.Unmarshal([]byte(body), &fields) == nil && fields != nil {
+		_, critique := fields["critique"]
+		_, pass := fields["pass"]
+		excerpt = fmt.Sprintf("{critique:%t, pass:%t, values:[redacted]}", critique, pass)
+	}
+	log.Printf("[mobile-brief] invalid morning judge response: %s; excerpt=%s", reason, excerpt)
+	return codeError(reason)
 }
 
 // validMorningBriefLeadSentence keeps the fallback to the scorer's one move
