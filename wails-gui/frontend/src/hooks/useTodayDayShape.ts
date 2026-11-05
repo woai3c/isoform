@@ -2,12 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TodayDayShape } from '@/lib/wails-shim-app';
 import { GetTodayDayShape, todayDayShapeDate, usePageQueryRefresh } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
-import { appActive, onAppShown, useBudgetedRefresh } from '@/lib/app-activity';
+import { appActive, onAppShown } from '@/lib/app-activity';
 import { onHoldSettingsChanged } from '@/lib/hold-settings-events';
-
-/** The strip changes with the calendar ('today-dayshape:updated', from
- *  EKEventStoreChanged); this is only the safety resync on show or focus. */
-export const DAY_SHAPE_RESYNC_MS = 15 * 60_000;
 
 /** Requested civil date is UI provenance, separate from the backend contract. */
 export interface TodayDayShapeState {
@@ -66,9 +62,6 @@ export function useTodayDayShape(enabled: boolean, briefDate?: string, evening =
         return () => { version.current++; };
     }, [enabled, refresh]);
     useEffect(() => onHoldSettingsChanged(() => pageQueryCache.invalidate(['GetTodayDayShape'], false), false), []);
-    // The now line moves on the strip's own one-minute clock (TodayDayStrip),
-    // with no data read.
-    useBudgetedRefresh(() => pageQueryCache.invalidate(['GetTodayDayShape'], false), DAY_SHAPE_RESYNC_MS, enabled);
     // A new day reads its own strip: once at local midnight while the window
     // is looked at, otherwise the moment it is shown again.
     const requested = useRef(dateISO);

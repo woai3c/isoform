@@ -161,9 +161,9 @@ describe('cached page hooks through shim spies', () => {
     });
 
     // Snappy 1.0: focus answers from what Today has. Topics, the quiet lines,
-    // the brief and the day strip are read again only past their budgets;
-    // the small status reads still refresh on focus.
-    it('keeps the event-driven Today reads on focus within budget and reads each once past it', async () => {
+    // the brief and quiet lines stay cached; the day strip changes on its
+    // backend event or when the window is shown again.
+    it('keeps event-driven reads on focus and resyncs topics past their budget', async () => {
         seedToday();
         await reads.prefetchToday();
         renderHook(useTodayReads);
@@ -178,7 +178,7 @@ describe('cached page hooks through shim spies', () => {
         vi.spyOn(Date, 'now').mockReturnValue(Date.now() + reads.TODAY_TOPICS_TTL_MS + 1);
         await act(async () => window.dispatchEvent(new Event('focus')));
         await waitFor(() => expect(binding('GetTodayTopics')).toHaveBeenCalledTimes(1));
-        expect(binding('GetTodayDayShape')).toHaveBeenCalledTimes(1);
+        expect(binding('GetTodayDayShape')).not.toHaveBeenCalled();
         for (const name of ['GetMobileBriefHealth', 'GetTodayQuietLines', 'GetLatestBrief']) expect(binding(name), name).not.toHaveBeenCalled();
         // Snappy 1.0: Today's click path never reads the capture counts.
         expect(binding('GetCaptureCounts')).not.toHaveBeenCalled();

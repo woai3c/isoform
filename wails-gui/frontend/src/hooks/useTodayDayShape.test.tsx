@@ -3,7 +3,7 @@ import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { resetPageQueries } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { TodayDayStrip } from '@/components/today/TodayDayStrip';
-import { DAY_SHAPE_RESYNC_MS, useTodayDayShape } from './useTodayDayShape';
+import { useTodayDayShape } from './useTodayDayShape';
 import { dayShapeFixture } from '@/components/today/today-next.fixture';
 import '@/i18n';
 const mocks = vi.hoisted(() => ({ read: vi.fn(), off: vi.fn(), listeners: new Map<string, () => void>() }));
@@ -52,18 +52,17 @@ it('distinguishes a failed first calendar read from a disconnected calendar', as
     expect(result.current.shape).toBeNull();
     expect(result.current.lastUpdatedAt).toBeNull();
 });
-// Snappy 1.0: the strip changes with the calendar's event, not a 60 s poll.
-// Focus paints from the cache; a read on show waits for the 15-minute budget.
-it('keeps the strip on focus within its budget and reads it once past it, never while hidden', async () => {
+it('does not poll and reads once when the window is shown again', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'Date'] });
     vi.setSystemTime(new Date(2026, 9, 23, 9));
     renderHook(() => useTodayDayShape(true));
     await act(async () => {});
     expect(mocks.read).toHaveBeenCalledTimes(1);
-    await act(async () => { window.dispatchEvent(new Event('focus')); await vi.advanceTimersByTimeAsync(60_000); });
+    await act(async () => { window.dispatchEvent(new Event('focus')); await vi.advanceTimersByTimeAsync(30 * 60_000); });
     expect(mocks.read).toHaveBeenCalledTimes(1);
     const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
-    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await vi.advanceTimersByTimeAsync(DAY_SHAPE_RESYNC_MS * 2); });
+    await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await vi.advanceTimersByTimeAsync(30 * 60_000); });
+    await act(async () => { await mocks.listeners.get('today-dayshape:updated')!(); });
     expect(mocks.read).toHaveBeenCalledTimes(1);
     visibility.mockReturnValue('visible');
     await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await vi.advanceTimersByTimeAsync(0); });
