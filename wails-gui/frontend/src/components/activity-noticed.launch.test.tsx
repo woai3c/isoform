@@ -40,8 +40,8 @@ const followUp: NoticedSuggestion = {
     why: 'They asked.',
 };
 
-function fire(name: string) {
-    for (const handler of fixture.listeners.get(name) ?? []) handler(undefined);
+function fire(name: string, data?: unknown) {
+    for (const handler of fixture.listeners.get(name) ?? []) handler(data);
 }
 
 const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 400)); });
@@ -58,6 +58,34 @@ describe('Isoform noticed launch sequence', () => {
         fixture.listeners.clear();
         setHidden(false);
         await i18n.changeLanguage('en');
+    });
+
+    it('a burst of 82 dated noticed events reads the mounted day once per window', async () => {
+        const read = vi.fn().mockResolvedValue([followUp]);
+        fixture.bindings.set('GetDayNoticed', read);
+        render(<ActivityNoticed dateStr={DAY} onOpenMoment={() => undefined} />);
+        await settle();
+        const afterMount = read.mock.calls.length;
+        // A dismissal across every shown day: one event per changed day, the
+        // mounted day among them, all within one coalescing window.
+        await act(async () => {
+            for (let i = 0; i < 82; i++) fire('noticed:updated', { date: i === 0 ? DAY : `2026-09-${String(i % 28 + 1).padStart(2, '0')}` });
+        });
+        await settle();
+        expect(read.mock.calls.length).toBe(afterMount + 1);
+    });
+
+    it('events for other days never read the mounted day', async () => {
+        const read = vi.fn().mockResolvedValue([followUp]);
+        fixture.bindings.set('GetDayNoticed', read);
+        render(<ActivityNoticed dateStr={DAY} onOpenMoment={() => undefined} />);
+        await settle();
+        const afterMount = read.mock.calls.length;
+        await act(async () => {
+            for (let i = 0; i < 82; i++) fire('noticed:updated', { date: '2026-09-01' });
+        });
+        await settle();
+        expect(read.mock.calls.length).toBe(afterMount);
     });
 
     it('reads once at launch, once per coalesced burst, and never while hidden', async () => {

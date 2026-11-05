@@ -76,7 +76,9 @@ func (a *App) refreshMobileBriefSchedule() bool {
 		return false
 	}
 	return a.mobileSchedule.armFor(view, time.Now(), func() {
-		a.emitBrowserEvent("mobile:updated")
-		a.refreshMobileBriefSchedule()
+		// A fired boundary tells the page only when the shown prediction moved.
+		if a.refreshMobileBriefSchedule() {
+			a.emitBrowserEvent("mobile:updated")
+		}
 	})
 }

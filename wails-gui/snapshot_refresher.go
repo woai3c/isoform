@@ -130,6 +130,30 @@ func (r *snapshotRefresher[T]) Get() (T, error) {
 	return zero, errSnapshotPending
 }
 
+// Fresh is for callers that build something from the data itself (the brief,
+// first-day reads, a confirmation): they must never see an empty cold
+// snapshot. With no value yet it loads inline, once, serialised with any
+// background load by runMu. With a value it answers like Get. Only the
+// Today UI bindings use Get, which never blocks.
+func (r *snapshotRefresher[T]) Fresh() (T, error) {
+	r.mu.Lock()
+	has := r.has
+	r.mu.Unlock()
+	if !has {
+		r.loadOnce()
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.has {
+		return r.value, nil
+	}
+	var zero T
+	if r.lastErr != nil {
+		return zero, r.lastErr
+	}
+	return zero, errSnapshotPending
+}
+
 // Kick starts a refresh, or marks one follow-up when a refresh is running.
 func (r *snapshotRefresher[T]) Kick() {
 	r.mu.Lock()

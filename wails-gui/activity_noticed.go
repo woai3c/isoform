@@ -706,12 +706,26 @@ func (a *App) noticedWriteWatch(dateStr string, allDays bool) func() {
 	before := a.noticedFingerprints(dates, language)
 	return func() {
 		after := a.noticedFingerprints(dates, language)
-		for _, date := range dates {
-			if before[date] != after[date] {
-				a.emitBrowserEvent("noticed:updated", map[string]string{"date": date})
-			}
+		for _, date := range noticedChangedDates(dates, before, after) {
+			a.emitBrowserEvent("noticed:updated", map[string]string{"date": date})
 		}
 	}
+}
+
+// noticedChangedDates lists the days whose suggestions really changed. A day
+// missing from either side could not be read, so it never counts as a change:
+// comparing its absence with a fingerprint once emitted a burst of
+// noticed:updated events for days that had not changed.
+func noticedChangedDates(dates []string, before, after map[string]string) []string {
+	var changed []string
+	for _, date := range dates {
+		b, inBefore := before[date]
+		a, inAfter := after[date]
+		if inBefore && inAfter && b != a {
+			changed = append(changed, date)
+		}
+	}
+	return changed
 }
 
 // noticedFingerprints hashes each day's checked suggestions. A day that cannot

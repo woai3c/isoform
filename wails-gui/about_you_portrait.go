@@ -863,6 +863,13 @@ func (a *App) GetAboutYouPortrait() (perfValue AboutYouPortrait, perfErr error) 
 	return value, snapshotPendingIsEmpty(err)
 }
 
+// aboutYouPortraitFresh is the portrait for the brief, first-day reads and
+// confirmation: never an empty cold snapshot. See snapshotRefresher.Fresh.
+func (a *App) aboutYouPortraitFresh() (AboutYouPortrait, error) {
+	value, err := a.aboutYouPortraitRefresher().Fresh()
+	return value, err
+}
+
 func (a *App) aboutYouPortraitRefresher() *snapshotRefresher[AboutYouPortrait] {
 	return a.aboutYouSnapshots.get("", func() *snapshotRefresher[AboutYouPortrait] {
 		return newSnapshotRefresher(func() (AboutYouPortrait, error) {
@@ -1870,7 +1877,7 @@ func (a *App) RetryAboutYouPortrait() error {
 // newer waits for the person, and confirms every belief under it. It
 // returns the beliefs it confirmed, for Undo.
 func (a *App) ConfirmAboutYouPortrait() ([]string, error) {
-	portrait, err := a.GetAboutYouPortrait()
+	portrait, err := a.aboutYouPortraitFresh()
 	if err != nil {
 		return nil, err
 	}

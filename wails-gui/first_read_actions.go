@@ -237,7 +237,7 @@ func (a *App) correctFirstRead(ctx context.Context, chatID string, card mainChat
 		}
 		return a.queuePortraitCorrection(text, "first-read-correction-"+engagement.HashPart(card.MomentID))
 	}
-	portrait, err := a.GetAboutYouPortrait()
+	portrait, err := a.aboutYouPortraitFresh()
 	content := buildFirstRead(portrait, firstReadFacts{}, 0, "en")
 	if err != nil || portrait.GeneratedAt != card.FirstReadVersion || content == nil || firstReadSentenceHash(content.Sentences) != card.FirstReadHash {
 		return errors.New("portrait changed")

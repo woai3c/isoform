@@ -109,6 +109,38 @@ export function PageEventsOn(event: string, handler: (...args: any[]) => void) {
     handlers.set(event, set);
     return () => { set.delete(handler); };
 }
+// Events whose payload names one day ({ date }). A burst of them (a dismissal
+// across every shown day emits one per day) is one invalidation per changed
+// day, flushed once per window, so a mounted reader reads once.
+const DATE_COALESCED_EVENTS = new Set(['noticed:updated']);
+export const DATE_EVENT_COALESCE_MS = 250;
+function coalesceByDate(event: string, names: string[]): () => void {
+    const dates = new Set<string>();
+    // An event with no date could name any day: it invalidates every day once.
+    let everyDay = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let last: { date?: string } | undefined;
+    const flush = () => {
+        timer = undefined;
+        const batch = [...dates];
+        const all = everyDay;
+        dates.clear();
+        everyDay = false;
+        if (all) pageQueryCache.invalidate(names, true);
+        else for (const date of batch) pageQueryCache.invalidate(names, true, [date]);
+        void dispatch(event, last);
+    };
+    const off = RuntimeEventsOn(event, (data?: { date?: string }) => {
+        last = data;
+        if (data?.date) dates.add(data.date);
+        else everyDay = true;
+        if (timer === undefined) timer = setTimeout(flush, DATE_EVENT_COALESCE_MS);
+    });
+    return () => {
+        if (timer !== undefined) clearTimeout(timer);
+        off();
+    };
+}
 let installed = false;
 const cleanups: (() => void)[] = [];
 // Publications and progress keep the last checked display while their
@@ -130,6 +162,10 @@ export function installPageQueryEvents() {
         clearSavedPeopleView();
     }));
     for (const [event, names] of Object.entries(eventReads)) {
+        if (DATE_COALESCED_EVENTS.has(event)) {
+            cleanups.push(coalesceByDate(event, names));
+            continue;
+        }
         cleanups.push(RuntimeEventsOn(event, (data?: { status?: string }) => {
             if (event === 'cron:run' && data?.status === 'missed') return;
             // Publications keep the last checked display available to a

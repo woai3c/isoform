@@ -319,3 +319,23 @@ func TestSnapshotRefresherReadAfterWriteLoadsBeforeAnswering(t *testing.T) {
 	}
 	waitSnapshotIdle(t, r)
 }
+
+// Fresh is the brief's read: a cold snapshot must never answer empty. It
+// loads inline, so the caller gets the real value on its first call.
+func TestSnapshotRefresherFreshLoadsColdValueInline(t *testing.T) {
+	var loads int
+	r := newSnapshotRefresher(func() (string, error) {
+		loads++
+		return "real", nil
+	}, nil, nil, 0)
+	got, err := r.Fresh()
+	if err != nil || got != "real" {
+		t.Fatalf("Fresh on a cold snapshot = %q, %v; want the loaded value", got, err)
+	}
+	if loads != 1 {
+		t.Fatalf("loads = %d, want one inline load", loads)
+	}
+	if _, err := r.Fresh(); err != nil || loads != 1 {
+		t.Fatalf("second Fresh loaded again (loads=%d, err=%v)", loads, err)
+	}
+}
