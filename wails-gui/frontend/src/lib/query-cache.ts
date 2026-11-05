@@ -58,8 +58,7 @@ export class QueryCache {
             entry.pending = undefined;
             changed.add(entry.name);
         }
-        // Subscribers that filter by argument need the arguments of a targeted invalidation.
-        for (const name of changed) args ? this.notify(name, args) : this.notify(name);
+        for (const name of changed) this.notify(name);
     }
 
     state(name: string, args: readonly unknown[] = []) { return this.entries.get(this.key(name, args)); }

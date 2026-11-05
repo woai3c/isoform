@@ -86,7 +86,7 @@ describe('Isoform noticed', () => {
         await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(2));
         for (let i = 0; i < 100; i++) await pageQueryCache.read('pressure', [i], async () => i);
         view.rerender(<><ActivityNoticed dateStr={DAY} onOpenMoment={vi.fn()} /><ActivityNoticed dateStr={otherDay} onOpenMoment={vi.fn()} /></>);
-        await act(async () => { await Promise.all([...(fixture.listeners.get('noticed:updated') ?? [])].map((fn) => fn(undefined))); });
+        await act(async () => { await Promise.all([...(fixture.listeners.get('activity:summary-ready') ?? [])].map((fn) => fn(undefined))); });
         await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(4));
         await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
         expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(4);
@@ -101,7 +101,7 @@ describe('Isoform noticed', () => {
         act(() => document.dispatchEvent(new Event('visibilitychange')));
         await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(1));
         act(() => { for (const fn of fixture.listeners.get('system:state') ?? []) fn('locked'); });
-        act(() => { for (const fn of fixture.listeners.get('noticed:updated') ?? []) fn(undefined); });
+        act(() => { for (const fn of fixture.listeners.get('activity:summary-ready') ?? []) fn(undefined); });
         await act(async () => { await Promise.resolve(); });
         expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(1);
         act(() => { for (const fn of fixture.listeners.get('system:state') ?? []) fn('unlocked'); });
@@ -233,20 +233,14 @@ describe('Isoform noticed', () => {
         expect(await screen.findByRole('status')).toHaveTextContent('Saved to Knowledge.');
     });
 
-    // Narrowed 2026-11-04: only the backend's noticed:updated re-reads the strip.
-    // agency:updated and activity:activities-updated fired at every launch and
-    // every read returned no rows, so they must not read it.
-    it('reads the suggestions again only when the noticed set changes', async () => {
+    it('reads the suggestions again when a new summary is ready or a follow-up changes', async () => {
         render(<ActivityNoticed dateStr={DAY} onOpenMoment={vi.fn()} />);
         await screen.findByText('Isoform noticed');
-        const before = binding('GetDayNoticed').mock.calls.length;
-        for (const event of ['agency:updated', 'activity:activities-updated', 'activity:summary-ready']) {
+        for (const event of ['activity:summary-ready', 'agency:updated']) {
+            const before = binding('GetDayNoticed').mock.calls.length;
             act(() => fixture.listeners.get(event)?.forEach((fn) => fn(DAY)));
+            await waitFor(() => expect(binding('GetDayNoticed').mock.calls.length).toBeGreaterThan(before));
         }
-        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
-        expect(binding('GetDayNoticed').mock.calls.length).toBe(before);
-        act(() => fixture.listeners.get('noticed:updated')?.forEach((fn) => fn({ date: DAY })));
-        await waitFor(() => expect(binding('GetDayNoticed').mock.calls.length).toBeGreaterThan(before));
     });
 
     it('translates the box and the routine draft into Chinese', async () => {

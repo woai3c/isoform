@@ -328,17 +328,3 @@ func TestActivityNoticedMigrationIsIdempotent(t *testing.T) {
 		t.Fatalf("replay = %v", err)
 	}
 }
-
-// A day that could not be read on one side of a write is not a change: the
-// missing fingerprint once read as "" versus a hash and emitted a burst.
-func TestNoticedChangedDatesIgnoreUnreadableDays(t *testing.T) {
-	before := map[string]string{"2026-11-01": "a", "2026-11-02": "b", "2026-11-03": "c"}
-	after := map[string]string{"2026-11-01": "a", "2026-11-02": "x"}
-	got := noticedChangedDates([]string{"2026-11-01", "2026-11-02", "2026-11-03", "2026-11-04"}, before, after)
-	if len(got) != 1 || got[0] != "2026-11-02" {
-		t.Fatalf("changed = %v, want only 2026-11-02 (a real change where both sides were read)", got)
-	}
-	if got := noticedChangedDates([]string{"2026-11-04"}, map[string]string{}, map[string]string{"2026-11-04": "z"}); len(got) != 0 {
-		t.Fatalf("day unreadable before the write counted as a change: %v", got)
-	}
-}

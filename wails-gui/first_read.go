@@ -240,7 +240,7 @@ func (a *App) maybePostFirstReads(ctx context.Context) {
 	if waiting {
 		return
 	}
-	portrait, err := a.aboutYouPortraitFresh()
+	portrait, err := a.GetAboutYouPortrait()
 	if err != nil || buildFirstRead(portrait, firstReadFacts{}, 0, "en") == nil {
 		return
 	}
@@ -275,7 +275,7 @@ func (a *App) projectFirstRead(ctx context.Context, item *mainChatProactive, lan
 		*item = mainChatProactive{MomentID: item.MomentID, Kind: "thread_update_unavailable", Target: mainChatTarget{Kind: mainChatTargetNone}}
 		return
 	}
-	portrait, err := a.aboutYouPortraitFresh()
+	portrait, err := a.GetAboutYouPortrait()
 	if err != nil || portrait.GeneratedAt != item.FirstReadVersion || a.IsClosedEyesModeEnabled() {
 		*item = mainChatProactive{MomentID: item.MomentID, Kind: "thread_update_unavailable", Target: mainChatTarget{Kind: mainChatTargetNone}}
 		return

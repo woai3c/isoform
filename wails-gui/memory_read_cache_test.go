@@ -99,11 +99,8 @@ func (r *memoryReadCountRig) read(t *testing.T, n int) {
 
 func TestBriefReadsDoNotRedactMemoryAgainWhileItIsUnchanged(t *testing.T) {
 	r := newMemoryReadCountRig(t)
-	// Start cold, as at launch: the first read does the work once. The Today
-	// health snapshot answers a cold read at once and refreshes in the
-	// background, so wait for that refresh before counting.
+	// Start cold, as at launch: the first read does the work once.
 	r.app.invalidateMemoryExternalReads()
-	waitMobileBriefHealthSnapshot(t, r.app)
 	r.read(t, 1)
 	t.Logf("first read: memory reads=%d memory redactions=%d exclusion scans=%d", r.loads["entries"], r.loads["redact"], r.loads["exclusions"])
 	if r.loads["entries"] != 1 || r.loads["redact"] == 0 || r.loads["exclusions"] == 0 {
@@ -236,21 +233,5 @@ func TestThreadOutcomeRedactionIsRememberedByInput(t *testing.T) {
 	}
 	if strings.Contains(want, "rowan.vale@example.com") {
 		t.Fatalf("email kept: %q", want)
-	}
-}
-
-// waitMobileBriefHealthSnapshot blocks until the health snapshot has its first
-// value. The binding itself never waits; only this test does.
-func waitMobileBriefHealthSnapshot(t *testing.T, app *App) {
-	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
-	for {
-		if _, err := app.mobileBriefHealthRefresher().Get(); err == nil {
-			return
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("mobile brief health snapshot never loaded")
-		}
-		time.Sleep(10 * time.Millisecond)
 	}
 }

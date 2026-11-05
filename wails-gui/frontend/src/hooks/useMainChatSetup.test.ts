@@ -101,21 +101,14 @@ describe("useMainChatSetup", () => {
         expect(mocks.openSettings).not.toHaveBeenCalled();
     });
 
-    // The setup re-reads once when the window is shown (the shared change hook
-    // reads on each show; the old focus throttle is gone). Window focus is a
-    // "shown" signal in app-activity, so it also yields that one coalesced read.
-    it("re-reads once each time the window is shown", async () => {
+    it("re-checks on focus at most every 30 seconds", async () => {
         const { result } = renderHook(() => useMainChatSetup(true));
         await waitFor(() => expect(result.current.current?.key).toBe("microphone"));
         const calls = mocks.getSetup.mock.calls.length;
-        // Hidden, then shown in a burst: one read for the show.
-        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
-        document.dispatchEvent(new Event("visibilitychange"));
-        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
-        document.dispatchEvent(new Event("visibilitychange"));
-        document.dispatchEvent(new Event("visibilitychange"));
+        window.dispatchEvent(new Event("focus"));
+        window.dispatchEvent(new Event("focus"));
         await new Promise((r) => setTimeout(r, 350));
-        expect(mocks.getSetup.mock.calls.length).toBe(calls + 1);
+        expect(mocks.getSetup.mock.calls.length).toBe(calls);
     });
 
     it("looks again before sending a slow prompt to System Settings", async () => {

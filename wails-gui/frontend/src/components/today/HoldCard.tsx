@@ -7,8 +7,6 @@ import { notifyHoldSettingsChanged, onHoldSettingsChanged } from "@/lib/hold-set
 import { DismissHoldOffer, UndoDismissHoldOffer, GetHoldSettings, GetHoldStatus, GetHoldDayShape, HoldTime, OpenExternalURL, OpenPermissionSettings, ProposeHold, RemoveHold, SetHoldCalendar, UndoHold, UndoRemoveHold, type FindTimeRange, type HoldProposal, type HoldSettings, type HoldStatus, type HoldThing, type TodayDayShape } from "@/lib/wails-shim-app";
 import { TodayDayStrip } from "./TodayDayStrip";
 import { computerClock, computerHourOptions } from "@/lib/brief-time";
-import { useChangeDrivenRead } from "@/hooks/useChangeDrivenRead";
-import { holdEventMatches } from "./useDirectHold";
 
 export interface HoldCardSource { thing: HoldThing; due?: string; reason?: string; preferred?: FindTimeRange; lengthMinutes?: number; telemetryAction?: "T14" | "T84" | "T31" | "D01" }
 
@@ -72,25 +70,13 @@ export function HoldCard({ source, onClose }: { source: HoldCardSource; onClose:
     }, [displayedStart]);
 
     useEffect(() => {
-        if (!status) return;
-        // Time changes the answer only at a window's end: the undo window
-        // (writeAfter) and the restore window after a removal (removedAt + 5 s).
-        // One timeout at that boundary re-reads the hold; no interval.
-        const boundary = status.state === "pending_write" ? Date.parse(status.writeAfter) : status.state === "removed" ? Date.parse(status.removedAt) + 5000 : NaN;
-        if (!Number.isFinite(boundary)) return;
-        const timer = window.setTimeout(() => {
+        if (!status || !["pending_write", "checking", "held", "moved", "removed"].includes(status.state)) return;
+        const timer = window.setInterval(() => {
             setClock(Date.now());
             void GetHoldStatus(status.id).then(setStatus).catch(() => setError("load"));
-        }, Math.max(0, boundary - Date.now()) + 50);
-        return () => window.clearTimeout(timer);
-    }, [status?.id, status?.state, status?.writeAfter, status?.removedAt]);
-
-    // A real hold transition (holds:updated) re-reads this card's hold once; a payload
-    // that names another hold is ignored. Always enabled: with no hold yet the read does nothing.
-    useChangeDrivenRead(true, ["holds:updated"], () => {
-        if (!status) return undefined;
-        return GetHoldStatus(status.id).then(setStatus).catch(() => setError("load"));
-    }, (data) => holdEventMatches(data, status?.id));
+        }, 1000);
+        return () => window.clearInterval(timer);
+    }, [status?.id, status?.state]);
 
     useEffect(() => {
         if (status?.state === "failed") setFailures((current) => ({ ...current, hold: current.hold + 1 }));

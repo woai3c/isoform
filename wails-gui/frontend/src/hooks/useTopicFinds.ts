@@ -1,4 +1,4 @@
-import { GetTopicFinds, usePageQueryRefresh } from '@/lib/page-queries';
+import { GetTopicFinds, usePageQueryRefresh, PageEventsOn as EventsOn } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -53,10 +53,17 @@ export function useTopicFinds(enabled: boolean): UseTopicFindsResult {
     useEffect(() => {
         if (!enabled) return;
         refresh();
-        // topics:finds, topics:updated, model-accounts:updated and ai:config-changed
-        // re-read through the page-query bus (usePageQueryRefresh above).
+        const unsubscribers = [
+            EventsOn("topics:finds", refresh),
+            EventsOn("topics:updated", refresh),
+            // Whether the search can run follows the assistant and its
+            // models, which may still be loading when Today first reads.
+            EventsOn("model-accounts:updated", refresh),
+            EventsOn("ai:config-changed", refresh),
+        ];
         return () => {
             version.current += 1;
+            unsubscribers.forEach((off) => off());
         };
     }, [enabled, refresh]);
 

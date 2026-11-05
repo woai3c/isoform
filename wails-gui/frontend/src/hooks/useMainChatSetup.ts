@@ -3,8 +3,8 @@ import {
     OpenPermissionSettings,
     RequestPermission,
 } from '../../wailsjs/go/main/App';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import i18n from '@/i18n';
-import { useChangeDrivenRead } from '@/hooks/useChangeDrivenRead';
 import {
     AnswerMainChatSetup,
     EnsureSelfProfile,
@@ -19,6 +19,10 @@ import { refreshUserProfile, useUserProfile } from '@/hooks/useUserProfile';
 // rule (GetMainChatSetup); this hook shows the step it names, and a macOS
 // prompt only ever follows a tap on Turn on (grant). Nothing here asks for a
 // permission on mount, focus or any event.
+
+const SETUP_REFRESH_DEBOUNCE_MS = 300;
+/** Focus and visibility re-check at most this often; events re-check at once. */
+const SETUP_FOCUS_THROTTLE_MS = 30_000;
 
 /** The renderer's language as Go expects it ("en" or "zh-CN"). */
 function setupLanguage(): string {
@@ -85,16 +89,42 @@ export function useMainChatSetup(enabled: boolean): MainChatSetupApi {
         return next;
     }, [apply]);
 
-    // Read once on mount, once per (coalesced) change to a permission, a model
-    // account or background listening, and once each time the window is shown.
-    // Focus alone does not re-read: a shown window is the trigger.
-    useChangeDrivenRead(enabled, ['permissions:changed', 'model-accounts:updated', 'background-listening:changed'], refresh);
     useEffect(() => {
         if (!enabled) return;
-        return () => {
-            requestRef.current++;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const schedule = () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                timer = null;
+                void refresh();
+            }, SETUP_REFRESH_DEBOUNCE_MS);
         };
-    }, [enabled]);
+        let lastFocusCheck = Date.now();
+        const onFocus = () => {
+            const now = Date.now();
+            if (now - lastFocusCheck < SETUP_FOCUS_THROTTLE_MS) return;
+            lastFocusCheck = now;
+            schedule();
+        };
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') onFocus();
+        };
+        void refresh();
+        const unsubs = [
+            EventsOn('permissions:changed', schedule),
+            EventsOn('model-accounts:updated', schedule),
+            EventsOn('background-listening:changed', schedule),
+        ];
+        window.addEventListener('focus', onFocus);
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            if (timer) clearTimeout(timer);
+            requestRef.current++;
+            unsubs.forEach((u) => u());
+            window.removeEventListener('focus', onFocus);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, [enabled, refresh]);
 
     // A name given elsewhere (the bottom-left menu, People) closes the name
     // step: look again as soon as the stored name changes.

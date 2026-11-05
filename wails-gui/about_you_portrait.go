@@ -859,27 +859,7 @@ func (s *AboutYouPortraitService) withSources(ctx context.Context, use func([]Me
 // is returned, and anything that fell below the bar is removed for good.
 func (a *App) GetAboutYouPortrait() (perfValue AboutYouPortrait, perfErr error) {
 	defer logPageBinding("GetAboutYouPortrait", time.Now(), &perfValue)
-	value, err := a.aboutYouPortraitRefresher().Get()
-	return value, snapshotPendingIsEmpty(err)
-}
-
-// aboutYouPortraitFresh is the portrait for the brief, first-day reads and
-// confirmation: never an empty cold snapshot. See snapshotRefresher.Fresh.
-func (a *App) aboutYouPortraitFresh() (AboutYouPortrait, error) {
-	value, err := a.aboutYouPortraitRefresher().Fresh()
-	return value, err
-}
-
-func (a *App) aboutYouPortraitRefresher() *snapshotRefresher[AboutYouPortrait] {
-	return a.aboutYouSnapshots.get("", func() *snapshotRefresher[AboutYouPortrait] {
-		return newSnapshotRefresher(func() (AboutYouPortrait, error) {
-			return a.portraitService().read()
-		}, nil, func() {
-			if a.ctx != nil {
-				a.emitBrowserEvent(portraitEvent)
-			}
-		}, portraitReadMemoMaxAge).readAfterWrites().withStamp(a.portraitReadStamp)
-	})
+	return a.portraitService().read()
 }
 
 func (a *App) portraitService() *AboutYouPortraitService {
@@ -1137,11 +1117,10 @@ func (a *App) portraitMemoryChanged() {
 	}
 }
 
-// emitPortraitUpdated is called by every portrait write. It no longer emits:
-// the snapshot refresh re-reads the portrait and emits portrait:updated only
-// when the value changed.
 func (a *App) emitPortraitUpdated() {
-	a.aboutYouSnapshots.invalidateAll()
+	if a.ctx != nil {
+		a.emitBrowserEvent(portraitEvent)
+	}
 }
 
 // portraitSources reads what pass 1 needs from each readable belief: its
@@ -1877,7 +1856,7 @@ func (a *App) RetryAboutYouPortrait() error {
 // newer waits for the person, and confirms every belief under it. It
 // returns the beliefs it confirmed, for Undo.
 func (a *App) ConfirmAboutYouPortrait() ([]string, error) {
-	portrait, err := a.aboutYouPortraitFresh()
+	portrait, err := a.GetAboutYouPortrait()
 	if err != nil {
 		return nil, err
 	}
@@ -2150,14 +2129,4 @@ func (a *App) MarkAboutYouPortraitSeen() error {
 		return nil
 	}
 	return writePortrait(path, doc)
-}
-
-// portraitReadStamp names what the portrait read depends on: the same key the
-// read's own memo uses. An empty key means the inputs are unknown.
-func (a *App) portraitReadStamp() string {
-	path, err := portraitPath()
-	if err != nil {
-		return ""
-	}
-	return a.portraitService().portraitReadKey(path)
 }

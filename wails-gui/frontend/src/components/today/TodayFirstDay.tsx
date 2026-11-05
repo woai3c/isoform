@@ -9,7 +9,7 @@ import { clockTime } from "@/lib/brief-time";
 import { historyFound, historyName } from "@/hooks/useFirstDay";
 import { cn } from "@/lib/utils";
 import { TodayPermissionControl } from "./TodayPermissionControl";
-import { onAppShown, waitForAppActive } from "@/lib/app-activity";
+import { activeInterval, waitForAppActive } from "@/lib/app-activity";
 
 type TodayT = (key: string, options?: Record<string, unknown>) => string;
 
@@ -38,17 +38,15 @@ export function watchedDuration(minutes: number, tr: TodayT): string {
     return tr("firstDay.know.hoursMinutes", { hours: tr("firstDay.know.hours", { count: h }), minutes: tr("firstDay.know.minutes", { count: m }) });
 }
 
-/** Watched time today, read on open and again each time the window is shown. */
+/** Watched time today, read on open and every minute while Today shows. */
 export function useWatchedToday(enabled: boolean): WatchedToday | null {
     const [watched, setWatched] = useState<WatchedToday | null>(null);
     useEffect(() => {
         if (!enabled) return;
         let live = true;
         const read = () => Promise.resolve().then(() => waitForAppActive()).then(() => live ? GetWatchedToday() : null).then((next) => { if (live) setWatched(next ?? null); }).catch(() => {});
-        // One read on open and one each time the window is shown: no minute
-        // poll. The backend has no watched-time event yet (see the report).
         void read();
-        const stop = onAppShown(read);
+        const stop = activeInterval(read, MINUTE_MS);
         return () => { live = false; stop(); };
     }, [enabled]);
     return watched;

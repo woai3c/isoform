@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 )
 
 // Guards for the spoken brief going missing (2026-10-19 to 2026-10-21): every
@@ -51,7 +50,7 @@ func assertBriefPlays(t *testing.T, rig *handoffTestRig, svc *mobileBriefService
 	if err != nil || view.Brief == nil || view.Brief.Audio == nil {
 		t.Fatalf("%s: Today has nothing to play: %+v, %v", when, view.Brief, err)
 	}
-	if health := todayHealthEventually(t, rig.app, func(h MobileBriefHealth) bool { return h.LatestBriefID == briefID && h.Audio != nil }); health.LatestBriefID != briefID || health.Audio == nil {
+	if health := rig.app.GetMobileBriefHealth(); health.LatestBriefID != briefID || health.Audio == nil {
 		t.Fatalf("%s: Today's player is not offered: %+v", when, health)
 	}
 	if phone, ok := svc.GetMobileBrief(briefID); !ok || phone.Audio == nil {
@@ -178,7 +177,6 @@ func TestMobileBriefAudioNeverSpeaksTextTheBriefNoLongerShows(t *testing.T) {
 	if phone, _ := svc.GetMobileBrief(brief.BriefID); phone.Audio != nil {
 		t.Fatal("the phone plays a recording of other words")
 	}
-	waitMobileBriefHealthSnapshot(t, rig.app)
 	if health := rig.app.GetMobileBriefHealth(); health.Audio != nil {
 		t.Fatalf("Today's player is offered for other words: %+v", health.Audio)
 	}
@@ -367,20 +365,5 @@ func TestClosedGoalSilencesOnlyTheBriefThatSpeaksOfIt(t *testing.T) {
 	}
 	if brief.Audio == nil {
 		t.Fatal("the read changed the stored brief")
-	}
-}
-
-// todayHealthEventually reads Today's health the way the page does: a read
-// answers from the snapshot and a write's refresh lands in the background, so
-// poll until the predicate holds. The binding itself never waits.
-func todayHealthEventually(t *testing.T, app *App, ok func(MobileBriefHealth) bool) MobileBriefHealth {
-	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
-	for {
-		health := app.GetMobileBriefHealth()
-		if ok(health) || time.Now().After(deadline) {
-			return health
-		}
-		time.Sleep(10 * time.Millisecond)
 	}
 }

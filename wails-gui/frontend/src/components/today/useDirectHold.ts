@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { GetHoldSettings, GetHoldStatus, HoldTime, ProposeHold, RemoveHold, UndoHold, UndoRemoveHold, type HoldStatus } from "@/lib/wails-shim-app";
-import { useChangeDrivenRead } from "@/hooks/useChangeDrivenRead";
 import type { HoldCardSource } from "./HoldCard";
-
-/** A holds:updated payload names its hold; one without an id is for every card. */
-export function holdEventMatches(data: unknown, id: string | undefined): boolean {
-    const named = (data as { id?: unknown } | null | undefined)?.id;
-    return typeof named !== "string" || named === id;
-}
 
 /** Submit only the exact slot the person saw; Go rechecks availability before writing. */
 export function useDirectHold(source: HoldCardSource | null) {
@@ -18,39 +11,21 @@ export function useDirectHold(source: HoldCardSource | null) {
     const generation = useRef(0);
     const busy = useRef(false);
     const revision = useRef(0);
-    const statusRef = useRef<HoldStatus | null>(null);
-    statusRef.current = status;
     useEffect(() => {
         generation.current++; busy.current = false;
         setStatus(null); setChecking(false); setFailed(false);
         return () => { generation.current++; };
     }, [source?.thing.sourceKind, source?.thing.sourceId, source?.thing.title, source?.preferred?.start, source?.preferred?.end]);
     useEffect(() => {
-        if (!status) return;
-        // Time changes the answer only at a window's end: the undo window
-        // (writeAfter) and the restore window after a removal (removedAt + 5 s).
-        // One timeout at that boundary re-reads the hold; no interval.
-        const boundary = status.state === "pending_write" ? Date.parse(status.writeAfter) : status.state === "removed" ? Date.parse(status.removedAt) + 5000 : NaN;
-        if (!Number.isFinite(boundary)) return;
+        if (!status || !["pending_write", "checking", "held", "moved", "removed"].includes(status.state)) return;
         let active = true;
-        const timer = window.setTimeout(() => {
+        const timer = window.setInterval(() => {
             setClock(Date.now());
             const current = revision.current;
             void GetHoldStatus(status.id).then((next) => { if (active && !busy.current && revision.current === current) setStatus(next); }).catch(() => { if (active && revision.current === current) setFailed(true); });
-        }, Math.max(0, boundary - Date.now()) + 50);
-        return () => { active = false; window.clearTimeout(timer); };
-    }, [status?.id, status?.state, status?.writeAfter, status?.removedAt]);
-    // holds:updated re-reads this source's hold once (HoldCard has the same rule).
-    // A read while a write is in flight is dropped: that write sets the status itself.
-    useChangeDrivenRead(true, ["holds:updated"], () => {
-        const id = statusRef.current?.id;
-        if (!id || busy.current) return undefined;
-        const turn = generation.current;
-        const current = revision.current;
-        return GetHoldStatus(id)
-            .then((next) => { if (turn === generation.current && !busy.current && revision.current === current) setStatus(next); })
-            .catch(() => { if (turn === generation.current && revision.current === current) setFailed(true); });
-    }, (data) => holdEventMatches(data, statusRef.current?.id));
+        }, 1000);
+        return () => { active = false; window.clearInterval(timer); };
+    }, [status?.id, status?.state]);
     const hold = async () => {
         if (!source?.preferred || busy.current) return false;
         busy.current = true; revision.current++;

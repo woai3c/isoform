@@ -1,4 +1,4 @@
-import { GetTodayNews, usePageQueryRefresh } from '@/lib/page-queries';
+import { GetTodayNews, usePageQueryRefresh, PageEventsOn as EventsOn } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -93,10 +93,30 @@ export function useTodayNews(enabled: boolean): UseTodayNewsResult {
             }
         });
 
-        // cron:run (a missed time is not a run), model-accounts:updated and
-        // ai:config-changed re-read through the page-query bus (usePageQueryRefresh above).
+        // The Daily News automation is hidden, so we don't hold its job id here;
+        // refetch whenever any cron run completes (infrequent, and GetTodayNews
+        // is a cheap read). A missed time is not a run, and a Mac waking up
+        // records many at once, so those do not refetch.
+        const unsubs = [
+            EventsOn("cron:run", (run?: { status?: string }) => {
+                if (run?.status === "missed") return;
+                void fetchNews();
+            }),
+            // Whether news can be generated depends on the model gateway being
+            // up; a first read at launch can land before it is, so re-read when
+            // the accounts status changes.
+            EventsOn("model-accounts:updated", () => {
+                void fetchNews();
+            }),
+            // A changed assistant can change whether and how news searches.
+            EventsOn("ai:config-changed", () => {
+                void fetchNews();
+            }),
+        ];
+
         return () => {
             cancelled = true;
+            for (const unsub of unsubs) unsub();
         };
     }, [enabled, fetchNews]);
 

@@ -100,28 +100,21 @@ describe('cached page hooks through shim spies', () => {
     });
     // Snappy 1.0: no 2-second poll. A missed publication is recovered by the
     // 10-minute safety resync, in one shared read, and never sooner.
-    const settleReal = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
-
     it('recovers two first-run bootstrap readers without an event in one shared read', async () => {
         vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
         binding('GetTodayTopics').mockResolvedValue({ topics: [], refreshing: true, firstRun: true });
         const readers = renderHook(() => [useTodayTopics(true), useTodayTopics(true)]);
-        // The shared change hook reads 250 ms after mount; both readers share that read.
-        // Real time, not waitFor: fake timers here also stop waitFor's polling interval.
-        await settleReal(300);
-        expect(binding('GetTodayTopics')).toHaveBeenCalledTimes(1);
+        await act(async () => {});
         expect(readers.result.current.every((reader) => reader.refreshing)).toBe(true);
         expect(readers.result.current.every((reader) => reader.firstRun)).toBe(true);
+        expect(binding('GetTodayTopics')).toHaveBeenCalledTimes(1);
         const published = { topics, refreshing: false, firstRun: false };
         binding('GetTodayTopics').mockResolvedValue(published);
         await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
         expect(binding('GetTodayTopics')).toHaveBeenCalledTimes(1);
-        // The publication arrives as "topics:updated" (the timed pending resync was
-        // removed 2026-11-04: a rebuild is never polled for).
-        await act(async () => { for (const handler of fixture.events.get('topics:updated') ?? []) handler(); await vi.advanceTimersByTimeAsync(0); });
-        await settleReal(300);
-        expect(binding('GetTodayTopics')).toHaveBeenCalledTimes(2);
+        await act(async () => { await vi.advanceTimersByTimeAsync(reads.TODAY_TOPICS_PENDING_RESYNC_MS); });
         expect(readers.result.current.every((reader) => reader.topics.length === 1 && !reader.refreshing && !reader.firstRun)).toBe(true);
+        expect(binding('GetTodayTopics')).toHaveBeenCalledTimes(2);
         expect(pageQueryCache.peek('GetTodayTopics')).toEqual(published);
         expect(pageQueryCache.state('GetTodayTopics')?.ttl).toBe(reads.TODAY_TOPICS_TTL_MS);
         readers.unmount();
@@ -142,8 +135,7 @@ describe('cached page hooks through shim spies', () => {
         expect(hook.result.current.brief.loading).toBe(false);
         expect(hook.result.current.topics.topics[0].name).toBe('Fixture project');
         expect(hook.result.current.day.shape).toEqual(dayShapeFixture);
-        // Topics read 250 ms after mount (the shared change hook); every other binding reads at once.
-        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
+        await act(async () => {});
         for (const [name, mock] of fixture.bindings) {
             // Chat's reads, and the capture counts (Activity's since 1.0).
             const chatOnly = ['GetMainChat', 'LoadStreamItemsPage', 'GetMainChatOverview', 'ListMainChatWaitingItems', 'ListMainChatAnswerChips', 'GetMainChatWaiting', 'GetCaptureCounts', 'GetTodayNews', 'GetTodaySuggestion'].includes(name);
@@ -171,17 +163,23 @@ describe('cached page hooks through shim spies', () => {
     // Snappy 1.0: focus answers from what Today has. Topics, the quiet lines,
     // the brief and quiet lines stay cached; the day strip changes on its
     // backend event or when the window is shown again.
-    // Changed 2026-11-04: focus is not a read. Events and the window being shown
-    // (hidden to visible) are the only reads; there are no focus or budget resyncs.
-    it('reads nothing on focus while the window stays shown', async () => {
+    it('keeps event-driven reads on focus and resyncs topics past their budget', async () => {
         seedToday();
         await reads.prefetchToday();
         renderHook(useTodayReads);
         await act(async () => {});
         for (const mock of fixture.bindings.values()) mock.mockClear();
         await act(async () => window.dispatchEvent(new Event('focus')));
-        await act(async () => {});
-        for (const name of ['GetGoalCheckIn', 'GetEngagementWeekSummary', 'GetMobileBriefHealth', 'GetTodayTopics', 'GetTodayQuietLines', 'GetLatestBrief', 'GetTodayDayShape']) expect(binding(name), name).not.toHaveBeenCalled();
+        await waitFor(() => expect(binding('GetGoalCheckIn')).toHaveBeenCalledTimes(1));
+        expect(binding('GetEngagementWeekSummary')).not.toHaveBeenCalled();
+        // Brief health is cached-first: focus inside its minute reads nothing.
+        const budgeted = ['GetMobileBriefHealth', 'GetTodayTopics', 'GetTodayQuietLines', 'GetLatestBrief', 'GetTodayDayShape'];
+        for (const name of budgeted) expect(binding(name), name).not.toHaveBeenCalled();
+        vi.spyOn(Date, 'now').mockReturnValue(Date.now() + reads.TODAY_TOPICS_TTL_MS + 1);
+        await act(async () => window.dispatchEvent(new Event('focus')));
+        await waitFor(() => expect(binding('GetTodayTopics')).toHaveBeenCalledTimes(1));
+        expect(binding('GetTodayDayShape')).not.toHaveBeenCalled();
+        for (const name of ['GetMobileBriefHealth', 'GetTodayQuietLines', 'GetLatestBrief']) expect(binding(name), name).not.toHaveBeenCalled();
         // Snappy 1.0: Today's click path never reads the capture counts.
         expect(binding('GetCaptureCounts')).not.toHaveBeenCalled();
     });
@@ -385,9 +383,7 @@ describe('cached page hooks through shim spies', () => {
 
     // Snappy 1.0: focus paints the topics Today has; "topics:updated" brings
     // new ones, and a read on show happens only once they are past budget.
-    // Changed 2026-11-04: focus never reads, even past the TTL (the show transition
-    // is the one window-driven read; no focus revalidation).
-    it('mounts Today topics without reads and keeps them on focus past the TTL', async () => {
+    it('mounts Today topics without reads and keeps fresh topics on focus', async () => {
         await reads.GetTodayTopics();
         binding('GetTodayTopics').mockClear();
         const hook = renderHook(() => useTodayTopics(true));
@@ -397,7 +393,7 @@ describe('cached page hooks through shim spies', () => {
         expect(binding('GetTodayTopics')).not.toHaveBeenCalled();
         vi.spyOn(Date, 'now').mockReturnValue(Date.now() + reads.TODAY_TOPICS_TTL_MS + 1);
         await act(async () => window.dispatchEvent(new Event('focus')));
-        expect(binding('GetTodayTopics')).not.toHaveBeenCalled();
+        expect(binding('GetTodayTopics')).toHaveBeenCalledTimes(1);
     });
 
     it('shows stale Today topics immediately, revalidates once and publishes the new result', async () => {

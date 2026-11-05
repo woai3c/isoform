@@ -1,9 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { resetPageQueries } from '@/lib/page-queries';
-import { useTodayQuietLines } from './useTodayQuietLines';
-
-const QUIET_REFRESH_MS = 30 * 60_000;
+import { QUIET_REFRESH_MS, useTodayQuietLines } from './useTodayQuietLines';
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), listeners: new Map<string, (data?: unknown) => unknown>() }));
 vi.mock('@/lib/wails-shim-app', () => ({ GetTodayQuietLines: mocks.read }));
@@ -22,8 +20,7 @@ beforeEach(() => {
 afterEach(() => { resetPageQueries(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 // Snappy 1.0: the quiet lines follow each brief and the notice settings, and
-// otherwise read at most every 30 minutes while Today is visible (was 5); the 30-minute
-// advances below prove no timer reads them.
+// otherwise read at most every 30 minutes while Today is visible (was 5).
 it('reads on a brief and on showing, never on a timer or while hidden', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
     const { result } = renderHook(() => useTodayQuietLines(true));

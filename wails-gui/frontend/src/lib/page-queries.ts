@@ -30,23 +30,18 @@ const settings = ['GetSettingsOverview', 'GetMobileBriefSchedule', 'GetPlatformP
 const search = ['GetTodayTopics', 'ListHandoffs'];
 const firstDay = ['GetFirstWeekDay', 'GetAssistantHistory', 'GetCalendarFirstDay'];
 const everyPage = [...today, ...chat, ...activity, ...goals, ...aboutYou, ...knowHow, ...people, ...settings, ...search, ...firstDay];
+const briefEvents = ['brief:stored', 'mobile:updated', 'cron:state', 'handoff:created', 'handoff:updated', 'insight:saved', 'memory:updated', 'activity:summary-ready', 'deliverables:updated', 'agency:updated'];
 const eventReads: Record<string, string[]> = {};
 function on(names: string[], reads: string[]) {
     for (const name of names) eventReads[name] = [...new Set([...(eventReads[name] ?? []), ...reads])];
 }
-// The latest brief is the stored document: it changes when a brief is stored
-// or starts and stops being built. Agency, activity summaries, memory, handoffs,
-// insights, deliverables and cron state do not rewrite a stored brief, and
-// agency:updated plus activity:summary-ready fire at every launch, so they are
-// not triggers here (the launch read storm, 2026-11-04).
-on(['brief:stored', 'brief:building', 'mobile:updated'], ['GetLatestBrief']);
+on(briefEvents, ['GetLatestBrief']);
+// A brief started or stopped being built: Today follows it instead of polling.
+on(['brief:building'], ['GetLatestBrief']);
 // The backend derives this event from real calendar/hold changes. Source
 // notifications alone must not clear an unchanged strip or its local preview.
-on(['today-dayshape:updated'], ['GetTodayDayShape']);
-// GetTodayBeforeYouTalk has no entry here: useTodayBeforeYouTalk subscribes to
-// today-dayshape:updated, today-before-you-talk:updated and calendar:synced through
-// useChangeDrivenRead, so a burst (or a burst while hidden) is one read. Activity,
-// mail, people and session saves do not change a meeting-prep card.
+on(['today-dayshape:updated'], ['GetTodayDayShape', 'GetTodayBeforeYouTalk']);
+on(['calendar:synced', 'activity:session-saved', 'activity:activities-updated', 'mail:synced', 'people:updated', 'session:items-appended'], ['GetTodayBeforeYouTalk']);
 on(['mobile:updated'], ['GetEngagementWeekSummary', 'GetMobileBriefHealth', 'GetMobileBriefSchedule']);
 on(['initiative:updated'], ['GetTodaySuggestion']);
 // Quiet lines change with each brief and with the notice settings; Today
@@ -57,14 +52,9 @@ on(['cron:run', 'model-accounts:updated', 'ai:config-changed'], ['GetTodayNews']
 on(['topics:finds', 'topics:updated', 'model-accounts:updated', 'ai:config-changed'], ['GetTopicFinds']);
 on(['topics:updated', 'topics:withdrawn'], ['GetTodayTopics']);
 on(['activity:session-saved', 'calendar:synced'], ['GetCaptureCounts']);
-// Goals are the source of the check-in. agency:updated is emitted by the goal and
-// directive writers (self_dream_compile.go, mobile_goals.go, self_directives_api.go).
 on(['agency:updated'], ['GetGoalCheckIn', 'ListGoals']);
-// The Noticed strip re-reads only when its own set really changes. The backend
-// emits "noticed:updated" with the date for that change; agency:updated and
-// activity:activities-updated fired 1,240 times at launch and every one of those
-// reads returned zero rows.
-on(['noticed:updated'], ['GetDayNoticed']);
+// The Noticed strip re-reads when a summary lands or a follow-up changes.
+on(['activity:summary-ready', 'agency:updated', 'activity:activities-updated'], ['GetDayNoticed']);
 on(['session:items-appended'], ['LoadStreamItemsPage', 'ListMainChatAnswerChips']);
 on(['main-chat:chips'], ['ListMainChatAnswerChips']);
 on(['main-chat:waiting-changed'], ['ListMainChatWaitingItems']);
@@ -109,38 +99,6 @@ export function PageEventsOn(event: string, handler: (...args: any[]) => void) {
     handlers.set(event, set);
     return () => { set.delete(handler); };
 }
-// Events whose payload names one day ({ date }). A burst of them (a dismissal
-// across every shown day emits one per day) is one invalidation per changed
-// day, flushed once per window, so a mounted reader reads once.
-const DATE_COALESCED_EVENTS = new Set(['noticed:updated']);
-export const DATE_EVENT_COALESCE_MS = 250;
-function coalesceByDate(event: string, names: string[]): () => void {
-    const dates = new Set<string>();
-    // An event with no date could name any day: it invalidates every day once.
-    let everyDay = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let last: { date?: string } | undefined;
-    const flush = () => {
-        timer = undefined;
-        const batch = [...dates];
-        const all = everyDay;
-        dates.clear();
-        everyDay = false;
-        if (all) pageQueryCache.invalidate(names, true);
-        else for (const date of batch) pageQueryCache.invalidate(names, true, [date]);
-        void dispatch(event, last);
-    };
-    const off = RuntimeEventsOn(event, (data?: { date?: string }) => {
-        last = data;
-        if (data?.date) dates.add(data.date);
-        else everyDay = true;
-        if (timer === undefined) timer = setTimeout(flush, DATE_EVENT_COALESCE_MS);
-    });
-    return () => {
-        if (timer !== undefined) clearTimeout(timer);
-        off();
-    };
-}
 let installed = false;
 const cleanups: (() => void)[] = [];
 // Publications and progress keep the last checked display while their
@@ -152,9 +110,7 @@ export function installPageQueryEvents() {
     installed = true;
     let wasAway = !appActive();
     cleanups.push(onAppActivity((active) => {
-        // Meeting prep is not re-read on show by this path: useTodayBeforeYouTalk reads
-        // once on show when a change arrived while hidden, so a show is never two reads.
-        if (active && wasAway) pageQueryCache.invalidate([...today.filter((name) => name !== 'GetTodayBeforeYouTalk'), ...activity, ...aboutYou, ...knowHow, ...firstDay], false);
+        if (active && wasAway) pageQueryCache.invalidate([...today, ...activity, ...aboutYou, ...knowHow, ...firstDay], false);
         wasAway = !active;
     }));
     cleanups.push(onPagePrivacyCacheWithdrawal(() => {
@@ -162,10 +118,6 @@ export function installPageQueryEvents() {
         clearSavedPeopleView();
     }));
     for (const [event, names] of Object.entries(eventReads)) {
-        if (DATE_COALESCED_EVENTS.has(event)) {
-            cleanups.push(coalesceByDate(event, names));
-            continue;
-        }
         cleanups.push(RuntimeEventsOn(event, (data?: { status?: string }) => {
             if (event === 'cron:run' && data?.status === 'missed') return;
             // Publications keep the last checked display available to a
@@ -256,8 +208,8 @@ export const GetTodaySuggestion = cached('GetTodaySuggestion');
 export const GetTodayQuietLines = cached('GetTodayQuietLines');
 // Topics change by "topics:updated" (each rebuild publishes it), never by a
 // poll (snappy-and-first-run-1.0.md, section 1). A pending projection keeps a
-// shorter cache lifetime; this is a TTL for the next mount's read, not a timer
-// (the timed resync was removed 2026-11-04). A settled one may be 2 hours old.
+// shorter lifetime, the safety resync for a publication that preceded its
+// listener or a bridge that reconnected; a settled one may be 2 hours old.
 export const TODAY_TOPICS_PENDING_RESYNC_MS = 10 * 60_000;
 export const TODAY_TOPICS_TTL_MS = 2 * 60 * 60_000;
 export const GetTodayTopics: typeof app.GetTodayTopics = (...args) => {

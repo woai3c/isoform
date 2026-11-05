@@ -105,15 +105,9 @@ func (a *App) SetMobileBriefSchedule(schedule MobileBriefSchedule) (MobileBriefS
 	if svc == nil {
 		return MobileBriefSchedule{}, errMobileBriefUnavailable
 	}
-	before, _ := svc.Schedule()
 	result, err := svc.SetSchedule(schedule)
 	if err == nil {
-		// The page hears about a save only when the settings or the shown
-		// prediction really moved.
-		predictionMoved := a.refreshMobileBriefSchedule()
-		if predictionMoved || mobileBriefScheduleConfigChanged(before, result) {
-			a.emitBrowserEvent("mobile:updated")
-		}
+		a.emitBrowserEvent("mobile:updated")
 	}
 	return result, err
 }
@@ -123,29 +117,9 @@ func (a *App) SetMobileBriefSchedule(schedule MobileBriefSchedule) (MobileBriefS
 // disabled view instead of failing.
 func (a *App) GetMobileBriefHealth() (perfValue MobileBriefHealth) {
 	defer logPageBinding("GetMobileBriefHealth", time.Now(), &perfValue)
-	health, _ := a.mobileBriefHealthRefresher().Get()
-	return health
-}
-
-// mobileBriefHealthMaxAge bounds how stale a read may be before it starts a
-// refresh. Health has time-driven fields (pending and retry slots) that no
-// writer announces.
-const mobileBriefHealthMaxAge = 30 * time.Second
-
-func (a *App) mobileBriefHealthRefresher() *snapshotRefresher[MobileBriefHealth] {
-	return a.mobileHealthSnapshots.get("", func() *snapshotRefresher[MobileBriefHealth] {
-		return newSnapshotRefresher(a.loadMobileBriefHealth, nil, func() {
-			a.emitBrowserEvent("mobile:updated")
-		}, mobileBriefHealthMaxAge)
-	})
-}
-
-// loadMobileBriefHealth builds the health view. It runs in the background
-// refresher, never on the binding's request path.
-func (a *App) loadMobileBriefHealth() (MobileBriefHealth, error) {
 	svc := a.mobileBriefSource()
 	if svc == nil {
-		return MobileBriefHealth{}, nil
+		return MobileBriefHealth{}
 	}
 	health := svc.Health()
 	// The current brief is the one play-ahead prepares. Today offers to play
@@ -158,7 +132,7 @@ func (a *App) loadMobileBriefHealth() (MobileBriefHealth, error) {
 			health.Audio = current.Audio
 		}
 	}
-	return health, nil
+	return health
 }
 
 // GetMobileBriefAudio returns the spoken brief for Today's play control. An

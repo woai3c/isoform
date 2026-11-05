@@ -111,19 +111,17 @@ describe("Today's stored brief refresh", () => {
         await waitFor(() => expect(result.current.view).toEqual(older));
     });
 
-    // Narrowed 2026-11-04: these events do not rewrite a stored brief, and
-    // agency:updated and activity:summary-ready fire at every launch. Only
-    // brief:stored, brief:building and mobile:updated re-read the brief.
-    // memory:updated is left out: it is a privacy-sweep event, which invalidates
-    // every Today read on purpose (PRIVACY_SWEEP_EVENTS, unchanged).
-    it.each(["cron:state", "handoff:created", "handoff:updated", "insight:saved", "activity:summary-ready", "deliverables:updated", "agency:updated"])("does not reread the stored brief on %s", async (event) => {
+    it.each(["cron:state", "handoff:created", "handoff:updated", "insight:saved", "memory:updated", "activity:summary-ready", "deliverables:updated", "agency:updated"])("reads changed stored content on %s and unsubscribes", async (event) => {
         const { result, unmount } = renderHook(() => useLatestBrief(true));
         await waitFor(() => expect(result.current.loading).toBe(false));
-        const before = getLatest.mock.calls.length;
-        getLatest.mockResolvedValue({ brief: { briefId: "same-morning-brief" }, dailySummary: { text: "Unchanged" }, building: false });
+        const updated = { brief: { briefId: "same-morning-brief" }, dailySummary: { text: "Updated during the day" }, building: false };
+        getLatest.mockResolvedValue(updated);
         await act(async () => { await events.get(event)?.(); });
-        expect(getLatest).toHaveBeenCalledTimes(before);
+        await waitFor(() => expect(result.current.view).toEqual(updated));
+        expect(getLatest).toHaveBeenCalledTimes(2);
         unmount();
+        await act(async () => { events.get(event)?.(); });
+        expect(getLatest).toHaveBeenCalledTimes(2);
     });
 
     // Snappy 1.0: showing the page paints what Today has; it reads again

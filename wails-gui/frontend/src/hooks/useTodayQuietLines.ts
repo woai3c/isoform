@@ -3,9 +3,12 @@ import { pageQueryCache } from '@/lib/query-cache';
 import { useCallback, useEffect, useState } from "react";
 import { type QuietLine } from "@/lib/wails-shim-app";
 
+/** At most how often Today reads its quiet lines again while it is visible. */
+export const QUIET_REFRESH_MS = 30 * 60_000;
+
 /** Today's quiet lines (RC 1 A4, `GetTodayQuietLines`): none until read, and
- *  a failed read keeps the last ones. Each brief and notice-settings event reads
- *  them again (page-queries), and once on showing or unlocking the window. No timer. */
+ *  a failed read keeps the last ones. Each brief and card event reads them
+ *  again (page-queries), and once on showing or unlocking the window. */
 export function useTodayQuietLines(enabled: boolean): QuietLine[] {
     const [lines, setLines] = useState<QuietLine[]>(() => pageQueryCache.peek('GetTodayQuietLines') ?? []);
     const refresh = useCallback(async () => {

@@ -15,12 +15,10 @@ vi.mock("../../wailsjs/runtime/runtime", () => ({
     },
 }));
 
-/** The computer's background retry succeeded (#167). The shared change hook
- *  coalesces events for 250 ms, so the read lands after that window. */
+/** The computer's background retry succeeded (#167). */
 async function emitTopicsUpdated() {
     await act(async () => {
         for (const handler of mocks.listeners.get(TOPICS_UPDATED_EVENT) ?? []) handler();
-        await new Promise((resolve) => setTimeout(resolve, 300));
     });
 }
 
@@ -189,7 +187,7 @@ describe("useTodayTopics and topics:updated", () => {
     it("stops listening when it unmounts", async () => {
         mocks.get.mockResolvedValue([]);
         const { unmount } = renderHook(() => useTodayTopics(true));
-        await waitFor(() => expect(mocks.get).toHaveBeenCalledTimes(1));
+        await waitFor(() => expect(mocks.listeners.get(TOPICS_UPDATED_EVENT)?.size).toBe(1));
         unmount();
         // The renderer retains one invalidator while the page is unmounted.
         expect(mocks.listeners.get(TOPICS_UPDATED_EVENT)?.size).toBe(1);

@@ -104,17 +104,8 @@ func newPortraitTestRig(t *testing.T, count int) (*App, *AboutYouPortraitService
 	return app, service, runner, path
 }
 
-// waitPortraitSnapshot waits until the portrait refresh has landed. A cold read
-// answers empty at once and its refresh emits when done, so a test that reads
-// the value settles the refresher first.
-func waitPortraitSnapshot(t *testing.T, app *App) {
-	t.Helper()
-	waitSnapshotValue(t, app.aboutYouPortraitRefresher())
-}
-
 func mustPortraitRead(t *testing.T, app *App, state string) AboutYouPortrait {
 	t.Helper()
-	waitPortraitSnapshot(t, app)
 	result, err := app.GetAboutYouPortrait()
 	if err != nil || result.State != state {
 		t.Fatalf("portrait: %+v, %v; want %s", result, err, state)
@@ -1113,7 +1104,6 @@ func TestPortraitNotQuiteSavesTheNoteAndRewrites(t *testing.T) {
 func TestPortraitThatsMeAndUndo(t *testing.T) {
 	app, service, _, _ := newPortraitTestRig(t, 20)
 	service.check(context.Background(), time.Now())
-	waitPortraitSnapshot(t, app)
 	confirmed, err := app.ConfirmAboutYouPortrait()
 	if err != nil || len(confirmed) != 12 {
 		t.Fatalf("confirmed %v %v", confirmed, err)

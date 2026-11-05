@@ -263,17 +263,10 @@ type App struct {
 	cachedDisplayName      string            // cached from GetUserProfile on first call
 	localClaudeEnvSnapshot map[string]string // local Claude-compatible env vars to restore after gateway override
 	todayDayShapeUpdates   todayDayShapeUpdateState
-	// Today read snapshots: bindings serve these, a background refresh fills them.
-	mobileHealthSnapshots snapshotCache[MobileBriefHealth]
-	aboutYouSnapshots     snapshotCache[AboutYouPortrait]
-	dayShapeSnapshots     snapshotCache[TodayDayShape]
-	noticedShown          noticedShownDays
-	beforeYouTalkBoundary boundaryTimer
-	mobileSchedule        mobileBriefScheduleArm
-	eventBroadcaster      *EventBroadcaster // forwards events to browser WebSocket clients
-	browserServer         *browserServer    // HTTP+WS server for browser-mode access
-	mobileBridge          *mobileBridge     // opt-in authenticated mobile hub transport
-	desktopTaskBridge     *mobileBridge     // task turns when no phone is paired
+	eventBroadcaster       *EventBroadcaster // forwards events to browser WebSocket clients
+	browserServer          *browserServer    // HTTP+WS server for browser-mode access
+	mobileBridge           *mobileBridge     // opt-in authenticated mobile hub transport
+	desktopTaskBridge      *mobileBridge     // task turns when no phone is paired
 	// Serialize phone and desktop choice dispatch through the same lock.
 	taskChoiceMu         sync.Mutex
 	desktopOfferStartMu  sync.Mutex
@@ -381,27 +374,6 @@ func (a *App) emitBrowserEvent(eventName string, data ...interface{}) {
 		if bridge := a.mobileBridgeForUse(); bridge != nil {
 			bridge.noteTodayChanged()
 		}
-	}
-	// Writer events mark the read snapshots stale; each refresh replaces its
-	// value in the background and emits only when the value really changed.
-	switch eventName {
-	case "mobile:updated":
-		a.mobileHealthSnapshots.invalidateAll()
-	case "agency:updated":
-		// A goal closed or reopened changes which recording the brief may play.
-		a.mobileHealthSnapshots.invalidateAll()
-	case "brief:stored":
-		a.mobileHealthSnapshots.invalidateAll()
-		a.dayShapeSnapshots.invalidateAll()
-		// A new brief can move the adaptive prediction the schedule shows.
-		go func() {
-			if a.refreshMobileBriefSchedule() {
-				a.emitBrowserEvent("mobile:updated")
-			}
-		}()
-	case "calendar:synced":
-		a.dayShapeSnapshots.invalidateAll()
-		go a.armTodayBeforeYouTalkBoundary()
 	}
 	switch eventName {
 	case "calendar:synced", "brief:stored":

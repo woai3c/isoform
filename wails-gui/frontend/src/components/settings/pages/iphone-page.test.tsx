@@ -148,8 +148,7 @@ describe("IPhonePage", () => {
         await renderPage({ onOpenPage });
         fireEvent.click(screen.getByRole("button", { name: /Advanced/ }));
 
-        // The schedule (and its note) arrive after the shared hook's 250 ms mount read.
-        expect(await screen.findByText(/turn on Use your own API key or model under Advanced/)).toBeInTheDocument();
+        expect(screen.getByText(/turn on Use your own API key or model under Advanced/)).toBeInTheDocument();
         fireEvent.click(screen.getByRole("button", { name: "Open Assistant" }));
 
         expect(onOpenPage).toHaveBeenCalledWith("ai-provider", { advanced: true });

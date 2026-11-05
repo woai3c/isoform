@@ -60,9 +60,9 @@ func TestPortraitReadsTheForgetMarkersOncePerMemoryChange(t *testing.T) {
 func TestPortraitReadRestsWhenNothingChanged(t *testing.T) {
 	rig, dir := newMemoryPrivacyQueryRig(t)
 	app := rig.app
-	// The first read of a cold snapshot starts its load in the background;
-	// settle it so the counts below only see the reads this test makes.
-	waitPortraitSnapshot(t, app)
+	if _, err := app.GetAboutYouPortrait(); err != nil {
+		t.Fatal(err)
+	}
 	before := portraitSourceReads.Load()
 	for i := 0; i < 3; i++ {
 		if _, err := app.GetAboutYouPortrait(); err != nil {
@@ -91,8 +91,6 @@ func TestPortraitReadRestsWhenNothingChanged(t *testing.T) {
 	if _, err := app.GetAboutYouPortrait(); err != nil {
 		t.Fatal(err)
 	}
-	// The withdrawal dropped the value, so the read starts a background load.
-	waitPortraitSnapshot(t, app)
 	if portraitSourceReads.Load()-before != 1 {
 		t.Fatal("Closed Eyes did not make the next portrait read check the notes again")
 	}
