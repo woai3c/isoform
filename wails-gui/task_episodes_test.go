@@ -654,7 +654,9 @@ func TestTaskEpisodeMigrationIsIdempotent(t *testing.T) {
 	).Scan(&tableCount); err != nil {
 		t.Fatal(err)
 	}
-	if tableCount != 6 {
-		t.Fatalf("task episode tables=%d, want 6", tableCount)
+	// Six task-episode tables, plus task_episode_read_revision: the revision
+	// counter that the triggers on the rows of the repeated-onset set maintain.
+	if tableCount != 7 {
+		t.Fatalf("task episode tables=%d, want 7 (six task-episode tables and task_episode_read_revision)", tableCount)
 	}
 }

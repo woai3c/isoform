@@ -1806,6 +1806,13 @@ func (s *ActivityStore) bootstrapMigrationLog() error {
 			return a && b, firstErr(e1, e2)
 		}},
 		{"calendar_hold_recovery", func() (bool, error) { return s.hasColumn("holds", "failure_reason") }},
+		{"task_episode_read_revision", func() (bool, error) {
+			// The table and all nine change triggers: a partial set is not derived.
+			a, e1 := s.hasTable("task_episode_read_revision")
+			var triggers int
+			e2 := s.db.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='trigger' AND name LIKE 'task_episode_read_revision_%'`).Scan(&triggers)
+			return a && triggers == 9, firstErr(e1, e2)
+		}},
 		{"activity_event_context_index", func() (bool, error) {
 			return s.hasIndex("idx_activity_events_context")
 		}},
