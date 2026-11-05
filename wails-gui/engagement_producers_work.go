@@ -85,6 +85,18 @@ func engagementBlockedQuestion(reason string) string {
 	}
 }
 
+// announceBriefStoredBeforeEngagement posts the brief-ready moment for a brief that
+// was stored while the Engagement service was not running (a launch while locked,
+// or a brief built before the service started). Without it that brief is never
+// announced: its moment was refused and nothing retries it (R36, 2026-11-05). The
+// moment's dedupe key is the brief, so announcing again is harmless.
+func (a *App) announceBriefStoredBeforeEngagement(brief MobileBriefV1) bool {
+	if brief.BriefID == "" || (brief.Slot != mobileBriefSlotMorning && brief.Slot != mobileBriefSlotEvening) {
+		return false
+	}
+	return a.produceBriefReady(brief, true)
+}
+
 // produceBriefReady submits brief_ready for a brief that would have pushed. It
 // returns the notify flag the brief publish should use. The flag is false once
 // the moment carries the push, so the phone is not pushed twice.

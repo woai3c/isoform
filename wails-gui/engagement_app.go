@@ -65,6 +65,7 @@ func (a *App) startEngagement(ctx context.Context) {
 	mobileSMSStateHook = a.handleSMSState
 	svc.Start(ctx)
 	a.startEngagementSignals(ctx)
+	a.announceLatestBriefIfUnannounced()
 	log.Printf("[engagement] service started")
 }
 
@@ -386,4 +387,18 @@ func (bridge *mobileBridge) devicesWithScope(scope string) []mobileDeviceRecord 
 		out = append(out, *record)
 	}
 	return out
+}
+
+// announceLatestBriefIfUnannounced announces today's stored morning or evening
+// brief once the Engagement service is up (see announceBriefStoredBeforeEngagement).
+func (a *App) announceLatestBriefIfUnannounced() {
+	svc, ok := a.mobileBriefSource().(*mobileBriefService)
+	if !ok || svc == nil || svc.store == nil {
+		return
+	}
+	brief, found := svc.store.latest()
+	if !found || brief.LocalDate != time.Now().Format("2006-01-02") {
+		return
+	}
+	a.announceBriefStoredBeforeEngagement(brief)
 }
