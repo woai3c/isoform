@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync/atomic"
 )
@@ -266,13 +267,24 @@ func (s *ActivityStore) taskEpisodeRepeatedOnsetSet() (
 	return s.taskEpisodeRepeatedOnsetSetAt(0)
 }
 
-// taskEpisodeRepeatedOnsetSetContext is the all-time repeated-onset set. The
-// scan is unbounded, and every Self and interest read asked for it again: many
-// identical scans queued on the activity read pool and held it for minutes
-// (2026-11-04). Callers that arrive while a scan runs now share its result. The
-// returned map is read-only.
+// taskEpisodeRepeatedOnsetSetContext is the all-time repeated-onset set. It is
+// served from a cache keyed on the trigger-maintained read revision (inserts only:
+// task episodes are immutable). Concurrent callers at one revision share one scan.
+// The revision is read before the scan, so a change during the scan leaves the cache
+// on an older key and the next read rescans rather than serving it. The returned
+// map is read-only.
 func (s *ActivityStore) taskEpisodeRepeatedOnsetSetContext(ctx context.Context) (map[string]struct{}, error) {
-	value, err, _ := s.repeatedOnsetFlight.Do("all", func() (any, error) {
+	revision, err := s.taskEpisodeReadRevision()
+	if err != nil {
+		return nil, err
+	}
+	if set, ok := s.repeatedOnsets.get(revision); ok {
+		return set, nil
+	}
+	value, err, _ := s.repeatedOnsetFlight.Do(strconv.FormatInt(revision, 10), func() (any, error) {
+		if set, ok := s.repeatedOnsets.get(revision); ok {
+			return set, nil
+		}
 		if repeatedOnsetScanGate != nil {
 			repeatedOnsetScanGate()
 		}
@@ -281,7 +293,9 @@ func (s *ActivityStore) taskEpisodeRepeatedOnsetSetContext(ctx context.Context) 
 		if err != nil {
 			return nil, err
 		}
-		return index.repeatedEpisodeIDs(), nil
+		set := index.repeatedEpisodeIDs()
+		s.repeatedOnsets.put(revision, set)
+		return set, nil
 	})
 	if err != nil {
 		return nil, err

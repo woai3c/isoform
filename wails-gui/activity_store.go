@@ -62,13 +62,15 @@ const sqlExcludeProtected = ` AND COALESCE(s.triage_status, '') != 'protected'`
 type ActivityStore struct {
 	// repeatedOnsetFlight shares one all-time repeated-onset scan among callers.
 	repeatedOnsetFlight singleflight.Group
-	db                  *sql.DB
-	readDB              *sql.DB
-	readWriter          *sql.DB
-	segmentsDir         string
-	snapshotsDir        string
-	eventsDir           string
-	audioDir            string
+	// repeatedOnsets holds the all-time repeated-onset set for one read revision.
+	repeatedOnsets taskEpisodeRepeatedCache
+	db             *sql.DB
+	readDB         *sql.DB
+	readWriter     *sql.DB
+	segmentsDir    string
+	snapshotsDir   string
+	eventsDir      string
+	audioDir       string
 	// Revision is even while sources are stable and odd during deletion.
 	readPrivacyMu               sync.Mutex
 	readPrivacyRevision         atomic.Uint64

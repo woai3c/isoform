@@ -379,6 +379,7 @@ var allActivityMigrations = []activityMigration{
 	{Name: "calendar_hold_dismissals", Fn: migrateCalendarHoldDismissals},
 	{Name: "calendar_hold_active_source", Fn: migrateCalendarHoldActiveSource},
 	{Name: "calendar_hold_recovery", Fn: migrateCalendarHoldRecovery},
+	{Name: "task_episode_read_revision", Fn: migrateTaskEpisodeReadRevision},
 }
 
 // ──────────────────────────────────────────────
