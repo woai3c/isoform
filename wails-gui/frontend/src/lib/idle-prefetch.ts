@@ -1,4 +1,5 @@
 import { pagePrefetchSteps, type PagePrefetchStep } from './page-queries';
+import { appActive, onAppShown } from './app-activity';
 
 // Idle prefetch (Bo, 2026-10-23): after Today's first paint, warm every page's
 // primary reads during idle time, one query at a time, in pagePrefetchSteps
@@ -72,6 +73,10 @@ export function startIdlePrefetch(deps: IdleDeps = {}): Promise<void> {
         const next = () => {
             if (cancelled) return resolve();
             if (index >= steps.length) return resolve();
+            if (!appActive()) {
+                const off = onAppShown(() => { off(); next(); });
+                return;
+            }
             // Parked work re-checks on later idle periods instead of polling.
             // The setTimeout fallback (no requestIdleCallback, e.g. WebKit)
             // parks on a bounded timer: a zero-delay re-arm would spin for
@@ -85,6 +90,7 @@ export function startIdlePrefetch(deps: IdleDeps = {}): Promise<void> {
             }
             const step = steps[index++];
             onIdle(() => {
+                if (!appActive()) { index--; next(); return; }
                 void step.run().catch(() => undefined).then(() => next());
             });
         };

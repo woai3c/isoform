@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { useTranslation } from 'react-i18next';
 import { ListPlus, Repeat, Undo2 } from 'lucide-react';
 import { ActivityInlineNotice, errorNotice, type ActivityNotice } from './activity-inline-notice';
-import { EventsOn } from '../../wailsjs/runtime/runtime';
 import {
     AddActivityFollowUp,
     EditTodayNoticedSchedule,
@@ -135,19 +134,11 @@ export function ActivityNoticed({
         setRoutineFor(null);
         setEditTarget(null);
         load();
-        // A new summary brings new suggestions; a follow-up added or undone
-        // anywhere changes which ones Go shows.
-        const offs = [
-            EventsOn('activity:summary-ready', load),
-            EventsOn('agency:updated', load),
-            EventsOn('activity:activities-updated', load),
-        ];
         return () => {
             ++loadID.current;
-            offs.forEach((off) => off());
         };
     }, [load]);
-    usePageQueryRefresh(['GetDayNoticed'], load);
+    usePageQueryRefresh(['GetDayNoticed'], load, true, (args) => args[0] === dateStr);
 
     const startFollowUp = (item: NoticedSuggestion) => {
         setEditTarget(null);

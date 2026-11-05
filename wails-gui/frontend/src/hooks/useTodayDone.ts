@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { GetDoneForYou, type TodayDone } from "@/lib/wails-shim-app";
 import { onPagePrivacyWithdrawal } from "@/lib/page-privacy-withdrawal";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
+import { waitForAppActive } from "@/lib/app-activity";
 
 type Snapshot = { items: TodayDone[]; loading: boolean; failed: boolean };
 let snapshot: Snapshot = { items: [], loading: true, failed: false };
@@ -11,7 +12,7 @@ const listeners = new Set<() => void>();
 function publish(next: Snapshot) { snapshot = next; listeners.forEach((listener) => listener()); }
 export function refreshTodayDone() {
     const current = ++request;
-    void Promise.resolve().then(() => GetDoneForYou(0)).then((page) => {
+    void Promise.resolve().then(() => waitForAppActive()).then(() => current === request ? GetDoneForYou(0) : null).then((page) => {
         if (current !== request) return;
         if (!page || !Array.isArray(page.items)) throw new Error("Invalid finished projection");
         publish({ items: page.items, loading: false, failed: false });

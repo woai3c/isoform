@@ -48,14 +48,9 @@ export function useTodayStatus(enabled: boolean): TodayStatusData {
         if (!enabled) return;
         refresh();
         const unsubscribe = EventsOn("mobile:updated", refresh);
-        // Brief health shows its cached view on focus; a stored brief or a
-        // mobile change already invalidates it, and it re-reads once stale.
-        const onFocus = () => { pageQueryCache.invalidate(['GetEngagementWeekSummary']); refresh(); };
-        window.addEventListener("focus", onFocus);
         return () => {
             version.current += 1;
             unsubscribe();
-            window.removeEventListener("focus", onFocus);
         };
     }, [enabled, refresh]);
 

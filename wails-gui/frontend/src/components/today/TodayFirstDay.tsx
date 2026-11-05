@@ -9,6 +9,7 @@ import { clockTime } from "@/lib/brief-time";
 import { historyFound, historyName } from "@/hooks/useFirstDay";
 import { cn } from "@/lib/utils";
 import { TodayPermissionControl } from "./TodayPermissionControl";
+import { activeInterval, waitForAppActive } from "@/lib/app-activity";
 
 type TodayT = (key: string, options?: Record<string, unknown>) => string;
 
@@ -43,10 +44,10 @@ export function useWatchedToday(enabled: boolean): WatchedToday | null {
     useEffect(() => {
         if (!enabled) return;
         let live = true;
-        const read = () => Promise.resolve().then(GetWatchedToday).then((next) => { if (live) setWatched(next ?? null); }).catch(() => {});
+        const read = () => Promise.resolve().then(() => waitForAppActive()).then(() => live ? GetWatchedToday() : null).then((next) => { if (live) setWatched(next ?? null); }).catch(() => {});
         void read();
-        const id = window.setInterval(read, MINUTE_MS);
-        return () => { live = false; window.clearInterval(id); };
+        const stop = activeInterval(read, MINUTE_MS);
+        return () => { live = false; stop(); };
     }, [enabled]);
     return watched;
 }

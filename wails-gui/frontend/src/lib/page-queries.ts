@@ -6,11 +6,13 @@ import { clearSavedPeopleView } from './people-saved-view';
 import { onPagePrivacyCacheWithdrawal, onPagePrivacyWithdrawal, resetPagePrivacyWithdrawal } from './page-privacy-withdrawal';
 import { briefSlotKey } from './brief-time';
 import { CHAT_FIRST_PAGE_SIZE } from './chat-page-size';
-import { resetAppActivity } from './app-activity';
+import { appActive, onAppActivity, resetAppActivity, waitForAppActive } from './app-activity';
 import {
     listMainChatWaitingItemsWithOpenAnswerDelivery,
     loadStreamItemsPageWithOpenAnswerDelivery,
 } from './open-answer-delivery';
+
+pageQueryCache.setActivityGate(waitForAppActive);
 
 const today = ['GetNeedsYou', 'GetTodayDayShape', 'GetTodayBeforeYouTalk', 'GetTodayNews', 'GetEngagementWeekSummary', 'GetMobileBriefHealth', 'GetTodaySuggestion', 'GetTodayQuietLines', 'GetTodayTopics', 'GetLatestBrief', 'GetTopicFinds', 'GetGoalCheckIn', 'GetPortraitTodayCard', 'IsClosedEyesModeEnabled'];
 const chat = ['LoadStreamItemsPage', 'GetMainChatOverview', 'ListMainChatWaitingItems', 'ListMainChatAnswerChips'];
@@ -106,6 +108,11 @@ const KEEP_SHOWN_EVENTS = new Set(['topics:updated', 'today-dayshape:updated', '
 export function installPageQueryEvents() {
     if (installed) return;
     installed = true;
+    let wasAway = !appActive();
+    cleanups.push(onAppActivity((active) => {
+        if (active && wasAway) pageQueryCache.invalidate([...today, ...activity, ...aboutYou, ...knowHow, ...firstDay], false);
+        wasAway = !active;
+    }));
     cleanups.push(onPagePrivacyCacheWithdrawal(() => {
         pageQueryCache.clear();
         clearSavedPeopleView();
@@ -168,9 +175,11 @@ export function usePageQueryRefresh(names: readonly string[], refresh: () => unk
     useEffect(() => {
         if (!enabled) return;
         installPageQueryEvents();
-        return pageQueryCache.subscribe((name, args) => {
+        const release = pageQueryCache.retainNames(key.split('|'));
+        const off = pageQueryCache.subscribe((name, args) => {
             if (key.split('|').includes(name) && (!args || !filter.current || filter.current(args))) void latest.current();
         });
+        return () => { off(); release(); };
     }, [key, enabled]);
 }
 

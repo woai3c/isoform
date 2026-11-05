@@ -79,6 +79,37 @@ describe('Isoform noticed', () => {
         await i18n.changeLanguage('en');
     });
 
+    it('keeps reads bounded across rerenders, other dates, cache pressure and events', async () => {
+        const otherDay = '2026-10-18';
+        binding('GetDayNoticed').mockImplementation(async (date: string) => date === DAY ? [followUp, routine] : [followUp]);
+        const view = render(<><ActivityNoticed dateStr={DAY} onOpenMoment={vi.fn()} /><ActivityNoticed dateStr={otherDay} onOpenMoment={vi.fn()} /></>);
+        await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(2));
+        for (let i = 0; i < 100; i++) await pageQueryCache.read('pressure', [i], async () => i);
+        view.rerender(<><ActivityNoticed dateStr={DAY} onOpenMoment={vi.fn()} /><ActivityNoticed dateStr={otherDay} onOpenMoment={vi.fn()} /></>);
+        await act(async () => { await Promise.all([...(fixture.listeners.get('activity:summary-ready') ?? [])].map((fn) => fn(undefined))); });
+        await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(4));
+        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+        expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(4);
+    });
+
+    it('defers reads while hidden or locked and catches up after showing', async () => {
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        const view = render(<ActivityNoticed dateStr={DAY} onOpenMoment={vi.fn()} />);
+        await act(async () => { await Promise.resolve(); });
+        expect(binding('GetDayNoticed')).not.toHaveBeenCalled();
+        visibility.mockReturnValue('visible');
+        act(() => document.dispatchEvent(new Event('visibilitychange')));
+        await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(1));
+        act(() => { for (const fn of fixture.listeners.get('system:state') ?? []) fn('locked'); });
+        act(() => { for (const fn of fixture.listeners.get('activity:summary-ready') ?? []) fn(undefined); });
+        await act(async () => { await Promise.resolve(); });
+        expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(1);
+        act(() => { for (const fn of fixture.listeners.get('system:state') ?? []) fn('unlocked'); });
+        await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(2));
+        view.unmount();
+        visibility.mockRestore();
+    });
+
     it('shows each suggestion with its reason and the moment it points at, and nothing when there are none', async () => {
         const onOpenMoment = vi.fn();
         const { unmount } = render(<ActivityNoticed dateStr={DAY} onOpenMoment={onOpenMoment} />);

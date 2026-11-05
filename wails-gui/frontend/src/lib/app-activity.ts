@@ -3,10 +3,7 @@ import { EventsOn as RuntimeEventsOn } from '../../wailsjs/runtime/runtime';
 
 /**
  * Whether the window is being looked at: shown, and the Mac neither locked nor
- * asleep. While it is not, the UI does nothing and no UI timer fires; when it
- * is shown again it paints from cache and catches up only what is past its
- * budget (docs/handoff-2026-10-26/snappy-and-first-run-1.0.md, section 1,
- * rule 2). The lock state comes from the backend's "system:state" event
+ * asleep. The lock state comes from the backend's "system:state" event
  * (context_signals.go).
  */
 let systemAway = false;
@@ -17,7 +14,6 @@ const changeListeners = new Set<(active: boolean) => void>();
 
 function notifyChange() {
     const active = appActive();
-    // Focus while already shown still counts as "shown again" for catch-up.
     if (active === wasActive && !active) return;
     wasActive = active;
     for (const listener of [...changeListeners]) listener(active);
@@ -42,6 +38,14 @@ function install() {
 export function appActive(): boolean {
     install();
     return !systemAway && (typeof document === 'undefined' || document.visibilityState !== 'hidden');
+}
+
+/** Wait for a shown, unlocked window before starting a background read. */
+export function waitForAppActive(): Promise<void> | undefined {
+    if (appActive()) return undefined;
+    return new Promise<void>((resolve) => {
+        const off = onAppActivity((active) => { if (active) { off(); resolve(); } });
+    }).then(() => waitForAppActive());
 }
 
 /** Calls listener with true each time the window is shown, focused or

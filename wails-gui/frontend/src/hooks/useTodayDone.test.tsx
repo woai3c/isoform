@@ -27,3 +27,16 @@ it("clears withdrawn data and ignores an earlier late read", async () => {
     expect(hook.result.current.items.map((row) => row.id)).toEqual(["safe"]);
     hook.unmount();
 });
+it("defers the read while hidden", async () => {
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    mocks.get.mockResolvedValue({ items: [item("safe")], total: 1 });
+    const hook = renderHook(() => useTodayDone());
+    await act(async () => { await Promise.resolve(); });
+    expect(mocks.get).not.toHaveBeenCalled();
+    visibility.mockReturnValue("visible");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    await waitFor(() => expect(hook.result.current.items.map((row) => row.id)).toEqual(["safe"]));
+    hook.unmount();
+    visibility.mockRestore();
+});

@@ -120,7 +120,9 @@ describe('idle binding reads', () => {
         console.log(`[binding-polls] five-minute wire calls ${JSON.stringify(counts)}`);
         expect(binding('GetBackgroundListening')).toHaveBeenCalledTimes(1);
         expect(binding('GetAutomaticMeetingRecordingEnabled')).toHaveBeenCalledTimes(1);
-        for (const name of watched.slice(2)) expect(binding(name).mock.calls.length, name).toBeLessThanOrEqual(6);
+        // Thirty show transitions may each refresh a mounted page once.
+        for (const name of ['GetMemoryEntries', 'GetKnowledgeEntries']) expect(binding(name).mock.calls.length, name).toBeLessThanOrEqual(31);
+        for (const name of watched.slice(4)) expect(binding(name).mock.calls.length, name).toBeLessThanOrEqual(6);
 
         await emit('background-listening:changed', true);
         await emit('automatic-meeting-recording:changed', true);

@@ -86,6 +86,18 @@ function seedToday() {
 }
 
 describe('cached page hooks through shim spies', () => {
+    it('defers the six reported bindings while hidden and reads each once on return', async () => {
+        seedToday();
+        for (const name of ['GetMemoryEntries', 'GetAboutYouPortrait', 'GetKnowledgeEntries']) fixture.bindings.set(name, vi.fn().mockResolvedValue([]));
+        const names = ['GetMemoryEntries', 'GetAboutYouPortrait', 'GetKnowledgeEntries', 'GetMobileBriefHealth', 'GetLatestBrief', 'GetTodayQuietLines'] as const;
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        const pending = names.map((name) => reads[name]());
+        await act(async () => { await Promise.resolve(); });
+        for (const name of names) expect(binding(name), name).not.toHaveBeenCalled();
+        visibility.mockReturnValue('visible');
+        await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await Promise.all(pending); });
+        for (const name of names) expect(binding(name), name).toHaveBeenCalledTimes(1);
+    });
     // Snappy 1.0: no 2-second poll. A missed publication is recovered by the
     // 10-minute safety resync, in one shared read, and never sooner.
     it('recovers two first-run bootstrap readers without an event in one shared read', async () => {
@@ -158,17 +170,16 @@ describe('cached page hooks through shim spies', () => {
         await act(async () => {});
         for (const mock of fixture.bindings.values()) mock.mockClear();
         await act(async () => window.dispatchEvent(new Event('focus')));
-        await waitFor(() => expect(binding('GetEngagementWeekSummary')).toHaveBeenCalledTimes(1));
-        for (const name of ['GetGoalCheckIn', 'GetEngagementWeekSummary']) {
-            expect(binding(name), name).toHaveBeenCalledTimes(1);
-        }
+        await waitFor(() => expect(binding('GetGoalCheckIn')).toHaveBeenCalledTimes(1));
+        expect(binding('GetEngagementWeekSummary')).not.toHaveBeenCalled();
         // Brief health is cached-first: focus inside its minute reads nothing.
         const budgeted = ['GetMobileBriefHealth', 'GetTodayTopics', 'GetTodayQuietLines', 'GetLatestBrief', 'GetTodayDayShape'];
         for (const name of budgeted) expect(binding(name), name).not.toHaveBeenCalled();
         vi.spyOn(Date, 'now').mockReturnValue(Date.now() + reads.TODAY_TOPICS_TTL_MS + 1);
         await act(async () => window.dispatchEvent(new Event('focus')));
         await waitFor(() => expect(binding('GetTodayTopics')).toHaveBeenCalledTimes(1));
-        for (const name of budgeted) expect(binding(name), name).toHaveBeenCalledTimes(1);
+        expect(binding('GetTodayDayShape')).toHaveBeenCalledTimes(1);
+        for (const name of ['GetMobileBriefHealth', 'GetTodayQuietLines', 'GetLatestBrief']) expect(binding(name), name).not.toHaveBeenCalled();
         // Snappy 1.0: Today's click path never reads the capture counts.
         expect(binding('GetCaptureCounts')).not.toHaveBeenCalled();
     });
@@ -184,13 +195,13 @@ describe('cached page hooks through shim spies', () => {
         expect(binding('GetLatestBrief')).not.toHaveBeenCalled();
         vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
         await act(async () => document.dispatchEvent(new Event('visibilitychange')));
-        expect(binding('GetLatestBrief')).not.toHaveBeenCalled();
+        expect(binding('GetLatestBrief')).toHaveBeenCalledTimes(1);
         vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
         await act(async () => document.dispatchEvent(new Event('visibilitychange')));
         vi.spyOn(Date, 'now').mockReturnValue(Date.now() + BRIEF_RESYNC_MS + 1);
         vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
         await act(async () => document.dispatchEvent(new Event('visibilitychange')));
-        expect(binding('GetLatestBrief')).toHaveBeenCalledTimes(1);
+        expect(binding('GetLatestBrief')).toHaveBeenCalledTimes(2);
     });
 
     it('refreshes the stale panel on focus without re-reading the shared waiting count', async () => {

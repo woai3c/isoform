@@ -3,6 +3,7 @@ import { GetNeedsYou, PutOffNeedsYou, type TodayNeed, type TodayNeedsPage } from
 import { pageQueryCache } from "@/lib/query-cache";
 import { onPagePrivacyWithdrawal } from "@/lib/page-privacy-withdrawal";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
+import { waitForAppActive } from "@/lib/app-activity";
 
 type Snapshot = { items: TodayNeed[]; putOff: TodayNeed[]; loading: boolean; failed: boolean };
 const EMPTY: TodayNeed[] = [];
@@ -50,7 +51,7 @@ export async function putOffTodayNeed(need: TodayNeed, action: "put_off" | "brin
 
 export function refreshTodayNeeds() {
     const current = ++request;
-    void Promise.resolve().then(() => GetNeedsYou(0)).then((page) => {
+    void Promise.resolve().then(() => waitForAppActive()).then(() => current === request ? GetNeedsYou(0) : null).then((page) => {
         if (current !== request) return;
         if (!page || !Array.isArray(page.items)) throw new Error("Invalid waiting projection");
         pageQueryCache.set("GetNeedsYou", [0], page);

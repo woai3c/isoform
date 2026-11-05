@@ -1,9 +1,9 @@
 import { markLaunchPaint, markLaunchStage } from '@/lib/launch-perf';
 import { GetLatestBrief, usePageQueryRefresh, PageEventsOn as EventsOn } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
-import { useBudgetedRefresh } from '@/lib/app-activity';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readWithQuietRetry } from "@/lib/quiet-retry";
+import { waitForAppActive } from '@/lib/app-activity';
 import {
     GetTodayBriefByID,
     GenerateMobileBriefNow,
@@ -62,7 +62,10 @@ export function useLatestBrief(enabled: boolean, briefId?: string, requestNonce?
     const refresh = useCallback(() => {
         const current = ++version.current;
         const read = () => briefId && !followLatest.current
-            ? GetTodayBriefByID(briefId).then((requested) => requested.brief ? requested : GetLatestBrief())
+            ? Promise.resolve(waitForAppActive()).then(() => {
+                if (current !== version.current) throw new Error('Superseded brief read');
+                return GetTodayBriefByID(briefId);
+            }).then((requested) => requested.brief ? requested : GetLatestBrief())
             : GetLatestBrief();
         readWithQuietRetry(read, () => current === version.current)
             .then((next) => {
@@ -126,12 +129,6 @@ export function useLatestBrief(enabled: boolean, briefId?: string, requestNonce?
             unsubscribers.forEach((off) => off());
         };
     }, [enabled, refresh]);
-    // Focus and showing the window paint from what Today has; the brief and
-    // its local signals are read again only once they are 15 minutes old (a
-    // new day after the Mac slept, a missed event). The read keeps the shown
-    // brief until its replacement arrives.
-    useBudgetedRefresh(() => { pageQueryCache.invalidate(['GetLatestBrief'], false); refresh(); }, BRIEF_RESYNC_MS, enabled);
-
     // "Make my brief now" comes back when the cooldown ends.
     useEffect(() => {
         if (make !== "cooldown") return;

@@ -22,9 +22,12 @@ export class QueryCache {
     private epoch = 0;
     private revisions = new Map<string, number>();
     private retained = new Map<string, number>();
+    private retainedNames = new Map<string, number>();
     private listeners = new Set<(name: string, args?: readonly unknown[]) => void>();
 
     constructor(private readonly capacity = 64, private readonly now = () => Date.now()) {}
+    private waitUntilActive?: () => Promise<void> | undefined;
+    setActivityGate(gate: () => Promise<void> | undefined) { this.waitUntilActive = gate; }
 
     private key(name: string, args: readonly unknown[]) { return JSON.stringify([name, args]); }
 
@@ -70,6 +73,18 @@ export class QueryCache {
         };
     }
 
+    retainNames(names: readonly string[]) {
+        for (const name of names) this.retainedNames.set(name, (this.retainedNames.get(name) ?? 0) + 1);
+        return () => {
+            for (const name of names) {
+                const count = (this.retainedNames.get(name) ?? 1) - 1;
+                if (count) this.retainedNames.set(name, count);
+                else this.retainedNames.delete(name);
+            }
+            this.trim();
+        };
+    }
+
     set<T>(name: string, args: readonly unknown[], value: T) {
         const key = this.key(name, args);
         const old = this.entries.get(key);
@@ -82,7 +97,8 @@ export class QueryCache {
 
     private trim() {
         while (this.entries.size > this.capacity) {
-            const oldest = [...this.entries.keys()].find((key) => !this.retained.has(key)) ?? this.entries.keys().next().value!;
+            const oldest = [...this.entries].find(([key, entry]) => !this.retained.has(key) && !this.retainedNames.has(entry.name) && !entry.pending)?.[0];
+            if (!oldest) break;
             this.entries.delete(oldest);
         }
     }
@@ -128,7 +144,6 @@ export class QueryCache {
             });
             while (pages.length > 2) this.entries.delete(pages.shift()!);
         }
-        this.trim();
         entry.load = load;
         entry.ttl = ttl;
         if (entry.ready && !entry.invalid && this.now() - entry.at < ttl) return Promise.resolve(entry.value as T);
@@ -153,7 +168,11 @@ export class QueryCache {
                 return this.read(name, args, load, ttl);
             };
             const superseded = () => target.generation !== generation || epoch !== this.epoch || revision !== this.revisions.get(name);
-            const pending: Promise<T> = Promise.resolve().then(() => !superseded() ? load() : latest()).then((value) => {
+            const pending: Promise<T> = Promise.resolve().then(() => {
+                const wait = this.waitUntilActive?.();
+                if (wait) return wait.then(() => !superseded() ? load() : latest());
+                return !superseded() ? load() : latest();
+            }).then((value) => {
                 // An event during a read supersedes that read for ALL callers,
                 // including callers awaiting the old promise.
                 if (superseded()) return latest();
@@ -165,6 +184,7 @@ export class QueryCache {
                 target.error = undefined;
                 target.settled = true;
                 this.notify(name, args);
+                this.trim();
                 return value;
             }, (error) => {
                 if (superseded()) return latest();
@@ -176,6 +196,7 @@ export class QueryCache {
             });
             target.pending = pending;
         }
+        this.trim();
         if (target.ready && !target.invalid) {
             // Stale-while-revalidate failures retain the last successful value.
             void target.pending.catch(() => {});

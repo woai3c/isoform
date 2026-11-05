@@ -28,9 +28,24 @@ it("withdraws cached rows immediately and rejects a late earlier response", asyn
     let finish!: (page: unknown) => void;
     mocks.get.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; })).mockResolvedValueOnce({ items: [item("safe")], total: 1 });
     const hook = renderHook(() => useTodayNeeds());
+    await waitFor(() => expect(mocks.get).toHaveBeenCalledTimes(1));
     act(() => mocks.withdraw?.());
     await waitFor(() => expect(hook.result.current.items.map((row) => row.id)).toEqual(["safe"]));
     await act(async () => finish({ items: [item("withdrawn")], total: 1 }));
     expect(hook.result.current.items.map((row) => row.id)).toEqual(["safe"]);
     hook.unmount();
+});
+
+it("does not read while hidden and catches up on showing", async () => {
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    mocks.get.mockResolvedValue({ items: [item("safe")], total: 1 });
+    const hook = renderHook(() => useTodayNeeds());
+    await act(async () => { await Promise.resolve(); });
+    expect(mocks.get).not.toHaveBeenCalled();
+    visibility.mockReturnValue("visible");
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    await waitFor(() => expect(hook.result.current.items.map((row) => row.id)).toEqual(["safe"]));
+    hook.unmount();
+    visibility.mockRestore();
 });
