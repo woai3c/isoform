@@ -19,11 +19,14 @@ func proactiveVoiceDeliveryBrief(t *testing.T, app *App) (engagement.Moment, str
 	brief := MobileBriefV1{Version: 1, BriefID: now.Format("2006-01-02") + "-morning", Slot: mobileBriefSlotMorning, AsOf: now.Format(time.RFC3339),
 		Evidence: []MobileBriefRef{{Ref: "e1", SourceKind: mobileBriefCalendarSource, SourceID: event.ID}},
 		Sections: MobileBriefSections{Meetings: []MobileBriefItem{{Title: event.Title, Refs: []string{"e1"}}}}}
-	store := newMobileBriefStore(t.TempDir())
+	dir := t.TempDir()
+	store := newMobileBriefStore(dir)
 	if err := store.save(brief, now); err != nil {
 		t.Fatal(err)
 	}
-	app.mobileBriefSvc = &mobileBriefService{app: app, store: store, now: func() time.Time { return now }}
+	// Built the way newMobileBriefService builds it, so the read path sees the
+	// same stores production does.
+	app.mobileBriefSvc = &mobileBriefService{app: app, store: store, config: newMobileBriefConfigStore(dir), runs: newMobileBriefRunStore(dir), now: func() time.Time { return now }}
 	app.runner = proactiveVoiceTestRouter(&proactiveVoiceTestRunner{raw: `{"headline":"Design review is in your brief.","body":"Open your brief when you have a moment.","draft":null,"actions":["open"],"evidence":["b1"],"abstain":false,"reason":null}`})
 	return engagement.Moment{ID: "voice-brief", Kind: engagement.KindBriefReady, SubjectID: brief.BriefID, CreatedAt: now}, event.Title
 }

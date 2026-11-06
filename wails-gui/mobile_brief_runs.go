@@ -84,8 +84,11 @@ func newMobileBriefRunStore(stateDir string) *mobileBriefRunStore {
 }
 
 // list returns every recorded run, oldest first. A missing or unreadable
-// file is an empty list.
+// file is an empty list, and so is a service built without a run store.
 func (s *mobileBriefRunStore) list() []mobileBriefRun {
+	if s == nil {
+		return nil
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.loadLocked().Runs

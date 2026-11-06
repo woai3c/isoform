@@ -154,12 +154,15 @@ func TestBootstrapReconcile_FullyMigrated(t *testing.T) {
 	// drop_removed_agency_tables leaves nothing to probe, so its rule returns
 	// false the same way. The identifier policy cleanup also has no schema
 	// marker: losing its log must not leave legacy prose tokens untouched.
+	// noticed_plain_invoice_followup rewrites saved wording and dismissal keys
+	// only, so it has no schema marker either; runPendingMigrations applies it.
 	dataOnlyMigrations := []string{
 		"activity_summaries_moments_partial_reset",
 		"timeline_summary_image_failure_requeue",
 		"drop_removed_agency_tables",
 		"activity_evidence_identifier_policy",
 		"activity_evidence_receipt_policy",
+		"noticed_plain_invoice_followup",
 	}
 	wantBootstrapped := len(allActivityMigrations) - len(dataOnlyMigrations)
 	var count int
