@@ -33,6 +33,8 @@ type mainChatHoldSource struct {
 }
 
 type mainChatProactive struct {
+	// postedAt is the time the card's row takes, when it is not now. Never stored.
+	postedAt                time.Time           `json:"-"`
 	FirstReadVersion        int64               `json:"firstReadVersion,omitempty"`
 	FirstReadHash           string              `json:"firstReadHash,omitempty"`
 	FirstReadConfirmedAt    int64               `json:"firstReadConfirmedAt,omitempty"`
@@ -472,6 +474,10 @@ func (a *App) postProactiveItem(item mainChatProactive, key string) string {
 	createdAt := time.Now()
 	if a.engagement != nil {
 		createdAt = a.engagement.now()
+	}
+	if !item.postedAt.IsZero() {
+		// A card posted late (the brief-card backfill) keeps the time its brief was ready.
+		createdAt = item.postedAt
 	}
 	storedID := a.appendMainChatItem(ctx, main.LocalID, storage.StreamItemRow{ID: id, Kind: "system", Content: proactiveFallback(item), ToolName: mainChatProactiveTool, ToolInput: string(payload), CreatedAt: createdAt.UnixMilli()}, mainChatSourceEngagement)
 	if storedID != "" {

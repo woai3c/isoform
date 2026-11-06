@@ -66,6 +66,7 @@ func (a *App) startEngagement(ctx context.Context) {
 	svc.Start(ctx)
 	a.startEngagementSignals(ctx)
 	a.announceLatestBriefIfUnannounced()
+	go a.backfillBriefChatCards(context.Background())
 	log.Printf("[engagement] service started")
 }
 
