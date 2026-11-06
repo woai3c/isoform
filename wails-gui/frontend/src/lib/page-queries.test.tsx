@@ -98,6 +98,25 @@ describe('cached page hooks through shim spies', () => {
         await act(async () => { document.dispatchEvent(new Event('visibilitychange')); await Promise.all(pending); });
         for (const name of names) expect(binding(name), name).toHaveBeenCalledTimes(1);
     });
+    it('on show re-reads only what is past its budget, never a cached read still inside it', async () => {
+        seedToday();
+        await reads.GetTodayQuietLines();
+        binding('GetTodayQuietLines').mockClear();
+        const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+        await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+        visibility.mockReturnValue('visible');
+        await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+        await reads.GetTodayQuietLines();
+        expect(binding('GetTodayQuietLines')).not.toHaveBeenCalled();
+        // Past its 60-second budget, the same show does read it once.
+        vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 61_000);
+        visibility.mockReturnValue('hidden');
+        await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+        visibility.mockReturnValue('visible');
+        await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+        await act(async () => { await reads.GetTodayQuietLines(); });
+        expect(binding('GetTodayQuietLines')).toHaveBeenCalledTimes(1);
+    });
     // Snappy 1.0: no 2-second poll. A missed publication is recovered by the
     // 10-minute safety resync, in one shared read, and never sooner.
     it('recovers two first-run bootstrap readers without an event in one shared read', async () => {
@@ -195,13 +214,13 @@ describe('cached page hooks through shim spies', () => {
         expect(binding('GetLatestBrief')).not.toHaveBeenCalled();
         vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
         await act(async () => document.dispatchEvent(new Event('visibilitychange')));
-        expect(binding('GetLatestBrief')).toHaveBeenCalledTimes(1);
+        expect(binding('GetLatestBrief')).not.toHaveBeenCalled();
         vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
         await act(async () => document.dispatchEvent(new Event('visibilitychange')));
         vi.spyOn(Date, 'now').mockReturnValue(Date.now() + BRIEF_RESYNC_MS + 1);
         vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
         await act(async () => document.dispatchEvent(new Event('visibilitychange')));
-        expect(binding('GetLatestBrief')).toHaveBeenCalledTimes(2);
+        expect(binding('GetLatestBrief')).toHaveBeenCalledTimes(1);
     });
 
     it('refreshes the stale panel on focus without re-reading the shared waiting count', async () => {

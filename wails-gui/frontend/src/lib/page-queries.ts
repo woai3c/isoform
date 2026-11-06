@@ -140,7 +140,9 @@ export function installPageQueryEvents() {
     installed = true;
     let wasAway = !appActive();
     cleanups.push(onAppActivity((active) => {
-        if (active && wasAway) pageQueryCache.invalidate([...today, ...activity, ...aboutYou, ...knowHow, ...firstDay], false);
+        // Back in view, re-read only what is past its budget: a fresh entry
+        // keeps painting from the cache, and no page is told to read it again.
+        if (active && wasAway) pageQueryCache.invalidateStale([...today, ...activity, ...aboutYou, ...knowHow, ...firstDay]);
         wasAway = !active;
     }));
     cleanups.push(onPagePrivacyCacheWithdrawal(() => {
@@ -251,7 +253,9 @@ export const GetTodayTopics: typeof app.GetTodayTopics = (...args) => {
     const prior = pageQueryCache.peek<{ refreshing?: boolean }>('GetTodayTopics', args);
     return pageQueryCache.read('GetTodayTopics', args, () => app.GetTodayTopics(...args), prior?.refreshing ? TODAY_TOPICS_PENDING_RESYNC_MS : TODAY_TOPICS_TTL_MS);
 };
-export const GetLatestBrief = cached('GetLatestBrief');
+// The brief's budget is BRIEF_RESYNC_MS (hooks/useLatestBrief): a show or
+// focus reads it again only past that age; brief events re-read it at once.
+export const GetLatestBrief = cached('GetLatestBrief', 15 * 60_000);
 export const GetTopicFinds = cached('GetTopicFinds');
 export const GetGoalCheckIn = cached('GetGoalCheckIn');
 export const LoadStreamItemsPage: typeof app.LoadStreamItemsPage = (...args) => {

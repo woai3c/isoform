@@ -29,6 +29,28 @@ describe('renderer query cache', () => {
         expect(load).toHaveBeenCalledTimes(3);
     });
 
+    it('on return marks only entries past their budget and tells only their readers', async () => {
+        let now = 0;
+        const cache = new QueryCache(64, () => now);
+        const old = vi.fn().mockResolvedValue('old');
+        const fresh = vi.fn().mockResolvedValue('fresh');
+        await cache.read('GetAboutYou', [], old, 60_000);
+        now = 50_000;
+        await cache.read('GetMemoryStatus', [], fresh, 60_000);
+        now = 70_000;
+        const notified: string[] = [];
+        const off = cache.subscribe((name) => notified.push(name));
+        cache.invalidateStale(['GetAboutYou', 'GetMemoryStatus']);
+        off();
+        expect(notified).toEqual(['GetAboutYou']);
+        expect(cache.state('GetAboutYou')?.invalid).toBe(true);
+        expect(cache.state('GetMemoryStatus')?.invalid).toBe(false);
+        await cache.read('GetMemoryStatus', [], fresh, 60_000);
+        expect(fresh).toHaveBeenCalledTimes(1);
+        await cache.read('GetAboutYou', [], old, 60_000);
+        expect(old).toHaveBeenCalledTimes(2);
+    });
+
     it('keys hits by binding and arguments and shares an in-flight miss', async () => {
         const cache = new QueryCache();
         const pending = deferred<string>();

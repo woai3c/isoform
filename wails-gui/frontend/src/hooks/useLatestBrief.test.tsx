@@ -151,6 +151,10 @@ describe("Today's stored brief refresh", () => {
         act(() => document.dispatchEvent(new Event("visibilitychange")));
         expect(getLatest).toHaveBeenCalledTimes(1);
         const now = vi.spyOn(Date, "now").mockReturnValue(Date.now() + BRIEF_RESYNC_MS + 1);
+        // A true return: hidden, then shown again past the budget.
+        visible.mockReturnValue("hidden");
+        act(() => document.dispatchEvent(new Event("visibilitychange")));
+        visible.mockReturnValue("visible");
         act(() => document.dispatchEvent(new Event("visibilitychange")));
         await waitFor(() => expect(getLatest).toHaveBeenCalledTimes(2));
         unmount();

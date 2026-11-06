@@ -63,6 +63,27 @@ export class QueryCache {
         for (const name of changed) this.notify(name);
     }
 
+    /**
+     * Back in view: only entries past their budget (their TTL) are marked for
+     * a read, and only their readers are told to read again. An entry still
+     * inside its budget keeps painting from the cache and nobody re-reads it
+     * (Snappy 1.0: showing the window catches up only what is past its budget).
+     */
+    invalidateStale(names: readonly string[]) {
+        const now = this.now();
+        const changed = new Set<string>();
+        for (const entry of this.entries.values()) {
+            if (!names.includes(entry.name) || !entry.ready || entry.pending) continue;
+            if (now - entry.at < (entry.ttl ?? 60_000)) continue;
+            entry.invalid = true;
+            entry.error = undefined;
+            entry.settled = false;
+            entry.generation++;
+            changed.add(entry.name);
+        }
+        for (const name of changed) this.notify(name);
+    }
+
     state(name: string, args: readonly unknown[] = []) { return this.entries.get(this.key(name, args)); }
 
     retain(name: string, args: readonly unknown[]) {
