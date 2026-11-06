@@ -651,6 +651,7 @@
         "proposed": "暂定？",
         "held": "已占",
         "private": "私人",
+        "busy": "忙碌",
         "heldHelper": "已预留。它显示在上方时间条上；在你按下发送之前，日历不会有任何变化。",
         "now": "现在，{{time}}",
         "eventTime": "{{title}} · {{start}} 至 {{end}}",

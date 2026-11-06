@@ -141,9 +141,11 @@ interface TodayDayStripProps {
     holdTitle?: string;
     onRemoveHold?: (id?: string) => void;
     onOpenHold?: () => void;
+    /** The brief's first sentence: an event it names is named on the strip too (R30). */
+    briefText?: string;
 }
 
-export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 'proposed', timeZone, requestedDate, heading, onOpenMeeting, holdTitle, onRemoveHold, onOpenHold }: TodayDayStripProps) {
+export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 'proposed', timeZone, requestedDate, heading, onOpenMeeting, holdTitle, onRemoveHold, onOpenHold, briefText }: TodayDayStripProps) {
     const { t, i18n } = useTranslation('today');
     const tr = (key: string, options?: Record<string, unknown>) => String(t(key as never, options as never));
     const track = useRef<HTMLDivElement>(null);
@@ -245,26 +247,34 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
                     const labelSpan = freeDaySpans(entry.start, entry.end, covers).sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
                     const { event } = entry;
                     const labelWidth = labelSpan ? width * (labelSpan.end - labelSpan.start) / (end - start) - 2 : 0;
-                    const rawLabel = event?.private ? '' : event ? event.holdId ? t('dayStrip.held') : event.kind === 'meeting' ? meetingLabel(event.shortName, event.title) : event.shortName || event.title
+                    // A private event reads Private; an event with no title reads Busy (R30 v3).
+                    const untitled = !!event && !event.holdId && !event.private && !event.title?.trim();
+                    const rawLabel = event?.private ? t('dayStrip.private') : untitled ? t('dayStrip.busy') : event ? event.holdId ? t('dayStrip.held') : event.kind === 'meeting' ? meetingLabel(event.shortName, event.title) : event.shortName || event.title
                         : holdPreview === 'held' ? t('dayStrip.held') : t('dayStrip.proposed');
-                    // A block shows the first of its names that fits (today-review v1.1.13 D7).
-                    const names = event && !event.holdId && !event.private ? [rawLabel, event.shortestName, event.title] : [rawLabel];
-                    const label = names.map((name) => fitChipLabel(name ?? '', labelWidth - 12, measureDayStripChip, event?.initial)).find(Boolean) ?? '';
+                    // A block shows the first of its names that fits (today-review v1.1.13 D7). A name never shows cut.
+                    const names = event && !event.holdId && !event.private && !untitled ? [rawLabel, event.shortestName, event.title] : [rawLabel];
+                    // An event the brief names gets its first whole word that fits, when no whole name does (R30 v3).
+                    const briefNamed = !!event && !event.holdId && !event.private && !untitled && !!briefText?.trim() && [event.title, event.shortName, event.shortestName]
+                        .some((name) => { const text = name?.trim().toLowerCase() ?? ''; return text.length >= 2 && briefText.toLowerCase().includes(text); });
+                    const fits = (text: string) => fitChipLabel(text, labelWidth - 12, measureDayStripChip, event?.initial);
+                    const label = names.map((name) => fits(name ?? '')).find(Boolean)
+                        ?? (briefNamed ? (event?.title ?? '').split(/\s+/).map((word) => word.trim()).filter((word) => /[\p{L}\p{N}]/u.test(word)).map(fits).find(Boolean) ?? '' : '');
                     return <span key={event?.id ?? 'hold'} data-testid={event ? 'today-day-event-group' : 'today-day-hold-group'}
                         className="pointer-events-none absolute inset-0" style={{ zIndex: pieces[0].layer + 1, opacity: entry.originalEnd <= now ? 0.45 : 1 }}>
                         {pieces.map((block, pieceIndex) => {
-                            const eventTitle = (item: DayBlock) => item.event?.private ? t('dayStrip.private') : t('dayStrip.eventTime', {
+                            // Hover and the accessible name carry the word or the full name, even where the block is too narrow to show it.
+                            const eventTitle = (item: DayBlock) => item.event?.private ? t('dayStrip.private') : item.event && !item.event.holdId && !item.event.title?.trim() ? t('dayStrip.busy') : t('dayStrip.eventTime', {
                                 title: item.event?.title ?? shape.hold!.label, start: clock(item.originalStart), end: clock(item.originalEnd),
                             });
                             const title = [eventTitle(block), ...(block.hidden.length ? [t('dayStrip.more', { count: block.hidden.length }), ...block.hidden.map(eventTitle)] : [])].join('\n');
-                            const className = cn('pointer-events-auto absolute flex items-center justify-center overflow-hidden whitespace-nowrap rounded-md text-[11.5px] font-medium', event ? event.holdId ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : event.kind === 'personal' ? 'border-[1.5px] border-ink bg-background text-ink' : 'bg-ink text-background' : holdPreview === 'held' ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : 'border-[1.5px] border-dashed border-accent bg-accent-light text-accent');
+                            const className = cn('pointer-events-auto absolute flex items-center justify-center overflow-hidden whitespace-nowrap rounded-md text-[11.5px] font-medium', event ? event.holdId ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : event.kind === 'personal' || event.private || untitled ? 'border-[1.5px] border-ink bg-background text-ink' : 'bg-ink text-background' : holdPreview === 'held' ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : 'border-[1.5px] border-dashed border-accent bg-accent-light text-accent');
                             const style = { ...placement(block, block.end === Math.min(end, block.originalEnd) ? 2 : 0), zIndex: 1, top: block.inset ? 10 : 6, height: block.inset ? 20 : 28 };
                             return event?.kind === 'meeting' && !event.holdId && !event.private && onOpenMeeting
                                 ? <button key={block.start} type="button" data-testid="today-day-event" data-inset={block.inset} data-kind={event.kind} title={title} aria-label={t('dayStrip.openPrep', { event: eventTitle(block) })} tabIndex={pieceIndex === 0 ? 0 : -1} className={cn(className, 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent')} style={style} onClick={() => onOpenMeeting(event.id)} />
                                 : <span key={block.start} data-testid={event ? 'today-day-event' : 'today-day-hold'} data-inset={block.inset} data-kind={event?.kind} data-state={event ? undefined : holdPreview} title={title} aria-label={title} className={className} style={style} />;
                         })}
                         {labelSpan && <BlockLabel eventId={event?.id} label={label}
-                            className={event ? event.holdId ? 'text-solid-btn-fg' : event.kind === 'personal' ? 'text-ink' : 'text-background' : holdPreview === 'held' ? 'text-solid-btn-fg' : 'text-accent'}
+                            className={event ? event.holdId ? 'text-solid-btn-fg' : event.kind === 'personal' || event.private || untitled ? 'text-ink' : 'text-background' : holdPreview === 'held' ? 'text-solid-btn-fg' : 'text-accent'}
                             style={{ ...placement(labelSpan), top: 6, height: 28, zIndex: 2 }} />}
                         {!event && labelSpan && holdPreview === 'held' && onRemoveHold && <button type="button"
                             aria-label={t('holds.heldFor', { title: holdTitle ?? shape.hold?.label })}

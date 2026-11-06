@@ -651,6 +651,7 @@
         "proposed": "Hold?",
         "held": "Held",
         "private": "Private",
+        "busy": "Busy",
         "heldHelper": "Held. It is on the strip above, and nothing is on your calendar until you press Send.",
         "now": "Now, {{time}}",
         "eventTime": "{{title}} · {{start}} to {{end}}",

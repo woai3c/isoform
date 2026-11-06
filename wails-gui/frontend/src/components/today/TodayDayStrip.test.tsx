@@ -362,9 +362,72 @@ it.each(['en', 'zh-CN'])('says only Private on a private item, in %s (today-revi
     const block = screen.getByTestId('today-day-event');
     const word = lang === 'en' ? 'Private' : '私人';
     expect(block.getAttribute('title')).toBe(word);
-    expect(screen.getByTestId('today-day-event-label').textContent).toBe('');
+    expect(screen.getByTestId('today-day-event-label').textContent).toBe(lang === 'en' ? 'Private' : '私人');
     expect(block.tagName).toBe('SPAN');
     expect(screen.queryByRole('button')).toBeNull();
+});
+
+it.each(['en', 'zh-CN'])('reads Busy in and on hover for a block with no title, in %s (R30 v3)', async (lang) => {
+    await i18n.changeLanguage(lang);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 2000 } as DOMRect);
+    const untitled = { ...dayShapeFixture.events[0], id: 'untitled', title: '', shortName: '', shortestName: '', initial: '', private: false };
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, events: [untitled], hold: null }} />);
+    const word = lang === 'en' ? 'Busy' : '忙碌';
+    expect(screen.getByTestId('today-day-event').getAttribute('title')).toBe(word);
+    expect(screen.getByTestId('today-day-event').getAttribute('aria-label')).toBe(word);
+    expect(screen.getByTestId('today-day-event-label').textContent).toBe(word);
+});
+
+it('draws a private event as an outlined block, never a solid black bar, and reads Private on hover (R30)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 2000 } as DOMRect);
+    const hidden = { ...dayShapeFixture.events[0], id: 'hidden', kind: 'meeting' as const, title: '', shortName: '', shortestName: '', initial: '', private: true };
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, events: [hidden], hold: null }} />);
+    const block = screen.getByTestId('today-day-event');
+    expect(block.className).not.toMatch(/\bbg-ink\b/);
+    expect(block.className).toMatch(/\bborder-ink\b/);
+    expect(block.getAttribute('title')).toBe('Private');
+});
+
+it('draws a Busy block outlined, never solid black, in the block and on hover (R30 v4)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 2000 } as DOMRect);
+    const untitled = { ...dayShapeFixture.events[0], id: 'busy', kind: 'meeting' as const, title: '', shortName: '', shortestName: '', initial: '' };
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, events: [untitled], hold: null }} />);
+    const block = screen.getByTestId('today-day-event');
+    expect(block.className).not.toMatch(/\bbg-ink\b/);
+    expect(block.className).toMatch(/\bborder-ink\b/);
+    expect(screen.getByTestId('today-day-event-label').className).toMatch(/\btext-ink\b/);
+    expect(block.getAttribute('title')).toBe('Busy');
+});
+
+it('keeps a narrow private block with no word inside it, but its hover and accessible name read Private (R30 v4)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 300 } as DOMRect);
+    const hidden = { ...dayShapeFixture.events[0], id: 'narrow', kind: 'meeting' as const, title: '', shortName: '', shortestName: '', initial: '', private: true, start: '2026-10-23T11:00:00-07:00', end: '2026-10-23T11:20:00-07:00' };
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, events: [hidden], hold: null }} />);
+    expect(screen.getByTestId('today-day-event-label').textContent).toBe('');
+    const block = screen.getByTestId('today-day-event');
+    expect(block.getAttribute('title')).toBe('Private');
+    expect(block.getAttribute('aria-label')).toBe('Private');
+});
+
+it('names an event the brief names with its first whole word that fits, never a cut name (R30 v3)', () => {
+    const review = { ...dayShapeFixture.events[0], id: 'review', kind: 'meeting' as const, title: 'Design review with Maya', shortName: '', shortestName: '' };
+    const shape = { ...dayShapeFixture, events: [review], hold: null };
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1000 } as DOMRect);
+    const { unmount } = render(<TodayDayStrip requestedDate="2026-10-23" shape={shape} briefText="Start with the 10:15 design review with Maya, then clear the memo." />);
+    expect(screen.getByTestId('today-day-event-label')).toHaveTextContent(/^Design$/);
+    unmount();
+    // Too narrow for even the first word: nothing shows, and the full name stays on hover.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 400 } as DOMRect);
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={shape} briefText="Start with the 10:15 design review with Maya." />);
+    expect(screen.getByTestId('today-day-event-label').textContent).toBe('');
+    expect(screen.getByTestId('today-day-event').getAttribute('title')).toContain('Design review with Maya');
+});
+
+it('never shows a brief-named title cut mid-word when no whole word fits (R30 v3)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1000 } as DOMRect);
+    const long = { ...dayShapeFixture.events[0], id: 'long', kind: 'meeting' as const, title: 'Quarterlybusinessreviewmeeting', shortName: '', shortestName: '' };
+    render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, events: [long], hold: null }} briefText="Quarterlybusinessreviewmeeting is at 10:15." />);
+    expect(screen.getByTestId('today-day-event-label').textContent).toBe('');
 });
 
 it('says Tomorrow on a strip for tomorrow, with no now line (today-review v1.1.17 R21)', () => {

@@ -62,6 +62,11 @@ type BriefSection = keyof MobileBriefSections | "upcoming";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
+/** The brief's first sentence, for naming the events it mentions on the day strip (R30). */
+function firstSentence(text?: string): string | undefined {
+    return text?.trim().split(/(?<=[.!?。])\s*/)[0] || undefined;
+}
+
 function isReplyDraftCard(card: MobileBriefCard): boolean {
     return [card.label ?? "", card.message].some((text) => /^(?:(?:yes|please)[,，]?\s+)?(?:draft|write|reply)\b|^(?:(?:是|好|好的)[，,、\s]*)?(?:起草|撰写|回复)/i.test(text.trim()));
 }
@@ -1568,7 +1573,7 @@ function briefParts({
                     <div className="text-[12px] text-muted" data-testid="brief-no-recording">{asOf}</div>
                 )}
                 {lateLine && <p className="-mt-2 text-[12px] text-muted" data-testid="brief-late-line">{lateLine}</p>}
-                {dayShapeFailure ? <CalendarReadFailed retry={dayShapeFailure.retry} tr={tr} /> : (<TodayDayStrip heading={firstBrief?.strip} requestedDate={dayShapeDate} shape={dayShape ? { ...dayShape, events: dayShape.events.filter((event) => !stripHidden.has(event.id)), hold: briefHold.offer?.preferred && !briefHold.dismissal ? { ...briefHold.offer.preferred, label: briefHold.offer.thing.title } : null } : null} holdPreview={briefHold.offer ? (directHold.removed ? "dismissed" : directHold.held ? "held" : "proposed") : holdPreview} holdTitle={briefHold.offer?.thing.title} onOpenHold={briefHold.offer && !briefHold.dismissal ? () => measureToday("T31", "reach", "opened", () => handlers.onFindTime?.({ ...briefHold.offer!, telemetryAction: "T31" })) : undefined} onRemoveHold={(id) => { if (id) void removeStripHold(id); else void directHold.remove(); }} timeZone={brief.timezone} onOpenMeeting={handlers.onOpenDayMeeting} />)}
+                {dayShapeFailure ? <CalendarReadFailed retry={dayShapeFailure.retry} tr={tr} /> : (<TodayDayStrip heading={firstBrief?.strip} briefText={firstSentence(brief.narrative?.[0]?.text)} requestedDate={dayShapeDate} shape={dayShape ? { ...dayShape, events: dayShape.events.filter((event) => !stripHidden.has(event.id)), hold: briefHold.offer?.preferred && !briefHold.dismissal ? { ...briefHold.offer.preferred, label: briefHold.offer.thing.title } : null } : null} holdPreview={briefHold.offer ? (directHold.removed ? "dismissed" : directHold.held ? "held" : "proposed") : holdPreview} holdTitle={briefHold.offer?.thing.title} onOpenHold={briefHold.offer && !briefHold.dismissal ? () => measureToday("T31", "reach", "opened", () => handlers.onFindTime?.({ ...briefHold.offer!, telemetryAction: "T31" })) : undefined} onRemoveHold={(id) => { if (id) void removeStripHold(id); else void directHold.remove(); }} timeZone={brief.timezone} onOpenMeeting={handlers.onOpenDayMeeting} />)}
                 {stripRemoval && <p role="status" className="text-[13px] text-muted">{tr("holds.removed")} · <button type="button" className="text-accent" onClick={() => void undoStripRemoval()}>{tr("holds.undo")}</button></p>}
                 {stripError && <div role="status" className="text-[13px] text-destructive">{tr(stripError === "access" ? "holds.accessOff" : stripError === "remove" ? "holds.removeFailed" : stripError === "edited" ? "holds.edited" : "holds.restoreFailed")} {stripError === "restore" && stripRemoval && <button type="button" className="text-accent" onClick={() => void undoStripRemoval()}>{tr("holds.retry")}</button>} {stripError === "access" && <button type="button" className="text-accent" onClick={() => void measureToday("T31", "open", "opened", () => OpenPermissionSettings("calendars"))}>{tr("holds.openSettings")}</button>} {stripError !== "restore" && <button type="button" className="text-accent" onClick={() => void measureToday("T31", "open", "opened", () => OpenExternalURL("/System/Applications/Calendar.app"))}>{tr("holds.openCalendar")}</button>}</div>}
 
