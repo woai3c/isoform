@@ -165,6 +165,24 @@ func TestTodayV110SlotBoundaryKeepsLastBriefOnlyBeforeDue(t *testing.T) {
 	}
 }
 
+// R55: a brief made before its slot arrived is not missed. The slot is pending
+// only while no brief exists for it, so an early brief clears the line at once.
+func TestTodayEarlyBriefIsNotCalledMissed(t *testing.T) {
+	clock := &fakeMobileBriefClock{now: time.Date(2026, 10, 9, 8, 50, 0, 0, time.UTC)}
+	svc, _ := newTestMobileBriefService(t, clock)
+	svc.app.mobileBriefSvc = svc
+	early := mobileBriefStoredBrief(t, "2026-10-09", mobileBriefSlotMorning, 9)
+	early.AsOf = "2026-10-09T08:50:00Z"
+	if err := svc.store.save(early, clock.Now()); err != nil {
+		t.Fatal(err)
+	}
+	clock.Set(time.Date(2026, 10, 9, 9, 5, 0, 0, time.UTC))
+	view, err := svc.app.GetLatestBrief()
+	if err != nil || view.PendingSlot != "" || view.Brief == nil || view.Brief.BriefID != early.BriefID {
+		t.Fatalf("an early brief was called missed or hidden: %+v, %v", view, err)
+	}
+}
+
 func TestGetTodayBriefByIDSelectsStoredBriefAndFallsBackWhenMissing(t *testing.T) {
 	clock := &fakeMobileBriefClock{now: time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC)}
 	svc, _ := newTestMobileBriefService(t, clock)

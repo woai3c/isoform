@@ -42,7 +42,9 @@ func mainChatBriefDisplayFor(brief MobileBriefV1, state upcomingBriefState, loc 
 		if run.BriefID != brief.BriefID || run.Status != mobileBriefRunOK {
 			continue
 		}
-		if run.Late && run.At != "" {
+		// The made-at time, as Today shows it (brief-rebuild rule 1), whether the
+		// brief was on time or late; the slot time is never the card's time (R64).
+		if run.At != "" {
 			result.AsOf = run.At
 		} else if run.ScheduledAt != "" {
 			result.AsOf = run.ScheduledAt

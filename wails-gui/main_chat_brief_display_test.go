@@ -13,8 +13,8 @@ func TestMainChatBriefDisplayUsesTasksReadyTime(t *testing.T) {
 	brief := MobileBriefV1{BriefID: "2026-10-30-evening", Slot: "evening", AsOf: "2026-10-30T17:50:00Z", Timezone: "UTC", YourWeek: &MobileBriefWeek{}}
 	state := upcomingBriefState{Settings: settings, Runs: []mobileBriefRun{{BriefID: brief.BriefID, Slot: "evening", Status: mobileBriefRunOK, ScheduledAt: "2026-10-30T17:50:00Z", At: "2026-10-30T17:55:00Z"}}}
 	got := mainChatBriefDisplayFor(brief, state, time.UTC)
-	if got.Slot != "evening" || got.AsOf != "2026-10-30T18:00:00Z" {
-		t.Fatalf("on-time display: %+v", got)
+	if got.Slot != "evening" || got.AsOf != "2026-10-30T17:55:00Z" {
+		t.Fatalf("on-time display shows the made-at time, not the slot: %+v", got)
 	}
 	state.Runs[0].At = "2026-10-30T18:45:00Z"
 	got = mainChatBriefDisplayFor(brief, state, time.UTC)

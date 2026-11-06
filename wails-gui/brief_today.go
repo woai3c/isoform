@@ -278,7 +278,7 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 				// state, as it always has, not a pending one.
 				latest, ok, snapshot, latestReady = quiet, true, false, quietAt
 				health.PendingSlot, health.PendingAt, health.RetryAt, health.PendingAttempts, health.PendingCause = "", "", "", 0, ""
-			} else if !due.ScheduledAt.IsZero() && (!ok || snapshot || latestReady.Before(due.ScheduledAt)) {
+			} else if !due.ScheduledAt.IsZero() && !service.store.exists(due.BriefID) && (!ok || snapshot || latestReady.Before(due.ScheduledAt)) {
 				health.PendingSlot, health.PendingAt = due.Slot, formatMobileBriefTime(due.ScheduledAt)
 				if ok && !snapshot {
 					health.LatestBriefID, health.LastSlot, health.LastRunAt = latest.BriefID, latest.Slot, formatMobileBriefTime(latestReady)
@@ -287,7 +287,7 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 				// first brief's card, never removed by it.
 				firstBrief = !everMade
 				ok = ok && (mobileBriefHasWrittenText(latest) || snapshot && firstBrief)
-			} else if ok && !due.ScheduledAt.IsZero() && !latestReady.Before(due.ScheduledAt) {
+			} else if ok && !due.ScheduledAt.IsZero() && (service.store.exists(due.BriefID) || !latestReady.Before(due.ScheduledAt)) {
 				health.PendingSlot, health.PendingAt, health.RetryAt, health.PendingAttempts, health.PendingCause = "", "", "", 0, ""
 			}
 		}
