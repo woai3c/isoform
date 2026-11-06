@@ -15,6 +15,8 @@ type Entry = {
     ttl?: number;
     /** When the current or last read started. */
     startedAt?: number;
+    /** The backend call in flight for this entry, settled; the next call waits for it. */
+    backend?: Promise<void>;
 };
 
 export class QueryCache {
@@ -113,6 +115,23 @@ export class QueryCache {
         }
     }
 
+    /**
+     * One backend call per entry at a time for events that supersede a read. An
+     * event cannot cancel the backend call it supersedes, so the next call waits
+     * for it instead of overlapping it; the superseded result is still discarded.
+     * Invalidation (a withdrawal) does not wait.
+     */
+    private backendCall<T>(entry: Entry, load: () => Promise<T>): Promise<T> {
+        // A withdrawal never waits behind an older call: the data it replaces is
+        // already invalid, and the reader must not wait for it.
+        const prior = entry.invalid ? undefined : entry.backend;
+        const run = prior ? prior.then(() => load()) : load();
+        const settled = run.then(() => undefined, () => undefined);
+        entry.backend = settled;
+        void settled.then(() => { if (entry.backend === settled) entry.backend = undefined; });
+        return run;
+    }
+
     clear() { this.invalidate(); this.entries.clear(); }
     get size() { return this.entries.size; }
 
@@ -170,8 +189,8 @@ export class QueryCache {
             const superseded = () => target.generation !== generation || epoch !== this.epoch || revision !== this.revisions.get(name);
             const pending: Promise<T> = Promise.resolve().then(() => {
                 const wait = this.waitUntilActive?.();
-                if (wait) return wait.then(() => !superseded() ? load() : latest());
-                return !superseded() ? load() : latest();
+                if (wait) return wait.then(() => !superseded() ? this.backendCall(target, load) : latest());
+                return !superseded() ? this.backendCall(target, load) : latest();
             }).then((value) => {
                 // An event during a read supersedes that read for ALL callers,
                 // including callers awaiting the old promise.

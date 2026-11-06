@@ -4,41 +4,55 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"wails-gui/internal/pii"
 )
 
-// savedCopyStamp is the privacy stamp that saved copies (the finds view and the
-// first stream page) are made under. It holds only what survives a restart:
-//   - the durable privacy epoch (#588): every privacy change advances it, and it
-//     is saved beside the briefs, so a restart reads the same value back;
-//   - Closed Eyes, the sensitive apps and the observation pauses;
-//   - the activity privacy counts (durable, in the database);
-//   - the memory folder's signal, once the folder has settled.
+// Saved copies (the finds view and the first chat page) are served only under
+// the privacy state they were made under. The check has two parts:
 //
-// It deliberately leaves out the in-memory counters (the brief read epoch, the
-// memory write revision, the context-use epoch). They reset on launch, so a
-// copy made before a restart would never match after it, and every launch would
-// drop every copy. Withdrawals reach the durable epoch through briefPrivacyChanged.
+//   - savedCopyStamp is read on every read. It compares only values already in
+//     memory: the durable privacy epoch (#588, every Isoform action that
+//     withdraws text advances it synchronously before it returns), Closed Eyes,
+//     and the sensitive-app version. No disk, no database, no memory parse.
+//   - savedCopyDeepStamp is the full check: the memory folder, the observation
+//     pauses and the protected activity count. It reads the disk and the
+//     database, so it runs only in the background. It records the copy's deep
+//     state after the copy is saved, and a background pass drops the copy when
+//     the deep state no longer matches.
 //
-// Returns "" when any part cannot be read, which means no copy is served.
+// The one gap: a memory file changed outside Isoform is caught when the memory
+// watcher fires (seconds later), or by the next background check, whichever
+// comes first. A change made while the app is closed is caught by the first
+// background check after launch.
 func (a *App) savedCopyStamp(ctx context.Context) string {
-	// Callers that arrive during one computation share the next one. A stamp
-	// read before a privacy change is never handed to a caller after it.
-	return a.savedStamps.Do(func() string { return a.savedCopyStampNow(context.Background()) })
+	savedCopyEpochLoad.Do(loadSavedCopyEpoch)
+	return fmt.Sprintf("read|%d|%t|%d", mobileBriefPrivacyEpoch.Load(), a.IsClosedEyesModeEnabled(), pii.UserSensitiveAppsVersion())
 }
 
-// savedCopyStampNow computes the stamp from the current state.
-func (a *App) savedCopyStampNow(ctx context.Context) string {
+// savedCopyEpochLoad loads the durable privacy epoch once, before the first
+// read compares against it. The epoch file lives beside the briefs.
+var savedCopyEpochLoad sync.Once
+
+func loadSavedCopyEpoch() {
 	dir, err := mobileBriefStateDir()
 	if err != nil || dir == "" {
+		return
+	}
+	adoptMobileBriefPrivacyEpoch(filepath.Join(dir, mobileBriefDirName))
+}
+
+// savedCopyDeepStamp is the full check. It runs in the background only.
+func (a *App) savedCopyDeepStamp(ctx context.Context) string {
+	// A fresh folder signal, not the cached snapshot: the background check must see
+	// a change made outside Isoform at once.
+	dir, err := memoryDir()
+	if err != nil {
 		return ""
 	}
-	// Load the saved epoch before reading it, so the first read after a launch
-	// compares against the value saved before the restart.
-	adoptMobileBriefPrivacyEpoch(filepath.Join(dir, mobileBriefDirName))
-	snapshot, err := a.memorySnapshot()
+	signal, _, err := memoryFolderSignal(dir)
 	if err != nil {
 		return ""
 	}
@@ -53,29 +67,16 @@ func (a *App) savedCopyStampNow(ctx context.Context) string {
 	return mobileBriefModelDigest(struct {
 		PrivacyEpoch  uint64
 		ClosedEyes    bool
-		SensitiveApps map[string]string
+		SensitiveApps uint64
 		Pauses        []observationPause
-		Activity      [2]int64
+		Protected     int64
 		Memory        string
 	}{
 		PrivacyEpoch:  mobileBriefPrivacyEpoch.Load(),
 		ClosedEyes:    a.IsClosedEyesModeEnabled(),
-		SensitiveApps: pii.GetUserSensitiveApps(),
+		SensitiveApps: pii.UserSensitiveAppsVersion(),
 		Pauses:        pauses,
-		Activity:      [2]int64{activity.sessions, activity.protected},
-		Memory:        durableMemoryIdentity(snapshot),
+		Protected:     activity.protected,
+		Memory:        fmt.Sprintf("%s|%x", dir, signal),
 	})
-}
-
-// durableMemoryIdentity names the memory folder by its signal, which survives a
-// restart. A folder still settling is named by its pointer, so its stamp never
-// holds while it is changing within the same second.
-func durableMemoryIdentity(snapshot *memoryExternalSnapshot) string {
-	if snapshot == nil {
-		return ""
-	}
-	if snapshot.settled {
-		return fmt.Sprintf("settled|%s|%x", snapshot.dirKey, snapshot.signal)
-	}
-	return fmt.Sprintf("unsettled|%p", snapshot)
 }

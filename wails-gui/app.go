@@ -85,9 +85,7 @@ type App struct {
 	// todayChatSourcesMemo shares Today source collections across callers.
 	todayChatSourcesMemo todayChatSourcesCoalescer
 	// streamPages keeps the saved first page of each chat stream.
-	streamPages streamPageState
-	// savedStamps coalesces the saved-copy privacy stamp (see savedCopyStamp).
-	savedStamps                trailingCall[string]
+	streamPages                streamPageState
 	memoryEvidenceReadObserver func()
 	topicPageBeforePublish     func()
 	topicPageAfterValidate     func()

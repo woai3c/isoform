@@ -33,10 +33,14 @@ const (
 )
 
 type topicFindsSnapshot struct {
-	Version int            `json:"version"`
-	Stamp   string         `json:"stamp"`
-	SavedAt time.Time      `json:"savedAt"`
-	View    TopicFindsView `json:"view"`
+	Version int `json:"version"`
+	// ReadStamp is the cheap privacy stamp the view was made under (what a read
+	// compares). Deep is the full check, taken before the view was computed; a
+	// view is served only once Deep is set.
+	ReadStamp string         `json:"readStamp"`
+	Deep      string         `json:"deep"`
+	SavedAt   time.Time      `json:"savedAt"`
+	View      TopicFindsView `json:"view"`
 }
 
 // topicFindsSnapshotState is the refresh bookkeeping kept on the topics service.
@@ -54,6 +58,8 @@ type topicFindsSnapshotState struct {
 	// computeHook runs between computing a view and checking the stamp again;
 	// tests use it to move the stamp mid-computation.
 	computeHook func()
+	// lastRefresh is when the last refresh ran; zero means none since launch.
+	lastRefresh time.Time
 }
 
 func (s *topicsService) findsSnapshotPath() string {
@@ -69,6 +75,7 @@ type topicFindsRead int
 const (
 	topicFindsMissing topicFindsRead = iota
 	topicFindsStale
+	topicFindsUnverified
 	topicFindsFound
 )
 
@@ -84,25 +91,28 @@ func (s *topicsService) readFindsSnapshot(stamp string) (TopicFindsView, time.Ti
 		return TopicFindsView{}, time.Time{}, topicFindsMissing
 	}
 	var snap topicFindsSnapshot
-	if json.Unmarshal(raw, &snap) != nil || snap.Version != topicFindsSnapshotVersion || stamp == "" || snap.Stamp != stamp {
+	if json.Unmarshal(raw, &snap) != nil || snap.Version != topicFindsSnapshotVersion || stamp == "" || snap.ReadStamp != stamp {
 		_ = os.Remove(path)
 		return TopicFindsView{}, time.Time{}, topicFindsStale
+	}
+	if snap.Deep == "" {
+		return TopicFindsView{}, time.Time{}, topicFindsUnverified
 	}
 	return snap.View, snap.SavedAt, topicFindsFound
 }
 
 // writeFindsSnapshot saves view under stamp with the same permissions as the
 // topics state: a private folder and owner-only files, written atomically.
-func (s *topicsService) writeFindsSnapshot(stamp string, view TopicFindsView) error {
-	return s.writeFindsSnapshotAt(stamp, view, time.Now())
+func (s *topicsService) writeFindsSnapshot(stamp, deep string, view TopicFindsView) error {
+	return s.writeFindsSnapshotAt(stamp, deep, view, time.Now())
 }
 
-func (s *topicsService) writeFindsSnapshotAt(stamp string, view TopicFindsView, savedAt time.Time) error {
+func (s *topicsService) writeFindsSnapshotAt(stamp, deep string, view TopicFindsView, savedAt time.Time) error {
 	path := s.findsSnapshotPath()
-	if path == "" || stamp == "" {
+	if path == "" || stamp == "" || deep == "" {
 		return nil
 	}
-	raw, err := json.Marshal(topicFindsSnapshot{Version: topicFindsSnapshotVersion, Stamp: stamp, SavedAt: savedAt, View: view})
+	raw, err := json.Marshal(topicFindsSnapshot{Version: topicFindsSnapshotVersion, ReadStamp: stamp, Deep: deep, SavedAt: savedAt, View: view})
 	if err != nil {
 		return err
 	}
@@ -134,7 +144,12 @@ func (a *App) topicFindsSaved() TopicFindsView {
 	view, savedAt, read := svc.readFindsSnapshot(stamp)
 	switch read {
 	case topicFindsFound:
-		if now.Sub(savedAt) > topicFindsRefreshAge {
+		svc.findsSnap.mu.Lock()
+		neverRefreshed := svc.findsSnap.lastRefresh.IsZero()
+		svc.findsSnap.mu.Unlock()
+		// The first refresh after launch runs the full check on what was saved
+		// before the launch; an old view refreshes too.
+		if neverRefreshed || now.Sub(savedAt) > topicFindsRefreshAge {
 			svc.scheduleFindsRefresh(a, svc.afterLaunch(now))
 		}
 		logFindsRead("copy", "stamp-held", stampMs)
@@ -142,6 +157,9 @@ func (a *App) topicFindsSaved() TopicFindsView {
 	case topicFindsStale:
 		svc.scheduleFindsRefresh(a, now)
 		logFindsRead("placeholder", "stamp-changed", stampMs)
+	case topicFindsUnverified:
+		svc.scheduleFindsRefresh(a, now)
+		logFindsRead("placeholder", "unverified", stampMs)
 	default:
 		svc.scheduleFindsRefresh(a, svc.afterLaunch(now))
 		logFindsRead("placeholder", "no-copy", stampMs)
@@ -241,6 +259,9 @@ func (a *App) refreshTopicFinds() {
 	svc.findsSnap.refreshes.Add(1)
 	ctx := context.Background()
 	before := a.savedCopyStamp(ctx)
+	// The full check is taken before the view, so a change during the view's
+	// computation leaves a mismatch for the next check to find.
+	deep := a.savedCopyDeepStamp(ctx)
 	view := a.topicFindsView()
 	svc.findsSnap.mu.Lock()
 	hook := svc.findsSnap.computeHook
@@ -249,7 +270,10 @@ func (a *App) refreshTopicFinds() {
 		hook()
 	}
 	after := a.savedCopyStamp(ctx)
-	if before == "" || before != after {
+	svc.findsSnap.mu.Lock()
+	svc.findsSnap.lastRefresh = time.Now()
+	svc.findsSnap.mu.Unlock()
+	if before == "" || before != after || deep == "" {
 		return
 	}
 	raw, err := json.Marshal(view)
@@ -260,7 +284,7 @@ func (a *App) refreshTopicFinds() {
 	changed := string(raw) != svc.findsSnap.last
 	svc.findsSnap.last = string(raw)
 	svc.findsSnap.mu.Unlock()
-	if err := svc.writeFindsSnapshot(before, view); err != nil {
+	if err := svc.writeFindsSnapshot(before, deep, view); err != nil {
 		return
 	}
 	if changed {

@@ -154,4 +154,27 @@ describe('renderer query cache', () => {
         expect(cache.peek('LoadStreamItemsPage', ['main', 50, 50])).toBeUndefined();
         expect(cache.size).toBeLessThanOrEqual(64);
     });
+
+    it('runs one backend call at a time while events supersede a slow read', async () => {
+        const cache = new QueryCache(64, () => 0);
+        let inFlight = 0;
+        let peak = 0;
+        const gates: Array<() => void> = [];
+        const load = vi.fn(() => new Promise<number>((resolve) => {
+            inFlight += 1;
+            peak = Math.max(peak, inFlight);
+            gates.push(() => { inFlight -= 1; resolve(inFlight); });
+        }));
+        void cache.read('LoadStreamItemsPage', ['main', -1, 50], load);
+        for (let event = 0; event < 6; event += 1) {
+            cache.revalidate(['LoadStreamItemsPage']);
+            await Promise.resolve();
+        }
+        // Each release lets the next queued call start; no two calls overlap.
+        for (let step = 0; step < 20 && gates.length; step += 1) {
+            gates.shift()!();
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        expect(peak).toBe(1);
+    });
 });

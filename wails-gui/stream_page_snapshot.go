@@ -50,11 +50,15 @@ type streamPageKey struct {
 }
 
 type streamPageSnapshot struct {
-	Format  int                `json:"format"`
-	Version int64              `json:"version"`
-	Stamp   string             `json:"stamp"`
-	SavedAt time.Time          `json:"savedAt"`
-	Page    StreamItemPageData `json:"page"`
+	Format  int   `json:"format"`
+	Version int64 `json:"version"`
+	// ReadStamp is the cheap privacy stamp the page was made under; it is what a
+	// read compares. Deep is the full check, recorded by a background pass; a copy
+	// is served only once Deep is set.
+	ReadStamp string             `json:"readStamp"`
+	Deep      string             `json:"deep"`
+	SavedAt   time.Time          `json:"savedAt"`
+	Page      StreamItemPageData `json:"page"`
 }
 
 type streamPageReadResult struct {
@@ -70,12 +74,17 @@ type streamPageState struct {
 	reads                      map[streamPageKey]*trailingCall[streamPageReadResult]
 	lastRun                    time.Time
 	dueAt                      time.Time
+	verifyAt                   time.Time
 	running                    bool
 	versionWait, recomputeWait time.Duration
 	launchDelay, eventDelay    time.Duration
 	// computeGate, when set, runs inside each computation; tests use it to hold a
 	// run open while more reads arrive.
 	computeGate func()
+	// verifyKeys are copies saved since the last background pass, awaiting their
+	// full check; dueRecompute asks the next pass to recompute every page.
+	verifyKeys   map[streamPageKey]bool
+	dueRecompute bool
 	// computes and retries count background work, so tests can prove reads
 	// within the window do no work.
 	computes atomic.Int64
@@ -116,10 +125,29 @@ func streamPageFile(key streamPageKey) (string, error) {
 	return filepath.Join(root, streamPageDirName, hex.EncodeToString(sum[:16])+".json"), nil
 }
 
-// readStreamPageSnapshot returns the saved page when it was made under stamp,
-// and "" as the reason. Otherwise it returns why not: "no-copy", "stamp-changed"
-// or "unreadable". A copy that does not match is deleted, never served.
+// readStreamPageSnapshot returns the saved page when it was made under stamp
+// and its full check has been recorded, and "" as the reason. Otherwise it
+// returns why not: "no-copy", "stamp-changed", "unverified" or "unreadable". A
+// copy whose stamp does not match is deleted, never served.
 func readStreamPageSnapshot(key streamPageKey, stamp string) (streamPageSnapshot, string) {
+	snap, reason := readRawStreamPageSnapshot(key)
+	if reason != "" {
+		return streamPageSnapshot{}, reason
+	}
+	if stamp == "" || snap.ReadStamp != stamp {
+		if path, err := streamPageFile(key); err == nil {
+			_ = os.Remove(path)
+		}
+		return streamPageSnapshot{}, "stamp-changed"
+	}
+	if snap.Deep == "" {
+		return streamPageSnapshot{}, "unverified"
+	}
+	return snap, ""
+}
+
+// readRawStreamPageSnapshot reads the saved page without judging it.
+func readRawStreamPageSnapshot(key streamPageKey) (streamPageSnapshot, string) {
 	path, err := streamPageFile(key)
 	if err != nil {
 		return streamPageSnapshot{}, "unreadable"
@@ -132,10 +160,6 @@ func readStreamPageSnapshot(key streamPageKey, stamp string) (streamPageSnapshot
 	if json.Unmarshal(raw, &snap) != nil || snap.Format != streamPageSnapshotFormat {
 		_ = os.Remove(path)
 		return streamPageSnapshot{}, "unreadable"
-	}
-	if stamp == "" || snap.Stamp != stamp {
-		_ = os.Remove(path)
-		return streamPageSnapshot{}, "stamp-changed"
 	}
 	return snap, ""
 }
@@ -220,7 +244,10 @@ func (a *App) loadLatestStreamPageNow(key streamPageKey) (StreamItemPageData, er
 	case reason != "":
 		// No usable copy: compute before the first paint, then refresh later.
 		computeStart := time.Now()
-		page, _, err := a.computeLatestStreamPage(key, stamp)
+		page, saved, err := a.computeLatestStreamPage(key, stamp)
+		if saved {
+			a.scheduleStreamVerify(key)
+		}
 		a.scheduleStreamPageRefresh(a.streamPageDueFor(now, time.Time{}))
 		logStreamPage("recompute", reason, stampMs, versionMs, time.Since(computeStart).Milliseconds())
 		return page, err
@@ -234,7 +261,10 @@ func (a *App) loadLatestStreamPageNow(key streamPageKey) (StreamItemPageData, er
 	done := make(chan result, 1)
 	computeStart := time.Now()
 	go func() {
-		page, _, err := a.computeLatestStreamPage(key, stamp)
+		page, saved, err := a.computeLatestStreamPage(key, stamp)
+		if saved {
+			a.scheduleStreamVerify(key)
+		}
 		done <- result{page, err}
 	}()
 	select {
@@ -316,7 +346,7 @@ func (a *App) computeLatestStreamPage(key streamPageKey, stamp string) (StreamIt
 	if verr != nil || stamp == "" || a.streamPageStamp(ctx) != stamp {
 		return page, false, nil
 	}
-	_ = writeStreamPageSnapshot(key, streamPageSnapshot{Format: streamPageSnapshotFormat, Version: version, Stamp: stamp, SavedAt: time.Now(), Page: page})
+	_ = writeStreamPageSnapshot(key, streamPageSnapshot{Format: streamPageSnapshotFormat, Version: version, ReadStamp: stamp, SavedAt: time.Now(), Page: page})
 	return page, true, nil
 }
 
@@ -326,12 +356,34 @@ func (a *App) scheduleStreamPageRefresh(at time.Time) {
 	if at.IsZero() {
 		return
 	}
+	a.queueStreamWork(at, true, nil)
+}
+
+// scheduleStreamVerify queues the full check of one saved copy. It recomputes
+// nothing.
+func (a *App) scheduleStreamVerify(key streamPageKey) {
+	a.queueStreamWork(time.Now(), false, &key)
+}
+
+func (a *App) queueStreamWork(at time.Time, recompute bool, verify *streamPageKey) {
 	st := &a.streamPages
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	st.settings()
-	if st.dueAt.IsZero() || at.Before(st.dueAt) {
-		st.dueAt = at
+	if recompute {
+		st.dueRecompute = true
+		if st.dueAt.IsZero() || at.Before(st.dueAt) {
+			st.dueAt = at
+		}
+	}
+	if verify != nil {
+		if st.verifyKeys == nil {
+			st.verifyKeys = map[streamPageKey]bool{}
+		}
+		st.verifyKeys[*verify] = true
+		if st.verifyAt.IsZero() || at.Before(st.verifyAt) {
+			st.verifyAt = at
+		}
 	}
 	if st.running {
 		return
@@ -344,21 +396,72 @@ func (a *App) runStreamPageRefreshes() {
 	st := &a.streamPages
 	for {
 		st.mu.Lock()
-		due := st.dueAt
-		if due.IsZero() {
-			st.running = false
+		now := time.Now()
+		runRecompute := st.dueRecompute && !st.dueAt.IsZero() && !now.Before(st.dueAt)
+		runVerify := len(st.verifyKeys) > 0 && !now.Before(st.verifyAt)
+		if !runRecompute && !runVerify {
+			// Nothing due: sleep until the earliest pending time, or stop.
+			earliest := time.Time{}
+			if st.dueRecompute && !st.dueAt.IsZero() {
+				earliest = st.dueAt
+			}
+			if len(st.verifyKeys) > 0 && (earliest.IsZero() || st.verifyAt.Before(earliest)) {
+				earliest = st.verifyAt
+			}
+			if earliest.IsZero() {
+				st.running = false
+				st.mu.Unlock()
+				return
+			}
 			st.mu.Unlock()
-			return
-		}
-		st.mu.Unlock()
-		if wait := time.Until(due); wait > 0 {
-			time.Sleep(min(wait, time.Second))
+			time.Sleep(min(time.Until(earliest), time.Second))
 			continue
 		}
-		st.mu.Lock()
-		st.dueAt = time.Time{}
+		var verify map[streamPageKey]bool
+		if runRecompute {
+			st.dueAt = time.Time{}
+			st.dueRecompute = false
+		}
+		if runVerify {
+			verify = st.verifyKeys
+			st.verifyKeys = nil
+			st.verifyAt = time.Time{}
+		}
 		st.mu.Unlock()
-		a.refreshStreamPages()
+		if runRecompute {
+			a.refreshStreamPages()
+		}
+		for key := range verify {
+			a.verifyStreamPageCopy(key)
+		}
+	}
+}
+
+// verifyStreamPageCopy runs a copy's full check in the background. A copy with
+// no recorded check gets one, if its cheap stamp still holds. A copy whose
+// recorded check no longer matches is dropped, and the stream is told to reload.
+func (a *App) verifyStreamPageCopy(key streamPageKey) {
+	ctx := context.Background()
+	snap, reason := readRawStreamPageSnapshot(key)
+	if reason != "" {
+		return
+	}
+	deep := a.savedCopyDeepStamp(ctx)
+	if deep == "" {
+		return
+	}
+	if snap.Deep == "" {
+		if snap.ReadStamp == a.savedCopyStamp(ctx) {
+			snap.Deep = deep
+			_ = writeStreamPageSnapshot(key, snap)
+		}
+		return
+	}
+	if snap.Deep != deep {
+		if path, err := streamPageFile(key); err == nil {
+			_ = os.Remove(path)
+		}
+		a.emitBrowserEvent("session:items-appended", map[string]any{"sessionId": key.session, "source": "privacy-check"})
 	}
 }
 

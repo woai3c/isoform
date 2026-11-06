@@ -19,6 +19,8 @@ func newSnapshotTestApp(t *testing.T) *App {
 	svc := app.topicsSvc()
 	svc.findsSnap.launchDelay = 0
 	svc.findsSnap.eventDelay = 0
+	// This launch has already refreshed once, so a read does not start the launch check.
+	svc.findsSnap.lastRefresh = time.Now()
 	return app
 }
 
@@ -47,7 +49,7 @@ func TestGetTopicFindsServesTheSavedViewWhileTheStampHolds(t *testing.T) {
 		t.Fatal("the privacy stamp should be readable in a test app")
 	}
 	saved := TopicFindsView{Enabled: true, Status: "ready", Items: []TopicFind{{ID: "saved-find", Title: "Saved find"}}}
-	if err := svc.writeFindsSnapshot(stamp, saved); err != nil {
+	if err := svc.writeFindsSnapshot(stamp, "test-deep", saved); err != nil {
 		t.Fatal(err)
 	}
 	view := getTopicFinds(t, app)
@@ -61,7 +63,7 @@ func TestSavedFindsViewIsDeletedNotServedWhenTheStampChanges(t *testing.T) {
 	app := newSnapshotTestApp(t)
 	svc := app.topicsSvc()
 	withdrawn := TopicFindsView{Enabled: true, Status: "ready", Items: []TopicFind{{ID: "withdrawn-find", Title: "Withdrawn"}}}
-	if err := svc.writeFindsSnapshot("stamp-before-a-forget", withdrawn); err != nil {
+	if err := svc.writeFindsSnapshot("stamp-before-a-forget", "test-deep", withdrawn); err != nil {
 		t.Fatal(err)
 	}
 	view := getTopicFinds(t, app)
@@ -104,7 +106,7 @@ func TestSavedFindsViewIsOwnerOnly(t *testing.T) {
 	app := newSnapshotTestApp(t)
 	svc := app.topicsSvc()
 	stamp := app.savedCopyStamp(context.Background())
-	if err := svc.writeFindsSnapshot(stamp, TopicFindsView{Enabled: true, Status: "none"}); err != nil {
+	if err := svc.writeFindsSnapshot(stamp, "test-deep", TopicFindsView{Enabled: true, Status: "none"}); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(svc.findsSnapshotPath())
@@ -131,7 +133,7 @@ func TestRepeatedFindsReadsWithinTheWindowDoNotRecompute(t *testing.T) {
 	app := newSnapshotTestApp(t)
 	svc := app.topicsSvc()
 	stamp := app.savedCopyStamp(context.Background())
-	if err := svc.writeFindsSnapshot(stamp, TopicFindsView{Enabled: true, Status: "ready", Items: []TopicFind{{ID: "fresh", Title: "Fresh"}}}); err != nil {
+	if err := svc.writeFindsSnapshot(stamp, "test-deep", TopicFindsView{Enabled: true, Status: "ready", Items: []TopicFind{{ID: "fresh", Title: "Fresh"}}}); err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 5; i++ {
@@ -150,7 +152,7 @@ func TestSavedFindsViewOlderThanTheWindowRefreshes(t *testing.T) {
 	app := newSnapshotTestApp(t)
 	svc := app.topicsSvc()
 	stamp := app.savedCopyStamp(context.Background())
-	if err := svc.writeFindsSnapshotAt(stamp, TopicFindsView{Enabled: true, Status: "ready"}, time.Now().Add(-2*topicFindsRefreshAge)); err != nil {
+	if err := svc.writeFindsSnapshotAt(stamp, "test-deep", TopicFindsView{Enabled: true, Status: "ready"}, time.Now().Add(-2*topicFindsRefreshAge)); err != nil {
 		t.Fatal(err)
 	}
 	getTopicFinds(t, app)
@@ -184,7 +186,7 @@ func TestAFailedRefreshKeepsTheSavedRow(t *testing.T) {
 	svc := app.topicsSvc()
 	stamp := app.savedCopyStamp(context.Background())
 	saved := TopicFindsView{Enabled: true, Status: "ready", Items: []TopicFind{{ID: "kept", Title: "Kept find"}}}
-	if err := svc.writeFindsSnapshot(stamp, saved); err != nil {
+	if err := svc.writeFindsSnapshot(stamp, "test-deep", saved); err != nil {
 		t.Fatal(err)
 	}
 	before, err := os.ReadFile(svc.findsSnapshotPath())
@@ -219,7 +221,7 @@ func TestASavedFindsViewSurvivesARestart(t *testing.T) {
 	if stamp == "" {
 		t.Fatal("the durable stamp should be readable")
 	}
-	if err := svc.writeFindsSnapshot(stamp, TopicFindsView{Enabled: true, Status: "ready", Items: []TopicFind{{ID: "kept", Title: "Kept"}}}); err != nil {
+	if err := svc.writeFindsSnapshot(stamp, "test-deep", TopicFindsView{Enabled: true, Status: "ready", Items: []TopicFind{{ID: "kept", Title: "Kept"}}}); err != nil {
 		t.Fatal(err)
 	}
 	mobileBriefPrivacyEpoch.Store(0)
@@ -227,12 +229,11 @@ func TestASavedFindsViewSurvivesARestart(t *testing.T) {
 	mobileBriefPrivacyEpochMu.Lock()
 	mobileBriefPrivacyEpochSavedDir = ""
 	mobileBriefPrivacyEpochMu.Unlock()
+	loadSavedCopyEpoch()
 	view := getTopicFinds(t, app)
 	if len(view.Items) != 1 || view.Items[0].ID != "kept" {
 		t.Fatalf("the saved view did not survive a restart: %+v", view)
 	}
-	time.Sleep(20 * time.Millisecond)
-	if n := svc.findsSnap.refreshes.Load(); n != 0 {
-		t.Fatalf("a restart recomputed the finds %d times", n)
-	}
+	// The launch check after a restart may run; the view itself came from the copy.
+	waitFindsRefreshIdle(t, svc)
 }

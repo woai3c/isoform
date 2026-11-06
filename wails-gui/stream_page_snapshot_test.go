@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"sync"
@@ -55,6 +54,9 @@ func latestPage(t *testing.T, a *App, session string) StreamItemPageData {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The background full check records the copy, as it does in a running app,
+	// before the copy can be served.
+	a.verifyStreamPageCopy(streamPageKey{session: session, limit: 50})
 	return page
 }
 
@@ -252,6 +254,8 @@ func TestASavedFirstPageSurvivesARestart(t *testing.T) {
 		mobileBriefPrivacyEpochMu.Lock()
 		mobileBriefPrivacyEpochSavedDir = ""
 		mobileBriefPrivacyEpochMu.Unlock()
+		// A launch reads the saved epoch back before the first read.
+		loadSavedCopyEpoch()
 	}
 	restart()
 	if page := latestPage(t, a, session); !pageHas(page, "one") {
@@ -273,7 +277,7 @@ func adoptTestBriefPrivacyEpoch(a *App) {
 	if err := os.MkdirAll(filepath.Join(dir, mobileBriefDirName), 0o700); err != nil {
 		panic(err)
 	}
-	_ = a.savedCopyStamp(context.Background())
+	loadSavedCopyEpoch()
 }
 
 // holdFirstStreamRun makes the first computation after this call wait until

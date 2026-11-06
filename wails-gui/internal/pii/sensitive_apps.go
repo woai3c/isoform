@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 // sensitiveAppBundleIDs maps known sensitive application bundle ID prefixes
@@ -88,11 +89,19 @@ func IsCoveredByDefaults(bundlePrefix string) bool {
 // Entries already covered by the hardcoded defaults are dropped so legacy
 // configs (saved before those apps became defaults) don't produce duplicate
 // list entries.
+// userSensitiveAppsVersion advances on every change to the user's sensitive apps,
+// so a reader can compare one number instead of the whole list.
+var userSensitiveAppsVersion atomic.Uint64
+
+// UserSensitiveAppsVersion returns the version of the user's sensitive apps.
+func UserSensitiveAppsVersion() uint64 { return userSensitiveAppsVersion.Load() }
+
 func SetUserSensitiveApps(apps map[string]string) {
 	userAppsPublicationMu.Lock()
 	defer userAppsPublicationMu.Unlock()
 	userAppsMu.Lock()
 	defer userAppsMu.Unlock()
+	defer userSensitiveAppsVersion.Add(1)
 	userSensitiveApps = make(map[string]string, len(apps))
 	for k, v := range apps {
 		if IsCoveredByDefaults(k) {
@@ -144,6 +153,7 @@ func AddUserSensitiveApp(bundlePrefix, category string) {
 	userAppsMu.Lock()
 	defer userAppsMu.Unlock()
 	userSensitiveApps[bundlePrefix] = category
+	userSensitiveAppsVersion.Add(1)
 }
 
 // RemoveUserSensitiveApp removes a single entry from the user-configured sensitive apps.
@@ -153,6 +163,7 @@ func RemoveUserSensitiveApp(bundlePrefix string) {
 	userAppsMu.Lock()
 	defer userAppsMu.Unlock()
 	delete(userSensitiveApps, bundlePrefix)
+	userSensitiveAppsVersion.Add(1)
 }
 
 // IsSensitiveApp checks whether the given bundle ID belongs to a known
