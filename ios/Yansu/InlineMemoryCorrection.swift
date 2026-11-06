@@ -29,7 +29,8 @@ struct InlineMemoryCorrection: View {
                 .accessibilityIdentifier("brief.correction.field")
             if failed { Text("Didn't save. Try again.").font(.footnote).foregroundStyle(YansuTheme.secondary) }
             HStack(spacing: 8) {
-                Button("Send to your computer") {
+                // One word, so it never wraps beside Cancel (P150).
+                Button("Send") {
                     sending = true
                     failed = false
                     Task {
@@ -40,6 +41,7 @@ struct InlineMemoryCorrection: View {
                 .buttonStyle(YansuPrimaryButtonStyle())
                 .disabled(sending || reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .accessibilityIdentifier("brief.correction.send")
+                .fixedSize()
                 Button("Cancel", action: cancel)
                     .buttonStyle(YansuSecondaryButtonStyle())
                     .disabled(sending)
