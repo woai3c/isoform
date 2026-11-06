@@ -1146,7 +1146,7 @@ func (s *ActivityStore) ListTaskEpisodes(status string, limit int) ([]TaskEpisod
 		}
 	}
 	limit = normalizeTaskEpisodeListLimit(limit)
-	rows, err := s.db.Query(`
+	rows, err := s.reader().Query(`
 		SELECT `+taskEpisodeSelectColumns+`
 		FROM task_episodes e
 		`+taskEpisodeCurrentJoins+`
@@ -1321,7 +1321,7 @@ func (s *ActivityStore) ListTaskEpisodeEvidence(
 		}
 	}
 	limit = normalizeTaskEpisodeListLimit(limit)
-	rows, err := s.db.Query(`
+	rows, err := s.reader().Query(`
 		SELECT id, task_episode_id, role, source_kind, source_id, summary,
 			payload_json, content_hash, observed_at, created_at
 		FROM task_episode_evidence
@@ -1585,7 +1585,7 @@ func (s *ActivityStore) ListTaskEpisodeHypotheses(
 		return nil, errors.New("task episode ID is required")
 	}
 	limit = normalizeTaskEpisodeListLimit(limit)
-	rows, err := s.db.Query(`
+	rows, err := s.reader().Query(`
 		SELECT id, task_episode_id, revision, task_hypothesis,
 			desired_result_hypothesis, task_confidence,
 			boundary_confidence, desired_result_confidence, alternatives_json,
@@ -1842,7 +1842,7 @@ func (s *ActivityStore) ListTaskEpisodeTransitions(
 		return nil, errors.New("task episode ID is required")
 	}
 	limit = normalizeTaskEpisodeListLimit(limit)
-	rows, err := s.db.Query(`
+	rows, err := s.reader().Query(`
 		SELECT id, task_episode_id, sequence, from_status, to_status,
 			reason, occurred_at, created_at
 		FROM task_episode_transitions
@@ -2004,7 +2004,7 @@ func (s *ActivityStore) ListTaskEpisodeLinks(
 		return nil, errors.New("task episode ID is required")
 	}
 	limit = normalizeTaskEpisodeListLimit(limit)
-	rows, err := s.db.Query(`
+	rows, err := s.reader().Query(`
 		SELECT id, source_episode_id, target_episode_id, relation, created_at
 		FROM task_episode_links
 		WHERE source_episode_id = ? OR target_episode_id = ?

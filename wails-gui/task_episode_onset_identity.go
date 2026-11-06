@@ -116,7 +116,7 @@ func (s *ActivityStore) taskEpisodeOnsetIdentityIndexAtContext(ctx context.Conte
 	query += `
 		ORDER BY episode.inferred_start_at DESC, episode.detected_at ASC,
 			episode.created_at ASC, episode.id ASC, evidence.id ASC`
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.reader().QueryContext(ctx, query, args...)
 	if err != nil {
 		return result, fmt.Errorf("list primary task onset identities: %w", err)
 	}
