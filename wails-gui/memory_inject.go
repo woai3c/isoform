@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -160,7 +161,7 @@ func applyMemoryUserControls(dir string, results []MemorySearchResult, allowRead
 			current[result.Path] = currentMemory{blocked: true}
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, result.Path))
+		data, err := readMemoryBody(filepath.Join(dir, result.Path))
 		if os.IsNotExist(err) {
 			current[result.Path] = currentMemory{blocked: true}
 			continue
@@ -443,4 +444,46 @@ func (a *App) injectMemoryContext(ctx context.Context, prompt, query string, val
 
 	a.recordMemorySelectionUses(ctx, used, useEpoch)
 	return selfModelContext + sb.String() + prompt
+}
+
+// memoryBodyCache keeps the bytes of memory files read by the injection path, keyed on
+// size and modification time: any edit changes one of them, so the next read misses.
+// Only bytes are cached. Authorization still runs on every read, so a forget or a
+// sensitive-app change takes effect at once (R24, 2026-11-05: 20 s of ReadFile).
+var memoryBodyCache = struct {
+	sync.Mutex
+	entries map[string]memoryBodyEntry
+}{entries: map[string]memoryBodyEntry{}}
+
+type memoryBodyEntry struct {
+	size int64
+	mod  int64
+	data []byte
+}
+
+const memoryBodyCacheLimit = 512
+
+func readMemoryBody(path string) ([]byte, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	size, mod := info.Size(), info.ModTime().UnixNano()
+	memoryBodyCache.Lock()
+	if e, ok := memoryBodyCache.entries[path]; ok && e.size == size && e.mod == mod {
+		memoryBodyCache.Unlock()
+		return append([]byte(nil), e.data...), nil
+	}
+	memoryBodyCache.Unlock()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	memoryBodyCache.Lock()
+	if len(memoryBodyCache.entries) >= memoryBodyCacheLimit {
+		memoryBodyCache.entries = map[string]memoryBodyEntry{}
+	}
+	memoryBodyCache.entries[path] = memoryBodyEntry{size: size, mod: mod, data: append([]byte(nil), data...)}
+	memoryBodyCache.Unlock()
+	return data, nil
 }
