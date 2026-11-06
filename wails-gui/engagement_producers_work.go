@@ -94,20 +94,24 @@ func (a *App) announceBriefStoredBeforeEngagement(brief MobileBriefV1) bool {
 	if brief.BriefID == "" || (brief.Slot != mobileBriefSlotMorning && brief.Slot != mobileBriefSlotEvening) {
 		return false
 	}
-	return a.produceBriefReady(brief, true)
+	return a.produceBriefReady(brief, true, false)
 }
 
 // produceBriefReady submits brief_ready for a brief that would have pushed. It
 // returns the notify flag the brief publish should use. The flag is false once
-// the moment carries the push, so the phone is not pushed twice.
-func (a *App) produceBriefReady(brief MobileBriefV1, notify bool) bool {
+// the moment carries the push, so the phone is not pushed twice. manual is set
+// for a brief the person asked for; it arrives without a buzz (ST86).
+func (a *App) produceBriefReady(brief MobileBriefV1, notify, manual bool) bool {
 	if a != nil && a.engagement != nil {
 		a.refreshYourWeekWorkDays(context.Background(), a.engagement.now())
 	}
 	if brief.NarrativeStatus == "quiet" {
 		return false
 	}
-	if a.produceFirstWeekBrief(brief) || a.produceYourWeekReady(brief) {
+	// A day-one first-week push is one per day; a manual brief must not use it,
+	// or the scheduled brief that day would never buzz.
+	firstWeek := !manual && a.produceFirstWeekBrief(brief)
+	if firstWeek || a.produceYourWeekReady(brief) {
 		return false
 	}
 	if !notify || brief.BriefID == "" || !a.engagementActive() {
@@ -129,11 +133,21 @@ func (a *App) produceBriefReady(brief MobileBriefV1, notify bool) bool {
 		Stakes:    engagementBriefStakes,
 		NotBefore: notBefore,
 		ExpiresAt: now.Add(engagementBriefExpiry),
-		Params:    map[string]string{"slot": mobileBriefDisplaySlot(brief, defaultMobileBriefSettings())},
+		Params:    briefReadyParams(brief, manual),
 	}) {
 		return false
 	}
 	return false
+}
+
+// briefReadyParams are the copy inputs of a brief_ready moment. A brief the
+// person asked for carries the manual marker, which keeps it silent.
+func briefReadyParams(brief MobileBriefV1, manual bool) map[string]string {
+	params := map[string]string{"slot": mobileBriefDisplaySlot(brief, defaultMobileBriefSettings())}
+	if manual {
+		params[engagement.BriefRequestParam] = engagement.BriefRequestManual
+	}
+	return params
 }
 
 // produceBriefMissed submits brief_missed for a scheduled slot that did not

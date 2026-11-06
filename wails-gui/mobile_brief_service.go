@@ -1262,7 +1262,7 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 	notify := false
 	if s.app != nil {
 		s.app.recordBriefContextUses(brief, useEpoch)
-		notify = s.app.produceBriefReady(brief, reason != mobileBriefReasonPhone && reason != mobileBriefReasonWake)
+		notify = s.app.produceBriefReady(brief, reason != mobileBriefReasonPhone && reason != mobileBriefReasonWake, reason == mobileBriefReasonSettings)
 	}
 	firstReadBriefMu.Unlock()
 	if s.app != nil {

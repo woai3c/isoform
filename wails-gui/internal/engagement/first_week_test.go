@@ -49,9 +49,10 @@ func TestFirstWeekCapQuietHoursBudgetAndSwitches(t *testing.T) {
 	if got := Pace(Moment{Kind: ordinary.Kind}, ordinary, prefs, NewPaceState(), now); got.Reason != "first week discovery" {
 		t.Fatal(got)
 	}
+	// A scheduled brief is the one push the first week allows (ST86).
 	brief, _ := Spec(KindBriefReady)
-	if got := Pace(Moment{Kind: brief.Kind}, brief, prefs, NewPaceState(), now); got.Reason != "first week discovery" {
-		t.Fatal("automatic brief added a second chat message", got)
+	if got := Pace(Moment{Kind: brief.Kind}, brief, prefs, NewPaceState(), now); got.Mode != ModeInterrupt || got.Interruption != InterruptionActive {
+		t.Fatal("scheduled brief must push in the first week", got)
 	}
 	state = NewPaceState()
 	quiet := now.Add(13 * time.Hour)

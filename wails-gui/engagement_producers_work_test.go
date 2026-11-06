@@ -45,7 +45,7 @@ func TestEngagementProducersAreInertWithoutTheService(t *testing.T) {
 	app := &App{}
 	app.produceWorkFinished(handoff.Entry{ID: "hf-1", Title: "Outline"})
 	app.produceWorkBlocked(handoff.Entry{ID: "hf-2", Title: "Export", BlockedReason: handoff.BlockedTimeout})
-	if app.produceBriefReady(MobileBriefV1{BriefID: "brief-1", Slot: mobileBriefSlotMorning}, true) {
+	if app.produceBriefReady(MobileBriefV1{BriefID: "brief-1", Slot: mobileBriefSlotMorning}, true, false) {
 		t.Fatal("without pacing a brief must not send its own push")
 	}
 }
@@ -150,13 +150,13 @@ func TestEngagementBriefReadyTakesOverTheBriefPush(t *testing.T) {
 	rig := newEngagementTestRig(t)
 	app := &App{engagement: rig.svc}
 	morning := MobileBriefV1{BriefID: "brief-7", Slot: mobileBriefSlotMorning}
-	if app.produceBriefReady(morning, false) {
+	if app.produceBriefReady(morning, false, false) {
 		t.Fatal("a brief that does not notify keeps notify off")
 	}
 	if rows := engagementPendingMoments(t, rig); len(rows) != 0 {
 		t.Fatalf("a brief that does not notify submits nothing: %+v", rows)
 	}
-	if app.produceBriefReady(morning, true) {
+	if app.produceBriefReady(morning, true, false) {
 		t.Fatal("the moment carries the push, so the brief publish must not notify")
 	}
 	rows := engagementPendingMoments(t, rig)
@@ -171,13 +171,13 @@ func TestEngagementBriefReadyTakesOverTheBriefPush(t *testing.T) {
 		t.Fatalf("brief expires after 12 hours: %+v", row)
 	}
 
-	app.produceBriefReady(MobileBriefV1{BriefID: "brief-8", Slot: mobileBriefSlotOnRequest, DisplaySlot: mobileBriefSlotEvening}, true)
+	app.produceBriefReady(MobileBriefV1{BriefID: "brief-8", Slot: mobileBriefSlotOnRequest, DisplaySlot: mobileBriefSlotEvening}, true, false)
 	onRequest := engagementMomentFor(t, engagementPendingMoments(t, rig), "brief_ready:brief-8")
 	if got := engagementMomentParams(t, onRequest)["slot"]; got != "evening" {
 		t.Fatalf("on-request slot = %q", got)
 	}
 
-	if (&App{}).produceBriefReady(morning, true) {
+	if (&App{}).produceBriefReady(morning, true, false) {
 		t.Fatal("without pacing the brief must not send its own push")
 	}
 }
@@ -236,5 +236,23 @@ func TestEngagementBriefHookSubmitsTheScheduledBriefInsteadOfPushingIt(t *testin
 	}
 	if got := engagementMomentParams(t, rows[0])["slot"]; got != "morning" {
 		t.Fatalf("slot = %q", got)
+	}
+}
+
+// ST86: a brief the person asked for is stored as a silent brief_ready moment,
+// and a scheduled one is not.
+func TestEngagementBriefReadyManualRequestCarriesTheSilentMarker(t *testing.T) {
+	rig := newEngagementTestRig(t)
+	app := &App{engagement: rig.svc}
+	app.produceBriefReady(MobileBriefV1{BriefID: "brief-manual", Slot: mobileBriefSlotOnRequest}, true, true)
+	app.produceBriefReady(MobileBriefV1{BriefID: "brief-scheduled", Slot: mobileBriefSlotMorning}, true, false)
+	rows := engagementPendingMoments(t, rig)
+	manual := engagementMomentParams(t, engagementMomentFor(t, rows, "brief_ready:brief-manual"))
+	if manual[engagement.BriefRequestParam] != engagement.BriefRequestManual {
+		t.Fatalf("manual brief params = %+v", manual)
+	}
+	scheduled := engagementMomentParams(t, engagementMomentFor(t, rows, "brief_ready:brief-scheduled"))
+	if _, marked := scheduled[engagement.BriefRequestParam]; marked {
+		t.Fatalf("scheduled brief carries the manual marker: %+v", scheduled)
 	}
 }

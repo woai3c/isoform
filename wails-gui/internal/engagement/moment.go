@@ -173,6 +173,13 @@ type KindSpec struct {
 	Actions []Action
 }
 
+// BriefRequestParam marks a brief_ready moment whose brief the person asked for
+// with Make my brief now. Its value is BriefRequestManual.
+const (
+	BriefRequestParam  = "brief_request"
+	BriefRequestManual = "manual"
+)
+
 // Interruption returns the level a moment of this kind asks for right now.
 func (s KindSpec) Interruption(m Moment, now time.Time) Interruption {
 	switch s.Kind {
@@ -196,7 +203,15 @@ func (s KindSpec) Interruption(m Moment, now time.Time) Interruption {
 		return InterruptionActive
 	case KindCommitmentSlipping, KindWorkFinished, KindMeetingPrep, KindPlaybookResult, KindFirstWeek, KindWeeklyRecap:
 		return InterruptionActive
-	case KindMeetingEnded, KindPersonReappeared, KindGoalCheckIn, KindBriefReady, KindLearnedToConfirm, KindCalendarConflict, KindMeetingFollowup, KindBriefMissed, KindScheduleMissed, KindSuggestion, KindWaitingOnReply, KindTopicFinds, KindPlaybookSuggested:
+	case KindBriefReady:
+		// A scheduled brief is the notification people act on, so it uses the
+		// normal sound and buzz. A brief the person asked for is already in
+		// front of them and arrives without one (ST86).
+		if m.Params[BriefRequestParam] == BriefRequestManual {
+			return InterruptionPassive
+		}
+		return InterruptionActive
+	case KindMeetingEnded, KindPersonReappeared, KindGoalCheckIn, KindLearnedToConfirm, KindCalendarConflict, KindMeetingFollowup, KindBriefMissed, KindScheduleMissed, KindSuggestion, KindWaitingOnReply, KindTopicFinds, KindPlaybookSuggested:
 		return InterruptionPassive
 	default:
 		return InterruptionPassive

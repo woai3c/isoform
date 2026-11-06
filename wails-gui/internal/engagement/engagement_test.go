@@ -277,8 +277,12 @@ func TestPacePassiveMomentsRespectQuietHours(t *testing.T) {
 	if v := Pace(Moment{Kind: KindBriefReady, DedupeKey: "brief_ready:v9"}, brief, prefs, state, night); v.Mode != ModeHold || !v.HoldUntil.Equal(time.Date(2026, 10, 13, 8, 0, 0, 0, la)) {
 		t.Fatalf("a passive brief at night must wait for the morning: %+v", v)
 	}
-	if v := Pace(Moment{Kind: KindBriefReady, DedupeKey: "brief_ready:v9"}, brief, prefs, state, at(9, 0)); v.Mode != ModeInterrupt || v.Interruption != InterruptionPassive {
-		t.Fatalf("a passive brief by day goes out quietly: %+v", v)
+	// ST86: a scheduled brief buzzes by day; one the person asked for does not.
+	if v := Pace(Moment{Kind: KindBriefReady, DedupeKey: "brief_ready:v9"}, brief, prefs, state, at(9, 0)); v.Mode != ModeInterrupt || v.Interruption != InterruptionActive {
+		t.Fatalf("a scheduled brief by day buzzes: %+v", v)
+	}
+	if v := Pace(Moment{Kind: KindBriefReady, DedupeKey: "brief_ready:v10", Params: map[string]string{BriefRequestParam: BriefRequestManual}}, brief, prefs, state, at(9, 0)); v.Mode != ModeInterrupt || v.Interruption != InterruptionPassive {
+		t.Fatalf("a brief made by hand goes out quietly: %+v", v)
 	}
 	meeting := mustSpec(t, KindMeetingEnded)
 	if v := Pace(Moment{Kind: KindMeetingEnded, DedupeKey: "meeting_ended:s9"}, meeting, prefs, state, night); v.Mode != ModeDigest || !v.HoldUntil.Equal(time.Date(2026, 10, 13, 8, 30, 0, 0, la)) {

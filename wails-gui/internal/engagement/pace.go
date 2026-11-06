@@ -85,9 +85,10 @@ func Pace(m Moment, spec KindSpec, prefs Prefs, state *PaceState, now time.Time)
 			if !quiet && state.SentByKindToday[KindFirstWeek]+state.SentByKindToday[KindWeeklyRecap] >= 1 {
 				return Verdict{Mode: ModeSuppress, Reason: "first week daily cap"}
 			}
-		case KindWorkBlocked, KindWorkFinished, KindDecisionDue, KindPlaybookResult, KindReminder:
-			// Explicit work keeps its existing delivery contract. Briefs stay
-			// available on Today without an additional automatic chat message.
+		case KindWorkBlocked, KindWorkFinished, KindDecisionDue, KindPlaybookResult, KindReminder, KindBriefReady:
+			// Explicit work keeps its existing delivery contract. A brief push is
+			// one per brief (its dedupe key) and follows quiet hours, the switch
+			// and the cap; brief_missed stays under the first-week rule (ST86).
 		default:
 			return Verdict{Mode: ModeSuppress, Reason: "first week discovery"}
 		}
