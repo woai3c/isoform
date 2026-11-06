@@ -28,7 +28,7 @@ func (r registryPeopleWorkTopics) ReadableWorkTopics(ctx context.Context) ([]peo
 		if project.Name == "" || len(project.PeopleKeys) == 0 {
 			continue
 		}
-		out = append(out, peopleWorkTopic{ID: project.ID, Name: project.Name, Keys: append([]string(nil), project.PeopleKeys...)})
+		out = append(out, peopleWorkTopic{ID: project.ID, Name: project.Name, Keys: append([]string(nil), project.PeopleKeys...), ActivityIDs: append([]string(nil), project.ActivityIDs...), RequireEvidence: true})
 	}
 	return out, nil
 }

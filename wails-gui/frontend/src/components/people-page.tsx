@@ -53,6 +53,7 @@ import { cn } from '../lib/utils';
 import { PeopleDevToolsContext, PeopleFailureLine } from './people/people-failure';
 import { ContactsStatusLine } from './people/contacts-status-line';
 import { clearSavedPeopleView, readSavedPeopleView, savePeopleView } from '../lib/people-saved-view';
+import { SelfSenderGuesses } from './people/self-sender-guesses';
 
 interface PeoplePageProps {
     /** The dialog's Escape asks the page first: true when the page stepped
@@ -666,6 +667,18 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                     </div>
                                 ) : null}
                             </section>
+                            <SelfSenderGuesses
+                                guesses={overview?.selfGuesses ?? []}
+                                onMerged={async (result, targetID) => {
+                                    await merged({ mergeId: result.mergeId, count: 2, name: result.target.name }, targetID);
+                                }}
+                                onNotSame={async (ids) => {
+                                    setReceipt(null);
+                                    setNotSame(ids);
+                                    invalidatePeopleReads();
+                                    await reload();
+                                }}
+                            />
                         </>
                     )}
                 </main>

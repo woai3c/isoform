@@ -196,6 +196,10 @@
         "sortLine_other": "Isoform 无法确认 {{count}} 位发送者是谁。",
         "sortButton": "整理一下",
         "sortTitle": "待整理的发送者",
+        "selfGuess": "这是你吗？{{app}} 中的 {{name}}",
+        "selfGuessYes": "这是我",
+        "selfGuessNo": "不是我",
+        "selfGuessFailed": "没能保存这个选择。",
         "pickHint": "选一个人",
         "pickDesc": "每个人会显示你们之间未完成的事、一起的经历，以及 Isoform 在哪里见过 ta。",
         "dayZero": "和你共事的人会出现在这里。"

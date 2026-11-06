@@ -47,11 +47,12 @@ type DuplicateGroup struct {
 	App               string   `json:"app"`
 }
 type PeopleOverview struct {
-	Headline   PeopleHeadline   `json:"headline"`
-	Open       []PersonCard     `json:"open"`
-	Everyone   []PersonCard     `json:"everyone"`
-	Duplicates []DuplicateGroup `json:"duplicates"`
-	KnownCount int              `json:"knownCount"`
+	Headline    PeopleHeadline    `json:"headline"`
+	Open        []PersonCard      `json:"open"`
+	Everyone    []PersonCard      `json:"everyone"`
+	Duplicates  []DuplicateGroup  `json:"duplicates"`
+	KnownCount  int               `json:"knownCount"`
+	SelfGuesses []SelfSenderGuess `json:"selfGuesses"`
 }
 
 type PersonTogether struct {
@@ -87,8 +88,10 @@ type PersonDetail struct {
 // supplies only topics whose complete source lineage passed the registry's
 // own publication gates.
 type peopleWorkTopic struct {
-	ID, Name string
-	Keys     []string
+	ID, Name        string
+	Keys            []string
+	ActivityIDs     []string
+	RequireEvidence bool
 }
 type peopleWorkTopics interface {
 	ReadableWorkTopics(context.Context) ([]peopleWorkTopic, error)
@@ -276,11 +279,16 @@ func (a *App) personSharedTopics(ctx context.Context, p storage.PrincipalRow, re
 	names = peopleNamesAfterMerge(p.ID, p.DisplayName, p.Aliases, owners, readable)
 	seen := map[string]bool{}
 	for _, topic := range topics {
+		matched := false
 		for _, key := range topic.Keys {
-			if strings.HasPrefix(key, "person:") && names[strings.TrimPrefix(key, "person:")] && !seen[topic.ID] {
-				out = append(out, PersonTopic{ID: topic.ID, Name: topic.Name})
-				seen[topic.ID] = true
+			if strings.HasPrefix(key, "person:") && names[strings.TrimPrefix(key, "person:")] {
+				matched = true
+				break
 			}
+		}
+		if matched && !seen[topic.ID] && (!topic.RequireEvidence || a.peopleTopicSourceShared(ctx, topic, names)) {
+			out = append(out, PersonTopic{ID: topic.ID, Name: topic.Name})
+			seen[topic.ID] = true
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
@@ -391,6 +399,7 @@ func (a *App) listPeopleOverview(cache *peopleReadGateCache) (PeopleOverview, er
 		return result.Everyone[i].ID < result.Everyone[j].ID
 	})
 	result.Duplicates = a.peopleDuplicateGroups(ctx, rows, cache)
+	result.SelfGuesses = a.peopleSelfSenderGuesses(ctx, rows, cache)
 	return result, nil
 }
 

@@ -4715,6 +4715,7 @@ export type PeopleOverview = {
     everyone: PersonCard[];
     duplicates: DuplicateGroup[];
     knownCount: number;
+    selfGuesses?: { selfId: string; personId: string; name: string; app: string }[];
 };
 export type MergeResult = { mergeId: string; target: PersonCard };
 export type PersonDetail = {

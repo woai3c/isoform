@@ -919,6 +919,11 @@ func (a *App) startupServices(ctx context.Context) {
 			log.Printf("[topics] startup sensitive-app scrub: %v", err)
 		}
 	})
+	a.deferLaunchTask("saved_chat_work_names", func() {
+		if err := a.repairSavedChatWorkNames(context.Background()); err != nil {
+			log.Printf("[main-chat] saved work name repair: %v", err)
+		}
+	})
 
 	// Quick Chat Spotlight: stream hub is created eagerly so any
 	// component that wants to publish events doesn't need a nil

@@ -248,7 +248,9 @@ func (a *App) projectProactiveVoiceDelivery(ctx context.Context, tool, content, 
 		if json.Unmarshal([]byte(input), &item) != nil || item.MomentID == "" || item.Kind == "" {
 			return engagement.DigestStatus(lang), ""
 		}
-		if !a.projectProactiveVoiceItem(ctx, &item, lang) {
+		changed := a.projectProactiveVoiceItem(ctx, &item, lang)
+		changed = a.applySavedWorkNames(ctx, input, &item) || changed
+		if !changed {
 			return content, input
 		}
 		raw, err := json.Marshal(item)
