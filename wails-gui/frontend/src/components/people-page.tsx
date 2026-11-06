@@ -106,6 +106,16 @@ function isUnnamedKind(kind: string): boolean {
     return kind === 'anonymous' || kind === 'content_subject';
 }
 
+// A cached paint may be stale while its binding is still running. An empty
+// answer is usable only after that read settles successfully.
+async function settledPeopleRead<T>(name: string, read: () => Promise<T>): Promise<T> {
+    const value = await read();
+    const state = pageQueryCache.state(name);
+    if (state?.pending) return await state.pending as T;
+    if (state?.error) throw state.error;
+    return value;
+}
+
 export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = false, active = true }: PeoplePageProps) {
     const { t } = useTranslation(['people', 'common']);
     const tr = useCallback<Translate>((key, options) => t(`people:${key}` as never, options as never) as unknown as string, [t]);
@@ -121,7 +131,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
     });
     const [overview, setOverview] = useState<PeopleOverview | null>(initial?.overview ?? null);
     const [entries, setEntries] = useState<PrincipalWithStatsDTO[]>(initial?.entries ?? []);
-    const [entriesReady, setEntriesReady] = useState(false);
+    const [selfReadReady, setSelfReadReady] = useState(false);
     const [load, setLoad] = useState<LoadState>(initial ? 'ready' : 'loading');
     const [refreshing, setRefreshing] = useState(false);
     const [revision, setRevision] = useState(0);
@@ -174,7 +184,12 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
     const reload = useCallback(async () => {
         const seq = ++readSeq.current;
         setRefreshing(true);
-        const overviewRead = readWithRetry(() => ListPeopleOverview()).then((nextOverview) => {
+        setSelfReadReady(false);
+        const overviewRead = readWithRetry(async () => {
+            const value = await settledPeopleRead("ListPeopleOverview", ListPeopleOverview);
+            if (!value || !Array.isArray(value.open) || !Array.isArray(value.everyone)) throw new Error('Invalid people overview');
+            return value;
+        }).then((nextOverview) => {
             if (seq !== readSeq.current) return;
             overviewRef.current = nextOverview;
             setOverview(nextOverview);
@@ -182,18 +197,27 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
             hasData.current = true;
             savePeopleView(nextOverview, entriesRef.current);
             setRevision((n) => n + 1);
+            return true;
         }).catch(() => {
             if (seq === readSeq.current && !hasData.current) setLoad('failed');
+            return false;
         });
-        const entriesRead = readWithRetry(() => ListPrincipalsWithStats()).then((rows) => {
+        const entriesRead = readWithRetry(async () => {
+            const rows = await settledPeopleRead("ListPrincipalsWithStats", ListPrincipalsWithStats);
+            if (!Array.isArray(rows)) throw new Error('Invalid people directory');
+            return rows;
+        }).then((rows) => {
             if (seq !== readSeq.current) return;
-            entriesRef.current = rows ?? [];
+            entriesRef.current = rows;
             setEntries(entriesRef.current);
-            setEntriesReady(true);
             if (overviewRef.current) savePeopleView(overviewRef.current, entriesRef.current);
-        }).catch(() => {});
-        await Promise.all([overviewRead, entriesRead]);
-        if (seq === readSeq.current) setRefreshing(false);
+            return true;
+        }).catch(() => false);
+        const [overviewOK, entriesOK] = await Promise.all([overviewRead, entriesRead]);
+        if (seq === readSeq.current) {
+            setSelfReadReady(Boolean(overviewOK && entriesOK));
+            setRefreshing(false);
+        }
     }, []);
 
     // A prefetch, revalidation or invalidation of these reads re-reads the
@@ -214,7 +238,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
         clearSavedPeopleView();
         setOverview(null);
         setEntries([]);
-        setEntriesReady(false);
+        setSelfReadReady(false);
         setLoad('loading');
         setSelectedID(null);
         setKeyword('');
@@ -342,7 +366,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
         appliedSelection.current = initialSelection;
         if (initialSelection === 'self') {
             if (groups.self || groups.selfCard) setSelectedID(groups.self?.principal.id ?? groups.selfCard!.id);
-            else if (entriesReady) setSelfCreateOpen(true);
+            else if (selfReadReady) setSelfCreateOpen(true);
             else { appliedSelection.current = null; }
             return;
         }
@@ -353,7 +377,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
         const first = groups.open[0] ?? groups.others[0];
         if (first) setSelectedID(first.id);
         else if (groups.self) setSelectedID(groups.self.principal.id);
-    }, [load, initialSelection, groups, byId, cardsById, entriesReady]);
+    }, [load, initialSelection, groups, byId, cardsById, selfReadReady]);
 
     // A selected person who disappeared (deleted, merged away) leaves the
     // detail empty rather than pointing at a missing row.
@@ -559,6 +583,12 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
 
                     {load === 'loading' && <OverviewSkeleton label={tr('loading')} />}
                     {load === 'failed' && <PeopleFailureLine text={tr('overview.loadFailed')} onRetry={retry} />}
+                    {load !== 'ready' && (
+                        <section aria-labelledby="people-you-h" className="flex flex-col gap-1">
+                            <h2 id="people-you-h" className="mb-2 text-[18px] font-semibold text-ink">{tr('groupSelf')}</h2>
+                            <SelfRowPlaceholder />
+                        </section>
+                    )}
 
                     {load === 'ready' && results && (
                         <section aria-labelledby="people-results-h" className="flex flex-col gap-1">
@@ -657,7 +687,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                 </h2>
                                 {groups.self || groups.selfCard ? (
                                     <PersonRow entry={groups.self ?? undefined} card={groups.selfCard ?? undefined} selected={selectedID === (groups.self?.principal.id ?? groups.selfCard?.id)} onSelect={setSelectedID} />
-                                ) : entriesReady ? (
+                                ) : selfReadReady ? (
                                     <div className="flex flex-col items-start gap-2.5">
                                         <p className="text-[13px] leading-relaxed text-muted">{tr('emptySelf')}</p>
                                         <Button variant="secondary" size="sm" onClick={() => setSelfCreateOpen(true)}>
@@ -665,7 +695,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                             {tr('nameYourselfButton')}
                                         </Button>
                                     </div>
-                                ) : null}
+                                ) : <SelfRowPlaceholder />}
                             </section>
                             <SelfSenderGuesses
                                 guesses={overview?.selfGuesses ?? []}
@@ -983,6 +1013,10 @@ function OpenCard({ card, entry, selected, landed = false, onSelect }: { card: P
             {last && <span className="text-[12px] text-muted">{last}</span>}
         </button>
     );
+}
+
+function SelfRowPlaceholder() {
+    return <div aria-hidden className="h-[53px] border-b border-border-divider" />;
 }
 
 function PersonRow({ entry, card, selected, landed = false, onSelect }: { entry?: PrincipalWithStatsDTO; card?: PersonCard; selected: boolean; landed?: boolean; onSelect: (id: string) => void }) {

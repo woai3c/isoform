@@ -1,4 +1,4 @@
-import { act, render, within } from "@testing-library/react";
+import { act, render, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
 import { pageQueryCache } from "@/lib/query-cache";
@@ -251,5 +251,82 @@ describe("Who you know refresh", () => {
         await act(async () => { await vi.advanceTimersByTimeAsync(PEOPLE_RESYNC_MS * 4); });
         expect(reads()).toBe(resynced);
         visibility.mockRestore();
+    });
+});
+
+
+describe("Who you know self read (N52)", () => {
+    const empty: PeopleOverview = { ...OVERVIEW, everyone: [], knownCount: 0 };
+    const noSelfPrompt = (main: HTMLElement) => {
+        expect(within(main).getByRole("heading", { name: "You" })).toBeInTheDocument();
+        expect(within(main).queryByRole("button", { name: "Name yourself" })).toBeNull();
+        expect(within(main).queryByText(/Name yourself so Isoform/)).toBeNull();
+    };
+
+    it("holds the You row while the reads are pending", async () => {
+        binding("ListPeopleOverview").mockImplementation(() => new Promise(() => {}));
+        binding("ListPrincipalsWithStats").mockImplementation(() => new Promise(() => {}));
+        const { container } = render(<PeoplePage initialSelection="self" />);
+        noSelfPrompt(mainOf(container));
+        expect(within(document.body).queryByRole("dialog")).toBeNull();
+    });
+
+    it("holds the You row after the directory fails twice", async () => {
+        binding("ListPeopleOverview").mockResolvedValue(empty);
+        binding("ListPrincipalsWithStats").mockRejectedValue(new Error("busy"));
+        const { container } = render(<PeoplePage initialSelection="self" />);
+        await waitFor(() => expect(binding("ListPrincipalsWithStats").mock.calls.length).toBeGreaterThanOrEqual(2));
+        noSelfPrompt(mainOf(container));
+        expect(within(document.body).queryByRole("dialog")).toBeNull();
+    });
+
+    it("retries once and shows the known name after an initial failure", async () => {
+        const entry = { principal: { id: "self", kind: "self", displayName: "Mira Vale", aliases: [], appHandles: [] }, stats: { principalId: "self", totalMessages: 0, firstSeenAt: 0, lastSeenAt: 0, byApp: [], recentMessages: [] } };
+        binding("ListPeopleOverview").mockResolvedValue(empty);
+        binding("ListPrincipalsWithStats").mockRejectedValueOnce(new Error("busy")).mockResolvedValueOnce([entry]);
+        const { container } = render(<PeoplePage />);
+        noSelfPrompt(mainOf(container));
+        expect(await within(mainOf(container)).findByText("Mira Vale · You")).toBeInTheDocument();
+        expect(binding("ListPrincipalsWithStats")).toHaveBeenCalledTimes(2);
+        noSelfPrompt(mainOf(container));
+    });
+
+    it("offers naming only after both reads confirm an empty self", async () => {
+        binding("ListPeopleOverview").mockResolvedValue(empty);
+        binding("ListPrincipalsWithStats").mockResolvedValue([]);
+        const { container } = render(<PeoplePage />);
+        expect(await within(mainOf(container)).findByRole("button", { name: "Name yourself" })).toBeInTheDocument();
+    });
+
+    it("does not treat a stale cached empty result as a successful revalidation", async () => {
+        seedCache(empty);
+        pageQueryCache.state("ListPrincipalsWithStats")!.at = Date.now() - 61_000;
+        binding("ListPrincipalsWithStats").mockRejectedValue(new Error("busy"));
+        const { container } = render(<PeoplePage />);
+        const main = mainOf(container);
+        noSelfPrompt(main);
+        await waitFor(() => expect(binding("ListPrincipalsWithStats").mock.calls.length).toBeGreaterThanOrEqual(2));
+        noSelfPrompt(main);
+    });
+
+    it("holds the You row if the overview fails even when the directory is empty", async () => {
+        savePeopleView(empty, []);
+        binding("ListPeopleOverview").mockRejectedValue(new Error("busy"));
+        binding("ListPrincipalsWithStats").mockResolvedValue([]);
+        const { container } = render(<PeoplePage />);
+        await waitFor(() => expect(binding("ListPeopleOverview").mock.calls.length).toBeGreaterThanOrEqual(2));
+        noSelfPrompt(mainOf(container));
+    });
+
+    it("withdraws a previous empty answer during and after a failed refresh", async () => {
+        binding("ListPeopleOverview").mockResolvedValue(empty);
+        const { container } = render(<PeoplePage />);
+        const main = mainOf(container);
+        expect(await within(main).findByRole("button", { name: "Name yourself" })).toBeInTheDocument();
+        binding("ListPrincipalsWithStats").mockRejectedValue(new Error("busy"));
+        await act(async () => { pageQueryCache.invalidate(["ListPrincipalsWithStats"]); });
+        noSelfPrompt(main);
+        await waitFor(() => expect(binding("ListPrincipalsWithStats").mock.calls.length).toBeGreaterThanOrEqual(3));
+        noSelfPrompt(main);
     });
 });

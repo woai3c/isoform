@@ -429,7 +429,8 @@ describe("People overview", () => {
         mocks.principals.mockResolvedValue(entries.filter((e) => e.principal.kind === "self"));
         mocks.overview.mockResolvedValue({ ...overview, headline: { repliesOwed: 0, thingsOwed: 0, peopleWaitingOnYou: 0 }, open: [], duplicates: [], everyone: overview.everyone.filter((c) => c.kind === "self"), knownCount: 1 });
         render(<PeoplePage />);
-        expect(await screen.findByRole("region", { name: "You" })).toBeInTheDocument();
+        await screen.findByRole("button", { name: /Alex Morgan/ });
+        expect(screen.getByRole("region", { name: "You" })).toBeInTheDocument();
         expect(screen.queryByRole("region", { name: "Everyone else" })).not.toBeInTheDocument();
         expect(screen.queryByRole("region", { name: "Open between you" })).not.toBeInTheDocument();
         expect(document.body).not.toHaveTextContent(/Nothing is open between you and anyone right now|Everyone Isoform knows|Add people you chat with/);
@@ -880,7 +881,8 @@ describe("Everything stays reachable", () => {
     it("keeps the You group", async () => {
         world();
         render(<PeoplePage />);
-        const you = await screen.findByRole("region", { name: "You" });
+        await screen.findByRole("button", { name: /Alex Morgan/ });
+        const you = screen.getByRole("region", { name: "You" });
         expect(within(you).getByRole("button", { name: /Alex Morgan/ })).toBeInTheDocument();
     });
 
