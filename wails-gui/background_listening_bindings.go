@@ -183,7 +183,7 @@ func (a *App) startBackgroundListeningIfReadyLocked() {
 		a.annotateBackgroundAudioChunk,
 		// A sleeping tap has no pre-roll. Keep it warm while automatic calls
 		// are enabled so detection does not lose the remote opening words.
-		a.GetAutomaticMeetingRecordingEnabled,
+		a.meetingRecordingOn,
 	)
 	capture.onRecordingChunk = a.writeMeetingAudioChunk
 	capture.sample = a.sampleCaptureState

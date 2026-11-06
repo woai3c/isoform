@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"log"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -243,5 +246,35 @@ func TestAutomaticMeetingRecordingDropsDelayedSpeechAcrossOffOn(t *testing.T) {
 	}
 	if got := app.activity.buf.Len(); got != 1 {
 		t.Fatalf("fresh speech was not admitted: len=%d", got)
+	}
+}
+
+// The detection poll and audio hot paths read the in-memory preference; only the
+// window's binding writes a perf line for it.
+func TestMeetingRecordingOnReadsMemoryWithoutPerfLines(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	var logged bytes.Buffer
+	prev := log.Writer()
+	log.SetOutput(&logged)
+	defer log.SetOutput(prev)
+	app := &App{}
+
+	if err := app.SetAutomaticMeetingRecordingEnabled(false); err != nil {
+		t.Fatalf("disable: %v", err)
+	}
+	logged.Reset()
+	for range 3 {
+		if app.meetingRecordingOn() {
+			t.Fatal("internal read saw enabled after opt-out")
+		}
+	}
+	if strings.Contains(logged.String(), "binding=GetAutomaticMeetingRecordingEnabled") {
+		t.Fatalf("internal reads wrote perf lines: %q", logged.String())
+	}
+	if app.GetAutomaticMeetingRecordingEnabled() {
+		t.Fatal("window binding saw enabled after opt-out")
+	}
+	if !strings.Contains(logged.String(), "binding=GetAutomaticMeetingRecordingEnabled") {
+		t.Fatal("window binding stopped writing its perf line")
 	}
 }

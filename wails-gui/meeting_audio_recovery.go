@@ -30,7 +30,7 @@ const meetingTrackMaxAge = 7 * 24 * time.Hour
 func (a *App) recoverMeetingAudio(store *ActivityStore, before time.Time) {
 	a.meetingRecordingMu.Lock()
 	defer a.meetingRecordingMu.Unlock()
-	store.recoverMeetingAudioTracks(before, !a.GetAutomaticMeetingRecordingEnabled())
+	store.recoverMeetingAudioTracks(before, !a.meetingRecordingOn())
 }
 
 // recoverMeetingAudioTracks finalizes the raw tracks of calls that a crash or

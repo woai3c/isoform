@@ -268,7 +268,7 @@ func newContextSignalService(a *App) *contextSignalService {
 			a.mobileBriefSystemStateChanged(change)
 		},
 		onMeeting: func(result meetingdetect.Result) {
-			if a.activity != nil && a.GetAutomaticMeetingRecordingEnabled() {
+			if a.activity != nil && a.meetingRecordingOn() {
 				a.onMeetingStarted(a.activity, result)
 			}
 		},

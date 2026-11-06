@@ -1260,7 +1260,7 @@ func (a *App) handleActivityEvent(evt activitymon.ActivityEvent) {
 	// meeting chat typing). Speech events are handled separately by
 	// injectSpeechEvent.
 	// A call in a private window never starts a recording from its title.
-	if a.GetAutomaticMeetingRecordingEnabled() && !privateWindowEventLocked(am, evt) {
+	if a.meetingRecordingOn() && !privateWindowEventLocked(am, evt) {
 		switch evt.Kind {
 		case activitymon.EventClick, activitymon.EventAppSwitch, activitymon.EventFocus:
 			// Browsers are left to the watcher, which reads the tab's
@@ -4855,7 +4855,7 @@ var accessibilityWarnOnce sync.Map // map[string]bool keyed by bundle ID
 // zero windows, we log an Accessibility-permission warning once per bundle
 // since that's the most common silent-failure mode.
 func (a *App) detectActiveMeeting(now time.Time) meetingdetect.Result {
-	if !a.GetAutomaticMeetingRecordingEnabled() {
+	if !a.meetingRecordingOn() {
 		return meetingdetect.Result{}
 	}
 
@@ -5048,7 +5048,7 @@ type meetingWatcherState struct {
 // pollMeetingLifecycle is one watcher poll at now. stopped reports whether
 // the watcher was told to stop, so a late transition never fires.
 func (a *App) pollMeetingLifecycle(am *activityMonitorState, w *meetingWatcherState, now time.Time, stopped func() bool) {
-	if !a.GetAutomaticMeetingRecordingEnabled() {
+	if !a.meetingRecordingOn() {
 		w.consecutiveSame = 0
 		return
 	}

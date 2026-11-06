@@ -102,5 +102,5 @@ func (a *App) browserMayBeInACall(ctx speechCaptureContext) bool {
 	if !meetingdetect.IsBrowserBundle(ctx.App.BundleID) || !ctx.MicHolders.couldHold(ctx.App.BundleID) {
 		return false
 	}
-	return ctx.BrowserMeeting != "" || !a.GetAutomaticMeetingRecordingEnabled()
+	return ctx.BrowserMeeting != "" || !a.meetingRecordingOn()
 }

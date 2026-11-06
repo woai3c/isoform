@@ -6,10 +6,19 @@ import (
 )
 
 // GetAutomaticMeetingRecordingEnabled reports whether Yansu may automatically
-// detect supported calls and save them as meeting records. The runtime cache
-// keeps activity and audio hot paths from reading config.json on every event.
+// detect supported calls and save them as meeting records. This is the window's
+// binding; Go code reads meetingRecordingOn.
 func (a *App) GetAutomaticMeetingRecordingEnabled() (perfValue bool) {
 	defer logPageBinding("GetAutomaticMeetingRecordingEnabled", time.Now(), &perfValue)
+	return a.meetingRecordingOn()
+}
+
+// meetingRecordingOn is the preference in memory: an atomic flag that
+// SetAutomaticMeetingRecordingEnabled sets (and announces with
+// automatic-meeting-recording:changed) and that startup loads from config. The
+// detection poll and the audio hot paths read it without a perf line or a stack
+// walk, so an unchanged preference is never logged as a read.
+func (a *App) meetingRecordingOn() bool {
 	if a == nil {
 		return true
 	}
