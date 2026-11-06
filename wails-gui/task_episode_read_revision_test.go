@@ -51,7 +51,7 @@ func TestRepeatedOnsetSetFollowsNewRepeatedOnsets(t *testing.T) {
 
 	// A read with no change is served from the cache.
 	scans := repeatedOnsetScans.Load()
-	revision, err := store.taskEpisodeReadRevision()
+	revision, err := store.taskEpisodeReadRevision(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestRepeatedOnsetSetFollowsNewRepeatedOnsets(t *testing.T) {
 
 	// A second episode with the same onset is an insert: the next read sees it.
 	createHistoricalOnsetEpisodeFixture(t, store, "revision-second", anchor, 2_200)
-	after, err := store.taskEpisodeReadRevision()
+	after, err := store.taskEpisodeReadRevision(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -288,7 +288,7 @@ func TestTodayChatSourceStoreReadsCancelWhileConnectionIsOccupied(t *testing.T) 
 		}},
 		{"purpose", store.db, func(ctx context.Context) error { _, err := purposeStore.ListDetailsAllContext(ctx); return err }},
 		{"self", store.db, func(ctx context.Context) error { _, err := store.listUsableSelfModelEntriesContext(ctx); return err }},
-		{"task-onsets", store.db, func(ctx context.Context) error { _, err := store.taskEpisodeRepeatedOnsetSetContext(ctx); return err }},
+		{"task-onsets", store.reader(), func(ctx context.Context) error { _, err := store.taskEpisodeRepeatedOnsetSetContext(ctx); return err }},
 		{"activities", store.reader(), func(ctx context.Context) error { _, err := store.GetActivitiesInRangeContext(ctx, 0, 1); return err }},
 		{"sessions", store.reader(), func(ctx context.Context) error {
 			_, err := store.GetSessionsByIDsContext(ctx, []string{"source"})

@@ -274,7 +274,7 @@ func (s *ActivityStore) taskEpisodeRepeatedOnsetSet() (
 // on an older key and the next read rescans rather than serving it. The returned
 // map is read-only.
 func (s *ActivityStore) taskEpisodeRepeatedOnsetSetContext(ctx context.Context) (map[string]struct{}, error) {
-	revision, err := s.taskEpisodeReadRevision()
+	revision, err := s.taskEpisodeReadRevision(ctx)
 	if err != nil {
 		return nil, err
 	}

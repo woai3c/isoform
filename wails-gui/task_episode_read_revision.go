@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -36,9 +37,11 @@ func migrateTaskEpisodeReadRevision(tx *sql.Tx) error {
 }
 
 // taskEpisodeReadRevision reads the counter the triggers maintain.
-func (s *ActivityStore) taskEpisodeReadRevision() (int64, error) {
+func (s *ActivityStore) taskEpisodeReadRevision(ctx context.Context) (int64, error) {
 	var revision int64
-	err := s.reader().QueryRow(`SELECT revision FROM task_episode_read_revision WHERE id = 1`).Scan(&revision)
+	// The request's context bounds the wait for a read connection: a cancelled lookup
+	// returns at once instead of queueing behind a busy pool.
+	err := s.reader().QueryRowContext(ctx, `SELECT revision FROM task_episode_read_revision WHERE id = 1`).Scan(&revision)
 	return revision, err
 }
 
