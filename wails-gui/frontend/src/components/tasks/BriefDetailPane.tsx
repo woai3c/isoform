@@ -154,9 +154,12 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
     if (Number.isNaN(scheduled.getTime())) return null;
     const time = clock(scheduled);
     if (run.status === "ok") {
+        // The time a brief shows is when it was ready to read, on time or not;
+        // its slot is only the fallback when no ready time was recorded (R64).
         const made = new Date(run.at);
-        const came = (run.late || run.madeNow) && !Number.isNaN(made.getTime()) ? made : null;
-        const shown = came ?? scheduled;
+        const readyAt = Number.isNaN(made.getTime()) ? null : made;
+        const came = (run.late || run.madeNow) && readyAt ? readyAt : null;
+        const shown = readyAt ?? scheduled;
         const why = run.reason === "asleep" || run.reason === "closed" ? t(`briefDetail.lateReason.${run.reason}`) : "";
         const line = !came ? ""
             : run.madeNow ? t("briefDetail.madeNow", { at: clock(came) })

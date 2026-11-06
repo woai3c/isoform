@@ -36,6 +36,20 @@ beforeEach(async () => {
 afterEach(async () => { await i18n.changeLanguage("en"); });
 
 describe("BriefDetailPane (K3)", () => {
+    // R64: a brief that came on time shows the time it was ready, not its slot.
+    it("shows a brief's ready time, not its slot, when it came on time", async () => {
+        const ready = at(0, 6, 52).toISOString();
+        mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "b-ready", status: "ok", scheduledAt: at(0, 7, 0).toISOString(), at: ready }] }));
+        render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
+        const row = await waitFor(() => {
+            const found = document.querySelector('[data-brief-run="b-ready"]');
+            expect(found).not.toBeNull();
+            return found as HTMLElement;
+        });
+        expect(row.textContent).toContain("6:52");
+        expect(row.textContent).not.toContain("7:00");
+    });
+
     it("offers the affected assistant sign in and hides make now", async () => {
         mocks.signIn.mockClear();
         mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "blocked", status: "failed", scheduledAt: at(0).toISOString(), at: at(0).toISOString(), attempts: 3, failureCause: "signed_out", failureAssistant: "codex", waitingForSignIn: true }] }));
@@ -67,14 +81,14 @@ describe("BriefDetailPane (K3)", () => {
         expect(screen.getByTestId("brief-detail-foot")).toHaveTextContent("Change times · In Settings › Brief");
     });
 
-    it("shows the scheduled ready time for an on-time run and the actual time for a late run", async () => {
+    it("shows the time an on-time run was ready, and the actual time for a late run", async () => {
         mocks.detail.mockResolvedValue(detail({ runs: [
             { briefId: "on-time", status: "ok", scheduledAt: at(0, 18, 0).toISOString(), at: at(0, 17, 50).toISOString() },
             { briefId: "late", status: "ok", scheduledAt: at(-1, 18, 0).toISOString(), at: at(-1, 19, 5).toISOString(), late: true },
         ] }));
         render(<BriefDetailPane slot="evening" onClose={vi.fn()} />);
         await screen.findByRole("region", { name: "The last three" });
-        await waitFor(() => expect(document.querySelector('[data-brief-run="on-time"]')).toHaveTextContent("Today, 6:00 PM"));
+        await waitFor(() => expect(document.querySelector('[data-brief-run="on-time"]')).toHaveTextContent("Today, 5:50 PM"));
         expect(document.querySelector('[data-brief-run="late"]')).toHaveTextContent("Yesterday, 7:05 PM");
     });
     it("shows the brief's schedule, what it is and the foot, with no schedule controls", async () => {

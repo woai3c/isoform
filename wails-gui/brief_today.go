@@ -242,7 +242,7 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 		// Health reads the stored slot history, never the Today snapshot.
 		stored, found := service.store.latest()
 		settings := service.config.load()
-		health = service.withPending(mobileBriefHealthView(now, loc, settings, stored, found, service.runs.list()), now, settings, stored, found)
+		health = service.withNextRun(service.withPending(mobileBriefHealthView(now, loc, settings, stored, found, service.runs.list()), now, settings, stored, found), now, settings)
 	} else {
 		health = svc.Health()
 	}

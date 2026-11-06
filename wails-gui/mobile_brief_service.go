@@ -964,14 +964,21 @@ func (s *mobileBriefService) Health() MobileBriefHealth {
 	latest, ok := s.store.latest()
 	now := s.now()
 	view := s.withPending(mobileBriefHealthView(now, s.location, settings, latest, ok, s.runs.list()), now, settings, latest, ok)
+	return s.withNextRun(view, now, settings)
+}
+
+// withNextRun names the next brief by the time it will be ready: the adaptive
+// prediction's ready time, or the scheduled slot. Every reader of the health view
+// (Today's launch read, Phone, Tasks) goes through here, so they agree (R64).
+func (s *mobileBriefService) withNextRun(view MobileBriefHealth, now time.Time, settings mobileBriefSettings) MobileBriefHealth {
+	// A switched-off schedule names no next brief, so nothing stale survives.
+	view.NextRunAt, view.NextSlot = "", ""
 	if settings.Enabled && !settings.Adaptive {
-		view.NextRunAt, view.NextSlot = "", ""
 		if next, found := mobileBriefScheduledNextRun(now, s.location, settings, s.scheduleFacts(now, settings)); found {
 			view.NextRunAt, view.NextSlot = formatMobileBriefTime(next.ScheduledAt), next.Slot
 		}
 	}
 	if settings.Enabled && settings.Adaptive {
-		view.NextRunAt, view.NextSlot = "", ""
 		if next, found := s.nextAdaptivePrediction(now, settings); found {
 			view.NextRunAt, view.NextSlot = formatMobileBriefTime(mobileBriefReadyAt(next, now, s.location, settings)), next.Slot
 		}
