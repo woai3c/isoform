@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 )
 
-const savedChatWorkNameRepairKey = "saved_chat_work_names_v1"
+const savedChatWorkNameRepairKey = "saved_chat_work_names_v2"
 const savedWorkNameField = "savedWorkNameV1"
 
 var savedWorkCommitClause = regexp.MustCompile(`(?i)\bon\s+[0-9a-f]{7,40}$`)
@@ -50,10 +50,45 @@ func savedThreadWorkName(source, body string) string {
 	return source
 }
 
+// savedThreadFallbackName removes a dangling fragment from a saved title only
+// when it is a literal prefix of the readable source. It never adds words.
+func savedThreadFallbackName(source, headline, body string) string {
+	source = strings.TrimSpace(source)
+	headline = strings.TrimSpace(headline)
+	clean := func(value string) string { return strings.TrimRight(strings.TrimSpace(value), " .。") }
+	if source != "" && !strings.ContainsAny(source, "\r\n!?！？") && !strings.Contains(source, ". ") && utf8.RuneCountInString(clean(source)) <= threadOutcomeTitleLimit && strings.EqualFold(clean(source), clean(headline)) && strings.EqualFold(clean(source), clean(body)) {
+		return clean(source)
+	}
+	if headline == "" || strings.ContainsAny(headline, "\r\n") || !strings.HasPrefix(source, headline) || len(source) <= len(headline) || utf8.RuneCountInString(headline) > threadOutcomeTitleLimit {
+		return ""
+	}
+	// Only the known dangling prepositions signal a clipped
+	// phrase; a word boundary alone does not prove a phrase is complete.
+	words := strings.Fields(headline)
+	if len(words) < 2 {
+		return ""
+	}
+	switch strings.ToLower(words[len(words)-1]) {
+	case "at", "for", "from", "in", "of", "on", "to", "with":
+		candidate := strings.TrimRight(strings.TrimSpace(headline[:strings.LastIndex(headline, words[len(words)-1])]), " .。")
+		remaining := strings.Fields(candidate)
+		if len(remaining) < 2 {
+			return ""
+		}
+		switch strings.ToLower(remaining[len(remaining)-1]) {
+		case "a", "an", "and", "at", "for", "from", "in", "of", "on", "or", "the", "to", "with":
+			return ""
+		}
+		return candidate
+	default:
+		return ""
+	}
+}
+
 // rewriteSavedWorkNames preserves fields unknown to this binary and visits
 // children recursively. resolve returns an empty name when evidence is held
 // or there is no safe complete name.
-func rewriteSavedWorkNames(input string, resolve func(target, source, body string) string) (string, bool) {
+func rewriteSavedWorkNames(input string, resolve func(target, source, body, headline string) string) (string, bool) {
 	var root map[string]json.RawMessage
 	if json.Unmarshal([]byte(input), &root) != nil || root == nil {
 		return input, false
@@ -61,7 +96,7 @@ func rewriteSavedWorkNames(input string, resolve func(target, source, body strin
 	var rewrite func(map[string]json.RawMessage) bool
 	rewrite = func(card map[string]json.RawMessage) bool {
 		changed := false
-		var kind, source, body, saved string
+		var kind, source, body, headline, saved string
 		var target struct {
 			Kind string `json:"kind"`
 			ID   string `json:"id"`
@@ -70,9 +105,10 @@ func rewriteSavedWorkNames(input string, resolve func(target, source, body strin
 		_ = json.Unmarshal(card["target"], &target)
 		_ = json.Unmarshal(card["activityOutcomeSource"], &source)
 		_ = json.Unmarshal(card["body"], &body)
+		_ = json.Unmarshal(card["headline"], &headline)
 		_ = json.Unmarshal(card[savedWorkNameField], &saved)
 		if kind == "decision_due" && target.Kind == mainChatTargetThread && target.ID != "" && source != "" {
-			if name := resolve(target.ID, source, body); saved == "" && name != "" {
+			if name := resolve(target.ID, source, body, headline); saved == "" && name != "" {
 				// This additive presentation field is ignored by the receipt's
 				// typed hash, preserving the original source-bound card proof.
 				card[savedWorkNameField], _ = json.Marshal(name)
@@ -147,13 +183,11 @@ func (a *App) applySavedWorkNames(ctx context.Context, input string, item *mainC
 	apply = func(card *mainChatProactive) bool {
 		changed := false
 		name := names[card.MomentID+"\x00"+card.ActivityOutcomeSource]
-		if name != "" && card.Kind == "decision_due" && card.Target.Kind == mainChatTargetThread && name == a.savedThreadWorkNameFromSource(ctx, card.Target.ID, card.ActivityOutcomeSource, card.Body) {
+		if name != "" && card.Kind == "decision_due" && card.Target.Kind == mainChatTargetThread && (name == a.savedThreadWorkNameFromSource(ctx, card.Target.ID, card.ActivityOutcomeSource, card.Body, card.Headline) || name == a.savedThreadWorkNameFromSource(ctx, card.Target.ID, card.ActivityOutcomeSource, card.Body, "")) {
 			card.Headline = name
 			for lang, copy := range card.Localized {
-				if !strings.EqualFold(name, strings.TrimRight(strings.TrimSpace(copy.Body), ".。")) {
-					copy.Headline = name
-					card.Localized[lang] = copy
-				}
+				copy.Headline = name
+				card.Localized[lang] = copy
 			}
 			changed = true
 		}
@@ -165,7 +199,7 @@ func (a *App) applySavedWorkNames(ctx context.Context, input string, item *mainC
 	return apply(item)
 }
 
-func (a *App) savedThreadWorkNameFromSource(ctx context.Context, target, source, body string) string {
+func (a *App) savedThreadWorkNameFromSource(ctx context.Context, target, source, body, headline string) string {
 	if a == nil || a.activity == nil || a.activity.store == nil {
 		return ""
 	}
@@ -176,7 +210,10 @@ func (a *App) savedThreadWorkNameFromSource(ctx context.Context, target, source,
 	if err != nil || row == nil {
 		return ""
 	}
-	name := savedThreadWorkName(row.Title, body)
+	name := savedThreadFallbackName(row.Title, headline, body)
+	if name == "" {
+		name = savedThreadWorkName(row.Title, body)
+	}
 	if name == "" || proactiveVoiceRestrictedText(name) || redactThreadOutcomeText(name) != name || activityPrivacyMarkerStrip(name) != name {
 		return ""
 	}
@@ -207,8 +244,8 @@ func (a *App) repairSavedChatWorkNames(ctx context.Context) error {
 		if a.IsClosedEyesModeEnabled() {
 			return errors.New("observation paused during title repair")
 		}
-		after, changed := rewriteSavedWorkNames(row.ToolInput, func(target, source, body string) string {
-			return a.savedThreadWorkNameFromSource(ctx, target, source, body)
+		after, changed := rewriteSavedWorkNames(row.ToolInput, func(target, source, body, headline string) string {
+			return a.savedThreadWorkNameFromSource(ctx, target, source, body, headline)
 		})
 		if !changed {
 			continue

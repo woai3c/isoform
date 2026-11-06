@@ -2103,6 +2103,15 @@ describe('chat walk-through v1.0.2 cards', () => {
         expect(screen.getByRole('button', { name: (language === 'en' ? en : zh).mainChat.card.button.showThread })).toBeInTheDocument();
     });
 
+    it('shows a left-off title only once when its body repeats it with punctuation', () => {
+        render(<MainChatProactiveCard item={proactive({
+            kind: 'decision_due', headline: 'Review the launch plan', body: 'Review the launch plan.',
+            target: { kind: 'thread', id: 'thread-1' }, actionIds: [], evidence: [],
+        })} onOpenTarget={vi.fn()} />);
+        expect(screen.getAllByText(/^Review the launch plan\.?$/)).toHaveLength(1);
+        expect(screen.getByRole('heading', { name: 'Review the launch plan' })).toBeInTheDocument();
+    });
+
     it('#2 keeps a left-off card folded after the next morning brief without its buttons', () => {
         render(<MainChatProactiveCard item={{ ...leftOff(new Date(2026, 9, 29, 19, 1).toISOString()), rowClass: 'routine' }} onOpenTarget={vi.fn()} />);
         expect(screen.queryByRole('button', { name: en.mainChat.card.button.showThread })).toBeNull();

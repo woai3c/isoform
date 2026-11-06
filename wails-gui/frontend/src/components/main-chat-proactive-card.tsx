@@ -205,6 +205,8 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
     const sentence = aboutYouLeftOff && [message.body, message.localized?.en?.body].some(
         (body) => body?.trim() === 'Next: mark the beliefs in Learned today.',
     ) ? t('mainChat.proactive.leftOffAboutYouNext') : originalSentence;
+    // A repeated body belongs in the title only, including punctuation variants.
+    const sameLeftOffText = (text: string) => leftOff && text.trim().replace(/[.。]+$/, '').trim() === displayHeadline.trim().replace(/[.。]+$/, '').trim();
     // After Review the draft and its Send live in the panel only; the card keeps
     // its preview with Review and Not now (chat-review v1.0.8).
     const draftInPanel = panelOpen && !detailPanel && !inPanel && message.kind === 'waiting_on_reply';
@@ -500,8 +502,8 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
             {message.updatedAt ? <p data-main-chat-updated className="text-[12px] leading-relaxed text-muted">{message.state === 'done'
                 ? t('mainChat.proactive.doneAt', { time: computerClock(new Date(message.updatedAt), i18n.resolvedLanguage ?? 'en') })
                 : t('mainChat.proactive.updatedAt', { time: computerClock(new Date(message.updatedAt), i18n.resolvedLanguage ?? 'en') })}</p> : null}
-            {sentence && !briefCard && !retiredBriefCopy(sentence) && (detailPanel || !expandable || expanded || panelOpen) &&<p className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{sentence}</p>}
-            {!briefCard && !aboutYouLeftOff && !retiredBriefCopy(message.body) && !detailPanel && (expanded || panelOpen) && message.body && message.body !== sentence && message.body !== copy.headline && (
+            {sentence && !sameLeftOffText(sentence) && !briefCard && !retiredBriefCopy(sentence) && (detailPanel || !expandable || expanded || panelOpen) &&<p className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{sentence}</p>}
+            {!briefCard && !aboutYouLeftOff && !retiredBriefCopy(message.body) && !detailPanel && (expanded || panelOpen) && message.body && !sameLeftOffText(message.body) && message.body !== sentence && message.body !== copy.headline && (
                 <p className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{message.body}</p>
             )}
             {isWork && message.work?.summary && !sentence.includes(message.work.summary) && message.work.summary !== copy.headline && <p className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{message.work.summary}</p>}
