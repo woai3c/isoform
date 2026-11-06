@@ -121,7 +121,7 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
     const { t: tApp } = useTranslation('app');
     const panel = useMainChatItemPanel(panelSurface);
     const copy = message.localized?.[copyLanguage(i18n.resolvedLanguage)] ?? message;
-    const sentence = useProactiveSentence(message);
+    const originalSentence = useProactiveSentence(message);
     const [state, setState] = useState(message.state);
     const [kindMuted, setKindMuted] = useState(message.kindMuted === true);
     const [busy, setBusy] = useState(false);
@@ -196,6 +196,15 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
     const slots = cardButtons(message);
     // A left-off card folded after the next morning brief no longer offers to go back.
     const leftOff = message.kind === 'decision_due' && message.target.kind === 'thread';
+    // Repair this persisted legacy card in either UI language, without changing
+    // other cards or inventing a next step for different work.
+    const aboutYouLeftOff = leftOff && [message.headline, message.localized?.en?.headline].some(
+        (headline) => headline?.trim() === 'You were going through what Isoform learned about you.',
+    );
+    const displayHeadline = aboutYouLeftOff ? t('mainChat.proactive.leftOffAboutYouTitle') : leftOff ? copy.headline.replace(/[.。]$/, '') : copy.headline;
+    const sentence = aboutYouLeftOff && [message.body, message.localized?.en?.body].some(
+        (body) => body?.trim() === 'Next: mark the beliefs in Learned today.',
+    ) ? t('mainChat.proactive.leftOffAboutYouNext') : originalSentence;
     // After Review the draft and its Send live in the panel only; the card keeps
     // its preview with Review and Not now (chat-review v1.0.8).
     const draftInPanel = panelOpen && !detailPanel && !inPanel && message.kind === 'waiting_on_reply';
@@ -483,7 +492,7 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
             ) : !titleInHeader && (
                 <h3 className="break-words text-[15px] font-semibold leading-snug text-ink">{message.kind === 'first_week' && message.briefId && briefDisplay
                     ? briefTitle({ ...briefDisplay, yourWeek: undefined, briefId: message.briefId } as Parameters<typeof briefTitle>[0], i18n.resolvedLanguage ?? i18n.language, (key, options) => String(tToday(key as never, options as never)))
-                    : retiredBriefCopy(copy.headline) && message.kind === 'brief_ready' ? tToday('todayBrief.slot.on_request') : retiredBriefCopy(copy.headline) && message.kind === 'weekly_recap' ? tToday('todayBrief.kind.week') : copy.headline}</h3>
+                    : retiredBriefCopy(copy.headline) && message.kind === 'brief_ready' ? tToday('todayBrief.slot.on_request') : retiredBriefCopy(copy.headline) && message.kind === 'weekly_recap' ? tToday('todayBrief.kind.week') : displayHeadline}</h3>
             )}
             {blockedReasonKey && <p className="text-[12px] leading-relaxed text-muted">{tApp(blockedReasonKey)}</p>}
             {verificationLine && <p className="text-[12px] leading-relaxed text-muted">{verificationLine.kind === 'checks' ? tApp(verificationLine.key, { met: verificationLine.met, total: verificationLine.total }) : tApp(verificationLine.key)}</p>}
@@ -491,7 +500,7 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
                 ? t('mainChat.proactive.doneAt', { time: computerClock(new Date(message.updatedAt), i18n.resolvedLanguage ?? 'en') })
                 : t('mainChat.proactive.updatedAt', { time: computerClock(new Date(message.updatedAt), i18n.resolvedLanguage ?? 'en') })}</p> : null}
             {sentence && !briefCard && !retiredBriefCopy(sentence) && (detailPanel || !expandable || expanded || panelOpen) &&<p className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{sentence}</p>}
-            {!briefCard && !retiredBriefCopy(message.body) && !detailPanel && (expanded || panelOpen) && message.body && message.body !== sentence && message.body !== copy.headline && (
+            {!briefCard && !aboutYouLeftOff && !retiredBriefCopy(message.body) && !detailPanel && (expanded || panelOpen) && message.body && message.body !== sentence && message.body !== copy.headline && (
                 <p className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{message.body}</p>
             )}
             {isWork && message.work?.summary && !sentence.includes(message.work.summary) && message.work.summary !== copy.headline && <p className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{message.work.summary}</p>}
@@ -695,7 +704,7 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
         <section ref={receiptRef} data-proactive-moment={message.momentId} className={cn('flex min-w-0 flex-col gap-2.5', !nested && !folded && 'rounded-xl border border-border bg-panel-warm px-[18px] py-4')}>
             {heldFolded ? (
                 <div data-proactive-held-folded className="flex flex-col gap-1">
-                    <h3 className="break-words text-[15px] font-semibold leading-snug text-ink">{copy.headline}</h3>
+                    <h3 className="break-words text-[15px] font-semibold leading-snug text-ink">{displayHeadline}</h3>
                     {heldLine}
                 </div>
             ) : folded ? (
@@ -703,7 +712,7 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
                     {/* Chat's own disclosure (as the day fold), not the browser's triangle. */}
                     <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-sm text-[12.5px] text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus [&::-webkit-details-marker]:hidden">
                         <ChevronRight aria-hidden className={cn('size-3.5 shrink-0 transition-transform', expanded && 'rotate-90')} />
-                        <span className="min-w-0 break-words">{copy.headline}</span>
+                        <span className="min-w-0 break-words">{displayHeadline}</span>
                     </summary>
                     <div hidden={!expanded} className={cn(expanded && 'flex flex-col gap-2.5 pt-2')}>{content}</div>
                 </details>

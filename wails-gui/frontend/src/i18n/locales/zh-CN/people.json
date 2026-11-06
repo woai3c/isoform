@@ -214,9 +214,11 @@
         "reappeared": "重新联系上了"
     },
     "loopLine": {
-        "replyOwed": "ta 的邮件已经等你回复 {{age}}",
+        "replyOwed": "回复{{name}}的邮件 · 已等{{age}}",
         "waitingOnThem": "ta 答应你：{{title}}",
-        "reappeared": "沉寂一段时间后重新联系上了"
+        "reappeared": "沉寂一段时间后重新联系上了",
+        "replyOwedNoAge": "回复{{name}}的邮件",
+        "youOweDue": "{{title}} · {{when}}到期"
     },
     "merge": {
         "title_one": "{{count}} 个资料看起来是同一个人：{{name}}",

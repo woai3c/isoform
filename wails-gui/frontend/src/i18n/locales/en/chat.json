@@ -398,7 +398,8 @@
                 "show": "Show",
                 "right": "Right",
                 "thatsMe": "That's me",
-                "notQuite": "Not quite"
+                "notQuite": "Not quite",
+                "hearIt": "Hear it"
             }
         },
         "relativeDay": {
@@ -559,7 +560,9 @@
                 "edit": "Edit"
             },
             "calendarFailed": "Couldn't open Calendar. Try again",
-            "howYouDoThings": "How you do things"
+            "howYouDoThings": "How you do things",
+            "leftOffAboutYouTitle": "What Isoform learned about you",
+            "leftOffAboutYouNext": "Next: say That's me or Not quite to this week's new beliefs."
         },
         "status": {
             "summary_one": "{{count}} background update",

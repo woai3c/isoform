@@ -480,9 +480,10 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
         : calendarPeople.length > 0 && groups.open.length === 0
           ? tr('firstDay.headline', { count: calendarPeople.length })
           : overview
-            ? headlineWords(tr, overview.headline, overview.open.length, paused)
+            ? headlineWords(tr, groups.open.filter((card) => card.loops.some(loopNeedsYou)).length, groups.open.length, paused)
             : tr('title');
-    const subline = dayZero ? '' : calendarPeople.length > 0 ? tr('firstDay.more') : knownCount > 0 ? tr('overview.subline', { count: knownCount }) : '';
+    const shownCount = groups.open.length + groups.others.length;
+    const subline = dayZero ? '' : calendarPeople.length > 0 ? tr('firstDay.more') : shownCount > 0 ? tr('overview.subline', { count: shownCount }) : '';
     const failureNotice =
         personFailure && personFailure.id === selectedID ? (
             <PeopleFailureLine
@@ -919,8 +920,7 @@ function OpenCard({ card, entry, selected, landed = false, onSelect }: { card: P
     const name = personName(entry, card.name || tr('unnamed'));
     const first = card.loops[0];
     const needsYou = first ? loopNeedsYou(first) : false;
-    const titled = card.loops.find((loop) => loop.title);
-    const context = titled ? loopLine(tr, titled) : first && first.kind !== 'reply_owed' ? loopLine(tr, first) : '';
+    const context = first ? loopLine(tr, first, name, i18n.language) : '';
     const more = card.loops.length - 1;
     const last = lastWords(tr, i18n.language, card);
     return (

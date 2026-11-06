@@ -248,17 +248,36 @@ describe("People overview", () => {
         world();
         render(<PeoplePage />);
 
-        expect(await screen.findByRole("heading", { level: 1, name: "You owe 1 reply, and 1 person is waiting on you" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { level: 1, name: "2 people are waiting on you" })).toBeInTheDocument();
         const open = screen.getByRole("region", { name: "Open between you" });
         const cards = within(open).getAllByRole("button");
         expect(cards.map((c) => c.textContent)).toEqual([expect.stringContaining("Priya Nair"), expect.stringContaining("Marcus Hale")]);
-        expect(cards[0]).toHaveTextContent("You owe a reply · 9h");
+        expect(cards[0]).toHaveTextContent("You owe them");
+        expect(cards[0]).toHaveTextContent("Reply to Priya's email · waiting 9h");
         expect(cards[0]).toHaveTextContent("Last: Slack,");
         expect(cards[1]).toHaveTextContent("You owe them");
         expect(cards[1]).toHaveTextContent("Countersign the SOW");
         const everyone = screen.getByRole("region", { name: "Everyone else" });
         expect(within(everyone).getByRole("button", { name: /Sam Rivera/ })).toBeInTheDocument();
         expect(within(everyone).queryByRole("button", { name: /Mei Chen/ })).not.toBeInTheDocument();
+    });
+
+    it.each([["en", "1 person is waiting on you"], ["zh-CN", "1 个人在等你"]])("counts a person with multiple owed items once in %s", async (language, heading) => {
+        const { overview } = world();
+        mocks.overview.mockResolvedValue({ ...overview, open: [{ ...overview.open[0], loops: [loop("reply_owed"), loop("you_owe", { title: "Review the plan" })] }] });
+        await i18n.changeLanguage(language);
+        render(<PeoplePage />);
+        expect(await screen.findByRole("heading", { level: 1, name: heading })).toBeInTheDocument();
+    });
+
+    it("keeps a due date beside the step on the card and detail", async () => {
+        const { overview, details } = world();
+        const due = loop("you_owe", { id: "due", title: "Review the plan", dueAt: NOW + 24 * HOUR });
+        mocks.overview.mockResolvedValue({ ...overview, open: [card("priya", "contact", "Priya Nair", [due])] });
+        details.priya = { ...details.priya, loops: [due] };
+        render(<PeoplePage />);
+        const line = "Review the plan · due Tomorrow";
+        await waitFor(() => expect(screen.getAllByText(line)).toHaveLength(2));
     });
 
     it("opens on the person Search asked for, and again on the next one", async () => {
@@ -290,7 +309,7 @@ describe("People overview", () => {
         const aside = screen.getByRole("complementary", { name: "Person detail" });
         queueMicrotask(releaseDetail);
         expect(await within(aside).findByText("Your day-to-day contact at Halcyon.")).toBeInTheDocument();
-        expect(within(aside).getByText("Their email has waited 9h for your reply")).toBeInTheDocument();
+        expect(within(aside).getByText("Reply to Priya's email · waiting 9h")).toBeInTheDocument();
         expect(within(aside).getByText("Kickoff call · 45 min")).toBeInTheDocument();
         expect(within(aside).getByText("Halcyon ERP sync")).toBeInTheDocument();
         expect(within(aside).getByText("Seen in Email and Slack")).toBeInTheDocument();
@@ -332,7 +351,7 @@ describe("People overview", () => {
         expect(mocks.overview).toHaveBeenCalledTimes(4);
         world();
         fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-        expect(await screen.findByRole("heading", { level: 1, name: /You owe 1 reply/ })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { level: 1, name: /2 people are waiting on you/ })).toBeInTheDocument();
     });
 
     it("never lets a slower older read overwrite a newer one", async () => {
@@ -343,9 +362,9 @@ describe("People overview", () => {
         await waitFor(() => expect(events.handlers["contacts:updated"]?.size ?? 0).toBeGreaterThan(0));
         // A Contacts sync reads again while the first read is still out.
         await emitEvent("contacts:updated");
-        expect(await screen.findByRole("heading", { level: 1, name: /You owe 1 reply/ })).toBeInTheDocument();
-        await act(async () => releaseOld({ ...overview, headline: { repliesOwed: 5, thingsOwed: 0, peopleWaitingOnYou: 0 } }));
-        expect(screen.getByRole("heading", { level: 1, name: /You owe 1 reply/ })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { level: 1, name: /2 people are waiting on you/ })).toBeInTheDocument();
+        await act(async () => releaseOld({ ...overview, open: [] }));
+        expect(screen.getByRole("heading", { level: 1, name: /2 people are waiting on you/ })).toBeInTheDocument();
     });
 
     it("reloads open loops when a send changes who is waiting", async () => {
@@ -507,6 +526,8 @@ describe("Who you know lists only people Isoform can name", () => {
         expect(within(everyone).queryByRole("button", { name: /Ana Lopez/ })).not.toBeInTheDocument();
         expect(within(everyone).queryByRole("button", { name: /Mei Chen/ })).not.toBeInTheDocument();
 
+        // The count includes only the people shown, with senders on a separate line.
+        expect(screen.getByText("3 people. Anyone with something open comes first.")).toBeInTheDocument();
         // One line under the list says how many senders are left to sort out.
         expect(screen.getByText("Isoform couldn't tell who 2 senders are.")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Sort them out" })).toBeInTheDocument();
@@ -662,7 +683,7 @@ describe("N2: Brief me and Draft a reply work in the detail", () => {
         const aside = await screen.findByRole("complementary", { name: "Person detail" });
         fireEvent.click(await within(aside).findByRole("button", { name: "Draft a reply" }));
         await waitFor(() => expect(mocks.openDraft).toHaveBeenCalledWith("priya", "reply_owed-1", expect.any(String)));
-        const item = within(aside).getByText("Their email has waited 9h for your reply").closest("li") as HTMLElement;
+        const item = within(aside).getByText("Reply to Priya's email · waiting 9h").closest("li") as HTMLElement;
         expect(await within(item).findByTestId("task-thread")).toHaveTextContent("task:task-7");
     });
 
@@ -1212,7 +1233,7 @@ describe("Chinese", () => {
         world();
         mocks.access.mockResolvedValue({ supported: true, consentAccepted: true, permission: "granted", syncState: "idle", lastImportAt: new Date(new Date().setHours(8, 0, 0, 0)).toISOString() });
         render(<PeoplePage />);
-        expect(await screen.findByRole("heading", { level: 1, name: "你欠 1 条回复，还有 1 个人在等你" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { level: 1, name: "2 个人在等你" })).toBeInTheDocument();
         expect(screen.getByRole("heading", { level: 2, name: "你们之间未完成的事" })).toBeInTheDocument();
         expect(screen.getByRole("status")).toHaveTextContent("通讯录已于今天上午同步");
         expect(await screen.findByRole("button", { name: "交谈前为我做简报" })).toBeInTheDocument();

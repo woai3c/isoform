@@ -167,9 +167,9 @@ export function loopNeedsYou(loop: PersonLoop): boolean {
 export function loopChip(t: Translate, lang: string, loop: PersonLoop, now = Date.now()): string {
     switch (loop.kind) {
         case 'reply_owed':
-            return t('loop.replyOwed', { age: ageWords(t, loop.since, now) });
+            return t('loop.youOwe');
         case 'you_owe':
-            return loop.dueAt > 0 ? t('loop.youOweDue', { when: dayWords(t, lang, loop.dueAt, now) }) : t('loop.youOwe');
+            return t('loop.youOwe');
         case 'waiting_on_them':
             return loop.dueAt > 0 ? t('loop.waitingOnThemDue', { when: dayWords(t, lang, loop.dueAt, now) }) : t('loop.waitingOnThem');
         default:
@@ -178,12 +178,12 @@ export function loopChip(t: Translate, lang: string, loop: PersonLoop, now = Dat
 }
 
 /** One loop as a sentence, for the card's context line and the detail list. */
-export function loopLine(t: Translate, loop: PersonLoop, now = Date.now()): string {
+export function loopLine(t: Translate, loop: PersonLoop, name: string, lang: string, now = Date.now()): string {
     switch (loop.kind) {
         case 'reply_owed':
-            return t('loopLine.replyOwed', { age: ageWords(t, loop.since, now) });
+            return loop.since > 0 ? t('loopLine.replyOwed', { name: shortName(name), age: ageWords(t, loop.since, now) }) : t('loopLine.replyOwedNoAge', { name: shortName(name) });
         case 'you_owe':
-            return loop.title || t('loop.youOwe');
+            return loop.dueAt > 0 ? t('loopLine.youOweDue', { title: loop.title || t('loop.youOwe'), when: dayWords(t, lang, loop.dueAt, now) }) : loop.title || t('loop.youOwe');
         case 'waiting_on_them':
             return loop.title ? t('loopLine.waitingOnThem', { title: loop.title }) : t('loop.waitingOnThem');
         default:
@@ -191,19 +191,10 @@ export function loopLine(t: Translate, loop: PersonLoop, now = Date.now()): stri
     }
 }
 
-export interface PeopleHeadlineCounts {
-    repliesOwed: number;
-    peopleWaitingOnYou: number;
-}
-
-/** The page's headline says what you owe, in one sentence. */
-export function headlineWords(t: Translate, counts: PeopleHeadlineCounts, openCount: number, paused: boolean): string {
+/** Count each person once, even if they have multiple open items. */
+export function headlineWords(t: Translate, waitingPeople: number, openCount: number, paused: boolean): string {
     if (paused) return t('overview.headlinePaused');
-    const replies = counts.repliesOwed > 0 ? t('overview.headlineReplies', { count: counts.repliesOwed }) : '';
-    const waiting = counts.peopleWaitingOnYou > 0 ? t('overview.headlineWaiting', { count: counts.peopleWaitingOnYou }) : '';
-    if (replies && waiting) return t('overview.headlineBoth', { replies, waiting });
-    if (replies) return replies;
-    if (waiting) return t('overview.headlineWaitingOnly', { count: counts.peopleWaitingOnYou });
+    if (waitingPeople > 0) return t('overview.headlineWaiting', { count: waitingPeople });
     return openCount > 0 ? t('overview.headlineNothingOwed') : t('overview.headlineNothingOpen');
 }
 

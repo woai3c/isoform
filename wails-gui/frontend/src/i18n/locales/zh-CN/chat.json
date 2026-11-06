@@ -398,7 +398,8 @@
                 "show": "查看",
                 "right": "对",
                 "thatsMe": "是我",
-                "notQuite": "不太对"
+                "notQuite": "不太对",
+                "hearIt": "听一听"
             }
         },
         "relativeDay": {
@@ -559,7 +560,9 @@
                 "edit": "编辑"
             },
             "calendarFailed": "没能打开日历。重试",
-            "howYouDoThings": "你做事的方式"
+            "howYouDoThings": "你做事的方式",
+            "leftOffAboutYouTitle": "Isoform 对你的了解",
+            "leftOffAboutYouNext": "下一步：对本周的新认识选择“说得对”或“不太对”。"
         },
         "status": {
             "summary_one": "{{count}} 条后台更新",

@@ -63,7 +63,7 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
     const fallbackLabel = weeklyRecap && slot === 'on_request' ? tr('todayBrief.kind.week') : tr(`todayBrief.slot.${slot}`);
     const current = brief?.briefId === briefId ? brief : null;
     const titleSource = display ?? (current ? { slot: current.slot, asOf: current.asOf, timezone: current.timezone, displaySlot: current.displaySlot } : null);
-    const title = titleSource ? briefTitle(titleSource as Parameters<typeof briefTitle>[0], language, tr) : fallbackLabel;
+    const title = titleSource ? briefTitle({ ...titleSource, slot: 'on_request' } as Parameters<typeof briefTitle>[0], language, tr) : fallbackLabel;
     const projected = current?.narrative?.map((paragraph) => mainChatBriefRelativeText(current, paragraph, clock, language, (key, options) => t(key as never, options as never) as unknown as string).trim()) ?? [];
     const changedWords = current?.narrative?.some((paragraph, index) => paragraph.text?.trim() !== projected[index]) ?? false;
     const paragraphs = projected.filter(Boolean);
@@ -107,7 +107,7 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
                         aria-pressed={playback === 'playing'}
                         onClick={() => void toggleBriefPlayback(briefId).catch(() => {})}
                     >
-                        {t('mainChat.card.button.play')}
+                        {t('mainChat.card.button.hearIt')}
                     </Button>
                 )}
                 {canRead && (

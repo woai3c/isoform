@@ -214,9 +214,11 @@
         "reappeared": "Back in touch"
     },
     "loopLine": {
-        "replyOwed": "Their email has waited {{age}} for your reply",
+        "replyOwed": "Reply to {{name}}'s email · waiting {{age}}",
         "waitingOnThem": "They owe you: {{title}}",
-        "reappeared": "Back in touch after a quiet stretch"
+        "reappeared": "Back in touch after a quiet stretch",
+        "replyOwedNoAge": "Reply to {{name}}'s email",
+        "youOweDue": "{{title}} · due {{when}}"
     },
     "merge": {
         "title_one": "{{count}} profile looks like one person: {{name}}",

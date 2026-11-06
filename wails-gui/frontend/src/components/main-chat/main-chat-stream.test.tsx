@@ -350,7 +350,7 @@ describe('main chat stream (RC 2 D1)', () => {
         } }));
         renderStream([card('brief', 'brief_ready', 'waiting', { briefId: 'brief-1' }, { topicIds: ['topic-halcyon'] })]);
         const topic = await screen.findByText('Halcyon ERP sync');
-        const button = screen.getByRole('button', { name: en.mainChat.card.button.play });
+        const button = screen.getByRole('button', { name: en.mainChat.card.button.hearIt });
         expect(topic.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 

@@ -39,11 +39,21 @@ describe("MainChatBriefCard", () => {
             }));
             render(<MainChatBriefCard briefId="2026-10-30-evening" onOpenBrief={vi.fn()} />);
             expect(await screen.findByText('The commitment was due Friday.')).toBeInTheDocument();
-            expect(screen.queryByRole('button', { name: en.mainChat.card.button.play })).toBeNull();
+            expect(screen.queryByRole('button', { name: en.mainChat.card.button.hearIt })).toBeNull();
             expect(screen.getByRole('button', { name: en.mainChat.card.button.readIt })).toBeInTheDocument();
         } finally {
             vi.useRealTimers();
         }
+    });
+
+    it.each([
+        ["en", "Evening brief · 5:24 PM"],
+        ["zh-CN", "晚间简报 · 17:24"],
+    ])("names the brief from its displayed time in %s", async (language, title) => {
+        await i18n.changeLanguage(language);
+        getByID.mockReturnValue(new Promise(() => {}));
+        render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'morning', asOf: '2026-11-03T17:24:00Z', timezone: 'UTC' }} />);
+        expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
     });
 
     it("shows a title while the brief loads", async () => {
@@ -93,8 +103,9 @@ describe("MainChatBriefCard", () => {
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={onReadAll} meta={() => <span>From brief</span>} />);
         expect(await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" })).toBeInTheDocument();
         expect(screen.getByText("Quiet day. Priya is waiting on your review.")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: en.mainChat.card.button.play })).toBeInTheDocument();
-        expect(screen.getByText("From brief").compareDocumentPosition(screen.getByRole("button", { name: en.mainChat.card.button.play })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.getByRole("button", { name: en.mainChat.card.button.hearIt })).toHaveClass('bg-solid-btn-bg');
+        expect(screen.getByRole("button", { name: en.mainChat.card.button.readIt })).toHaveClass('bg-transparent');
+        expect(screen.getByText("From brief").compareDocumentPosition(screen.getByRole("button", { name: en.mainChat.card.button.hearIt })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         fireEvent.click(screen.getByRole("button", { name: en.mainChat.card.button.readIt }));
         expect(onReadAll).not.toHaveBeenCalled();
         expect(screen.queryByRole("button", { name: en.mainChat.card.button.readIt })).toBeNull();
@@ -104,8 +115,8 @@ describe("MainChatBriefCard", () => {
         getByID.mockResolvedValue(view({ ...withWords, audio: undefined }));
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
         await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" });
-        expect(screen.queryByRole("button", { name: en.mainChat.card.button.play })).toBeNull();
-        expect(screen.getByRole("button", { name: en.mainChat.card.button.readIt })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: en.mainChat.card.button.hearIt })).toBeNull();
+        expect(screen.getByRole("button", { name: en.mainChat.card.button.readIt })).toHaveClass('bg-solid-btn-bg');
     });
 
     it('does not carry a previous brief or its expanded state to another id', async () => {
@@ -121,7 +132,7 @@ describe("MainChatBriefCard", () => {
         getByID.mockResolvedValue(view({ ...withWords, narrative: [] }));
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
         await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" });
-        expect(screen.queryByRole("button", { name: en.mainChat.card.button.play })).toBeNull();
+        expect(screen.queryByRole("button", { name: en.mainChat.card.button.hearIt })).toBeNull();
     });
 
     it("never shows another brief or a provisional headline when the id does not match", async () => {

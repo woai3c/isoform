@@ -17,7 +17,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { appLabel, dayWords, listWords, loopChip, loopLine, readWithRetry, relationshipLabel, togetherWords, type Translate } from './people-format';
+import { appLabel, dayWords, listWords, loopChip, loopLine, loopNeedsYou, readWithRetry, relationshipLabel, togetherWords, type Translate } from './people-format';
 import { PeopleFailureLine, usePeopleDevTools } from './people-failure';
 import { PersonBriefBlock, PersonReplyDraft } from './person-brief';
 import { DetailFold, PersonDossier, PersonTechnicalDetails, RecentMessagesList, VoiceFingerprint } from './person-sections';
@@ -168,8 +168,9 @@ export function PersonDetailPanel({
                                 <span className="flex items-start gap-2.5">
                                     <span aria-hidden className="mt-[7px] size-1.5 shrink-0 rounded-full bg-muted" />
                                     <span className="flex min-w-0 flex-col">
-                                        <span>{loopLine(tr, loop)}</span>
-                                        {(loop.kind === 'you_owe' || loop.kind === 'waiting_on_them') && (
+                                        {loopNeedsYou(loop) && <span className="mb-1 inline-flex h-6 items-center self-start rounded-md border border-warning-border bg-warning-bg px-2 text-[12px] font-medium text-warning">{loopChip(tr, i18n.language, loop)}</span>}
+                                        <span>{loopLine(tr, loop, name, i18n.language)}</span>
+                                        {loop.kind === 'waiting_on_them' && (
                                             <span className="text-[12px] text-muted">{loopChip(tr, i18n.language, loop)}</span>
                                         )}
                                     </span>
