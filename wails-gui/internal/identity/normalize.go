@@ -192,6 +192,11 @@ func PlausibleAutoContactName(name string) bool {
 	if strings.ContainsAny(name, "\n\r") {
 		return false
 	}
+	// A message timestamp captured into the name field ("v1t0 11/1/26, 6:43 PM") is
+	// not a name: the handle is what the person is called (N50, 2026-11-05).
+	if containsMessageTimestamp(name) {
+		return false
+	}
 	// "Server Tag: <CLAN>" is a Discord badge rendered after the username.
 	// When it survives normalization it sits mid-string with body text on
 	// either side — the name is not trustworthy.
@@ -209,4 +214,11 @@ func PlausibleAutoContactName(name string) bool {
 		}
 	}
 	return true
+}
+
+var messageTimestampPattern = regexp.MustCompile(`(?i)\b\d{1,4}[/.-]\d{1,2}[/.-]\d{1,4}\b|\b\d{1,2}:\d{2}(:\d{2})?\s*(am|pm)?\b`)
+
+// containsMessageTimestamp reports a date or a clock time in a name.
+func containsMessageTimestamp(name string) bool {
+	return messageTimestampPattern.MatchString(name)
 }
