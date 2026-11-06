@@ -135,6 +135,7 @@ enum TodayBriefPlaceholder {
 /// The Today card for the phone's current brief. It holds an older brief only while the person plays or reads it
 /// (`held`), so a newer brief replaces the old one in place with a crossfade otherwise.
 struct TodayBriefCardView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let current: MobileBriefV1
     let hubID: String
     @ObservedObject var player: BriefAudioPlayer
@@ -249,7 +250,8 @@ struct TodayBriefCardView: View {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("feed.brief.newer")
                 }
-                HStack {
+                // Side-by-side links stack at accessibility sizes, so their labels never run into each other.
+                let links = Group {
                     NavigationLink {
                         BriefDetailView(entry: entry, player: player,
                                         fallbackLead: todayStore.snapshot?.briefs.first { $0.id == shown.identifier }?.lead)
@@ -257,7 +259,6 @@ struct TodayBriefCardView: View {
                         Text("Read all")
                     }
                     .accessibilityIdentifier("feed.readAll")
-                    Spacer()
                     Button(action: onPastBriefs) {
                         HStack(spacing: 4) {
                             Text("Past briefs")
@@ -266,8 +267,15 @@ struct TodayBriefCardView: View {
                     }
                     .accessibilityIdentifier("feed.pastBriefs")
                 }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(YansuTheme.accent)
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 10) { links }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(YansuTheme.accent)
+                } else {
+                    HStack { links; Spacer() }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(YansuTheme.accent)
+                }
             }
         }
         .id(shown.identifier)

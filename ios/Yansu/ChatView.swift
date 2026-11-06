@@ -25,6 +25,7 @@ struct ChatView: View {
     @EnvironmentObject private var actions: ActionStore
     @EnvironmentObject private var router: NotificationRouter
     @FocusState private var composerFocused: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var scroll = ChatScrollTracker()
     @State private var latest = LatestControl.hidden
     @State private var deliveryExplanation: String?
@@ -709,41 +710,38 @@ struct ChatView: View {
                 .font(.footnote)
                 .accessibilityIdentifier("chat.discardDraft")
             }
-            HStack(alignment: .bottom, spacing: 10) {
-                TextField("Message Isoform", text: draftBinding, axis: .vertical)
-                    .id(composerIdentity)
-                    .font(.body)
-                    .lineLimit(1...5)
-                    .focused($composerFocused)
-                    .toolbar {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            Spacer()
-                            Button(String(localized: "Done")) { composerFocused = false }
-                                .accessibilityIdentifier("chat.keyboard.done")
+            if dynamicTypeSize.isAccessibilitySize {
+                // At accessibility sizes the field keeps its own row; the mic and Send sit under it.
+                VStack(alignment: .leading, spacing: 8) {
+                    composerField
+                    HStack(spacing: 10) {
+                        HoldToTalk(text: draftBinding)
+                        Spacer(minLength: 0)
+                        if isRunning {
+                            Button("Stop") {
+                                Task { await chat.cancelTurn() }
+                            }
+                            .buttonStyle(ComposerButtonStyle(prominent: false))
+                            .fixedSize()
+                            .accessibilityIdentifier("chat.stop")
                         }
+                        sendButton(proxy)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(YansuTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(YansuTheme.border, lineWidth: 1)
-                    }
-                    .accessibilityIdentifier("chat.composer")
-                HoldToTalk(text: draftBinding)
-                if isRunning {
-                    Button("Stop") {
-                        Task { await chat.cancelTurn() }
-                    }
-                    .buttonStyle(ComposerButtonStyle(prominent: false))
-                    .accessibilityIdentifier("chat.stop")
                 }
-                Button("Send") {
-                    Task { await send(proxy) }
+            } else {
+                HStack(alignment: .bottom, spacing: 10) {
+                    composerField
+                    HoldToTalk(text: draftBinding)
+                    if isRunning {
+                        Button("Stop") {
+                            Task { await chat.cancelTurn() }
+                        }
+                        .buttonStyle(ComposerButtonStyle(prominent: false))
+                        .fixedSize()
+                        .accessibilityIdentifier("chat.stop")
+                    }
+                    sendButton(proxy)
                 }
-                .buttonStyle(ComposerButtonStyle(prominent: true))
-                .disabled(!sendable || isRunning)
-                .accessibilityIdentifier("chat.send")
             }
         }
         .padding(.horizontal, YansuTheme.gutter)
@@ -752,6 +750,51 @@ struct ChatView: View {
         // has focus the bar steps aside (RootView), and the composer sits on the keyboard.
         .padding(.bottom, 10 + tabChromeHeight)
         .background(YansuTheme.background)
+    }
+
+    private var composerField: some View {
+        // Our own prompt, in the same stack as the field, so it wraps at the largest sizes instead of truncating to
+        // "Message Isof…". The stack is the field's box, so the box grows with the prompt and the text.
+        ZStack(alignment: .topLeading) {
+            TextField("", text: draftBinding, axis: .vertical)
+                .accessibilityLabel(String(localized: "Message Isoform"))
+                .id(composerIdentity)
+                .font(.body)
+                .lineLimit(1...5)
+                .focused($composerFocused)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button(String(localized: "Done")) { composerFocused = false }
+                            .accessibilityIdentifier("chat.keyboard.done")
+                    }
+                }
+                .accessibilityIdentifier("chat.composer")
+            if draftBinding.wrappedValue.isEmpty {
+                Text("Message Isoform")
+                    .font(.body)
+                    .foregroundStyle(YansuTheme.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .allowsHitTesting(false)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(YansuTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(YansuTheme.border, lineWidth: 1)
+        }
+    }
+
+    private func sendButton(_ proxy: ScrollViewProxy) -> some View {
+        Button("Send") {
+            Task { await send(proxy) }
+        }
+        .buttonStyle(ComposerButtonStyle(prominent: true))
+        .fixedSize()
+        .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRunning)
+        .accessibilityIdentifier("chat.send")
     }
 
     /// The message leaves the composer at once and shows as Sending; a refused one comes back to the composer.

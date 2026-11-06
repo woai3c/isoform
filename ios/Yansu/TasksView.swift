@@ -1042,6 +1042,7 @@ struct TasksView: View {
 }
 
 struct TaskRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -1159,15 +1160,17 @@ struct TaskRow: View {
         let line = TaskThreadCopy.rowLine(task, locale: locale)
         return VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(task.title)
-                        .font(compact ? .subheadline.weight(.semibold) : .body.weight(.semibold))
-                        .foregroundStyle(YansuTheme.ink)
-                        .lineLimit(compact ? 1 : 2)
+                    // The unread dot leads the title at every size, so a wrapped title never pushes it away.
                     if task.unread == true {
                         Circle().fill(YansuTheme.accent).frame(width: 8, height: 8)
                             .accessibilityLabel(String(localized: "New"))
                             .accessibilityIdentifier("tasks.row.unread.\(task.id)")
                     }
+                    Text(task.title)
+                        .font(compact ? .subheadline.weight(.semibold) : .body.weight(.semibold))
+                        .foregroundStyle(YansuTheme.ink)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : (compact ? 1 : 2))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 if !compact {
                     Group {
