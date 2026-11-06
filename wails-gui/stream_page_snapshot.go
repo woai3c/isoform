@@ -35,7 +35,7 @@ const (
 	streamPageLaunchDelay     = 30 * time.Second
 	streamPageEventDelay      = time.Second
 	streamPageDefaultLimit    = 50
-	streamPageSnapshotFormat  = 1
+	streamPageSnapshotFormat  = 2
 )
 
 // streamPageWakeEvents are the events that say a stream changed. They wake a
@@ -59,6 +59,9 @@ type streamPageSnapshot struct {
 	Deep      string             `json:"deep"`
 	SavedAt   time.Time          `json:"savedAt"`
 	Page      StreamItemPageData `json:"page"`
+	// Cards are the page's proactive cards as stored, before projection. A read
+	// projects them again through the live gates (stream_page_cards.go).
+	Cards []StreamItemData `json:"cards,omitempty"`
 }
 
 type streamPageReadResult struct {
@@ -81,6 +84,11 @@ type streamPageState struct {
 	// computeGate, when set, runs inside each computation; tests use it to hold a
 	// run open while more reads arrive.
 	computeGate func()
+	// cardBudget bounds the card check on one read; tests set it.
+	cardBudget time.Duration
+	// verifyQueued counts copies queued for their full check; verifyDone counts
+	// the ones a pass has finished. Equal means no check is pending or running.
+	verifyQueued, verifyDone atomic.Int64
 	// verifyKeys are copies saved since the last background pass, awaiting their
 	// full check; dueRecompute asks the next pass to recompute every page.
 	verifyKeys   map[streamPageKey]bool
@@ -100,6 +108,7 @@ func (st *streamPageState) settings() {
 		st.recomputeWait = streamPageRecomputeWait
 		st.launchDelay = streamPageLaunchDelay
 		st.eventDelay = streamPageEventDelay
+		st.cardBudget = streamPageCardBudget
 	}
 }
 
@@ -210,7 +219,7 @@ func (a *App) loadLatestStreamPage(session string, limit int) (StreamItemPageDat
 func (a *App) loadLatestStreamPageNow(key streamPageKey) (StreamItemPageData, error) {
 	st := &a.streamPages
 	st.mu.Lock()
-	versionWait, recomputeWait := st.versionWait, st.recomputeWait
+	versionWait, recomputeWait, cardBudget := st.versionWait, st.recomputeWait, st.cardBudget
 	st.mu.Unlock()
 	now := time.Now()
 	stampStart := time.Now()
@@ -218,7 +227,7 @@ func (a *App) loadLatestStreamPageNow(key streamPageKey) (StreamItemPageData, er
 	stampMs := time.Since(stampStart).Milliseconds()
 	if stamp == "" {
 		page, _, err := a.computeLatestStreamPage(key, "")
-		logStreamPage("recompute", "no-stamp", stampMs, 0, time.Since(now).Milliseconds())
+		logStreamPage("recompute", "no-stamp", stampMs, 0, time.Since(now).Milliseconds(), 0, 0)
 		return page, err
 	}
 	versionStart := time.Now()
@@ -227,19 +236,40 @@ func (a *App) loadLatestStreamPageNow(key streamPageKey) (StreamItemPageData, er
 	cancel()
 	versionMs := time.Since(versionStart).Milliseconds()
 	saved, reason := readStreamPageSnapshot(key, stamp)
-	if reason == "" && streamPageHoldsProactiveCard(saved.Page) {
-		// Never served from a copy: see streamPageHoldsProactiveCard.
-		reason = "proactive-card"
+	cards, cardCheckMs := 0, int64(0)
+	if reason == "" {
+		cards = streamPageCardCount(saved.Page)
+	}
+	if reason == "" && cards > 0 {
+		// A copy with cards is served only when the version holds and every card
+		// is confirmed by the live gates within the card budget (stream_page_cards.go).
+		if verErr == nil && saved.Version == version {
+			page, ms, why := a.confirmProactiveCards(key, saved, now, cardBudget)
+			cardCheckMs = ms
+			if why == "" {
+				a.scheduleStreamPageRefresh(a.streamPageDueFor(now, saved.SavedAt))
+				logStreamPage("copy", "version-held", stampMs, versionMs, 0, cards, cardCheckMs)
+				return page, nil
+			}
+			reason = why
+		} else {
+			reason = "proactive-card"
+		}
+		if reason != "" {
+			// Not served: drop the copy now, so a withdrawn card's raw row does
+			// not stay in the file until the next save.
+			removeStreamPageCopy(key)
+		}
 	}
 	switch {
 	case reason == "" && verErr == nil && saved.Version == version:
 		a.scheduleStreamPageRefresh(a.streamPageDueFor(now, saved.SavedAt))
-		logStreamPage("copy", "version-held", stampMs, versionMs, 0)
+		logStreamPage("copy", "version-held", stampMs, versionMs, 0, 0, 0)
 		return saved.Page, nil
 	case reason == "" && verErr != nil:
 		// The version could not be read in time: serve the copy and refresh.
 		a.scheduleStreamPageRefresh(now)
-		logStreamPage("copy", "version-timeout", stampMs, versionMs, 0)
+		logStreamPage("copy", "version-timeout", stampMs, versionMs, 0, 0, 0)
 		return saved.Page, nil
 	case reason != "":
 		// No usable copy: compute before the first paint, then refresh later.
@@ -249,7 +279,7 @@ func (a *App) loadLatestStreamPageNow(key streamPageKey) (StreamItemPageData, er
 			a.scheduleStreamVerify(key)
 		}
 		a.scheduleStreamPageRefresh(a.streamPageDueFor(now, time.Time{}))
-		logStreamPage("recompute", reason, stampMs, versionMs, time.Since(computeStart).Milliseconds())
+		logStreamPage("recompute", reason, stampMs, versionMs, time.Since(computeStart).Milliseconds(), cards, cardCheckMs)
 		return page, err
 	}
 	// The copy is from an older version: recompute under a short deadline. On
@@ -270,23 +300,23 @@ func (a *App) loadLatestStreamPageNow(key streamPageKey) (StreamItemPageData, er
 	select {
 	case r := <-done:
 		if r.err == nil {
-			logStreamPage("recompute", "version-changed", stampMs, versionMs, time.Since(computeStart).Milliseconds())
+			logStreamPage("recompute", "version-changed", stampMs, versionMs, time.Since(computeStart).Milliseconds(), 0, 0)
 			return r.page, nil
 		}
 		a.scheduleStreamPageRefresh(now)
-		logStreamPage("copy", "recompute-error", stampMs, versionMs, time.Since(computeStart).Milliseconds())
+		logStreamPage("copy", "recompute-error", stampMs, versionMs, time.Since(computeStart).Milliseconds(), 0, 0)
 		return saved.Page, nil
 	case <-time.After(recomputeWait):
 		a.scheduleStreamPageRefresh(now)
-		logStreamPage("copy", "recompute-timeout", stampMs, versionMs, time.Since(computeStart).Milliseconds())
+		logStreamPage("copy", "recompute-timeout", stampMs, versionMs, time.Since(computeStart).Milliseconds(), 0, 0)
 		return saved.Page, nil
 	}
 }
 
 // logStreamPage is the one line per read that says whether the saved copy was
 // served, and why not. The timings show where a slow read spent its time.
-func logStreamPage(served, reason string, stampMs, versionMs, computeMs int64) {
-	log.Printf("[stream-page] served=%s reason=%s stamp_ms=%d version_ms=%d compute_ms=%d", served, reason, stampMs, versionMs, computeMs)
+func logStreamPage(served, reason string, stampMs, versionMs, computeMs int64, cards int, cardCheckMs int64) {
+	log.Printf("[stream-page] served=%s reason=%s stamp_ms=%d version_ms=%d compute_ms=%d cards=%d card_check_ms=%d", served, reason, stampMs, versionMs, computeMs, cards, cardCheckMs)
 }
 
 // streamPageStamp is the privacy stamp a saved first page is made under: the
@@ -337,6 +367,7 @@ func (a *App) computeLatestStreamPage(key streamPageKey, stamp string) (StreamIt
 	if err != nil {
 		return StreamItemPageData{}, false, err
 	}
+	cardsRaw := rawProactiveCards(page.Items)
 	a.projectStreamItems(page.Items)
 	release, err := a.projectMainChatView(ctx, key.session, page.Items, time.Now())
 	if err != nil {
@@ -346,7 +377,7 @@ func (a *App) computeLatestStreamPage(key streamPageKey, stamp string) (StreamIt
 	if verr != nil || stamp == "" || a.streamPageStamp(ctx) != stamp {
 		return page, false, nil
 	}
-	_ = writeStreamPageSnapshot(key, streamPageSnapshot{Format: streamPageSnapshotFormat, Version: version, ReadStamp: stamp, SavedAt: time.Now(), Page: page})
+	_ = writeStreamPageSnapshot(key, streamPageSnapshot{Format: streamPageSnapshotFormat, Version: version, ReadStamp: stamp, SavedAt: time.Now(), Page: page, Cards: cardsRaw})
 	return page, true, nil
 }
 
@@ -379,6 +410,9 @@ func (a *App) queueStreamWork(at time.Time, recompute bool, verify *streamPageKe
 	if verify != nil {
 		if st.verifyKeys == nil {
 			st.verifyKeys = map[streamPageKey]bool{}
+		}
+		if !st.verifyKeys[*verify] {
+			st.verifyQueued.Add(1)
 		}
 		st.verifyKeys[*verify] = true
 		if st.verifyAt.IsZero() || at.Before(st.verifyAt) {
@@ -433,6 +467,7 @@ func (a *App) runStreamPageRefreshes() {
 		}
 		for key := range verify {
 			a.verifyStreamPageCopy(key)
+			st.verifyDone.Add(1)
 		}
 	}
 }
@@ -502,19 +537,4 @@ func (a *App) noteStreamPageEvent(eventName string) {
 		st.mu.Unlock()
 		a.scheduleStreamPageRefresh(time.Now().Add(delay))
 	}
-}
-
-// streamPageHoldsProactiveCard reports whether a saved page holds a proactive
-// card. Its words come from calendar, reminders and meeting notes. Withdrawing
-// one of those (a revoked permission, a deleted note) moves neither the privacy
-// stamp nor the stream item version, so such a page is read live, which
-// applies the source gates on every read. A copy would keep the withdrawn words
-// on the desktop after a restart.
-func streamPageHoldsProactiveCard(page StreamItemPageData) bool {
-	for _, item := range page.Items {
-		if item.ToolName == mainChatProactiveTool {
-			return true
-		}
-	}
-	return false
 }

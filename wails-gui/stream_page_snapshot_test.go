@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -212,6 +213,9 @@ func TestAWithdrawalDropsASavedCopyThatHoldsABriefLead(t *testing.T) {
 			t.Cleanup(func() { pii.SetUserSensitiveApps(previous) })
 			a, session := streamPageTestApp(t)
 			latestPage(t, a, session)
+			// The read that saved the copy queued its full check. Plant only once
+			// that check has finished, or it rewrites the copy over the planted one.
+			waitStreamPageVerified(t, a)
 			key := streamPageKey{session: session, limit: 50}
 			stamp := a.streamPageStamp(t.Context())
 			snap, reason := readStreamPageSnapshot(key, stamp)
@@ -379,5 +383,95 @@ func TestBackgroundRefreshVerifiesItsCopy(t *testing.T) {
 	}
 	if !pageHas(page, "one") {
 		t.Fatal("the served copy lost its item")
+	}
+}
+
+// waitStreamPageVerified waits until every queued full check has finished.
+func waitStreamPageVerified(t *testing.T, a *App) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for a.streamPages.verifyDone.Load() != a.streamPages.verifyQueued.Load() {
+		if time.Now().After(deadline) {
+			t.Fatal("the copy's full check did not finish")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+// appendStreamPageCard adds a proactive card to the chat, as a card row is stored.
+func appendStreamPageCard(t *testing.T, a *App, session, id string) {
+	t.Helper()
+	card := mainChatProactive{MomentID: id, Kind: "decision_due", State: "pending", ExpiresAt: time.Now().Add(time.Hour).UnixMilli()}
+	if _, err := a.store.AppendStreamItem(t.Context(), session, storage.StreamItemRow{ID: id, Kind: "system", ToolName: mainChatProactiveTool, ToolInput: mainChatViewPayload(t, card), CreatedAt: time.Now().UnixMilli()}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A copy that holds a card is served without a computation only when the live
+// gates confirm the card within the card budget.
+func TestProactiveCardCopyIsServedWhenItsChecksFinish(t *testing.T) {
+	a, session := streamPageTestApp(t)
+	appendStreamPageCard(t, a, session, "card-served")
+	latestPage(t, a, session)
+	waitStreamPageVerified(t, a)
+	computes := a.streamPages.computes.Load()
+	page, err := a.LoadStreamItemsPage(session, -1, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := a.streamPages.computes.Load(); n != computes {
+		t.Fatalf("a confirmed card copy recomputed the page (%d computes)", n-computes)
+	}
+	if !pageHas(page, "card-served") {
+		t.Fatal("the confirmed card is missing from the served page")
+	}
+}
+
+// When the card check cannot finish in its budget, the read recomputes; the
+// copy's card is never served unconfirmed.
+func TestProactiveCardCopyRecomputesWhenTheCheckRunsOut(t *testing.T) {
+	a, session := streamPageTestApp(t)
+	appendStreamPageCard(t, a, session, "card-late")
+	latestPage(t, a, session)
+	waitStreamPageVerified(t, a)
+	a.streamPages.mu.Lock()
+	a.streamPages.cardBudget = 0
+	a.streamPages.mu.Unlock()
+	computes := a.streamPages.computes.Load()
+	if _, err := a.LoadStreamItemsPage(session, -1, 50); err != nil {
+		t.Fatal(err)
+	}
+	if n := a.streamPages.computes.Load(); n != computes+1 {
+		t.Fatalf("a card check that ran out of time did not recompute (%d computes)", n-computes)
+	}
+}
+
+// A copy whose card the live gates do not confirm is deleted before the page is
+// recomputed. The copy's raw card row must not stay on disk until the next save.
+func TestProactiveCardCopyIsDeletedBeforeTheRecompute(t *testing.T) {
+	a, session := streamPageTestApp(t)
+	appendStreamPageCard(t, a, session, "card-unconfirmed")
+	latestPage(t, a, session)
+	waitStreamPageVerified(t, a)
+	path, err := streamPageFile(streamPageKey{session: session, limit: 50})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatal("no copy was saved with the card")
+	}
+	var onDisk atomic.Bool
+	a.streamPages.mu.Lock()
+	a.streamPages.cardBudget = 0
+	a.streamPages.computeGate = func() {
+		_, statErr := os.Stat(path)
+		onDisk.Store(statErr == nil)
+	}
+	a.streamPages.mu.Unlock()
+	if _, err := a.LoadStreamItemsPage(session, -1, 50); err != nil {
+		t.Fatal(err)
+	}
+	if onDisk.Load() {
+		t.Fatal("the copy with an unconfirmed card was still on disk when the page was recomputed")
 	}
 }
