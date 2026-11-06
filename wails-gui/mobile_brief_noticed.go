@@ -1,7 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"runtime"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -56,6 +61,7 @@ func (lookup *mobileBriefNoticedLookup) suggestion(id string) (NoticedSuggestion
 	items, seen := lookup.days[target.Date]
 	if !seen {
 		items = make(map[string]NoticedSuggestion)
+		countNoticedRead()
 		day, err := lookup.read(target.Date)
 		if err == nil {
 			for _, item := range day {
@@ -84,6 +90,7 @@ func collectMobileBriefNoticed(a *App, in *mobileBriefInput) {
 	day := in.AsOf.In(mobileBriefInputLocation(*in))
 	for offset := 0; offset >= -1; offset-- {
 		date := day.AddDate(0, 0, offset).Format("2006-01-02")
+		countNoticedRead()
 		items, err := a.GetDayNoticed(date)
 		if err != nil {
 			continue
@@ -163,4 +170,79 @@ func (a *App) mobileBriefPhoneProjection(brief MobileBriefV1) (MobileBriefV1, []
 		}
 	}
 	return brief, desktopOffers
+}
+
+// noticedReadCounts counts the GetDayNoticed reads that reach the store, by the
+// chain of brief functions that made them. One line a minute says which read
+// path a burst came from, so the real log can name it. Diagnostic only.
+var noticedReadCounts = struct {
+	sync.Mutex
+	byChain map[string]int
+	since   time.Time
+}{byChain: map[string]int{}}
+
+const noticedReadLogEvery = time.Minute
+
+func countNoticedRead() {
+	chain := noticedReadChain()
+	now := time.Now()
+	noticedReadCounts.Lock()
+	defer noticedReadCounts.Unlock()
+	if noticedReadCounts.since.IsZero() {
+		noticedReadCounts.since = now
+	}
+	noticedReadCounts.byChain[chain]++
+	if now.Sub(noticedReadCounts.since) >= noticedReadLogEvery {
+		logNoticedReadCounts(noticedReadCounts.byChain)
+		noticedReadCounts.byChain = map[string]int{}
+		noticedReadCounts.since = now
+	}
+}
+
+// noticedReadChain names the three callers above the read, innermost first.
+func noticedReadChain() string {
+	pcs := make([]uintptr, 8)
+	n := runtime.Callers(3, pcs)
+	frames := runtime.CallersFrames(pcs[:n])
+	var names []string
+	for len(names) < 3 {
+		frame, more := frames.Next()
+		if !strings.Contains(frame.Function, "wails-gui.") && !strings.Contains(frame.Function, "main.") {
+			if !more {
+				break
+			}
+			continue
+		}
+		name := frame.Function
+		if i := strings.LastIndex(name, "/"); i >= 0 {
+			name = name[i+1:]
+		}
+		names = append(names, strings.TrimPrefix(name, "main."))
+		if !more {
+			break
+		}
+	}
+	return strings.Join(names, "<")
+}
+
+func logNoticedReadCounts(counts map[string]int) {
+	type row struct {
+		chain string
+		n     int
+	}
+	rows := make([]row, 0, len(counts))
+	total := 0
+	for chain, n := range counts {
+		rows = append(rows, row{chain, n})
+		total += n
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].n > rows[j].n })
+	if len(rows) > 5 {
+		rows = rows[:5]
+	}
+	parts := make([]string, 0, len(rows))
+	for _, r := range rows {
+		parts = append(parts, fmt.Sprintf("%d %s", r.n, r.chain))
+	}
+	log.Printf("[noticed-pass] minute reads=%d by=%s", total, strings.Join(parts, " | "))
 }
