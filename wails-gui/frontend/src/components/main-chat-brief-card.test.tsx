@@ -6,14 +6,18 @@ import enToday from "@/i18n/locales/en/today.json";
 import { MainChatBriefCard } from "./main-chat-brief-card";
 
 const getByID = vi.hoisted(() => vi.fn());
+const handlers = vi.hoisted(() => ({} as Record<string, Array<() => void>>));
+vi.mock("@/lib/wails-shim-runtime", () => ({
+    EventsOn: (name: string, callback: () => void) => { (handlers[name] ??= []).push(callback); return () => {}; },
+}));
 vi.mock("@/lib/wails-shim-app", () => ({
     GetTodayBriefByID: (...args: unknown[]) => getByID(...args),
     GetMobileBriefAudio: vi.fn(),
     GetMobileBriefHealth: vi.fn(),
 }));
 
-function view(brief: Record<string, unknown> | null) {
-    return { brief, building: false, enabled: true, nextAt: "", nextSlot: "", empty: false, missing: [] };
+function view(brief: Record<string, unknown> | null, wordsWithheld = '') {
+    return { brief, wordsWithheld, building: false, enabled: true, nextAt: "", nextSlot: "", empty: false, missing: [] };
 }
 
 const withWords = {
@@ -24,6 +28,7 @@ const withWords = {
 
 describe("MainChatBriefCard", () => {
     beforeEach(() => {
+        for (const key of Object.keys(handlers)) delete handlers[key];
         getByID.mockReset();
         i18n.changeLanguage("en");
     });
@@ -66,37 +71,6 @@ describe("MainChatBriefCard", () => {
         finish(view(withWords));
         expect(await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" })).toBeInTheDocument();
     });
-    it('keeps the recorded title and source, hides Read it and offers Try again in copper if the brief read fails (H5)', async () => {
-        getByID.mockRejectedValue(new Error('offline'));
-        render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'morning', asOf: '2026-10-28T09:23:00Z', timezone: 'UTC' }} onOpenBrief={vi.fn()} meta={() => <span>From your brief</span>} />);
-        expect(screen.getByRole('heading', { name: 'Morning brief · 9:23 AM' })).toBeInTheDocument();
-        await screen.findByRole('alert');
-        expect(screen.getByText('From your brief')).toBeInTheDocument();
-        const alert = screen.getByRole('alert');
-        expect(alert).toHaveTextContent("Couldn't open this brief. Try again");
-        expect(alert).toHaveClass('text-copper');
-        expect(within(alert).getByRole('button', { name: 'Try again' })).toHaveClass('text-accent');
-        expect(screen.queryByRole('button', { name: 'Read it' })).toBeNull();
-        expect(screen.getByTestId('main-chat-brief-card')).not.toHaveClass('min-h-32');
-    });
-    it('recovers when a slow brief read finishes after its timeout', async () => {
-        vi.useFakeTimers();
-        try {
-            let finish!: (result: ReturnType<typeof view>) => void;
-            getByID.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
-            render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'evening', asOf: '2026-10-28T18:00:00Z', timezone: 'UTC' }} onOpenBrief={vi.fn()} />);
-            await vi.advanceTimersByTimeAsync(10000);
-            expect(screen.getByRole('alert')).toBeInTheDocument();
-            expect(finish).toBeDefined();
-            await act(async () => finish(view(withWords)));
-            expect(screen.queryByRole('alert')).toBeNull();
-            expect(screen.getByText('Quiet day. Priya is waiting on your review.')).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'Read it' })).toBeInTheDocument();
-        } finally {
-            vi.useRealTimers();
-        }
-    });
-
     it("shows the title and opening sentence, and Read it opens the brief in the card", async () => {
         getByID.mockResolvedValue(view(withWords));
         const onReadAll = vi.fn();
@@ -135,57 +109,60 @@ describe("MainChatBriefCard", () => {
         expect(screen.queryByRole("button", { name: en.mainChat.card.button.hearIt })).toBeNull();
     });
 
-    it("never shows another brief or a provisional headline when the id does not match", async () => {
-        getByID.mockResolvedValue(view({ ...withWords, briefId: "brief-9" }));
+    it("never shows another brief or a provisional headline when the id does not match; it fills in on the store's event (R40)", async () => {
+        getByID.mockResolvedValueOnce(view({ ...withWords, briefId: "brief-9" }));
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
         await waitFor(() => expect(getByID).toHaveBeenCalledWith("brief-1"));
-        expect(screen.getByRole("heading", { name: "Brief" })).toBeInTheDocument();
-        expect(await screen.findByRole("alert")).toHaveTextContent(enToday.todayBrief.pending.openFailed);
+        expect(screen.queryByText(withWords.narrative[0].text)).toBeNull();
+        expect(screen.queryByRole("alert")).toBeNull();
         getByID.mockResolvedValue(view(withWords));
-        fireEvent.click(screen.getByRole("button", { name: enToday.todayBrief.pending.tryAgain }));
+        await act(async () => { (handlers['brief:stored'] ?? []).forEach((callback) => callback()); });
         expect(await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" })).toBeInTheDocument();
     });
     it.each([
         ['en', 'Evening brief'],
         ['zh-CN', '晚间简报'],
-    ])('keeps the known title, source and actions after a failed read in %s', async (language, title) => {
+    ])('keeps the known title and source after a failed read, with no error line, in %s (R40)', async (language, title) => {
         await i18n.changeLanguage(language);
         getByID.mockRejectedValue(new Error('unavailable'));
         render(<MainChatBriefCard briefId="2026-10-30-evening" onOpenBrief={vi.fn()} meta={() => <span>source</span>} />);
         expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
-        await screen.findByRole('alert');
+        await waitFor(() => expect(getByID).toHaveBeenCalled());
         expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
         expect(screen.getByText('source')).toBeInTheDocument();
-        expect(screen.getByRole('alert')).toHaveTextContent(i18n.t('chat:mainChat.view.briefOpenFailed'));
-        expect(screen.getByRole('button', { name: i18n.t('chat:mainChat.view.retry') })).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: i18n.t('chat:mainChat.card.button.readIt') })).toBeNull();
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(screen.queryByRole('button', { name: i18n.t('chat:mainChat.view.retry') })).toBeNull();
     });
-    it('shows no brief card when the brief has nothing to open (H7)', async () => {
-        getByID.mockResolvedValue(view({ ...withWords, narrative: [], audio: undefined }));
-        const { container } = render(<MainChatBriefCard briefId="brief-1" />);
-        await waitFor(() => expect(getByID).toHaveBeenCalled());
-        await waitFor(() => expect(container.querySelector('[data-testid="main-chat-brief-card"]')).toBeNull());
+    it("Read it and Hear it appear only with the words; a held card has neither, and no reserved space (design, PR #646)", async () => {
+        getByID.mockResolvedValueOnce(view({ ...withWords, narrative: [] }, 'store_unavailable'));
+        getByID.mockResolvedValueOnce(view(withWords));
+        const { container } = render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'evening', asOf: '2026-10-28T18:00:00Z', timezone: 'UTC' }} onOpenBrief={vi.fn()} meta={() => <span>From brief</span>} />);
+        expect(await screen.findByRole('heading', { name: 'Evening brief · 6:00 PM' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: en.mainChat.card.button.readIt })).toBeNull();
+        expect(screen.queryByRole('button', { name: en.mainChat.card.button.hearIt })).toBeNull();
+        expect(container.querySelector('[data-brief-body]')).toBeNull();
+        expect(screen.getByText('From brief').compareDocumentPosition(screen.getByRole('heading')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+        await act(async () => { (handlers['app:ready'] ?? []).forEach((callback) => callback()); });
+        expect(await screen.findByRole('button', { name: en.mainChat.card.button.readIt })).toBeInTheDocument();
+        expect(screen.getByText('Quiet day. Priya is waiting on your review.')).toBeInTheDocument();
     });
-    it("opens the whole saved brief at once when Read it is pressed while it loads (today-review v1.1.19 R27)", async () => {
-        let finish!: (result: ReturnType<typeof view>) => void;
-        getByID.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
-        const open = vi.fn();
-        render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'evening', asOf: '2026-10-28T18:00:00Z', timezone: 'UTC' }} onOpenBrief={open} />);
-        fireEvent.click(screen.getByRole("button", { name: en.mainChat.card.button.readIt }));
-        expect(screen.queryByRole("button", { name: en.mainChat.card.button.readIt })).toBeNull();
-        await act(async () => finish(view({ ...withWords, narrative: [{ text: "Quiet day." }, { text: "Priya is waiting on your review." }] })));
-        expect(screen.getByText("Quiet day.")).toBeInTheDocument();
-        expect(screen.getByText("Priya is waiting on your review.")).toBeInTheDocument();
-        expect(open).not.toHaveBeenCalled();
+
+    it("a failed card puts its line under the title, before the source line, with no Read it (design, PR #646)", async () => {
+        getByID.mockResolvedValue(view({ ...withWords, narrative: [] }, 'closed_eyes'));
+        render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} meta={() => <span>From brief</span>} />);
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent(en.mainChat.card.wordsUnreadable);
+        expect(alert.compareDocumentPosition(screen.getByText('From brief')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(screen.queryByRole('button', { name: en.mainChat.card.button.readIt })).toBeNull();
+        expect(screen.queryByRole('button', { name: en.mainChat.card.button.hearIt })).toBeNull();
     });
-    it.each(["en", "zh-CN"])("says in copper that the brief couldn't open, with Try again, in %s (today-review v1.1.19 R27)", async (language) => {
+    it.each(["en", "zh-CN"])("a failed read shows no error and fills in on the store's event, in %s (R40)", async (language) => {
         await i18n.changeLanguage(language);
         getByID.mockRejectedValueOnce(new Error("unavailable")).mockResolvedValue(view(withWords));
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
-        const alert = await screen.findByRole("alert");
-        expect(alert).toHaveClass("text-copper");
-        expect(alert).toHaveTextContent(i18n.t("todayBrief.pending.openFailed", { ns: "today" }));
-        fireEvent.click(screen.getByRole("button", { name: i18n.t("todayBrief.pending.tryAgain", { ns: "today" }) }));
+        await waitFor(() => expect(getByID).toHaveBeenCalledTimes(1));
+        expect(screen.queryByRole("alert")).toBeNull();
+        await act(async () => { (handlers['app:ready'] ?? []).forEach((callback) => callback()); });
         expect(await screen.findByText(withWords.narrative[0].text)).toBeInTheDocument();
         expect(screen.queryByRole("alert")).toBeNull();
     });
@@ -197,4 +174,46 @@ describe("MainChatBriefCard", () => {
         fireEvent.click(screen.getByRole("button", { name: en.mainChat.card.button.readIt }));
         expect(onOpenBrief).toHaveBeenCalledTimes(1);
     });
+
+    it("keeps the title and source when a read fails while Isoform is still trying, with no error line (R40)", async () => {
+        getByID.mockRejectedValue(new Error("offline"));
+        render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'morning', asOf: '2026-10-28T09:23:00Z', timezone: 'UTC' }} onOpenBrief={vi.fn()} meta={() => <span>From your brief</span>} />);
+        expect(screen.getByRole('heading', { name: 'Morning brief · 9:23 AM' })).toBeInTheDocument();
+        await waitFor(() => expect(getByID).toHaveBeenCalled());
+        expect(screen.getByText('From your brief')).toBeInTheDocument();
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    });
+
+    it("a held card shows its title and time with no body and no error, and fills in when the store opens (R40)", async () => {
+        getByID.mockResolvedValueOnce(view({ ...withWords, narrative: [] }, 'store_unavailable'));
+        getByID.mockResolvedValueOnce(view(withWords));
+        render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
+        expect(await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" })).toBeInTheDocument();
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(screen.queryByText('Quiet day. Priya is waiting on your review.')).toBeNull();
+        await act(async () => { (handlers['app:ready'] ?? []).forEach((callback) => callback()); });
+        expect(await screen.findByText('Quiet day. Priya is waiting on your review.')).toBeInTheDocument();
+        expect(getByID).toHaveBeenCalledTimes(2);
+    });
+
+    it("says Couldn't read this brief. only once the store is open and the words still can't be read (R40)", async () => {
+        getByID.mockResolvedValue(view({ ...withWords, narrative: [] }, 'closed_eyes'));
+        render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent(en.mainChat.card.wordsUnreadable);
+        expect(alert).toHaveClass('text-copper');
+        expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    });
+
+    it("never waits on a timer: a slow read that finishes later fills the card in", async () => {
+        let finish!: (result: ReturnType<typeof view>) => void;
+        getByID.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+        render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'evening', asOf: '2026-10-28T18:00:00Z', timezone: 'UTC' }} onOpenBrief={vi.fn()} />);
+        await waitFor(() => expect(getByID).toHaveBeenCalled());
+        expect(screen.queryByRole('alert')).toBeNull();
+        await act(async () => finish(view(withWords)));
+        expect(screen.getByText('Quiet day. Priya is waiting on your review.')).toBeInTheDocument();
+    });
+
 });

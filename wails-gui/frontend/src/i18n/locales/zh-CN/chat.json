@@ -400,7 +400,8 @@
                 "thatsMe": "是我",
                 "notQuite": "不太对",
                 "hearIt": "听一听"
-            }
+            },
+            "wordsUnreadable": "无法读取这份简报。"
         },
         "relativeDay": {
             "today": "今天",

@@ -400,7 +400,8 @@
                 "thatsMe": "That's me",
                 "notQuite": "Not quite",
                 "hearIt": "Hear it"
-            }
+            },
+            "wordsUnreadable": "Couldn't read this brief."
         },
         "relativeDay": {
             "today": "today",

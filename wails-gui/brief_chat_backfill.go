@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"wails-gui/internal/engagement"
 	"wails-gui/storage"
@@ -55,19 +56,31 @@ func (a *App) dedupeBriefChatCards(ctx context.Context) bool {
 	if err != nil {
 		return false
 	}
-	kept := map[string]bool{}
+	// A card that carries text outranks an empty one; otherwise the earliest
+	// stays. Nothing is deleted until every brief has its card chosen.
+	keep := map[string]storage.StreamItemRow{}
+	var drop []string
 	for _, row := range rows {
 		briefID := proactiveCardBriefID(row)
 		if briefID == "" {
 			continue
 		}
-		if kept[briefID] {
-			if err := a.store.DeleteStreamItemByID(ctx, row.ID); err != nil {
-				return false
-			}
+		current, seen := keep[briefID]
+		if !seen {
+			keep[briefID] = row
 			continue
 		}
-		kept[briefID] = true
+		if strings.TrimSpace(current.Content) == "" && strings.TrimSpace(row.Content) != "" {
+			drop = append(drop, current.ID)
+			keep[briefID] = row
+			continue
+		}
+		drop = append(drop, row.ID)
+	}
+	for _, id := range drop {
+		if err := a.store.DeleteStreamItemByID(ctx, id); err != nil {
+			return false
+		}
 	}
 	return a.store.SetUIState(ctx, briefChatCardDedupeKey, "true") == nil
 }

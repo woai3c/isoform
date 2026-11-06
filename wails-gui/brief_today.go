@@ -28,7 +28,10 @@ type TodayDailySummary struct {
 
 // TodayBriefView is Today's desktop response, not a phone document.
 type TodayBriefView struct {
-	NothingNew    bool                `json:"nothingNew,omitempty"`
+	NothingNew bool `json:"nothingNew,omitempty"`
+	// WordsWithheld names why a brief read has no words: store_unavailable while a
+	// store is still opening, or another reason. Empty when the words are there.
+	WordsWithheld string              `json:"wordsWithheld,omitempty"`
 	Quiet         bool                `json:"quiet,omitempty"`
 	QuietSince    string              `json:"quietSince,omitempty"`
 	QuietScreens  *int                `json:"quietScreens,omitempty"`
@@ -351,9 +354,10 @@ func (a *App) GetTodayBriefByID(briefID string) (TodayBriefView, error) {
 	}
 	var brief MobileBriefV1
 	var ok bool
+	var withheld mobileBriefWithholding
 	if service, isService := svc.(*mobileBriefService); isService && service != nil {
 		var err error
-		if brief, ok, err = service.finishedBrief(briefID); err != nil {
+		if brief, withheld, ok, err = service.finishedBriefWithholding(briefID); err != nil {
 			return TodayBriefView{}, err
 		}
 	} else {
@@ -386,6 +390,9 @@ func (a *App) GetTodayBriefByID(briefID string) (TodayBriefView, error) {
 	}
 	brief = mobileBriefWithoutStartedEventQuestion(brief, now)
 	view := todayBriefView(selectedAt, loc, brief, true, svc.Health(), building, missing)
+	if !mobileBriefHasWrittenText(brief) {
+		view.WordsWithheld = withheld.Reason
+	}
 	view.BriefRun = todayBriefRecordedRun(svc, brief.BriefID)
 	view.WeekAnswer = a.todayWeekAnswer(brief, now)
 	view.ClosingAnswer = a.todayClosingAnswer(brief)

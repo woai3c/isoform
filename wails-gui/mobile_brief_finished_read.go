@@ -896,12 +896,20 @@ func (s *mobileBriefService) storedSource(briefID string) (MobileBriefV1, bool) 
 
 // finishedBrief is GetMobileBrief from the sealed read.
 func (s *mobileBriefService) finishedBrief(briefID string) (MobileBriefV1, bool, error) {
+	brief, _, ok, err := s.finishedBriefWithholding(briefID)
+	return brief, ok, err
+}
+
+// finishedBriefWithholding is finishedBrief with the reason the words were held
+// back, when they were (R40): a store still opening is held; anything else is
+// withheld for good.
+func (s *mobileBriefService) finishedBriefWithholding(briefID string) (MobileBriefV1, mobileBriefWithholding, bool, error) {
 	source, ok := s.storedSource(briefID)
 	if !ok {
-		return MobileBriefV1{}, false, nil
+		return MobileBriefV1{}, mobileBriefWithholding{}, false, nil
 	}
-	brief, err := s.finishedRead(source)
-	return brief, err == nil, err
+	brief, withheld, err := s.finishedReadWithholding(source)
+	return brief, withheld, err == nil, err
 }
 
 // A live row leaving a template brief hides its recording on this read only

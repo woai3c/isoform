@@ -3,6 +3,7 @@ import type React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { GetTodayBriefByID, type MobileBriefDocument } from '@/lib/wails-shim-app';
+import { EventsOn } from '@/lib/wails-shim-runtime';
 import { toggleBriefPlayback, useBriefPlayback } from '@/lib/brief-audio';
 import { briefHasWords, briefKind, briefTitle } from '@/lib/brief-title';
 import { mainChatBriefRelativeText } from '@/lib/main-chat-brief-relative';
@@ -29,8 +30,8 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead:
     const { t, i18n } = useTranslation('chat');
     const { t: tToday } = useTranslation('today');
     const [brief, setBrief] = useState<MobileBriefDocument | null>(null);
-    const [failed, setFailed] = useState(false);
-    const [attempt, setAttempt] = useState(0);
+    // Why the words are held back, from the read (R40): store_unavailable while a store opens.
+    const [wordsWithheld, setWordsWithheld] = useState('');
     const [reading, setReading] = useState(false);
     const [clock, setClock] = useState(() => new Date());
     useEffect(() => {
@@ -39,24 +40,30 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead:
     }, []);
     const playback = useBriefPlayback(briefId);
 
+    // The card reads its words when it opens, and again when the store opens or a
+    // brief is stored: on those events, never on a timer. A read that fails while
+    // Isoform is still trying shows nothing; the next event reads again (R40).
     useEffect(() => {
         let live = true;
-        const timeout = window.setTimeout(() => { if (live) setFailed(true); }, 10000);
-        // A retry keeps the lines already on the card (chat-review v1.0.10 H5).
+        const read = () => {
+            if (!live) return;
+            Promise.resolve()
+                .then(() => GetTodayBriefByID(briefId))
+                .then((view) => {
+                    // The id is the one the card names, never a fallback brief.
+                    if (!live || view?.brief?.briefId !== briefId) return;
+                    setBrief(view.brief);
+                    setWordsWithheld(view.wordsWithheld ?? '');
+                })
+                .catch(() => {});
+        };
+        // A new brief id starts empty, and a retry keeps the lines already shown.
         setBrief((previous) => (previous?.briefId === briefId ? previous : null));
-        setFailed(false);
-        Promise.resolve()
-            .then(() => GetTodayBriefByID(briefId))
-            .then((view) => {
-                // The id is the one the card names, never a fallback brief.
-                if (!live) return;
-                window.clearTimeout(timeout);
-                if (view?.brief?.briefId === briefId) { setBrief(view.brief); setFailed(false); }
-                else setFailed(true);
-            })
-            .catch(() => { if (live) { window.clearTimeout(timeout); setFailed(true); } });
-        return () => { live = false; window.clearTimeout(timeout); };
-    }, [briefId, attempt]);
+        setWordsWithheld('');
+        read();
+        const offs = [EventsOn('app:ready', read), EventsOn('brief:stored', read)];
+        return () => { live = false; offs.forEach((off) => off()); };
+    }, [briefId]);
     useEffect(() => setReading(false), [briefId]);
 
     const language = i18n.resolvedLanguage ?? i18n.language;
@@ -70,6 +77,10 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead:
     const changedWords = current?.narrative?.some((paragraph, index) => paragraph.text?.trim() !== projected[index]) ?? false;
     const paragraphs = projected.filter(Boolean);
     // Until the brief is read, the words that came with the card stand in.
+    // Held: a store still opening withholds the words, so the card waits for its event.
+    // Unreadable: the words are missing once nothing is opening (R40).
+    const held = !!current && paragraphs.length === 0 && wordsWithheld === 'store_unavailable';
+    const unreadable = !!current && paragraphs.length === 0 && !held;
     const lead = current ? (paragraphs[0] ?? '') : (leadWithCard ?? '');
     // Read it opens the brief in the card (§5), not on Today.
     // The week's brief has its own sections beyond the words; it opens on Today.
@@ -79,36 +90,24 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead:
         if (reading && week && onOpenBrief) { setReading(false); onOpenBrief(); }
     }, [reading, week, onOpenBrief]);
     // A recording never plays without its words.
-    const playable = !failed && !changedWords && briefHasWords(current) && !!current?.audio && current.audio.bytes > 0;
-    const canRead = !failed && !reading && (!current || paragraphs.length > 0 || !!onOpenBrief);
-    // Every brief card has Read it or the failure line; one with nothing to open is not shown (H7).
-    if (current && !failed && paragraphs.length === 0 && !onOpenBrief) return null;
+    const playable = !changedWords && briefHasWords(current) && !!current?.audio && current.audio.bytes > 0;
+    // Read it and Hear it appear with the words, never on a held or failed card (design, PR #646).
+    const canRead = !reading && paragraphs.length > 0;
 
     return (
-        <div className="flex flex-col gap-2" data-testid="main-chat-brief-card" aria-busy={!current && !failed}>
+        <div className="flex flex-col gap-2" data-testid="main-chat-brief-card" aria-busy={!current}>
             <h3 className="break-words text-[15px] font-semibold leading-snug text-ink">{title}</h3>
-            {/* The body holds one line from the first paint while its words are
-                missing, so they arriving do not push the card below. A failed
-                read has no words and holds nothing. */}
+            {/* No reserved space: a held or failed card has no body, so the source
+                line sits right under the title (design, PR #646). */}
             {reading
                 ? paragraphs.map((text, index) => <p key={index} className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{text}</p>)
-                : (lead || !failed) && (
-                    // One line is held while the words are still missing; it is never three.
-                    <div className="min-h-[21px]" data-brief-body>
-                        {lead && <p className="line-clamp-3 whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{lead}</p>}
-                    </div>
-                )}
+                : lead && <p data-brief-body className="line-clamp-3 whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{lead}</p>}
+            {/* A failed read says so where the words would be, before the source line. */}
+            {unreadable && (
+                <p role="alert" className="text-[13px] text-copper" data-brief-unreadable>{t('mainChat.card.wordsUnreadable')}</p>
+            )}
             {/* The source line comes from the message, so it renders while the brief loads. */}
             {meta?.(current)}
-            {failed && (
-                // A brief that can't open says so in copper; Try again is the accent and Read it hides (H5).
-                <p role="alert" className="text-[13px] text-copper" data-brief-open-failed>
-                    {t('mainChat.view.briefOpenFailed')}{' '}
-                    <button type="button" className="font-medium text-accent hover:underline focus-visible:underline focus-visible:outline-none" onClick={() => setAttempt((value) => value + 1)}>
-                        {t('mainChat.view.retry')}
-                    </button>
-                </p>
-            )}
             {(playable || canRead || trailing) && <div className="flex flex-wrap items-center gap-2">
                 {playable && (
                     <Button
@@ -131,7 +130,7 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead:
                         aria-expanded={reading}
                         onClick={() => {
                             if (current) return paragraphs.length > 0 && !(week && onOpenBrief) ? setReading(true) : onOpenBrief?.();
-                            return failed && onOpenBrief ? onOpenBrief() : setReading(true);
+                            return setReading(true);
                         }}
                     >
                         {t('mainChat.card.button.readIt')}

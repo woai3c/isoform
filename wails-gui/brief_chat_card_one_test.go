@@ -90,3 +90,31 @@ func TestBriefChatCardRepairKeepsOneCardPerBrief(t *testing.T) {
 		t.Fatalf("a second repair changed the cards: %d", len(again))
 	}
 }
+
+// R40 repair: when a brief has an empty card and a later card that carries
+// text, the card with text is kept, so a repair never drops the one with words.
+func TestBriefChatCardRepairKeepsTheCardWithText(t *testing.T) {
+	rig := newEngagementTestRig(t)
+	app := &App{store: rig.store, engagement: rig.svc, eventBroadcaster: NewEventBroadcaster()}
+	ctx := context.Background()
+	main, err := app.ensureMainChat(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 11, 6, 6, 52, 0, 0, time.UTC)
+	post := func(momentID, content string, when time.Time) {
+		t.Helper()
+		payload, _ := json.Marshal(map[string]string{"kind": "brief_ready", "briefId": "2026-11-06-morning", "momentId": momentID})
+		app.appendMainChatItem(ctx, main.LocalID, storage.StreamItemRow{ID: "proactive:" + momentID, Kind: "system", Content: content,
+			ToolName: mainChatProactiveTool, ToolInput: string(payload), CreatedAt: when.UnixMilli()}, mainChatSourceEngagement)
+	}
+	post("empty", "", at)
+	post("text", "Your morning brief is ready.", at.Add(3*time.Hour))
+	if !app.dedupeBriefChatCards(ctx) {
+		t.Fatal("the repair did not complete")
+	}
+	cards := mainChatStructuredRows(t, app, mainChatProactiveTool)
+	if len(cards) != 1 || cards[0].ID != "proactive:text" {
+		t.Fatalf("after repair = %+v, want the card that carries text", cards)
+	}
+}
