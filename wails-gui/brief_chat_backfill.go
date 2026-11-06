@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 
 	"wails-gui/internal/engagement"
 	"wails-gui/storage"
@@ -18,11 +19,69 @@ const firstWeekDiscoveryReason = "first week discovery"
 // Chat card, once. It posts the card only: it never pushes, never buzzes and
 // never changes the moment's state. Each card keeps the time its brief was ready.
 func (a *App) backfillBriefChatCards(ctx context.Context) {
+	a.dedupeBriefChatCards(ctx)
 	svc, ok := a.mobileBriefSource().(*mobileBriefService)
 	if !ok || svc == nil || svc.store == nil {
 		return
 	}
 	a.runBriefChatCardBackfill(ctx, svc.store.load)
+}
+
+// briefChatCardDedupeKey records that the saved brief cards hold one card per
+// brief (R40). Earlier launches posted a card per moment, so one brief could
+// have several.
+const briefChatCardDedupeKey = "brief-chat-cards-dedupe-v1"
+
+// dedupeBriefChatCards keeps the earliest Chat card of each brief and deletes
+// the copies, once. It runs at engagement start and records completion only
+// after the deletes, so a failed launch retries. A card without a brief id is
+// left alone.
+func (a *App) dedupeBriefChatCards(ctx context.Context) bool {
+	if a == nil || a.store == nil {
+		return false
+	}
+	done, err := a.store.GetUIState(ctx, briefChatCardDedupeKey)
+	if err != nil {
+		return false
+	}
+	if done == "true" {
+		return true
+	}
+	main, err := a.ensureMainChat(ctx)
+	if err != nil {
+		return false
+	}
+	rows, err := a.store.ListProactiveBriefCards(ctx, main.LocalID)
+	if err != nil {
+		return false
+	}
+	kept := map[string]bool{}
+	for _, row := range rows {
+		briefID := proactiveCardBriefID(row)
+		if briefID == "" {
+			continue
+		}
+		if kept[briefID] {
+			if err := a.store.DeleteStreamItemByID(ctx, row.ID); err != nil {
+				return false
+			}
+			continue
+		}
+		kept[briefID] = true
+	}
+	return a.store.SetUIState(ctx, briefChatCardDedupeKey, "true") == nil
+}
+
+// proactiveCardBriefID reads the brief a stored card belongs to, or "" when
+// the payload has none.
+func proactiveCardBriefID(row storage.StreamItemRow) string {
+	var payload struct {
+		BriefID string `json:"briefId"`
+	}
+	if json.Unmarshal([]byte(row.ToolInput), &payload) != nil {
+		return ""
+	}
+	return payload.BriefID
 }
 
 // runBriefChatCardBackfill posts the missing cards and records completion only

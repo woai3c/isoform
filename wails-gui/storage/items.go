@@ -237,6 +237,50 @@ func (s *Store) FindProactiveStreamItem(ctx context.Context, sessionLocalID, mom
 	return scanStreamItemRow(s.db.QueryRowContext(ctx, findProactiveChildSQL, sessionLocalID, momentID))
 }
 
+const findProactiveBriefCardSQL = `
+	SELECT id, session_local_id, kind, content, tool_name, tool_input, tool_use_id, run_id, session_id, sort_order, created_at, images, automation_context, files
+	FROM stream_items
+	WHERE session_local_id = ? AND tool_name = 'main_chat_proactive'
+		AND json_extract(CASE WHEN json_valid(tool_input) THEN tool_input ELSE '{}' END, '$.kind') = 'brief_ready'
+		AND json_extract(CASE WHEN json_valid(tool_input) THEN tool_input ELSE '{}' END, '$.briefId') = ?
+	ORDER BY sort_order ASC LIMIT 1`
+
+// FindProactiveBriefCard returns the earliest Chat card of one brief, whatever
+// moment posted it (R40). Malformed payloads never match.
+func (s *Store) FindProactiveBriefCard(ctx context.Context, sessionLocalID, briefID string) (*StreamItemRow, error) {
+	if briefID == "" {
+		return nil, nil
+	}
+	return scanStreamItemRow(s.db.QueryRowContext(ctx, findProactiveBriefCardSQL, sessionLocalID, briefID))
+}
+
+// ListProactiveBriefCards returns every brief Chat card of a session in
+// sort order, the earliest first (R40 repair).
+func (s *Store) ListProactiveBriefCards(ctx context.Context, sessionLocalID string) ([]StreamItemRow, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, session_local_id, kind, content, tool_name, tool_input, tool_use_id, run_id, session_id, sort_order, created_at, images, automation_context, files
+		FROM stream_items
+		WHERE session_local_id = ? AND tool_name = 'main_chat_proactive'
+			AND json_extract(CASE WHEN json_valid(tool_input) THEN tool_input ELSE '{}' END, '$.kind') = 'brief_ready'
+		ORDER BY sort_order ASC
+	`, sessionLocalID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []StreamItemRow
+	for rows.Next() {
+		item, err := scanStreamItemRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		if item != nil {
+			result = append(result, *item)
+		}
+	}
+	return result, rows.Err()
+}
+
 const findStatusStreamItemSQL = `
 	SELECT id, session_local_id, kind, content, tool_name, tool_input, tool_use_id, run_id, session_id, sort_order, created_at, images, automation_context, files
 	FROM stream_items WHERE id = (

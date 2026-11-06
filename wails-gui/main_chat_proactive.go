@@ -448,6 +448,20 @@ func (a *App) postProactiveItem(item mainChatProactive, key string) string {
 	if existing := seen[item.MomentID]; existing != "" {
 		return existing
 	}
+	// One card per brief (R40): a brief re-made or re-sent under a new moment,
+	// or posted again by the backfill, keeps the card it already has.
+	if item.Kind == string(engagement.KindBriefReady) && item.BriefID != "" {
+		stored, err := a.store.FindProactiveBriefCard(ctx, main.LocalID, item.BriefID)
+		if err != nil {
+			return ""
+		}
+		if stored != nil {
+			if err := a.repairMainChatDelivery(*stored); err != nil {
+				return ""
+			}
+			return stored.ID
+		}
+	}
 	if len(item.Items) > 0 {
 		remaining := make([]mainChatProactive, 0, len(item.Items))
 		lastExisting := ""
