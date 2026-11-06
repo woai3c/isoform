@@ -8,6 +8,7 @@ import type { GoalItemView, GoalsPageView, MemoryForgetPreview } from '@/lib/wai
 import { resetPageQueries } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { MemoryPage } from './memory-page';
+import { resetAboutYouSaveThrottle } from '@/lib/about-saved-view';
 import { Dialog, DialogTitle } from '@/components/ui/dialog';
 import { RetainedDialogContent } from '@/components/retained-dialog-content';
 
@@ -24,6 +25,10 @@ const mocks = vi.hoisted(() => ({
     notify: vi.fn(),
     getAbout: vi.fn(),
     getPortrait: vi.fn(),
+    getSavedAbout: vi.fn(),
+    saveAbout: vi.fn(),
+    forgetAbout: vi.fn(),
+    savedStamp: vi.fn(),
     confirm: vi.fn(),
     undoConfirm: vi.fn(),
     notQuite: vi.fn(),
@@ -54,6 +59,10 @@ vi.mock('@/lib/wails-shim-app', () => ({
     GetEntryUses: mocks.getUses,
     GetCommunicationDraftExamples: mocks.getExamples,
     GetAboutYou: mocks.getAbout,
+    GetSavedAboutYou: (...args: unknown[]) => mocks.getSavedAbout(...args),
+    SaveAboutYouSavedView: (...args: unknown[]) => mocks.saveAbout(...args),
+    ForgetSavedAboutYou: (...args: unknown[]) => mocks.forgetAbout(...args),
+    GetSavedCopyStamp: (...args: unknown[]) => mocks.savedStamp(...args),
     GetAboutYouPortrait: mocks.getPortrait,
     ConfirmMemoryEntry: mocks.confirm,
     UndoConfirmMemoryEntry: mocks.undoConfirm,
@@ -847,6 +856,45 @@ describe('MemoryPage human-first detail', () => {
         expect(screen.queryByText('No activity evidence is available for this memory.')).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Open where this was learned in Activity' }));
         expect(onOpen).toHaveBeenCalledWith('hidden-session');
+    });
+});
+
+describe('About you saved beliefs', () => {
+    beforeEach(async () => {
+        vi.resetAllMocks();
+        window.localStorage.clear();
+        await i18n.changeLanguage('en');
+        resetAboutYouSaveThrottle();
+    });
+
+    it('paints the saved beliefs while the first reads are still running', async () => {
+        mocks.getSavedAbout.mockResolvedValue({ about: aboutFor([entry]), entries: [entry], savedAt: '2026-11-06T13:00:00Z' });
+        mocks.getEntries.mockImplementation(() => new Promise(() => {}));
+        mocks.getAbout.mockImplementation(() => new Promise(() => {}));
+        render(<MemoryPage devToolsUnlocked />);
+        expect(await screen.findByText('You prefer detailed replies.')).toBeInTheDocument();
+    });
+
+    it('saves what it read under the stamp taken before the reads began', async () => {
+        mocks.savedStamp.mockResolvedValue('stamp-before');
+        mocks.getEntries.mockResolvedValue([entry]);
+        mocks.getAbout.mockResolvedValue(aboutFor([entry]));
+        mocks.getPortrait.mockResolvedValue(null);
+        mocks.getStatus.mockResolvedValue({});
+        render(<MemoryPage devToolsUnlocked />);
+        await waitFor(() => expect(mocks.saveAbout).toHaveBeenCalledTimes(1));
+        expect(mocks.saveAbout.mock.calls[0][0]).toBe('stamp-before');
+    });
+
+    it('a privacy change forgets the saved beliefs at once', async () => {
+        mocks.getEntries.mockResolvedValue([entry]);
+        mocks.getAbout.mockResolvedValue(aboutFor([entry]));
+        mocks.getPortrait.mockResolvedValue(null);
+        mocks.getStatus.mockResolvedValue({});
+        render(<MemoryPage devToolsUnlocked />);
+        await screen.findByText('You prefer detailed replies.');
+        await emitEvent('closed-eyes:changed', true);
+        expect(mocks.forgetAbout).toHaveBeenCalled();
     });
 });
 
