@@ -350,3 +350,34 @@ func TestABurstOfReadsSharesOneFollowingRun(t *testing.T) {
 		t.Fatalf("a burst of 11 reads made %d computations, want at most 2", n)
 	}
 }
+
+// A copy that a background refresh saves is verified in the background as well,
+// so the next read serves it. Before this, the refresh left the copy unverified
+// and that read recomputed the page.
+func TestBackgroundRefreshVerifiesItsCopy(t *testing.T) {
+	a, session := streamPageTestApp(t)
+	key := streamPageKey{session: session, limit: 50}
+	latestPage(t, a, session)
+	a.refreshStreamPages()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if snap, reason := readRawStreamPageSnapshot(key); reason == "" && snap.Deep != "" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the copy saved by the background refresh was never verified")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	computes := a.streamPages.computes.Load()
+	page, err := a.LoadStreamItemsPage(session, -1, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := a.streamPages.computes.Load(); n != computes {
+		t.Fatalf("the read recomputed the page (%d computes) instead of serving its verified copy", n-computes)
+	}
+	if !pageHas(page, "one") {
+		t.Fatal("the served copy lost its item")
+	}
+}

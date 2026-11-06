@@ -480,7 +480,12 @@ func (a *App) refreshStreamPages() {
 	}
 	st.mu.Unlock()
 	for _, key := range keys {
-		_, _, _ = a.computeLatestStreamPage(key, a.streamPageStamp(context.Background()))
+		// A copy saved here is unverified until its full check runs. The read
+		// path schedules that check; a refresh must too, or every read that
+		// follows recomputes.
+		if _, saved, _ := a.computeLatestStreamPage(key, a.streamPageStamp(context.Background())); saved {
+			a.scheduleStreamVerify(key)
+		}
 	}
 	st.mu.Lock()
 	st.lastRun = time.Now()
