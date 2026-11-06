@@ -98,7 +98,8 @@ func TestBriefSpeechPreparationAndSynthesisNormalizeTimes(t *testing.T) {
 			if _, ok, reason := renderMobileBriefAudio(t.Context(), speaker, t.TempDir(), brief); !ok {
 				t.Fatal(reason)
 			}
-			want := "Yesterday, 6pm; 1:30pm. an hour and 33 minutes. from 11:04am to 5:06pm."
+			// The voice says clocks as words (R68, mobileBriefSpokenClocks); the screen keeps digits.
+			want := "Yesterday, 6pm; one thirty in the afternoon. an hour and 33 minutes. from eleven oh four in the morning to five oh six in the evening."
 			if briefChinese(language) {
 				want = "昨天, 下午6点; 下午1点半. 1小时33分钟. 从上午11点4分到下午5点6分."
 			}

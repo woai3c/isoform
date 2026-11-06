@@ -497,7 +497,7 @@ func (a *App) CleanupAnonymousPrincipals() (CleanupReportDTO, error) {
 		context.Background(),
 		identity.NormalizeSenderName,
 		identity.IsChatApp,
-		func(name string) bool { return !identity.PlausibleAutoContactName(name) },
+		func(name string) bool { return !identity.PlausibleAutoContactName(identity.NormalizeSenderName(name)) },
 	)
 	if err != nil {
 		return CleanupReportDTO{}, err

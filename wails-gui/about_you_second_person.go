@@ -55,7 +55,15 @@ var beliefIrregularVerbs = map[string]string{"is": "are", "was": "were", "has": 
 // both read "You use design reviews…". Quotation marks around it go.
 // Anything else (Chinese, a noun phrase, already "You …") is unchanged.
 func beliefInSecondPerson(text string) string {
-	return beliefAgreeWithYou(beliefFirstPersonToYou(beliefDisplayName(text)))
+	return beliefAgreeWithYou(beliefFirstPersonToYou(beliefDisplayName(text), true))
+}
+
+// memoryTitleInSecondPerson is beliefInSecondPerson for a memory title. The
+// first-person and You rules apply, but a noun phrase keeps its words: a call
+// titled "Pricing call" stays "Pricing call", so the Learned list and the
+// correction gate see the title the memory was saved under.
+func memoryTitleInSecondPerson(text string) string {
+	return beliefAgreeWithYou(beliefFirstPersonToYou(beliefDisplayName(text), false))
 }
 
 // beliefProperNouns keep their capital when a noun phrase is turned into "You
@@ -150,7 +158,9 @@ func beliefAgreeWithYou(sentence string) string {
 	return strings.Join(words, " ")
 }
 
-func beliefFirstPersonToYou(text string) string {
+// beliefFirstPersonToYou rewrites the first-person and Title Case forms. The
+// noun-phrase rule applies only when nounPhrases is set (beliefs, not titles).
+func beliefFirstPersonToYou(text string, nounPhrases bool) string {
 	trimmed := strings.TrimSpace(text)
 	if unquoted := strings.Trim(trimmed, "\"“”'‘’"); unquoted != trimmed && unquoted != "" {
 		trimmed = strings.TrimSpace(unquoted)
@@ -194,7 +204,7 @@ func beliefFirstPersonToYou(text string) string {
 	if strings.EqualFold(first, "caution") && strings.HasPrefix(rest, "before ") {
 		return "You're careful " + rest
 	}
-	if phrase, ok := beliefNounPhrase(trimmed); ok {
+	if phrase, ok := beliefNounPhrase(trimmed); nounPhrases && ok {
 		return phrase
 	}
 	return beliefKeepOrTrim(text, trimmed)

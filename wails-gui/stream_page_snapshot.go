@@ -203,6 +203,10 @@ func (a *App) loadLatestStreamPageNow(key streamPageKey) (StreamItemPageData, er
 	cancel()
 	versionMs := time.Since(versionStart).Milliseconds()
 	saved, reason := readStreamPageSnapshot(key, stamp)
+	if reason == "" && streamPageHoldsProactiveCard(saved.Page) {
+		// Never served from a copy: see streamPageHoldsProactiveCard.
+		reason = "proactive-card"
+	}
 	switch {
 	case reason == "" && verErr == nil && saved.Version == version:
 		a.scheduleStreamPageRefresh(a.streamPageDueFor(now, saved.SavedAt))
@@ -390,4 +394,19 @@ func (a *App) noteStreamPageEvent(eventName string) {
 		st.mu.Unlock()
 		a.scheduleStreamPageRefresh(time.Now().Add(delay))
 	}
+}
+
+// streamPageHoldsProactiveCard reports whether a saved page holds a proactive
+// card. Its words come from calendar, reminders and meeting notes. Withdrawing
+// one of those (a revoked permission, a deleted note) moves neither the privacy
+// stamp nor the stream item version, so such a page is read live, which
+// applies the source gates on every read. A copy would keep the withdrawn words
+// on the desktop after a restart.
+func streamPageHoldsProactiveCard(page StreamItemPageData) bool {
+	for _, item := range page.Items {
+		if item.ToolName == mainChatProactiveTool {
+			return true
+		}
+	}
+	return false
 }

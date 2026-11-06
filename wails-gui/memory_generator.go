@@ -664,7 +664,7 @@ func (mc *MemoryGenerator) runMemoryPipelineDetailed(
 		})
 	}
 
-	memResult.Title = beliefInSecondPerson(memResult.Title)
+	memResult.Title = memoryTitleInSecondPerson(memResult.Title)
 	if len(memResult.MemoryPoints) == 0 {
 		log.Printf("[memory] generation returned no points for %s:%s, skipping", source, sourceID)
 		logDecision("skip", "AI returned no memory points")
