@@ -219,14 +219,38 @@ export function memoryLabel(
     );
 }
 
+// Y42: prompt and template text is never a belief or its detail. Mirrors
+// memoryTextIsPromptOrTemplate in wails-gui/memory_prompt_text.go; change both together.
+const PROMPT_OR_TEMPLATE_TEXT = /\(s\)|\{[a-z_][a-z0-9_]*\}|system-reminder|<system|output[- ]format|\bthe task asks\b|\bonly the (?:translated|json|markdown)\b|\b(?:reply|respond|return) (?:with |only |just |one )*json\b|\bjson only\b|\bone json object\b|\b(?:return|respond|reply) only\b/i;
+const PROMPT_LABEL_LINE = /^\s*(?:rules|instructions|system prompt|output)\s*:/im;
+
+export function memoryTextIsPromptOrTemplate(text: string): boolean {
+    return PROMPT_OR_TEMPLATE_TEXT.test(text) || PROMPT_LABEL_LINE.test(text);
+}
+
+/** A saved entry whose title or memory point is prompt text is hidden from About you. */
+export function memoryEntryIsPromptText(entry: main.MemoryEntry): boolean {
+    return (
+        memoryTextIsPromptOrTemplate(entry.title) ||
+        memoryPoints(entry.content).some((point) => memoryTextIsPromptOrTemplate(point.text))
+    );
+}
+
+/** The entries About you shows; the saved files stay as they are. */
+export function visibleMemoryEntries(entries: main.MemoryEntry[]): main.MemoryEntry[] {
+    return entries.filter((entry) => !memoryEntryIsPromptText(entry));
+}
+
 /**
- * The title of an About you belief row. A belief always reads as a sentence about
- * you, so a noun-phrase title gets its subject ("You care about …"). A memory name
- * elsewhere keeps its words (memoryLabel).
+ * The title of an About you belief row. A product-name title gets its subject
+ * ("You care about Isoform …"); every other memory name keeps its words (memoryLabel).
  */
 export function beliefRowLabel(entry: main.MemoryEntry, t: TFunction<'memory'>): string {
     const label = memoryLabel(entry, t);
-    return label === t('row.empty') ? label : beliefInSecondPerson(label);
+    // Only a product-name title gets its subject; other memory names keep their words
+    // ("Writing style", "Project plans") so their rows and buttons are unchanged.
+    if (label === t('row.empty') || !PROPER_NOUNS.has(label.split(' ')[0])) return label;
+    return beliefInSecondPerson(label);
 }
 
 export function memoryKind(entry: main.MemoryEntry): MemoryKind {

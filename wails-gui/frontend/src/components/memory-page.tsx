@@ -43,7 +43,7 @@ import { AboutYouPortraitCard, type PortraitEvidence } from '@/components/about-
 import { NewThisWeek, answeredStatus, useBeliefReview, type ReviewItem, type ReviewResult } from '@/components/about-you/new-this-week';
 import { GoalStory, useGoalsBoard } from '@/components/goals/GoalsPage';
 import { GoalsGroup, useGoalsCopy } from '@/components/goals/GoalsGroup';
-import { beliefInSecondPerson, MEMORY_KINDS, humanMemoryText, memoryApps, memoryKind, memoryPoints, type MemoryKind } from '@/lib/memory-content';
+import { beliefInSecondPerson, MEMORY_KINDS, humanMemoryText, memoryApps, memoryKind, memoryPoints, type MemoryKind, visibleMemoryEntries } from '@/lib/memory-content';
 import { beliefSummary } from '@/lib/about-you';
 import { historyFound, historyName, useFirstDay } from '@/hooks/useFirstDay';
 import { MEMORY_AREAS, memoryArea, sentMessageEvidence, type MemoryArea } from '@/lib/communication';
@@ -145,7 +145,7 @@ export function MemoryPage({
     const { t, i18n } = useTranslation(['memory', 'common']);
     // A warm reopen paints the cached reads first and revalidates behind
     // them; only a true first load shows the skeleton.
-    const [entries, setEntries] = useState<main.MemoryEntry[]>(() => pageQueryCache.peek<main.MemoryEntry[]>('GetMemoryEntries') ?? []);
+    const [entries, setEntries] = useState<main.MemoryEntry[]>(() => visibleMemoryEntries(pageQueryCache.peek<main.MemoryEntry[]>('GetMemoryEntries') ?? []));
     const [entriesState, setEntriesState] = useState<'loading' | 'ready' | 'failed'>(() => (pageQueryCache.peek('GetMemoryEntries') !== undefined ? 'ready' : 'loading'));
     const [about, setAbout] = useState<AboutYouView | null>(() => pageQueryCache.peek<AboutYouView>('GetAboutYou') ?? null);
     const [aboutFailed, setAboutFailed] = useState(false);
@@ -231,7 +231,7 @@ export function MemoryPage({
         Promise.all([GetMemoryEntries() as Promise<main.MemoryEntry[]>, GetAboutYouPortrait().catch(() => null)])
             .then(([result]) => {
                 if (read !== entriesRead.current) return;
-                setEntries(result ?? []);
+                setEntries(visibleMemoryEntries(result ?? []));
                 setEntriesState('ready');
             })
             .catch(() => {

@@ -55,7 +55,12 @@ func communicationObservations(message communicationMessage) []communicationObse
 	}
 	sentences := communicationSentenceCount(text)
 	sentenceValue := strconv.Itoa(sentences)
-	sentenceText := fmt.Sprintf("Writes %d sentence(s) in sent messages.", sentences)
+	// Y42: a stored belief never carries a "(s)" placeholder, so the count is
+	// spelled for one sentence or for many.
+	sentenceText := fmt.Sprintf("Writes %d sentences in sent messages.", sentences)
+	if sentences == 1 {
+		sentenceText = "Writes 1 sentence in sent messages."
+	}
 	if sentences > 4 {
 		sentenceValue = "5+"
 		sentenceText = "Writes 5 or more sentences in sent messages."

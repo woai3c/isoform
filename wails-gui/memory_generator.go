@@ -1190,6 +1190,7 @@ fit, pick the closest match (usually "user_insight").
 	}
 
 	promptContext.apply(&resp)
+	dropPromptMemoryPoints(&resp)
 	return &resp, nil
 }
 

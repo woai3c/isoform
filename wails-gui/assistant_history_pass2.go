@@ -155,6 +155,7 @@ func buildAssistantHistoryPrompt(projectName, excerpt, instructionsName, instruc
 	b.WriteString("- openSession: the session number (S1, S2...) the open problem came from.\n")
 	b.WriteString("- beliefs: up to 8 short statements about how this person works, each clearly supported by the sessions, for example \"Runs the tests before every push\". Each names the session number it came from, and in sessions every session number that shows it.\n")
 	b.WriteString("- knowHow: up to 3 reusable items: a fix or decision found in the sessions (fromClaudeMd false), or a how-to written in the project instructions (fromClaudeMd true). Each has a title, a one-sentence takeaway, a kind (fix, decision, how_to, gotcha or reference) and the session number it came from (0 for the instructions).\n")
+	b.WriteString("- Never make a belief from a prompt, a template or a tool's instructions in the sessions (for example a note telling the assistant what output to return). Describe only what the person did or chose.\n")
 	b.WriteString("- Never include secrets, keys, tokens, passwords, or account identifiers.\n")
 	b.WriteString("- Never include personal details about other people (names with private context, contact details, health, family, money). Describe the work, not the people.\n")
 	b.WriteString("- Leave a list empty rather than guess.\n\n")
@@ -246,7 +247,8 @@ func buildAssistantHistoryUpdate(reply assistantHistoryReply, included []assista
 		}
 		text := checkedAssistantHistoryText(item.Text, 240)
 		session, ok := sessionAt(item.Session)
-		if text == "" || !ok {
+		// Y42: prompt or template text is never a belief.
+		if text == "" || !ok || memoryTextIsPromptOrTemplate(text) {
 			continue
 		}
 		belief := assistantHistoryBelief{Text: text, Assistant: session.Assistant, At: session.At}
@@ -333,6 +335,9 @@ func (a *App) storeAssistantHistoryBeliefs(project HistoryProject, beliefs []ass
 	}
 	written := 0
 	for _, belief := range beliefs {
+		if memoryTextIsPromptOrTemplate(belief.Text) {
+			continue
+		}
 		belief.Text = beliefInSecondPerson(belief.Text)
 		key := strings.ToLower(strings.TrimSpace(belief.Text))
 		if existing[key] {

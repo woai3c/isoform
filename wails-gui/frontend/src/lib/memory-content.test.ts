@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
     beliefInSecondPerson,
+    beliefRowLabel,
     isSystemNoiseApp,
     memoryApps,
     memoryConfirmed,
+    memoryEntryIsPromptText,
     memoryKind,
     memoryLabel,
     memoryPoints,
+    memoryTextIsPromptOrTemplate,
     relativeWords,
+    visibleMemoryEntries,
 } from './memory-content';
 import type { main } from '../../wailsjs/go/models';
 import i18n from '@/i18n';
@@ -201,6 +205,41 @@ describe('bare instructions and events stay as written (launch walk Y28)', () =>
     });
 });
 
+describe('prompt and template text is never a belief (Y42)', () => {
+    it.each([
+        'You write 1 sentence(s) in sent messages.',
+        'Output-format note: the task asks for ONLY the translated Markdown',
+        'Reply with one JSON object only, in this shape',
+        'Hello {company}, here is the update',
+        'Rules: keep the answer short',
+    ])('%s is screened out', (text) => {
+        expect(memoryTextIsPromptOrTemplate(text)).toBe(true);
+    });
+
+    it.each([
+        'Writes 1 sentence in sent messages.',
+        'Uses design reviews before merging',
+        'Preferences for short release notes',
+    ])('%s stays a belief', (text) => {
+        expect(memoryTextIsPromptOrTemplate(text)).toBe(false);
+    });
+
+    it('hides a saved entry whose point is prompt text and keeps the rest', () => {
+        const tainted = {
+            id: 'a',
+            title: 'Caution before sending messages to external people',
+            content: '# Caution before sending messages\n\n## Memory Points\n\n- Output-format note: the task asks for ONLY the translated Markdown\n',
+        } as main.MemoryEntry;
+        const clean = {
+            id: 'b',
+            title: 'Runs tests',
+            content: '# Runs tests\n\n## Memory Points\n\n- Runs the tests before every push\n',
+        } as main.MemoryEntry;
+        expect(memoryEntryIsPromptText(tainted)).toBe(true);
+        expect(visibleMemoryEntries([tainted, clean])).toEqual([clean]);
+    });
+});
+
 describe('Y28 leftovers (v1.0.11 walk)', () => {
     it('gives a belief title its subject, so a confirmed product line reads as a sentence about you', () => {
         expect(beliefInSecondPerson('Isoform product direction and wearable hat hardware research')).toBe(
@@ -217,5 +256,17 @@ describe('Y28 leftovers (v1.0.11 walk)', () => {
 
     it('keeps a plain memory name unchanged', () => {
         expect(beliefInSecondPerson('Writing style', { nounPhrase: false })).toBe('Writing style');
+    });
+});
+
+describe('About you row title: only product names get a subject', () => {
+    const t = i18n.getFixedT('en', 'memory');
+    const entry = (title: string) => ({ id: `entry-${title.length}`, title, content: `# ${title}\n\n## Memory Points\n\n- x\n` }) as main.MemoryEntry;
+    it('keeps a plain memory name as it is', () => {
+        expect(beliefRowLabel(entry('Writing style'), t)).toBe('Writing style');
+        expect(beliefRowLabel(entry('Project plans'), t)).toBe('Project plans');
+    });
+    it('gives a product-name title its subject', () => {
+        expect(beliefRowLabel(entry('Yansu product direction'), t)).toBe('You care about Isoform product direction');
     });
 });

@@ -62,9 +62,17 @@ type AboutYouView struct {
 // GetAboutYou projects the existing owner-visible memory list into belief metadata.
 func (a *App) GetAboutYou() (perfValue AboutYouView, perfErr error) {
 	defer logPageBinding("GetAboutYou", time.Now(), &perfValue)
-	entries, err := a.GetMemoryEntries()
+	all, err := a.GetMemoryEntries()
 	if err != nil {
 		return AboutYouView{}, err
+	}
+	// Y42: an entry whose text came from a prompt or template is hidden here;
+	// the file stays on disk.
+	entries := make([]MemoryEntry, 0, len(all))
+	for _, entry := range all {
+		if !memoryEntryIsPromptText(pii.DisplayText(extractTitle(entry.Content)), entry.Content) {
+			entries = append(entries, entry)
+		}
 	}
 	dir, err := memoryDir()
 	if err != nil {
