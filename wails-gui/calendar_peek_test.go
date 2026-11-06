@@ -129,6 +129,7 @@ func newPeekTestService(t *testing.T, driver *fakePeekDriver, start time.Time) (
 		now:       func() time.Time { return clock.now },
 		loc:       time.UTC,
 		lease:     &computerUseLease{},
+		notice:    func() bool { return true },
 		failures:  map[string]int{},
 		holdUntil: map[string]time.Time{},
 	}
@@ -144,7 +145,7 @@ func TestCalendarPeekReadsClosesAndRestores(t *testing.T) {
 	suppressed := []bool{}
 	svc.suppress = func(on bool) { suppressed = append(suppressed, on) }
 	notices := 0
-	svc.notice = func() { notices++ }
+	svc.notice = func() bool { notices++; return true }
 	svc.onRead = func(provider string, events int, at time.Time) {
 		reads = append(reads, provider)
 		readCounts = append(readCounts, events)
@@ -416,5 +417,17 @@ func TestCalendarPeekCheckAppliesTheRules(t *testing.T) {
 	decision, _ = svc.check(context.Background())
 	if decision.Run || decision.Reason != "user was active" {
 		t.Fatalf("retry pause %+v", decision)
+	}
+}
+
+func TestCalendarPeekWaitsWhenItsNoticeCannotBeSent(t *testing.T) {
+	driver := &fakePeekDriver{front: "com.example.editor", browser: "com.example.browser", tree: googleWeekTree()}
+	svc, _, _ := newPeekTestService(t, driver, time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC))
+	svc.notice = func() bool { return false }
+	if _, err := svc.run(context.Background(), []string{"google"}, "idle"); err == nil {
+		t.Fatal("peek ran without its notice")
+	}
+	if len(driver.opened) != 0 {
+		t.Fatal("browser opened before its notice")
 	}
 }

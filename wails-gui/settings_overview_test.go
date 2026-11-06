@@ -398,8 +398,8 @@ func TestSettingsOverviewCapsWorthALookAtThree(t *testing.T) {
 	if len(view.WorthALook) != settingsOverviewMaxIssues {
 		t.Fatalf("worthALook holds at most %d: %+v", settingsOverviewMaxIssues, view.WorthALook)
 	}
-	// Most-sent first; the 20-sent kind drops out.
-	want := []string{"noisy_kind:work_finished", "noisy_kind:brief_ready", "noisy_kind:capture_paused"}
+	// Capture pauses are retired; the next eligible kind takes its place.
+	want := []string{"noisy_kind:work_finished", "noisy_kind:brief_ready", "noisy_kind:meeting_prep"}
 	for i, issue := range view.WorthALook {
 		if issue.ID != want[i] {
 			t.Fatalf("issue %d is %s, want %s (%+v)", i, issue.ID, want[i], view.WorthALook)

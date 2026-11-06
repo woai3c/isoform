@@ -178,9 +178,8 @@ func TestEngagementSettingsViewReportsQuietPerKind(t *testing.T) {
 	for _, kind := range view.Kinds {
 		byKind[kind.Kind] = kind
 	}
-	capture := byKind[string(engagement.KindCapturePaused)]
-	if !capture.QuietOnToday || !capture.QuietAllowed {
-		t.Fatalf("a quiet kind reports its mode: %+v", capture)
+	if _, exists := byKind[string(engagement.KindCapturePaused)]; exists {
+		t.Fatal("retired capture notification remains in Settings")
 	}
 	decision := byKind[string(engagement.KindDecisionDue)]
 	if decision.QuietOnToday || decision.QuietAllowed {
@@ -712,8 +711,10 @@ func TestEngagementNormalHandoffReportDoesNotWaitForPass(t *testing.T) {
 
 func TestEngagementQuietReleasesExistingBudgetHold(t *testing.T) {
 	rig := newEngagementTestRig(t)
-	rig.svc.state.Day = rig.clock.Format("2006-01-02")
-	rig.svc.state.InterruptsToday = 6
+	rig.svc.prefs.DailyInterruptBudget = 1
+	if _, err := rig.store.CreateEngagementMoment(t.Context(), storage.EngagementMomentRow{Kind: "work_blocked", DedupeKey: "spent-budget", State: storage.EngagementStateSent, Channel: "push", SentAt: rig.clock.UnixMilli(), CreatedAt: rig.clock.UnixMilli()}); err != nil {
+		t.Fatal(err)
+	}
 	row, err := rig.svc.Submit(t.Context(), engagement.Moment{Kind: engagement.KindWorkFinished, SubjectID: "held"})
 	if err != nil {
 		t.Fatal(err)

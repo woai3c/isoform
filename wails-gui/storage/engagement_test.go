@@ -438,7 +438,7 @@ func TestEngagementChatSendPreservesRoutingAndFirstSend(t *testing.T) {
 			sent = receipt
 		}
 	}
-	if sent.Channel != "desktop" || sent.At != now.UnixMilli() {
+	if sent.Channel != "chat" || sent.At != now.UnixMilli() {
 		t.Fatalf("chat receipt = %+v", sent)
 	}
 }

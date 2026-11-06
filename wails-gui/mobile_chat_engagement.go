@@ -58,7 +58,7 @@ func (bridge *mobileBridge) serveProactiveReceipt(w http.ResponseWriter, r *http
 		return
 	}
 	bridge.runReceipted(w, device, key, r.Method+" "+r.URL.Path, func(w http.ResponseWriter) {
-		if err := bridge.app.recordMainChatProactiveReceipt(momentID, input.State, engagement.ChannelPush); err != nil {
+		if err := bridge.app.recordMainChatProactiveReceipt(momentID, input.State, engagement.ChannelChat); err != nil {
 			mobileJSON(w, http.StatusConflict, nil, "the receipt could not be saved")
 			return
 		}

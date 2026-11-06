@@ -117,7 +117,7 @@ func (a *App) recordMainChatDelivery(item mainChatProactive, at int64) error {
 	_, err = a.store.CreateEngagementMoment(ctx, storage.EngagementMomentRow{
 		ID: momentID, Kind: item.Kind, SubjectID: subjectID,
 		DedupeKey: "chat:" + item.MomentID, State: storage.EngagementStateSent,
-		Channel: string(engagement.ChannelDesktop), CreatedAt: at, SentAt: at,
+		Channel: string(engagement.ChannelChat), CreatedAt: at, SentAt: at,
 	})
 	return err
 }
@@ -125,7 +125,7 @@ func (a *App) recordMainChatDelivery(item mainChatProactive, at int64) error {
 // RecordMainChatProactiveReceipt observes a rendered computer card. Clients
 // cannot claim acted: that state requires the linked item's completion time.
 func (a *App) RecordMainChatProactiveReceipt(momentID, state string) error {
-	return a.recordMainChatProactiveReceipt(momentID, state, engagement.ChannelDesktop)
+	return a.recordMainChatProactiveReceipt(momentID, state, engagement.ChannelChat)
 }
 
 func (a *App) recordMainChatProactiveReceipt(momentID, state string, channel engagement.Channel) error {

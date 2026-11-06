@@ -59,7 +59,7 @@ func TestFirstWeekCapQuietHoursBudgetAndSwitches(t *testing.T) {
 		t.Fatal(got)
 	}
 	state.Day, state.InterruptsToday = now.Format("2006-01-02"), prefs.DailyInterruptBudget
-	if got := Pace(m, spec, prefs, state, now); got.Reason != "budget" {
+	if got := Pace(m, spec, prefs, state, now); got.Mode != ModeInterrupt {
 		t.Fatal(got)
 	}
 	prefs.Enabled[KindFirstWeek] = false

@@ -90,22 +90,25 @@ type engagementService struct {
 	// Once the setter returns, no older pass can publish on the previous mode.
 	// Dedicated handoff reports make a fast entry-time decision outside this lock.
 	deliveryMu sync.Mutex
-	mu         sync.Mutex
-	prefs      engagement.Prefs
-	state      *engagement.PaceState
-	paused     map[engagement.Kind]bool
+	// notificationIDs is owned by deliveryMu and counts actual notices in the current pass.
+	notificationIDs map[string]bool
+	mu              sync.Mutex
+	prefs           engagement.Prefs
+	state           *engagement.PaceState
+	paused          map[engagement.Kind]bool
 	// resumedAt is when the user last turned a kind back on; receipts from
 	// before it never pause the kind again.
 	resumedAt map[engagement.Kind]time.Time
 	// unrecorded holds deliveries whose state could not be written, by
 	// moment id, so a later pass neither sends them again nor loses them.
-	unrecorded map[string]engagementUnrecorded
-	ctx        context.Context
-	cancel     context.CancelFunc
-	wake       chan struct{}
-	started    bool
-	stopped    bool
-	wg         sync.WaitGroup
+	unrecorded  map[string]engagementUnrecorded
+	ctx         context.Context
+	cancel      context.CancelFunc
+	wake        chan struct{}
+	started     bool
+	stopped     bool
+	loadPending bool
+	wg          sync.WaitGroup
 }
 
 // engagementUnrecorded is a delivery the store did not take: the channels
@@ -197,6 +200,9 @@ func (s *engagementService) Start(ctx context.Context) {
 
 	if err := s.load(s.ctx); err != nil {
 		log.Printf("[engagement] loading state: %v", err)
+		s.mu.Lock()
+		s.loadPending = true
+		s.mu.Unlock()
 	}
 	s.suppressSilentKinds(s.ctx)
 	s.wg.Add(1)
@@ -603,12 +609,19 @@ func (s *engagementService) Pass(ctx context.Context) {
 			s.afterPass()
 		}
 	}()
+	if !s.ensureLoaded(ctx) {
+		return
+	}
 	now := s.now()
 	if s.journey != nil {
 		s.journey(ctx, now)
 	}
 	s.inferCompletedReceipts(ctx, now)
 	if !s.persistUnrecorded(ctx, now) {
+		return
+	}
+	if err := s.refreshNotificationBudget(ctx, now); err != nil {
+		log.Printf("[engagement] reading notification budget: %v", err)
 		return
 	}
 	if n, err := s.store.ExpireEngagementMoments(ctx, now); err != nil {
@@ -637,6 +650,24 @@ func (s *engagementService) Pass(ctx context.Context) {
 		s.handle(ctx, row, now)
 	}
 	s.handleDigest(ctx, digest, now)
+}
+
+// ensureLoaded refuses delivery until persisted preferences can be read.
+// Call with deliveryMu held.
+func (s *engagementService) ensureLoaded(ctx context.Context) bool {
+	s.mu.Lock()
+	pending := s.loadPending
+	s.mu.Unlock()
+	if !pending {
+		return true
+	}
+	if err := s.load(ctx); err != nil {
+		return false
+	}
+	s.mu.Lock()
+	s.loadPending = false
+	s.mu.Unlock()
+	return true
 }
 
 func (s *engagementService) handle(ctx context.Context, row storage.EngagementMomentRow, now time.Time) {
@@ -818,6 +849,12 @@ func (s *engagementService) handle(ctx context.Context, row storage.EngagementMo
 		markSent(delivered)
 		return
 	}
+	// Capture interruptions are retired. Preserve the unchosen stop as its
+	// existing chat report, without sending a desktop or phone notification.
+	if m.Kind == engagement.KindCapturePaused {
+		markSent(string(engagement.ChannelChat))
+		return
+	}
 	if s.deliver.Report != nil && engagementMomentIsStatus(m, now) {
 		// Chat records the result even if every chosen channel is unavailable.
 		// Reporting does not count as an external delivery or consume pacing;
@@ -828,55 +865,64 @@ func (s *engagementService) handle(ctx context.Context, row storage.EngagementMo
 			return
 		}
 		if len(m.Channels) == 0 {
-			markSent(string(engagement.ChannelDesktop))
+			markSent(string(engagement.ChannelChat))
 			return
 		}
+	}
+	holdForBudget := func() bool {
+		if s.notificationAllowed(row, m, prefs) {
+			return false
+		}
+		_ = s.store.SetEngagementMomentState(ctx, row.ID, storage.EngagementStateScheduled, "budget",
+			storage.EngagementMomentRow{UpdatedAt: now.UnixMilli(), Score: score, HoldUntil: engagementNextMidnight(now).UnixMilli()})
+		return true
 	}
 	if s.deliver.Report != nil && m.Kind == engagement.KindBriefReady {
-		// The brief is in Chat and the desktop toast says so. The Chat card is
-		// the delivery: a phone that is offline does not withhold it, and a
-		// retry never posts a second card. The phone is attempted last.
 		if !report() {
 			_ = s.store.SetEngagementMomentState(ctx, row.ID, storage.EngagementStateScheduled, "chat report",
 				storage.EngagementMomentRow{HoldUntil: now.Add(engagementRetryDelay).UnixMilli()})
 			return
 		}
-		delivered := string(engagement.ChannelDesktop)
-		if sender := s.senderFor(engagement.ChannelDesktop); sender != nil {
-			if err := sender(ctx, row, m, verdict, s.render(spec, m)); err != nil {
-				log.Printf("[engagement] %s delivery failed on desktop: %v", row.Kind, err)
-			}
-		}
-		if sender := s.senderFor(engagement.ChannelPush); sender != nil {
-			if err := sender(ctx, row, m, verdict, s.render(spec, m)); err == nil {
-				delivered += "+" + string(engagement.ChannelPush)
-			} else {
-				log.Printf("[engagement] %s delivery failed on push: %v", row.Kind, err)
-			}
-		}
-		markSent(delivered)
-		return
-	}
-	if s.deliver.Report != nil && (m.Kind == engagement.KindFirstWeek || m.Kind == engagement.KindWeeklyRecap) {
-		// The chat is the delivery. A doorbell can fail independently without
-		// withholding the welcome/recap or sending a second chat on retry.
-		if !report() {
-			_ = s.store.SetEngagementMomentState(ctx, row.ID, storage.EngagementStateScheduled, "chat report",
-				storage.EngagementMomentRow{HoldUntil: now.Add(engagementRetryDelay).UnixMilli()})
+		if holdForBudget() {
 			return
 		}
-		delivered := string(engagement.ChannelDesktop)
-		if m.Params["stage"] != "welcome" {
-			channel := engagement.ChannelForKind(spec.Kind, verdict, presence, now)
+		delivered := string(engagement.ChannelChat)
+		for _, channel := range []engagement.Channel{engagement.ChannelDesktop, engagement.ChannelPush} {
 			if sender := s.senderFor(channel); sender != nil {
-				if err := sender(ctx, row, m, verdict, s.render(spec, m)); err == nil && channel != engagement.ChannelDesktop {
+				if err := sender(ctx, row, m, verdict, s.render(spec, m)); err == nil {
 					delivered += "+" + string(channel)
+					s.notificationSent(row, m)
+				} else {
+					log.Printf("[engagement] %s delivery failed on %s: %v", row.Kind, channel, err)
 				}
 			}
 		}
 		markSent(delivered)
 		return
 	}
+	if s.deliver.Report != nil && (m.Kind == engagement.KindFirstWeek || m.Kind == engagement.KindWeeklyRecap) {
+		if !report() {
+			_ = s.store.SetEngagementMomentState(ctx, row.ID, storage.EngagementStateScheduled, "chat report",
+				storage.EngagementMomentRow{HoldUntil: now.Add(engagementRetryDelay).UnixMilli()})
+			return
+		}
+		delivered := string(engagement.ChannelChat)
+		if m.Params["stage"] != "welcome" {
+			if holdForBudget() {
+				return
+			}
+			channel := engagement.ChannelForKind(spec.Kind, verdict, presence, now)
+			if sender := s.senderFor(channel); sender != nil {
+				if err := sender(ctx, row, m, verdict, s.render(spec, m)); err == nil {
+					delivered += "+" + string(channel)
+					s.notificationSent(row, m)
+				}
+			}
+		}
+		markSent(delivered)
+		return
+	}
+
 	// The channels an earlier pass already reached are never sent to again,
 	// even when that pass could not record them, or which ones were left.
 	reached := row.Channel
@@ -899,6 +945,9 @@ func (s *engagementService) handle(ctx context.Context, row storage.EngagementMo
 		}
 		channels = []engagement.Channel{engagement.ChannelForKind(spec.Kind, verdict, presence, now)}
 	}
+	if holdForBudget() {
+		return
+	}
 	text := s.render(spec, m)
 	var sent, stopped []string
 	for _, channel := range channels {
@@ -914,6 +963,7 @@ func (s *engagementService) handle(ctx context.Context, row storage.EngagementMo
 			continue
 		}
 		sent = append(sent, string(channel))
+		s.notificationSent(row, m)
 	}
 	if len(stopped) > 0 {
 		m.Channels = remainingChannels(m.Channels, stopped)
@@ -1164,6 +1214,7 @@ func (s *engagementService) load(ctx context.Context) error {
 	s.prefs = engagement.FillMissingKinds(s.prefs, stored)
 	// Restore pacing from the channel delivery, which can happen on a later
 	// day than the first durable chat card used for engagement measurement.
+	s.state = engagement.NewPaceState()
 	s.state.Day = now.Format("2006-01-02")
 	for _, row := range pacing {
 		sentAt := time.UnixMilli(row.At)

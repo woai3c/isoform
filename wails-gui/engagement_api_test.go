@@ -41,7 +41,7 @@ func TestEngagementSettingsViewListsEveryKindWithDefaultsAndCounts(t *testing.T)
 	}
 	var all []engagement.Kind
 	for _, kind := range engagement.AllKinds() {
-		if !engagementKindSilent(kind) {
+		if !engagementKindSilent(kind) && kind != engagement.KindCapturePaused {
 			all = append(all, kind)
 		}
 	}
@@ -138,7 +138,7 @@ func TestMobileNotificationRoutes(t *testing.T) {
 	if err := json.Unmarshal(mobileTestDecodeReply(t, got).Data, &view); err != nil {
 		t.Fatal(err)
 	}
-	if !view.Available || len(view.Kinds) != len(engagement.AllKinds())-len(engagementSilentKinds) || view.QuietStart != "22:00" {
+	if !view.Available || len(view.Kinds) != len(engagement.AllKinds())-len(engagementSilentKinds)-1 || view.QuietStart != "22:00" {
 		t.Fatalf("view: %+v", view)
 	}
 

@@ -49,8 +49,8 @@ func mobileTodayPacing(svc *engagementService, now time.Time) *mobileTodayNotice
 		return nil
 	}
 	svc.mu.Lock()
-	defer svc.mu.Unlock()
 	if svc.state == nil {
+		svc.mu.Unlock()
 		return nil
 	}
 	pace := &mobileTodayNoticePacing{}
@@ -59,6 +59,23 @@ func mobileTodayPacing(svc *engagementService, now time.Time) *mobileTodayNotice
 	}
 	if !svc.state.LastQuietBreak.IsZero() {
 		pace.LastQuietBreak = mobileTimestamp(svc.state.LastQuietBreak)
+	}
+	budget := svc.prefs.DailyInterruptBudget
+	svc.mu.Unlock()
+	if svc.store != nil {
+		midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		notices, err := svc.store.EngagementNotificationsBetween(context.Background(), midnight, now)
+		if err != nil {
+			// An unreadable counter must not give the phone a fresh allowance.
+			pace.ActiveToday = budget
+			return pace
+		}
+		pace.ActiveToday = 0
+		for _, notice := range notices {
+			if engagementAutomaticNotification(engagement.Kind(notice.Kind)) {
+				pace.ActiveToday++
+			}
+		}
 	}
 	return pace
 }

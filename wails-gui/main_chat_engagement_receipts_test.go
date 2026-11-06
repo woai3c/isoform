@@ -24,11 +24,14 @@ func engagementReceiptStates(t *testing.T, app *App, momentID, channel string) m
 		t.Fatal(err)
 	}
 	states := map[string]bool{}
+	seen := map[string]bool{}
 	for _, row := range rows {
 		if channel == "" || row.Channel == channel {
-			if states[row.State] {
+			key := row.Channel + "|" + row.State
+			if seen[key] {
 				t.Fatalf("duplicate receipt %s/%s: %+v", momentID, channel, rows)
 			}
+			seen[key] = true
 			states[row.State] = true
 		}
 	}
@@ -70,6 +73,10 @@ func TestMainChatEngagementReceiptsObserveWithoutClaimingCompletion(t *testing.T
 	}
 	if states["acted"] {
 		t.Fatal("opening a card was counted as completion")
+	}
+	week, err := app.GetEngagementWeekSummary()
+	if err != nil || week.Sent != 0 {
+		t.Fatalf("a chat card must not count as a notification: %+v %v", week, err)
 	}
 }
 
@@ -192,7 +199,7 @@ func TestMainChatWorkCardAndNoticeShareOneMoment(t *testing.T) {
 	if err := app.RecordMainChatProactiveReceipt(card.MomentID, "opened"); err != nil {
 		t.Fatal(err)
 	}
-	if !engagementReceiptStates(t, app, rows[0].ID, string(engagement.ChannelDesktop))["opened"] {
+	if !engagementReceiptStates(t, app, rows[0].ID, string(engagement.ChannelChat))["opened"] {
 		t.Fatal("card receipt did not reach the notice moment")
 	}
 }
@@ -265,7 +272,7 @@ func TestMainChatRoutineStatusReceiptsUseTheirMoment(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	states := engagementReceiptStates(t, app, moment.ID, string(engagement.ChannelDesktop))
+	states := engagementReceiptStates(t, app, moment.ID, string(engagement.ChannelChat))
 	if !states["sent"] || !states["delivered"] || !states["opened"] || states["acted"] {
 		t.Fatalf("routine status receipts = %v", states)
 	}
@@ -325,7 +332,7 @@ func TestMainChatLegacyWorkCardReusesOriginalNoticeMoment(t *testing.T) {
 			if row, err := app.store.GetEngagementMoment(t.Context(), mainChatEngagementMomentID(card.MomentID)); err != nil || row != nil {
 				t.Fatalf("upgrade created another measurement identity: %+v, %v", row, err)
 			}
-			if !engagementReceiptStates(t, app, originalID, string(engagement.ChannelDesktop))["opened"] {
+			if !engagementReceiptStates(t, app, originalID, string(engagement.ChannelChat))["opened"] {
 				t.Fatal("legacy card receipt did not reach its original phone notice")
 			}
 		})

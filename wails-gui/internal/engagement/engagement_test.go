@@ -305,8 +305,8 @@ func TestPaceBudget(t *testing.T) {
 		state.Record(m, v, now)
 	}
 	third := Moment{Kind: KindWorkFinished, DedupeKey: "work_finished:c"}
-	if v := Pace(third, finished, prefs, state, now); v.Mode != ModeHold || v.Reason != "budget" {
-		t.Fatalf("over budget active moment must hold: %+v", v)
+	if v := Pace(third, finished, prefs, state, now); v.Mode != ModeInterrupt {
+		t.Fatalf("routing must allow chat; the notification sender enforces the budget: %+v", v)
 	}
 	blocked := mustSpec(t, KindWorkBlocked)
 	deadline := Moment{Kind: KindWorkBlocked, DedupeKey: "work_blocked:d", DueAt: now.Add(time.Hour), HardDeadline: true}

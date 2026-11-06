@@ -189,21 +189,39 @@ func (a *App) GetEngagementWeekSummary() (perfValue EngagementWeekSummary, perfE
 	if err != nil {
 		return EngagementWeekSummary{}, err
 	}
-	out := EngagementWeekSummary{Available: true, Days: 7, Kinds: []EngagementWeekKind{}}
+	notices, err := svc.store.EngagementNotificationsBetween(context.Background(), now.Add(-7*24*time.Hour), now)
+	if err != nil {
+		return EngagementWeekSummary{}, err
+	}
+	notified := map[string]int{}
+	acted := map[string]int{}
+	totalSent, totalActed := 0, 0
+	for _, notice := range notices {
+		if !engagementAutomaticNotification(engagement.Kind(notice.Kind)) {
+			continue
+		}
+		notified[notice.Kind]++
+		totalSent++
+		if notice.Acted {
+			acted[notice.Kind]++
+			totalActed++
+		}
+	}
+	out := EngagementWeekSummary{Available: true, Days: 7, Sent: totalSent, ActedOn: totalActed, Kinds: []EngagementWeekKind{}}
 	for _, kind := range engagement.AllKinds() {
-		if engagementKindSilent(kind) {
+		if engagementKindSilent(kind) || !engagementAutomaticNotification(kind) {
 			continue
 		}
 		stat := stats[string(kind)]
 		row := EngagementWeekKind{Kind: string(kind), Created: stat.Created, Scheduled: stat.Scheduled,
-			Sent: stat.Sent, Delivered: stat.Delivered, Opened: stat.Opened, Acted: stat.Acted,
+			Sent: notified[string(kind)], Delivered: stat.Delivered, Opened: stat.Opened, Acted: acted[string(kind)],
 			Dismissed: stat.Dismissed, Muted: stat.Muted}
 		if row.Sent > 0 {
 			row.ActRate = float64(row.Acted) / float64(row.Sent)
 		}
-		out.Kinds = append(out.Kinds, row)
-		out.Sent += row.Sent
-		out.ActedOn += row.Acted
+		if kind != engagement.KindCapturePaused {
+			out.Kinds = append(out.Kinds, row)
+		}
 	}
 	return out, nil
 }
@@ -271,9 +289,35 @@ func engagementSettingsView(ctx context.Context, svc *engagementService) (Engage
 		return EngagementSettingsView{}, err
 	}
 	now := svc.now()
+	notices, err := svc.store.EngagementNotificationsBetween(ctx, now.Add(-engagementStatsWindow), now)
+	if err != nil {
+		return EngagementSettingsView{}, err
+	}
+	type notificationCounts struct{ sent, opened, acted, useful int }
+	countedNotices := map[string]notificationCounts{}
+	var summary EngagementStatsSummary
+	for _, notice := range notices {
+		if !engagementAutomaticNotification(engagement.Kind(notice.Kind)) {
+			continue
+		}
+		counts := countedNotices[notice.Kind]
+		counts.sent++
+		summary.Sent++
+		if notice.OpenedOrActed {
+			counts.opened++
+			summary.OpenedOrActed++
+		}
+		if notice.Acted {
+			counts.acted++
+		}
+		if notice.Useful {
+			counts.useful++
+			summary.Useful++
+		}
+		countedNotices[notice.Kind] = counts
+	}
 	all := engagement.AllKinds()
 	kinds := make([]EngagementKindView, 0, len(all)-len(engagementSilentKinds))
-	var summary EngagementStatsSummary
 	for _, kind := range all {
 		spec, ok := engagement.Spec(kind)
 		if !ok || engagementKindSilent(kind) {
@@ -297,23 +341,25 @@ func engagementSettingsView(ctx context.Context, svc *engagementService) (Engage
 		}
 		if s, counted := stats[string(kind)]; counted {
 			view.Sent, view.Opened, view.Acted, view.Dismissed, view.Muted = s.Sent, s.Opened, s.Acted, s.Dismissed, s.Muted
-			view.NotificationSent, view.NotificationOpenedOrActed, view.NotificationActed = s.NotificationSent, s.NotificationOpenedOrActed, s.NotificationActed
-			view.NotificationUseful = s.NotificationUseful
-			summary.Useful += s.NotificationUseful
+			notice := countedNotices[string(kind)]
+			view.NotificationSent, view.NotificationOpenedOrActed, view.NotificationActed = notice.sent, notice.opened, notice.acted
+			view.NotificationUseful = notice.useful
 			view.QuietSent, view.QuietOpenedOrActed = s.QuietSent, s.QuietOpenedOrActed
 			view.Channels = engagementNotificationChannels(s.Channels)
 			if s.Sent > 0 {
 				view.SampleCopyKey = engagement.NotificationSampleCopyKey(kind, s.LatestActivityThread)
 			}
-			summary.Sent += s.NotificationSent
-			summary.OpenedOrActed += s.NotificationOpenedOrActed
 			summary.QuietSent += s.QuietSent
 			summary.QuietOpenedOrActed += s.QuietOpenedOrActed
-			view.Tag = engagement.NotificationStatsTag(kind, s.NotificationSent, s.NotificationOpenedOrActed, s.NotificationActed, view.Quiet)
+			view.Tag = engagement.NotificationStatsTag(kind, view.NotificationSent, view.NotificationOpenedOrActed, view.NotificationActed, view.Quiet)
 		} else {
-			view.Tag = engagement.NotificationStatsTag(kind, 0, 0, 0, view.Quiet)
+			notice := countedNotices[string(kind)]
+			view.NotificationSent, view.NotificationOpenedOrActed, view.NotificationActed, view.NotificationUseful = notice.sent, notice.opened, notice.acted, notice.useful
+			view.Tag = engagement.NotificationStatsTag(kind, notice.sent, notice.opened, notice.acted, view.Quiet)
 		}
-		kinds = append(kinds, view)
+		if kind != engagement.KindCapturePaused {
+			kinds = append(kinds, view)
+		}
 	}
 	digests := make([]string, 0, len(prefs.DigestTimes))
 	for _, offset := range prefs.DigestTimes {

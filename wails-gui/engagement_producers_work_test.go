@@ -45,8 +45,8 @@ func TestEngagementProducersAreInertWithoutTheService(t *testing.T) {
 	app := &App{}
 	app.produceWorkFinished(handoff.Entry{ID: "hf-1", Title: "Outline"})
 	app.produceWorkBlocked(handoff.Entry{ID: "hf-2", Title: "Export", BlockedReason: handoff.BlockedTimeout})
-	if !app.produceBriefReady(MobileBriefV1{BriefID: "brief-1", Slot: mobileBriefSlotMorning}, true) {
-		t.Fatal("without the service the brief keeps its own push")
+	if app.produceBriefReady(MobileBriefV1{BriefID: "brief-1", Slot: mobileBriefSlotMorning}, true) {
+		t.Fatal("without pacing a brief must not send its own push")
 	}
 }
 
@@ -177,8 +177,8 @@ func TestEngagementBriefReadyTakesOverTheBriefPush(t *testing.T) {
 		t.Fatalf("on-request slot = %q", got)
 	}
 
-	if !(&App{}).produceBriefReady(morning, true) {
-		t.Fatal("without the service the brief keeps its push")
+	if (&App{}).produceBriefReady(morning, true) {
+		t.Fatal("without pacing the brief must not send its own push")
 	}
 }
 

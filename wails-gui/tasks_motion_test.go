@@ -184,14 +184,12 @@ func TestNotificationUsefulPerKind(t *testing.T) {
 		switch engagement.Kind(row.Kind) {
 		case engagement.KindBriefReady, engagement.KindMeetingEnded, engagement.KindWeeklyRecap:
 			want = 2
-		case engagement.KindReminder:
-			want = 1
 		}
 		if row.NotificationUseful != want {
 			t.Fatalf("%s useful = %d, want %d", row.Kind, row.NotificationUseful, want)
 		}
 	}
-	if view.Summary.Useful != 5 {
+	if view.Summary.Useful != 6 {
 		t.Fatalf("summary: %+v", view.Summary)
 	}
 	stats, err := rig.store.EngagementStatsBetween(t.Context(), rig.clock.Add(-engagementStatsWindow), rig.clock)

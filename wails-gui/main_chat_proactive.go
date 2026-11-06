@@ -518,7 +518,7 @@ func (a *App) engagementDigest(_ context.Context, entries []engagementDigestItem
 		return "", errors.New("could not read stored digest")
 	}
 	a.postMainChatStatus(mainChatStatusEntry{ID: storedID, Kind: "digest_done", Text: item.Body, Target: mainChatTarget{Kind: mainChatTargetToday}}, time.UnixMilli(stored.CreatedAt))
-	return engagement.ChannelDesktop, nil
+	return engagement.ChannelChat, nil
 }
 
 // Status periods follow the configured digest slots. Between slots every

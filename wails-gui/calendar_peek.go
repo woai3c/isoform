@@ -87,7 +87,7 @@ type calendarPeekService struct {
 	// onRead records the activity event; notice shows the one-time notice;
 	// suppress pauses the activity monitor's capture for the run.
 	onRead   func(provider string, events int, at time.Time)
-	notice   func()
+	notice   func() bool
 	suppress func(on bool)
 	lease    *computerUseLease
 
@@ -255,7 +255,9 @@ func (s *calendarPeekService) run(parent context.Context, providers []string, re
 		s.suppress(true)
 		defer s.suppress(false)
 	}
-	s.showNoticeOnce(ctx)
+	if !s.showNoticeOnce(ctx) {
+		return res, fmt.Errorf("calendar peek notice not delivered")
+	}
 
 	startedAt := now
 	// stop names why the run must end now: the user touched the Mac (idle
@@ -351,17 +353,25 @@ func (s *calendarPeekService) noteSuccess(provider string) {
 
 // showNoticeOnce tells the user, the first time a peek ever runs, that
 // Isoform reads web calendars while the Mac is idle and where to turn it off.
-func (s *calendarPeekService) showNoticeOnce(ctx context.Context) {
+func (s *calendarPeekService) showNoticeOnce(ctx context.Context) bool {
 	if s.notice == nil || s.store == nil {
-		return
+		return false
 	}
-	if shown, err := s.store.GetUIState(ctx, calendarPeekNoticeKey); err == nil && shown != "" {
-		return
+	shown, err := s.store.GetUIState(ctx, calendarPeekNoticeKey)
+	if err != nil {
+		return false
 	}
-	s.notice()
+	if shown != "" {
+		return true
+	}
+	if !s.notice() {
+		return false
+	}
 	if err := s.store.SetUIState(ctx, calendarPeekNoticeKey, s.now().UTC().Format(time.RFC3339)); err != nil {
 		log.Printf("[calendar-peek] record notice: %v", err)
+		return false
 	}
+	return true
 }
 
 // readProvider opens one web calendar, reads its week view and stores the
@@ -547,12 +557,12 @@ func (a *App) calendarPeekRead(provider string, events int, at time.Time) {
 }
 
 // calendarPeekNotice is the one-time desktop notice before the first peek.
-func (a *App) calendarPeekNotice() {
-	a.NotifyUser(
+func (a *App) calendarPeekNotice() bool {
+	return a.notifyAutomaticDesktop(
 		"Isoform can read web calendars when the computer is idle",
 		"It opens your browser briefly while you are away and closes it again. Turn this off in Settings > Observation.",
 		"settings:activity",
-	)
+	) == "desktop"
 }
 
 // startCalendarPeek starts the scheduler. It runs once from startup, after

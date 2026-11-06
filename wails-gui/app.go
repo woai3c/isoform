@@ -1991,6 +1991,11 @@ func (a *App) FireDelayedDesktopNotification(title, body string) error {
 // toast is suppressed on macOS when the user has turned Yansu's notifications OFF
 // in System Settings, and the non-darwin fallback delegates to the OS notifier.
 func (a *App) NotifyUser(title, body, clickData string) string {
+	// Newly observed knowledge and beliefs are proactive, not a response to a
+	// button press. They share the automatic notification budget.
+	if strings.HasPrefix(clickData, "memory:") || strings.HasPrefix(clickData, "knowledge:") {
+		return a.notifyAutomaticDesktop(title, body, clickData)
+	}
 	var allowed bool
 	title, body, allowed = a.notificationForDelivery(title, body, clickData)
 	if !allowed {

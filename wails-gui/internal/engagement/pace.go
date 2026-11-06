@@ -31,7 +31,7 @@ type Verdict struct {
 type PaceState struct {
 	// Day is the local date the counters belong to (2006-01-02).
 	Day string
-	// InterruptsToday counts active deliveries against the daily budget.
+	// InterruptsToday tracks active deliveries for legacy phone pacing.
 	InterruptsToday int
 	// SentByKindToday counts deliveries per kind for daily caps.
 	SentByKindToday map[Kind]int
@@ -59,8 +59,9 @@ func (s *PaceState) rollover(now time.Time) {
 	s.SentByKindToday = map[Kind]int{}
 }
 
-// Pace applies the enabled, mute, expiry, cooldown, cap, quiet-hours and
-// budget rules in that order and returns the verdict. It does not mutate the
+// Pace applies the enabled, mute, expiry, cooldown, kind cap and quiet-hours
+// rules. The delivery service enforces the notification budget after routing.
+// It does not mutate the
 // state; call Record after a delivery.
 func Pace(m Moment, spec KindSpec, prefs Prefs, state *PaceState, now time.Time) Verdict {
 	if state == nil {
@@ -133,13 +134,6 @@ func Pace(m Moment, spec KindSpec, prefs Prefs, state *PaceState, now time.Time)
 		return Verdict{Mode: ModeHold, Interruption: level, Reason: "quiet hours", HoldUntil: prefs.Quiet.EndAfter(now)}
 	}
 
-	if level == InterruptionActive && !spec.Requested && prefs.DailyInterruptBudget > 0 && state.InterruptsToday >= prefs.DailyInterruptBudget {
-		if spec.Digestable {
-			return Verdict{Mode: ModeDigest, Interruption: level, Reason: "budget", HoldUntil: prefs.NextDigest(now)}
-		}
-		return Verdict{Mode: ModeHold, Interruption: level, Reason: "budget", HoldUntil: nextLocalMidnight(now)}
-	}
-
 	return Verdict{Mode: ModeInterrupt, Interruption: level, Reason: "ok"}
 }
 
@@ -194,7 +188,7 @@ func nextLocalMidnight(t time.Time) time.Time {
 }
 
 // requestedKind reports whether a kind's deliveries are ones the user asked
-// for, which the interruption budget neither holds back nor counts.
+// for, which the automatic notification budget does not count.
 func requestedKind(kind Kind) bool {
 	spec, ok := Spec(kind)
 	return ok && spec.Requested

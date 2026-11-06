@@ -59,7 +59,7 @@ func TestNotificationStatsReceiptsChannelsSummaryAndSamples(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(view.Kinds) != len(engagement.AllKinds())-len(engagementSilentKinds) {
+	if len(view.Kinds) != len(engagement.AllKinds())-len(engagementSilentKinds)-1 {
 		t.Fatalf("all kinds: %d", len(view.Kinds))
 	}
 	var sent int
@@ -101,7 +101,7 @@ func TestNotificationStatsReceiptsChannelsSummaryAndSamples(t *testing.T) {
 			t.Fatalf("zero-send switch: %+v", row)
 		}
 	}
-	if view.Summary.Sent != 2 || view.Summary.QuietSent != 1 || view.Summary.Sent+view.Summary.QuietSent != sent || view.Summary.OpenedOrActed != 2 {
+	if view.Summary.Sent != 2 || view.Summary.QuietSent != 1 || view.Summary.Sent != sent || view.Summary.OpenedOrActed != 2 {
 		t.Fatalf("summary: %+v (rows sent=%d)", view.Summary, sent)
 	}
 	data, err := json.Marshal(view)

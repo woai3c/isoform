@@ -11,6 +11,8 @@ const (
 	ChannelText    Channel = "text"
 	ChannelEmail   Channel = "email"
 	ChannelNone    Channel = "none"
+	// ChannelChat is a durable chat record, not an interruption.
+	ChannelChat Channel = "chat"
 	// ChannelTodayQuiet records a delivery shown as a quiet line on Today
 	// instead of interrupting. It is a receipt channel, not a sender: no
 	// sender is registered for it and users cannot choose it.

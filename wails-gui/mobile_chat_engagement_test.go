@@ -61,9 +61,10 @@ func TestMobileChatEngagementScopesReceiptsAndMute(t *testing.T) {
 	if first.Code != http.StatusOK || first.Body.String() != repeat.Body.String() || !strings.Contains(first.Body.String(), `"state":"pending"`) {
 		t.Fatalf("mute replay = %d %s / %d %s", first.Code, first.Body.String(), repeat.Code, repeat.Body.String())
 	}
-	states := engagementReceiptStates(t, app, item.MomentID, string(engagement.ChannelPush))
-	if !states["delivered"] || !states["opened"] || !states["muted"] || states["acted"] {
-		t.Fatalf("phone receipts = %v", states)
+	states := engagementReceiptStates(t, app, item.MomentID, string(engagement.ChannelChat))
+	pushStates := engagementReceiptStates(t, app, item.MomentID, string(engagement.ChannelPush))
+	if !states["delivered"] || !states["opened"] || !pushStates["muted"] || states["acted"] {
+		t.Fatalf("phone chat receipts = %v, push actions = %v", states, pushStates)
 	}
 	if app.engagement.Prefs().Enabled[engagement.KindBriefReady] {
 		t.Fatal("phone mute did not turn kind off")

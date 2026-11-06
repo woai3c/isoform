@@ -460,7 +460,7 @@ func (s *Store) RecordEngagementChatSent(ctx context.Context, momentID string, a
 		return sql.ErrNoRows
 	}
 	if err := insertEngagementReceipt(ctx, tx, EngagementReceiptRow{
-		MomentID: momentID, Channel: "desktop", State: EngagementReceiptSent, At: at.UnixMilli(),
+		MomentID: momentID, Channel: "chat", State: EngagementReceiptSent, At: at.UnixMilli(),
 	}); err != nil {
 		return err
 	}

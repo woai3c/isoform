@@ -236,7 +236,7 @@ func (hb *hostBridge) handleNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hb.app.NotifyUser(body.Title, body.Body, "")
+	hb.app.notifyAutomaticDesktop(body.Title, body.Body, "")
 
 	hb.writeOK(w)
 }

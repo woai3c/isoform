@@ -56,8 +56,8 @@ type Prefs struct {
 	// interrupting; absent means the kind delivers normally.
 	QuietOnToday map[Kind]bool
 	Quiet        QuietWindow
-	// DailyInterruptBudget caps active deliveries per local day. Time-sensitive
-	// deliveries are not counted against it, so a real deadline still arrives.
+	// DailyInterruptBudget caps automatic notifications per local day. The
+	// delivery service counts actual external-channel receipts across levels.
 	DailyInterruptBudget int
 	// DigestTimes are offsets from local midnight when held passive moments
 	// become eligible for a quiet digest. The service bundles up to five.

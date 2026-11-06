@@ -108,7 +108,7 @@ func TestNotificationRound1RetiredKindsStayOutAndZeroSendSwitchesRemain(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(view.Kinds) != len(engagement.AllKinds())-len(engagementSilentKinds) {
+	if len(view.Kinds) != len(engagement.AllKinds())-len(engagementSilentKinds)-1 {
 		t.Fatalf("retired kinds must stay absent: %d", len(view.Kinds))
 	}
 	found := false

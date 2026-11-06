@@ -111,7 +111,7 @@ func (a *App) produceBriefReady(brief MobileBriefV1, notify bool) bool {
 		return false
 	}
 	if !notify || brief.BriefID == "" || !a.engagementActive() {
-		return notify
+		return false
 	}
 	now := a.engagement.now()
 	// A scheduled brief built ahead of its slot is held until the slot's time,
@@ -131,7 +131,7 @@ func (a *App) produceBriefReady(brief MobileBriefV1, notify bool) bool {
 		ExpiresAt: now.Add(engagementBriefExpiry),
 		Params:    map[string]string{"slot": mobileBriefDisplaySlot(brief, defaultMobileBriefSettings())},
 	}) {
-		return notify
+		return false
 	}
 	return false
 }
@@ -141,18 +141,35 @@ func (a *App) produceBriefReady(brief MobileBriefV1, notify bool) bool {
 // It reports whether the moment was accepted.
 // details may carry the run's "reason" and its due "time".
 func (a *App) produceBriefMissed(briefID, slot string, details ...map[string]string) bool {
-	if !a.engagementActive() || strings.TrimSpace(briefID) == "" {
+	if !a.engagementActive() || a.engagement.store == nil || strings.TrimSpace(briefID) == "" {
 		return false
 	}
+	key := engagement.DedupeKey(engagement.KindBriefMissed, briefID)
+	seen, err := a.engagement.store.EngagementMomentKeyExists(context.Background(), key)
+	if err != nil {
+		return false
+	}
+	if seen {
+		return true
+	}
 	now := a.engagement.now()
-	return a.submitEngagementMoment("brief missed", engagement.Moment{
+	id := mainChatEngagementMomentID("brief-missed:" + key)
+	accepted := a.submitEngagementMoment("brief missed", engagement.Moment{
+		ID:        id,
 		Kind:      engagement.KindBriefMissed,
 		SubjectID: briefID,
-		DedupeKey: engagement.DedupeKey(engagement.KindBriefMissed, briefID),
+		DedupeKey: key,
 		Stakes:    engagementBriefMissedStakes,
 		ExpiresAt: now.Add(engagementBriefExpiry),
 		Params:    briefMissedParams(slot, details...),
 	})
+	if accepted {
+		return true
+	}
+	// A concurrent producer may have created the deterministic ID after the
+	// first lookup. Treat that as accepted so its run can mark itself notified.
+	seen, err = a.engagement.store.EngagementMomentKeyExists(context.Background(), key)
+	return err == nil && seen
 }
 
 func briefMissedParams(slot string, details ...map[string]string) map[string]string {
