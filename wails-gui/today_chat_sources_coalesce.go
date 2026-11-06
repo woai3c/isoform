@@ -38,8 +38,8 @@ type todayChatSourcesSnapshot struct {
 
 // todayChatSourcesStamp names the privacy inputs the source collection reads.
 // It returns "" when a stamp cannot be read, which disables coalescing.
-func (a *App) todayChatSourcesStamp() string {
-	key := a.interestsReadKey()
+func (a *App) todayChatSourcesStamp(ctx context.Context) string {
+	key := a.interestsReadKeyContext(ctx)
 	if key == "" {
 		return ""
 	}
@@ -50,7 +50,7 @@ func (a *App) todayChatSourcesStamp() string {
 // nil-activities read of collectTodayChatSourcesWithActivities), shared across
 // concurrent callers under one privacy stamp. Each caller gets its own copy.
 func (a *App) collectTodayChatSourcesCoalesced(ctx context.Context, now time.Time) todayChatSources {
-	stamp := a.todayChatSourcesStamp()
+	stamp := a.todayChatSourcesStamp(ctx)
 	if stamp == "" {
 		return a.collectTodayChatSourcesWithActivities(ctx, now, nil)
 	}

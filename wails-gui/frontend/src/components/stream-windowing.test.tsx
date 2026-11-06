@@ -146,6 +146,9 @@ describe('windowed stream', () => {
         const vp = viewport();
         Object.defineProperty(vp, 'scrollHeight', { configurable: true, value: 5000 });
         Object.defineProperty(vp, 'clientHeight', { configurable: true, value: 800 });
+        // The reader scrolls up with the wheel; only their own input counts as
+        // scrolling away from the bottom.
+        fireEvent.wheel(vp);
         vp.scrollTop = 1000;
         fireEvent.scroll(vp);
         expect(document.querySelector('[data-testid="jump-to-newest"]')).not.toBeNull();

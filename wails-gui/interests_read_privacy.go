@@ -235,12 +235,17 @@ func (c *interestsReadCache) decisions(key string, now time.Time) *interestsRead
 // memory snapshot (outside edits), Closed Eyes, the user's sensitive apps,
 // the pause log and the sessions' protection count.
 func (a *App) interestsReadKey() string {
-	ctx := context.Background()
+	return a.interestsReadKeyContext(context.Background())
+}
+
+// interestsReadKeyContext is interestsReadKey whose database reads stop with
+// ctx: a caller that is cancelled while the database is busy returns at once.
+func (a *App) interestsReadKeyContext(ctx context.Context) string {
 	snapshot, err := a.memorySnapshot()
 	if err != nil {
 		return ""
 	}
-	pauses, err := a.observationPauses()
+	pauses, err := a.observationPausesContext(ctx)
 	if err != nil && a.store != nil {
 		return ""
 	}
