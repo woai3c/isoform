@@ -45,10 +45,10 @@ it.each([720, 768, 920, 1024, 1280, 1440, 1920])('keeps long topic text wrappabl
     await act(async () => {});
     const card = screen.getByTestId('today-topic-card');
     expect(card).toHaveClass('min-w-0', 'max-w-full', 'whitespace-normal', '[overflow-wrap:anywhere]');
-    // Review v1.1.8 replaces an overlong line with a timed Active line.
+    // An overlong line falls back to when it last moved (R66), never a bare status.
     expect(card).toHaveTextContent(topic.name);
     expect(card).not.toHaveTextContent(topic.latest!.text);
-    expect(within(card).getByTestId('today-topic-line')).toHaveTextContent(/^Active · /);
+    expect(within(card).getByTestId('today-topic-line')).toHaveTextContent(/^1 day this week · Last: /);
     for (const child of Array.from(card.children).slice(1)) expect(child).toHaveClass('min-w-0', 'max-w-full');
     const panel = screen.getByTestId('topic-panel');
     expect(panel).toHaveClass('min-w-0', '[overflow-wrap:anywhere]');

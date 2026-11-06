@@ -26,10 +26,10 @@ beforeEach(async () => {
 });
 
 describe("TodayTopicsGrid (RC 1)", () => {
-    it.each(["Opened a page, clicked another, then visited a third page", 'Read "Window title \\ project"', "A".repeat(60)])("uses a short active line for raw or long activity: %s", (text) => {
+    it.each(["Opened a page, clicked another, then visited a third page", 'Read "Window title \\ project"', "A".repeat(60)])("uses a day-count line for raw or long activity: %s", (text) => {
         renderGrid({ topics: [{ ...work, latest: { text, at: work.latest!.at } }] });
         const line = screen.getByTestId("today-topic-line").textContent ?? "";
-        expect(line).toBe("Active · 8:00 AM");
+        expect(line).toBe("1 day this week · Last: 8:00 AM");
         expect([...line].length).toBeLessThanOrEqual(50);
     });
     it("retains topics and offers a retry with the last successful time", () => {
@@ -57,10 +57,32 @@ describe("TodayTopicsGrid (RC 1)", () => {
         for (const text of ["A".repeat(100), "First click\nSecond click"]) {
             const view = render(<TodayTopicsGrid topics={[{ ...work, latest: { text, at: work.latest!.at } }]} status="ready" selectedId={null} now={NOW} onPick={vi.fn()} onRetry={vi.fn()} onEdit={vi.fn()} />);
             const line = within(screen.getByTestId("today-topic-card")).getByTestId("today-topic-line");
-            expect(line).toHaveTextContent(language === "en" ? /^Active · / : /^有活动 · /);
+            expect(line).toHaveTextContent(language === "en" ? /^1 day this week · Last: 8:00 AM$/ : /^本周 1 天 · 最近：8:00$/);
             expect([...(line.textContent ?? "")].length).toBeLessThanOrEqual(50);
             view.unmount();
         }
+    });
+    it.each(["en", "zh-CN"])("keeps the card for an older moment, with its date and no day count (%s)", async (language) => {
+        await i18n.changeLanguage(language);
+        renderGrid({ topics: [{ ...work, latest: { text: "Opened a page, clicked another", at: new Date(2026, 9, 10, 8).toISOString() } }], selectedId: null });
+        const line = screen.getByTestId("today-topic-line").textContent ?? "";
+        expect(line).toBe(language === "en" ? "Last: Oct 10" : "最近：10月10日");
+        expect(line).not.toMatch(/day/);
+    });
+    it("leads with what took most of the week, not the first topic listed", () => {
+        const game = { ...work, id: "game", name: "Moxgate Simulator", status: undefined, activityDays: ["2026-10-21", "2026-10-20"] };
+        const project = { ...work, id: "project", name: "Atlas launch", status: undefined, activityDays: ["2026-10-21", "2026-10-20", "2026-10-19", "2026-10-18", "2026-10-17"] };
+        renderGrid({ topics: [game, project], selectedId: null });
+        const names = screen.getAllByTestId("today-topic-card").map((card) => card.textContent);
+        expect(names[0]).toMatch(/^Atlas launch/);
+        expect(names[1]).toMatch(/^Moxgate Simulator/);
+    });
+    it.each(["en", "zh-CN"])("says how many days this week and when the last one was, never a bare status (%s)", async (language) => {
+        await i18n.changeLanguage(language);
+        renderGrid({ topics: [{ ...work, latest: { text: "Opened a page", at: work.latest!.at }, activityDays: ["2026-10-21", "2026-10-20", "2026-10-18"] }], selectedId: null });
+        const line = screen.getByTestId("today-topic-line").textContent ?? "";
+        expect(line).toBe(language === "en" ? "3 days this week · Last: today" : "本周 3 天 · 最近：今天");
+        expect(line).not.toMatch(/^(Active|有活动|Last moved|最近变动)/);
     });
     it.each(["en", "zh-CN"])("shows a grounded quiet line for a pinned topic and omits an ungrounded card (%s)", async (language) => {
         await i18n.changeLanguage(language);
