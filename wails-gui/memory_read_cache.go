@@ -39,8 +39,6 @@ type memoryExternalSnapshot struct {
 	signal   [sha256.Size]byte
 	// checked is when the folder last matched signal; guarded by the cache mu.
 	checked time.Time
-	// settled is set once the folder stopped changing and the snapshot is cached.
-	settled bool
 	entries []memoryExternalEntry
 
 	externalOnce sync.Once
@@ -224,7 +222,6 @@ func (a *App) memorySnapshot() (*memoryExternalSnapshot, error) {
 		s.entries = append(s.entries, memoryExternalEntry{raw: entry})
 	}
 	if c.revision.Load() == revision && now.Sub(newest) >= memoryFolderSettle {
-		s.settled = true
 		c.snapshot = s
 	} else {
 		c.snapshot = nil

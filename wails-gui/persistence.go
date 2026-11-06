@@ -371,10 +371,6 @@ func (a *App) UpdateWorkspaceActiveSession(workspaceID, sessionID string) error 
 // LoadStreamItemsPage loads a page of stream items using cursor-based pagination.
 func (a *App) LoadStreamItemsPage(sessionLocalID string, cursor, limit int) (perfValue StreamItemPageData, perfErr error) {
 	defer logPageBinding("LoadStreamItemsPage", time.Now(), &perfValue)
-	if cursor < 0 {
-		// The first page paints from its saved copy; see loadLatestStreamPage.
-		return a.loadLatestStreamPage(sessionLocalID, limit)
-	}
 	a.retryWorkPermissionWrites()
 	page, err := a.persistenceService().LoadStreamItemsPage(context.Background(), sessionLocalID, cursor, limit)
 	if err != nil {

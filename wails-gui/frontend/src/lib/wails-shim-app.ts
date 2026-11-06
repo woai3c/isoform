@@ -1290,7 +1290,6 @@ export interface TopicFind {
 
 export type TopicFindsStatus =
     | "off"
-    | "loading"
     | "unconfigured"
     | "no_topics"
     | "finding"
