@@ -147,26 +147,31 @@ func (doc *portraitDocument) settlePending(entries []MemoryEntry) bool {
 		return false
 	}
 	pending := doc.Pending
-	_, stored := pending.keepSupported(liveInputs(pending.Inputs, entries))
+	confirmed := confirmedIDs(entries)
+	_, stored := pending.keepSupported(liveInputs(pending.Inputs, entries), confirmed)
 	switch true {
 	case len(pending.Sentences) == 0:
 		doc.Pending = nil
 		return true
 	case !doc.said():
-		doc.showPending()
+		doc.showPending(confirmed)
 		return true
 	}
 	return stored
 }
 
 // showPending makes the waiting version current, keeping the counts that
-// moved on since it was written.
-func (doc *portraitDocument) showPending() {
+// moved on since it was written. The shown version's confirmed lines carry
+// over too: a confirmation made after the version waited is not lost (Y41).
+func (doc *portraitDocument) showPending(confirmed map[string]bool) {
 	next := *doc.Pending
 	next.Pending, next.SaidAt, next.SaidVersion = nil, 0, 0
 	next.Progress, next.Announced, next.TodaySeen, next.Writes, next.Attempt, next.CheckedAt = doc.Progress, doc.Announced, doc.TodaySeen, doc.Writes, doc.Attempt, doc.CheckedAt
 	if len(doc.Sentences) > 0 {
 		next.Previous = doc.Sentences
+	}
+	if doc.Language == next.Language {
+		next.WorkWithMe = pinLines(doc.WorkWithMe, next.WorkWithMe, confirmed)
 	}
 	*doc = next
 }
@@ -477,10 +482,12 @@ func portraitNotQuite(entry MemoryEntry) bool {
 
 // keepSupported removes every sentence, clause, Lately line and How to work
 // with me line whose support falls below the bar with only the live beliefs.
+// A How to work with me line that rests on a confirmed belief (confirmed,
+// readable now, whatever its digest) stays while the belief does (Y41).
 // It never calls a model. It reports whether shown text went and whether the
 // file changed at all: gone beliefs are erased from the inputs and from the
 // previous version too.
-func (doc *portraitDocument) keepSupported(live map[string]portraitInput) (bool, bool) {
+func (doc *portraitDocument) keepSupported(live map[string]portraitInput, confirmed map[string]bool) (bool, bool) {
 	check := portraitCheck{live: live}
 	changed := false
 	var sentences []portraitSentence
@@ -499,8 +506,12 @@ func (doc *portraitDocument) keepSupported(live map[string]portraitInput) (bool,
 	}
 	doc.Sentences = sentences
 	var lines []portraitLine
+	flagged := false
 	for _, line := range doc.WorkWithMe {
-		if portraitBelieved(line.IDs, live) {
+		pin := pinnedLine(line, confirmed)
+		if pin || portraitBelieved(line.IDs, live) {
+			flagged = flagged || line.Pinned != pin
+			line.Pinned = pin
 			lines = append(lines, line)
 		} else {
 			changed = true
@@ -518,7 +529,7 @@ func (doc *portraitDocument) keepSupported(live map[string]portraitInput) (bool,
 			previous = append(previous, sentence)
 		}
 	}
-	stored := changed || len(previous) != len(doc.Previous)
+	stored := changed || flagged || len(previous) != len(doc.Previous)
 	doc.Previous = previous
 	inputs := []portraitInput{}
 	for _, input := range doc.Inputs {
@@ -555,6 +566,76 @@ func (doc *portraitDocument) keepSupported(live map[string]portraitInput) (bool,
 	stored = stored || len(candidates) != len(doc.Candidates)
 	doc.Candidates = candidates
 	return changed, stored
+}
+
+// confirmedIDs are the beliefs the person has confirmed and not since marked
+// Not quite, read from the sources as they are now (a changed digest counts).
+func confirmedIDs(entries []MemoryEntry) map[string]bool {
+	out := map[string]bool{}
+	for _, entry := range entries {
+		if portraitConfirmed(entry) {
+			out[entry.ID] = true
+		}
+	}
+	return out
+}
+
+// confirmedFromInputs is confirmedIDs for a set of live inputs, for paths
+// that have no sources in hand.
+func confirmedFromInputs(live map[string]portraitInput) map[string]bool {
+	out := map[string]bool{}
+	for id, input := range live {
+		if input.Confirmed && !input.NotQuite {
+			out[id] = true
+		}
+	}
+	return out
+}
+
+// pinnedLine is true while a line rests on a confirmed belief (Y41).
+func pinnedLine(line portraitLine, confirmed map[string]bool) bool {
+	for _, id := range line.IDs {
+		if confirmed[id] {
+			return true
+		}
+	}
+	return false
+}
+
+// portraitMaxLines is how many How to work with me lines a version holds,
+// pinned ones included; a pinned line is never cut to make room.
+const portraitMaxLines = 5
+
+// pinLines is the How to work with me list a rewrite publishes: every line
+// of the shown version that rests on a confirmed belief, verbatim and first,
+// then the written lines that bring beliefs the pinned lines don't cover.
+// What the person confirmed never disappears or changes without them.
+func pinLines(shown, written []portraitLine, confirmed map[string]bool) []portraitLine {
+	var out []portraitLine
+	covered := map[string]bool{}
+	for _, line := range shown {
+		if !pinnedLine(line, confirmed) {
+			continue
+		}
+		line.Pinned = true
+		out = append(out, line)
+		for _, id := range line.IDs {
+			covered[id] = true
+		}
+	}
+	limit := max(portraitMaxLines, len(out))
+	for _, line := range written {
+		if len(out) >= limit {
+			break
+		}
+		// A written line whose beliefs a pinned line already covers repeats it.
+		if len(line.IDs) == 0 || !slices.ContainsFunc(line.IDs, func(id string) bool { return !covered[id] }) {
+			continue
+		}
+		line.Pinned = false
+		out = append(out, line)
+	}
+	return out
 }
 
 // portraitCandidates picks the confirm rows (section 6): up to 3 beliefs whose
@@ -735,7 +816,7 @@ func (a *App) forgetAboutYouPortraitVersions(ids []string, records []*memoryForg
 		}
 		return nil
 	}
-	if shown, _ := doc.keepSupported(live); shown {
+	if shown, _ := doc.keepSupported(live, confirmedFromInputs(live)); shown {
 		doc.Removed = true
 	}
 	if err := writePortrait(path, doc); err != nil {
@@ -948,7 +1029,7 @@ func (s *AboutYouPortraitService) readNow(path string) (AboutYouPortrait, bool, 
 	remember := true
 	if doc != nil {
 		live = liveInputs(doc.Inputs, entries)
-		shown, stored := doc.keepSupported(live)
+		shown, stored := doc.keepSupported(live, confirmedIDs(entries))
 		if doc.settlePending(entries) {
 			stored, live = true, liveInputs(doc.Inputs, entries)
 		}
@@ -1014,7 +1095,9 @@ func (s *AboutYouPortraitService) project(doc *portraitDocument, live map[string
 		result.Sentences = append(result.Sentences, out)
 	}
 	for _, line := range doc.WorkWithMe {
-		out := AboutYouPortraitLine{Text: pii.DisplayText(line.Text), MemoryIDs: append([]string{}, line.IDs...)}
+		// A pinned line stays "You confirmed this" even when its belief's
+		// digest changed and it is not live (Y41).
+		out := AboutYouPortraitLine{Text: pii.DisplayText(line.Text), MemoryIDs: append([]string{}, line.IDs...), Confirmed: line.Pinned}
 		areas := map[string]float64{}
 		sources := map[string]bool{}
 		for _, id := range line.IDs {
@@ -1236,7 +1319,7 @@ func (s *AboutYouPortraitService) check(ctx context.Context, now time.Time) {
 		doc = &portraitDocument{Sentences: []portraitSentence{}, Inputs: []portraitInput{}}
 	}
 	live := liveInputs(doc.Inputs, entries)
-	if shown, _ := doc.keepSupported(live); shown && doc.GeneratedAt > 0 {
+	if shown, _ := doc.keepSupported(live, confirmedIDs(entries)); shown && doc.GeneratedAt > 0 {
 		doc.Removed = true
 	}
 	if doc.settlePending(entries) {
@@ -1580,7 +1663,8 @@ func (s *AboutYouPortraitService) write(ctx context.Context, path string, now ti
 		if doc.Sentences == nil {
 			doc.Sentences = []portraitSentence{}
 		}
-		doc.keepSupported(live)
+		confirmed := confirmedIDs(entries)
+		doc.keepSupported(live, confirmed)
 		doc.Candidates = portraitCandidates(doc.Dropped, live)
 		// The person's own answer says why the words changed, once.
 		for i := range doc.Sentences {
@@ -1598,6 +1682,12 @@ func (s *AboutYouPortraitService) write(ctx context.Context, path string, now ti
 		defer s.fileMu.Unlock()
 		old, _ := readPortrait(path)
 		if old != nil {
+			// Y41: the confirmed lines of the shown version are carried over
+			// verbatim, first. A change of language rewrites the text, so the
+			// old lines are not carried into it.
+			if old.Language == language {
+				doc.WorkWithMe = pinLines(old.WorkWithMe, doc.WorkWithMe, confirmed)
+			}
 			doc.Progress, doc.Announced, doc.TodaySeen, doc.Writes = old.Progress, old.Announced, old.TodaySeen, old.Writes
 			if len(old.Sentences) > 0 {
 				doc.Previous = old.Sentences
@@ -1962,13 +2052,17 @@ func (a *App) ShowAboutYouPortraitPending() error {
 	if err != nil {
 		return err
 	}
+	entries, err := s.readableEntries(false)
+	if err != nil {
+		return err
+	}
 	s.fileMu.Lock()
 	doc, err := readPortrait(path)
 	if err != nil || doc == nil || doc.Pending == nil {
 		s.fileMu.Unlock()
 		return err
 	}
-	doc.showPending()
+	doc.showPending(confirmedIDs(entries))
 	announce := s.announce(doc, nil)
 	err = writePortrait(path, doc)
 	s.fileMu.Unlock()

@@ -158,7 +158,7 @@ func (a *App) confirmFirstRead(ctx context.Context, card mainChatProactive) (int
 			return errors.New("portrait changed")
 		}
 		live := liveInputs(doc.Inputs, entries)
-		doc.keepSupported(live)
+		doc.keepSupported(live, confirmedIDs(entries))
 		portrait := s.project(doc, live, entries)
 		content := buildFirstRead(portrait, firstReadFacts{}, 0, "en")
 		if content == nil || firstReadSentenceHash(content.Sentences) != card.FirstReadHash {

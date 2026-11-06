@@ -57,6 +57,9 @@ type portraitCause struct {
 type portraitLine struct {
 	Text string   `json:"text"`
 	IDs  []string `json:"ids"`
+	// Pinned is set while a belief the line rests on is confirmed (Y41): a
+	// pinned line survives every rewrite, verbatim.
+	Pinned bool `json:"pinned,omitempty"`
 }
 
 type portraitLatelyLine struct {
