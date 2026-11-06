@@ -120,6 +120,10 @@ const COMMON_WORDS = new Set(('tools news process notes meeting meetings product
 /** Names that keep their capital when a noun phrase becomes "You care about …". */
 const PROPER_NOUNS = new Set('Claude Codex Isoform Devin Kimi GitHub Slack Xero Wails Go iPhone macOS Apple Google Chrome Safari Telegram WeChat Discord'.split(' '));
 
+function namesProduct(text: string): boolean {
+    return text.split(/\s+/).some((word) => PROPER_NOUNS.has(word.replace(/[^\p{L}]/gu, '')));
+}
+
 /** Shows the product under its current name (a project entry never shows Yansu). */
 function displayName(text: string): string {
     return text.replace(/\byansu\b/gi, (match) => (/^[A-Z]/.test(match) ? 'Isoform' : 'isoform'));
@@ -175,7 +179,11 @@ function firstPersonToYou(text: string, allowNounPhrase = true): string {
     const base = baseVerb(first);
     if (base) return `You ${base} ${rest}`;
     // Launch walk Y28: Title Case entries with no subject.
-    if (first.toLowerCase() === 'preferences' && rest.toLowerCase().startsWith('for ')) return `You prefer ${rest.slice(4)}`;
+    // Y33-Y28 (v1.0.11): a preference for a product's features reads as care, not a claimed preference.
+    if (first.toLowerCase() === 'preferences' && rest.toLowerCase().startsWith('for ')) {
+        const object = rest.slice(4);
+        return namesProduct(object) ? `You care about ${object}` : `You prefer ${object}`;
+    }
     if (first.toLowerCase() === 'caution' && rest.toLowerCase().startsWith('before ')) return `You're careful ${rest}`;
     return (allowNounPhrase ? nounPhrase(trimmed) : null) ?? trimmed;
 }
@@ -209,6 +217,16 @@ export function memoryLabel(
             { nounPhrase: false },
         ) || t('row.empty')
     );
+}
+
+/**
+ * The title of an About you belief row. A belief always reads as a sentence about
+ * you, so a noun-phrase title gets its subject ("You care about …"). A memory name
+ * elsewhere keeps its words (memoryLabel).
+ */
+export function beliefRowLabel(entry: main.MemoryEntry, t: TFunction<'memory'>): string {
+    const label = memoryLabel(entry, t);
+    return label === t('row.empty') ? label : beliefInSecondPerson(label);
 }
 
 export function memoryKind(entry: main.MemoryEntry): MemoryKind {

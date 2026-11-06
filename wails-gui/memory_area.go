@@ -37,7 +37,7 @@ func classifyMemoryArea(words, kind string) string {
 	}
 	rules := []struct{ area, words string }{
 		{"communication", "email|emails|message|messages|reply|replies|concise|tone|communication|communicate|writing|沟通|邮件|回复"},
-		{"tools", "tool|tools|editor|terminal|software|keyboard|browser|bun|npm|pnpm|git|vscode|package|packages|automation|automations|automatic|automatically|automate|automated|replay|replays|replayed|repo|repos|repository|backup|hub|script|scripts|工具|编辑器|终端|自动化|仓库"},
+		{"tools", "tool|tools|editor|terminal|software|keyboard|browser|bun|npm|pnpm|git|vscode|package|packages|automation|automations|automatic|automatically|automate|automated|replay|replays|replayed|repo|repos|repository|backup|hub|script|scripts|commit|commits|工具|编辑器|终端|自动化|仓库"},
 		{"people", "colleague|colleagues|coworker|coworkers|manager|family|friend|friends|partner|teammate|teammates|同事|家人|朋友"},
 		{"routines", "routine|routines|daily|weekly|morning|evening|habit|habits|每天|每周|早上|习惯"},
 		{"interests", "hobby|hobbies|enjoy|enjoys|music|reading|photography|cooking|hiking|兴趣|音乐|摄影"},
@@ -53,10 +53,15 @@ func classifyMemoryArea(words, kind string) string {
 	for _, word := range []string{"automatic", "automatically", "automate", "automated", "replay", "replays", "replayed"} {
 		automated = automated || strings.Contains(titleTokens, " "+word+" ")
 	}
+	// "commit messages" is git work, not writing to a person (v1.0.11 walk).
+	inCommit := strings.Contains(titleTokens, " commit ") || strings.Contains(titleTokens, " commits ")
 	best, bestAt := "", -1
 	for _, rule := range rules {
 		for _, word := range strings.Split(rule.words, "|") {
 			if automated && rule.area == "communication" && (word == "reply" || word == "replies") {
+				continue
+			}
+			if inCommit && rule.area == "communication" && (word == "message" || word == "messages") {
 				continue
 			}
 			at := strings.Index(titleTokens, " "+word+" ")

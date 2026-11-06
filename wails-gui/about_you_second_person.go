@@ -87,6 +87,16 @@ var beliefCommonWords = map[string]bool{
 	"pull": true, "requests": true, "branch": true, "branches": true, "hardware": true, "content": true,
 }
 
+// beliefNamesProduct reports whether a phrase names one of the products above.
+func beliefNamesProduct(text string) bool {
+	for _, word := range strings.Fields(text) {
+		if beliefProperNouns[strings.Trim(word, ".,;:!?")] {
+			return true
+		}
+	}
+	return false
+}
+
 // beliefDisplayName shows the product under its current name. Stored beliefs
 // may still say the old name (launch walk Y28: a project entry never shows Yansu).
 func beliefDisplayName(text string) string {
@@ -198,8 +208,13 @@ func beliefFirstPersonToYou(text string, nounPhrases bool) string {
 		return "You're " + gerund + " " + rest
 	}
 	// Launch walk Y28: Title Case entries with no subject.
+	// v1.0.11 walk: a preference for a product's features reads as care, not a claimed preference.
 	if strings.EqualFold(first, "preferences") && strings.HasPrefix(rest, "for ") {
-		return "You prefer " + strings.TrimPrefix(rest, "for ")
+		object := strings.TrimPrefix(rest, "for ")
+		if beliefNamesProduct(object) {
+			return "You care about " + object
+		}
+		return "You prefer " + object
 	}
 	if strings.EqualFold(first, "caution") && strings.HasPrefix(rest, "before ") {
 		return "You're careful " + rest

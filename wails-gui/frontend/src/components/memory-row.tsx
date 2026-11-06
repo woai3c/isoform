@@ -7,7 +7,7 @@ import type { AboutYouBelief } from '@/lib/wails-shim-app';
 import { BeliefStatusMark } from '@/components/about-you/belief-status';
 import { cn } from '@/lib/utils';
 
-import { beliefInSecondPerson, humanMemoryText, memoryPoints, memoryKind, memoryLabel, relativeWords } from '@/lib/memory-content';
+import { beliefInSecondPerson, beliefRowLabel, humanMemoryText, memoryPoints, memoryKind, memoryLabel, relativeWords } from '@/lib/memory-content';
 export { memoryText, memoryLabel } from '@/lib/memory-content';
 
 /** Calendar days avoid clock times and keep yesterday correct across DST. */
@@ -46,7 +46,7 @@ export function MemoryRow({
     highlight?: (text: string) => ReactNode;
 }) {
     const { t } = useTranslation('memory');
-    const label = memoryLabel(entry, t);
+    const label = belief ? beliefRowLabel(entry, t) : memoryLabel(entry, t);
     const firstPoint = beliefInSecondPerson(humanMemoryText(memoryPoints(entry.content)[0]?.text ?? ''));
     const changed = entry.updatedAt > 0 ? entry.updatedAt : entry.modTime;
     const learned = belief?.firstLearnedAt ?? 0;

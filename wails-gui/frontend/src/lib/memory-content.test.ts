@@ -200,3 +200,22 @@ describe('bare instructions and events stay as written (launch walk Y28)', () =>
         expect(beliefInSecondPerson(input)).toBe(input);
     });
 });
+
+describe('Y28 leftovers (v1.0.11 walk)', () => {
+    it('gives a belief title its subject, so a confirmed product line reads as a sentence about you', () => {
+        expect(beliefInSecondPerson('Isoform product direction and wearable hat hardware research')).toBe(
+            'You care about Isoform product direction and wearable hat hardware research',
+        );
+    });
+
+    it('reads a preference for a product as care, not a claimed preference', () => {
+        expect(beliefInSecondPerson('Preferences for Isoform Spoken Briefs and Contextual Chat')).toBe(
+            'You care about Isoform Spoken Briefs and Contextual Chat',
+        );
+        expect(beliefInSecondPerson('Preferences for short release notes')).toBe('You prefer short release notes');
+    });
+
+    it('keeps a plain memory name unchanged', () => {
+        expect(beliefInSecondPerson('Writing style', { nounPhrase: false })).toBe('Writing style');
+    });
+});
