@@ -136,6 +136,12 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
     const [refreshing, setRefreshing] = useState(false);
     const [revision, setRevision] = useState(0);
     const [selectedID, setSelectedID] = useState<string | null>(null);
+    // Clicking the selected person again reloads its detail (N53).
+    const [reloadToken, setReloadToken] = useState(0);
+    const pickPerson = useCallback((id: string) => {
+        if (id === selectedID) setReloadToken((n) => n + 1);
+        setSelectedID(id);
+    }, [selectedID]);
     const firstDay = useFirstDay();
     const calendarPeople = firstDay.firstDays && firstDay.calendar?.connected ? firstDay.calendar.people ?? [] : [];
     const [keyword, setKeyword] = useState('');
@@ -599,7 +605,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                 <p className="text-[13px] text-muted">{tr('overview.noResults', { query: keyword.trim() })}</p>
                             ) : (
                                 results.map((e) => (
-                                    <PersonRow key={e.principal.id} entry={e} card={cardsById.get(e.principal.id)} selected={selectedID === e.principal.id} onSelect={setSelectedID} />
+                                    <PersonRow key={e.principal.id} entry={e} card={cardsById.get(e.principal.id)} selected={selectedID === e.principal.id} onSelect={pickPerson} />
                                 ))
                             )}
                         </section>
@@ -638,7 +644,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                     invalidatePeopleReads();
                                     void reload();
                                 }}
-                                onReview={setSelectedID}
+                                onReview={pickPerson}
                             />
 
                             {groups.open.length > 0 && (
@@ -648,13 +654,13 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                     </h2>
                                     <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] gap-3">
                                         {groups.open.map((card) => (
-                                            <OpenCard key={card.id} card={card} entry={byId.get(card.id)} selected={selectedID === card.id} landed={landedID === card.id} onSelect={setSelectedID} />
+                                            <OpenCard key={card.id} card={card} entry={byId.get(card.id)} selected={selectedID === card.id} landed={landedID === card.id} onSelect={pickPerson} />
                                         ))}
                                     </div>
                                 </section>
                             )}
 
-                            <CalendarPeopleSection people={calendarPeople} known={(id) => byId.has(id)} onSelect={setSelectedID} />
+                            <CalendarPeopleSection people={calendarPeople} known={(id) => byId.has(id)} onSelect={pickPerson} />
 
                             {groups.others.length > 0 && (
                                 <section aria-labelledby="people-all-h" className="flex flex-col gap-1">
@@ -662,7 +668,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                         {tr('overview.everyoneHeading')}
                                     </h2>
                                     {groups.others.map((card) => (
-                                        <PersonRow key={card.id} entry={byId.get(card.id)} card={card} selected={selectedID === card.id} landed={landedID === card.id} onSelect={setSelectedID} />
+                                        <PersonRow key={card.id} entry={byId.get(card.id)} card={card} selected={selectedID === card.id} landed={landedID === card.id} onSelect={pickPerson} />
                                     ))}
                                 </section>
                             )}
@@ -686,7 +692,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                     {tr('groupSelf')}
                                 </h2>
                                 {groups.self || groups.selfCard ? (
-                                    <PersonRow entry={groups.self ?? undefined} card={groups.selfCard ?? undefined} selected={selectedID === (groups.self?.principal.id ?? groups.selfCard?.id)} onSelect={setSelectedID} />
+                                    <PersonRow entry={groups.self ?? undefined} card={groups.selfCard ?? undefined} selected={selectedID === (groups.self?.principal.id ?? groups.selfCard?.id)} onSelect={pickPerson} />
                                 ) : selfReadReady ? (
                                     <div className="flex flex-col items-start gap-2.5">
                                         <p className="text-[13px] leading-relaxed text-muted">{tr('emptySelf')}</p>
@@ -725,6 +731,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                 card={selectedCard}
                                 entry={selectedEntry}
                                 revision={revision}
+                                reloadToken={reloadToken}
                                 actions={actions}
                                 notice={failureNotice}
                             />

@@ -31,11 +31,15 @@ export interface PersonActions {
     onUnlink: (p: PrincipalDTO) => void;
 }
 
+/** Quiet re-reads after a failed read, before the failure line shows (N45). */
+const quietRetryWaits = [400, 1200, 3000];
+
 export function PersonDetailPanel({
     personId,
     card,
     entry,
     revision,
+    reloadToken = 0,
     actions,
     notice,
 }: {
@@ -44,6 +48,8 @@ export function PersonDetailPanel({
     entry?: PrincipalWithStatsDTO;
     /** Bumped by the page after a change, so the detail reads again. */
     revision: number;
+    /** Bumped when the selected person is clicked again: the detail reads again. */
+    reloadToken?: number;
     actions: PersonActions;
     /** A failed action on this person (delete, unlink), at the top. */
     notice?: ReactNode;
@@ -55,8 +61,23 @@ export function PersonDetailPanel({
     );
     const [failed, setFailed] = useState(false);
     const [attempt, setAttempt] = useState(0);
-    const reread = useCallback(() => setAttempt((n) => n + 1), []);
+    // How many quiet re-reads a failed re-read has used since the last success.
+    const quietRetries = useRef(0);
+    const reread = useCallback(() => {
+        quietRetries.current = 0;
+        setAttempt((n) => n + 1);
+    }, []);
     const lastRevision = useRef(revision);
+    const lastReload = useRef(reloadToken);
+    // How many successes have landed for this person. A failure only shows
+    // when no success landed after its read started, so a stale error never
+    // overrides a later success (N53).
+    const landed = useRef(0);
+    // The detail on screen, read by the load effect's failure path.
+    const shown = useRef<PersonDetail | null>(null);
+    useEffect(() => {
+        shown.current = detail;
+    }, [detail]);
     const devTools = usePeopleDevTools();
     const [draftFor, setDraftFor] = useState<string | null>(null);
     useEffect(() => setDraftFor(null), [personId]);
@@ -66,30 +87,63 @@ export function PersonDetailPanel({
     useEffect(() => {
         setDetail(pageQueryCache.peek<PersonDetail>('GetPersonDetail', [personId]) ?? null);
         setFailed(false);
+        quietRetries.current = 0;
     }, [personId]);
+
+    // A value for this person that lands in the cache from another read paints
+    // here too, so a failure of this panel's own read never outlives it (N53).
+    useEffect(() => pageQueryCache.subscribe((name, args) => {
+        if (name !== 'GetPersonDetail' || (args && args[0] !== personId)) return;
+        const value = pageQueryCache.peek<PersonDetail>('GetPersonDetail', [personId]);
+        if (!value) return;
+        landed.current++;
+        quietRetries.current = 0;
+        setDetail(value);
+        setFailed(false);
+    }), [personId]);
 
     useEffect(() => {
         let alive = true;
+        let quiet: ReturnType<typeof setTimeout> | undefined;
         // The page's revision bump (a people change) means re-read from the
         // source, not a fresh-cache answer; the page-queries event map also
-        // clears this name on contacts/privacy events.
+        // clears this name on contacts/privacy events. Clicking the selected
+        // person again (reloadToken) re-reads the same way.
         const revisionChanged = revision !== lastRevision.current;
         lastRevision.current = revision;
-        if (attempt > 0 || revisionChanged) pageQueryCache.invalidate(['GetPersonDetail'], true, [personId]);
+        const reloaded = reloadToken !== lastReload.current;
+        lastReload.current = reloadToken;
+        if (attempt > 0 || revisionChanged || reloaded) pageQueryCache.invalidate(['GetPersonDetail'], true, [personId]);
+        const started = landed.current;
         readWithRetry(() => GetPersonDetail(personId))
             .then((next) => {
                 if (!alive) return;
+                landed.current++;
+                quietRetries.current = 0;
                 setDetail(next);
                 setFailed(false);
             })
             .catch(() => {
-                // A later failed re-read keeps the detail on screen and says nothing.
-                if (alive) setFailed(true);
+                // A failure a later success overtook says nothing (N53).
+                if (!alive || landed.current !== started) return;
+                // A failed re-read keeps the detail on screen and tries again
+                // quietly; the failure line shows only when the tries run out (N45).
+                // A first read that fails shows the failure line as before.
+                const wait = shown.current ? quietRetryWaits[quietRetries.current] : undefined;
+                if (wait !== undefined) {
+                    quietRetries.current++;
+                    quiet = setTimeout(() => {
+                        if (alive) setAttempt((n) => n + 1);
+                    }, wait);
+                    return;
+                }
+                setFailed(true);
             });
         return () => {
             alive = false;
+            clearTimeout(quiet);
         };
-    }, [personId, revision, attempt]);
+    }, [personId, revision, attempt, reloadToken]);
 
     const principal = entry?.principal;
     const kind = principal?.kind ?? card?.kind ?? '';

@@ -316,6 +316,15 @@ describe("People overview", () => {
         expect(screen.getByRole("button", { name: /Priya Nair/, pressed: true })).toBeInTheDocument();
     });
 
+    it("clicking the selected person again reads their detail again (N53)", async () => {
+        world();
+        render(<PeoplePage />);
+        expect(await screen.findByRole("heading", { level: 2, name: "Priya Nair" })).toBeInTheDocument();
+        const readsSoFar = mocks.detail.mock.calls.filter(([id]) => id === "priya").length;
+        fireEvent.click(screen.getByRole("button", { name: /Priya Nair/, pressed: true }));
+        await waitFor(() => expect(mocks.detail.mock.calls.filter(([id]) => id === "priya").length).toBeGreaterThan(readsSoFar));
+    });
+
     it("keeps the page and person visible when Together fails, and retries it", async () => {
         const { details } = world();
         mocks.detail.mockImplementation(async (id: string) => id === "priya" ? { ...details.priya, together: [], togetherFailed: true } : details[id]);
