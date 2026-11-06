@@ -169,7 +169,10 @@ enum FeedUITestSeed {
         var brief = MobileBriefV1(version: 1, briefId: "\(localDate)-\(slot)", slot: slot, localDate: localDate,
                                   timezone: TimeZone.current.identifier, asOf: stamp(asOf),
                                   hubName: "Seeded Mac", narrativeStatus: "ok",
-                                  narrative: [BriefParagraph(text: items.first?.1.title ?? "Your day is ready.")])
+                                  // The opening is a sentence the computer would write, never an item's title (P126).
+                                  narrative: [BriefParagraph(text: slot == "evening"
+                                                             ? "Your day is wrapping up, and here is what moved."
+                                                             : "Here is what moved since yesterday.")])
         for (index, entry) in items.enumerated() {
             let (section, seed) = entry
             let ref = "e\(index + 1)"
