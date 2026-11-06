@@ -1,7 +1,7 @@
 import { ExistingTextChannels } from "./existing-text-channels";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { SettingsFailureLine, useSettingsFailure } from "@/components/settings/settings-failure";
 import type { TFunction } from "i18next";
 import { describeMobileStatus } from "@/lib/mobile-status";
@@ -203,6 +203,41 @@ async function settle<T>(read: () => Promise<T>): Promise<ReadState<T>> {
     }
 }
 
+/** ST87: a failed read never replaces a value the page already shows. A read
+ *  that never succeeded stays failed, and its line is left out. */
+export function keepRead<T>(next: ReadState<T>, prev: ReadState<T>): ReadState<T> {
+    if (next.status !== "failed") return next;
+    return prev.status === "ready" ? prev : next;
+}
+
+/** ST87: the overview names the sections it could not read. Each keeps its last
+ *  known value; a section that was never read stays unavailable, so its line is left out. */
+export function keepOverviewRead(
+    next: ReadState<SettingsOverviewView>,
+    prev: ReadState<SettingsOverviewView>,
+): ReadState<SettingsOverviewView> {
+    if (next.status === "failed") return keepRead(next, prev);
+    if (next.status !== "ready" || prev.status !== "ready") return next;
+    const unavailable = next.value.unavailable ?? [];
+    if (unavailable.length === 0) return next;
+    const known = prev.value as unknown as Record<string, unknown>;
+    const prevUnavailable = prev.value.unavailable ?? [];
+    const merged: Record<string, unknown> = { ...next.value };
+    const stillUnavailable: string[] = [];
+    for (const section of unavailable) {
+        if (!prevUnavailable.includes(section) && known[section] !== undefined) {
+            merged[section] = known[section];
+        } else {
+            stillUnavailable.push(section);
+        }
+    }
+    return { status: "ready", value: { ...(merged as unknown as SettingsOverviewView), unavailable: stillUnavailable } };
+}
+
+/** How long a quiet re-read waits while a read is still missing: 5 s, doubling to 60 s. */
+const QUIET_RETRY_FIRST_MS = 5_000;
+const QUIET_RETRY_LAST_MS = 60_000;
+
 // ── Layout pieces ──
 
 function OverviewRow({ label, control, children }: { label: string; control?: ReactNode; children: ReactNode }) {
@@ -214,20 +249,6 @@ function OverviewRow({ label, control, children }: { label: string; control?: Re
             <div className="min-w-0 flex-[1_1_420px] text-[15px] leading-[1.6] text-ink">{children}</div>
             {control && <div className="flex shrink-0 items-center gap-2">{control}</div>}
         </div>
-    );
-}
-
-// Set by OverviewPage: Try again on any row re-reads the whole overview.
-const OverviewRetryContext = createContext<() => void>(() => {});
-
-function RowFailed() {
-    const { t } = useTranslation("settings");
-    const retry = useContext(OverviewRetryContext);
-    return (
-        <span className="flex items-center gap-2 text-[13.5px] leading-snug">
-            <AlertCircle className="size-[15px] shrink-0 text-copper" aria-hidden />
-            <SettingsFailureLine className="text-[13.5px]" failure={{ text: t("overview.rowFailed"), retry }} />
-        </span>
     );
 }
 
@@ -508,6 +529,10 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
     const outcomesRef = useRef(outcomes);
     // Bumped by every read; a read that resolves after a newer one started is dropped.
     const readVersion = useRef(0);
+    // ST87: a missing read re-reads quietly, with no message on the page.
+    const retryTimer = useRef<number | undefined>(undefined);
+    const retryDelay = useRef(QUIET_RETRY_FIRST_MS);
+    const refreshRef = useRef<() => void>(() => {});
 
     const refresh = useCallback(async () => {
         const version = ++readVersion.current;
@@ -518,11 +543,23 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
             settle(() => GetMobileBriefSchedule()),
         ]);
         if (!mounted.current || version !== readVersion.current) return;
-        setOverview(nextOverview);
-        setSources(nextSources);
-        setLearning(nextLearning);
-        setSchedule(nextSchedule);
+        setOverview((prev) => keepOverviewRead(nextOverview, prev));
+        setSources((prev) => keepRead(nextSources, prev));
+        setLearning((prev) => keepRead(nextLearning, prev));
+        setSchedule((prev) => keepRead(nextSchedule, prev));
         setNow(Date.now());
+        const missing =
+            nextOverview.status !== "ready" ||
+            (nextOverview.value.unavailable?.length ?? 0) > 0 ||
+            [nextSources, nextLearning, nextSchedule].some((read) => read.status === "failed");
+        window.clearTimeout(retryTimer.current);
+        if (missing) {
+            retryTimer.current = window.setTimeout(() => refreshRef.current(), retryDelay.current);
+            retryDelay.current = Math.min(retryDelay.current * 2, QUIET_RETRY_LAST_MS);
+        } else {
+            retryTimer.current = undefined;
+            retryDelay.current = QUIET_RETRY_FIRST_MS;
+        }
         if (nextOverview.status === "ready") {
             markPageContent('settings');
             const current = nextOverview.value.worthALook ?? [];
@@ -533,7 +570,6 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
         }
     }, []);
 
-    const retryOverview = useCallback(() => void refresh(), [refresh]);
     usePageQueryRefresh(OVERVIEW_READS, refresh);
 
     // A privacy transition withdraws the pre-transition sentences
@@ -553,6 +589,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
 
     useEffect(() => {
         mounted.current = true;
+        refreshRef.current = () => void refresh();
         // A seeded page has content at mount; the timing mark belongs to it.
         if (overviewSeed !== undefined) markPageContent("settings");
         void refresh();
@@ -564,6 +601,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
         return () => {
             mounted.current = false;
             readVersion.current += 1;
+            window.clearTimeout(retryTimer.current);
             window.removeEventListener("focus", onFocus);
             off();
             offPermissions();
@@ -660,7 +698,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
         const observation = (
             <PageLink onClick={() => openSettingsPage("activity", onOpenPage)}>{t("overview.sees.link")}</PageLink>
         );
-        if (!view) return { body: <RowFailed />, control: observation };
+        if (!view) return null;
         const sees = view.sees;
         if (!sees.watching) {
             const until = sees.pausedUntil ? timeOf(sees.pausedUntil, now, locale) : null;
@@ -683,7 +721,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
                 ),
             };
         }
-        if (sources.status === "failed") return { body: <RowFailed />, control: observation };
+        if (sources.status === "failed") return null;
         if (sources.status === "loading") return { body: null };
         if (sources.value.screenBlocked) {
             return {
@@ -732,7 +770,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
                 {t("overview.speaksUp.link")}
             </PageLink>
         );
-        if (!view || failed("speaksUp")) return { body: <RowFailed />, control };
+        if (!view || failed("speaksUp")) return null;
         const speaks = view.speaksUp;
         const level = speaks.level as EngagementLevel;
         const select = (
@@ -796,7 +834,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
         const control = (
             <PageLink onClick={() => openSettingsPage("ai-provider", onOpenPage)}>{t("overview.thinksWith.link")}</PageLink>
         );
-        if (!view || failed("thinksWith")) return { body: <RowFailed />, control };
+        if (!view || failed("thinksWith")) return null;
         const order = view.thinksWith.order;
         if (order.length === 0) return { body: t("overview.thinksWith.none"), control };
         const names = order.map((entry) => assistantName(entry.assistant, t));
@@ -827,16 +865,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
 
     // ── Remembers ──
     const remembersRow = (() => {
-        if (!view || failed("remembers") || learning.status === "failed") {
-            return {
-                body: <RowFailed />,
-                control: (
-                    <PageLink onClick={() => openSettingsPage("memory", onOpenPage)}>
-                        {t("overview.remembers.link")}
-                    </PageLink>
-                ),
-            };
-        }
+        if (!view || failed("remembers") || learning.status === "failed") return null;
         if (learning.status === "loading") return { body: null };
         const count = view.remembers.awaitingConfirmCount;
         const things = learning.value.map((thing) => t(`overview.remembers.things.${thing}`));
@@ -860,14 +889,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
 
     // ── Keeps ──
     const keepsRow = (() => {
-        if (!view || failed("keeps")) {
-            return {
-                body: <RowFailed />,
-                control: (
-                    <PageLink onClick={() => openSettingsPage("storage", onOpenPage)}>{t("overview.keeps.link")}</PageLink>
-                ),
-            };
-        }
+        if (!view || failed("keeps")) return null;
         const keeps = view.keeps;
         const limit = formatBytes(keeps.limitBytes);
         const used = formatBytes(keeps.usedBytes);
@@ -928,7 +950,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
         const control = (
             <PageLink onClick={() => openSettingsPage("iphone", onOpenPage)}>{t("overview.briefs.link")}</PageLink>
         );
-        if (!view || failed("briefs") || schedule.status === "failed") return { body: <RowFailed />, control };
+        if (!view || failed("briefs") || schedule.status === "failed") return null;
         if (schedule.status === "loading") return { body: null, control };
         const brief = schedule.value;
         if (!brief.enabled) return { body: t("overview.briefs.off"), control };
@@ -950,14 +972,13 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
 
     // ── Ignores ──
     const ignoresRow = (() => {
-        const apps = view?.ignores.apps ?? [];
+        if (!view) return null;
+        const apps = view.ignores.apps;
         const named = apps.slice(0, IGNORED_APPS_NAMED).map((app) => app.name);
         const rest = apps.length - named.length;
         const list = rest > 0 ? [...named, t("overview.ignores.more", { count: rest })] : named;
         return {
-            body: !view ? (
-                <RowFailed />
-            ) : apps.length === 0 ? (
+            body: apps.length === 0 ? (
                 t("overview.ignores.none")
             ) : (
                 t("overview.ignores.some", { apps: joinList(list, t) })
@@ -970,7 +991,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
         };
     })();
 
-    const rows: { key: string; row: { body: ReactNode; control?: ReactNode } }[] = [
+    const rows: { key: string; row: { body: ReactNode; control?: ReactNode } | null }[] = [
         { key: "sees", row: seesRow },
         { key: "speaksUp", row: speaksUpRow },
         { key: "thinksWith", row: thinksWithRow },
@@ -982,7 +1003,7 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
     const confirmPeriod = confirmDays === null ? "" : retentionLabel(t, confirmDays);
 
     return (
-        <OverviewRetryContext.Provider value={retryOverview}>
+        <>
             <SettingsFailureLine failure={changeFailure} />
             {view && issues.length > 0 && (
                 <WorthALook
@@ -996,15 +1017,17 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
                 />
             )}
             <section aria-label={t("pages.overview.title")} className="flex flex-col">
-                {rows.map(({ key, row }) => (
-                    <OverviewRow
-                        key={key}
-                        label={t(`overview.labels.${key}` as never) as string}
-                        control={row.control}
-                    >
-                        {row.body}
-                    </OverviewRow>
-                ))}
+                {rows.flatMap(({ key, row }) =>
+                    row ? [
+                        <OverviewRow
+                            key={key}
+                            label={t(`overview.labels.${key}` as never) as string}
+                            control={row.control}
+                        >
+                            {row.body}
+                        </OverviewRow>,
+                    ] : [],
+                )}
             </section>
             <ExistingTextChannels />
             <ConfirmDialog
@@ -1022,6 +1045,6 @@ export function OverviewPage({ onOpenPage, active = true }: { onOpenPage?: OpenS
                     void change("keeps", () => SetActivityRetentionDays(confirmDays));
                 }}
             />
-        </OverviewRetryContext.Provider>
+        </>
     );
 }

@@ -897,7 +897,6 @@
     },
     "overview": {
         "loading": "Checking your setup...",
-        "rowFailed": "Couldn't read this setting.",
         "changeFailed": "Couldn't change this.",
         "listSeparator": ", ",
         "listLastSeparator": " and ",

@@ -897,7 +897,6 @@
     },
     "overview": {
         "loading": "正在检查你的设置……",
-        "rowFailed": "无法读取此设置。",
         "changeFailed": "无法更改此设置。",
         "listSeparator": "、",
         "listLastSeparator": "和",

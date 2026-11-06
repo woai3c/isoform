@@ -6,7 +6,7 @@ import type { MobileBriefSchedule, SettingsOverviewView } from "@/lib/wails-shim
 import type { PermissionItem, PlatformPermissions } from "@/types";
 import { pageQueryCache } from "@/lib/query-cache";
 import { resetPageQueries } from "@/lib/page-queries";
-import { OverviewPage } from "./overview-page";
+import { keepOverviewRead, keepRead, OverviewPage } from "./overview-page";
 
 vi.mock("./existing-text-channels", () => ({ ExistingTextChannels: () => null }));
 
@@ -513,39 +513,48 @@ describe("OverviewPage", () => {
         expect(screen.getByRole("button", { name: "Fix the connection" })).toBeInTheDocument();
     });
 
-    it("fails only the sentence whose source failed", async () => {
+    // ST87: the Overview never shows a read error. A line whose read never
+    // succeeded is left out; every other line still shows.
+    it("leaves out a line that was never read and shows no read error", async () => {
         mocks.overview.mockResolvedValue(makeOverview({ unavailable: ["thinksWith"] }));
         mocks.schedule.mockRejectedValue(new Error("brief unavailable"));
         render(<OverviewPage />);
         await screen.findByText("Sees");
-        await waitFor(() => expect(row("Thinks with")).toHaveTextContent("Couldn't read this setting."));
-        expect(row("Briefs")).toHaveTextContent("Couldn't read this setting.");
-        expect(within(row("Thinks with")).getByRole("button", { name: "Assistant" })).toBeInTheDocument();
+        await act(async () => {});
+        expect(screen.queryByText("Thinks with", { selector: "span" })).toBeNull();
+        expect(screen.queryByText("Briefs", { selector: "span" })).toBeNull();
+        expect(screen.queryByText("Couldn't read this setting.")).toBeNull();
         expect(row("Sees")).toHaveTextContent("Isoform is watching your screen");
         expect(row("Speaks up")).toHaveTextContent("up to 6 times a day");
         expect(row("Remembers")).toHaveTextContent("3 things it learned");
         expect(row("Keeps")).toHaveTextContent("2.4 GB used");
     });
 
-    it("keeps every row and says each failed when the overview cannot be read", async () => {
+    it("shows no read error and leaves out every line when the overview cannot be read", async () => {
         mocks.overview.mockRejectedValue(new Error("down"));
         render(<OverviewPage />);
-        await screen.findByText("Sees");
-        const pages: [string, string][] = [
-            ["Sees", "Observation"],
-            ["Speaks up", "Notifications"],
-            ["Thinks with", "Assistant"],
-            ["Remembers", "Learning and memory"],
-            ["Keeps", "Storage"],
-            ["Briefs", "Phone"],
-            ["Ignores", "Add a private app"],
-        ];
-        for (const [label, link] of pages) {
-            expect(row(label)).toHaveTextContent("Couldn't read this setting.");
-            // Each failed sentence still leads to the page that owns the setting.
-            expect(within(row(label)).getByRole("button", { name: link })).toBeInTheDocument();
+        await act(async () => {});
+        await waitFor(() => expect(mocks.overview).toHaveBeenCalled());
+        expect(screen.queryByText("Couldn't read this setting.")).toBeNull();
+        for (const label of ["Speaks up", "Thinks with", "Remembers", "Keeps", "Briefs", "Ignores"]) {
+            expect(screen.queryByText(label, { selector: "span" })).toBeNull();
         }
         expect(screen.queryByText(/Worth a look/)).toBeNull();
+    });
+
+    it("keeps the last known Thinks with line when a later read cannot read it", async () => {
+        mocks.overview.mockResolvedValueOnce(makeOverview());
+        const { unmount } = await renderPage();
+        expect(row("Thinks with")).toHaveTextContent("Assistant");
+        mocks.overview.mockResolvedValue(makeOverview({ unavailable: ["thinksWith"] }));
+        const before = mocks.overview.mock.calls.length;
+        pageQueryCache.invalidate(["GetSettingsOverview"]);
+        fireEvent(window, new Event("focus"));
+        await waitFor(() => expect(mocks.overview.mock.calls.length).toBeGreaterThan(before));
+        await act(async () => {});
+        expect(row("Thinks with")).toHaveTextContent("Assistant");
+        expect(screen.queryByText("Couldn't read this setting.")).toBeNull();
+        unmount();
     });
 
     it("shows the busy state while the overview is read", async () => {
@@ -664,5 +673,34 @@ describe("OverviewPage", () => {
         expect(row("保留")).toHaveTextContent("录制内容存储在这台电脑上，保留");
         expect(row("保留")).toHaveTextContent("，总共最多 10 GB，已使用 2.4 GB。");
         expect(row("思考")).toHaveTextContent("先由 Claude Code 回答，然后是 Codex。Claude Code 的5 小时额度还剩 95%。");
+    });
+});
+
+describe("Overview keeps the last known reading (ST87)", () => {
+    const ready = (value: SettingsOverviewView) => ({ status: "ready" as const, value });
+
+    it("keeps the last known section when the next read names it unavailable", () => {
+        const known = makeOverview();
+        const next = makeOverview({ unavailable: ["thinksWith"], thinksWith: { order: [] } as unknown as SettingsOverviewView["thinksWith"] });
+        const merged = keepOverviewRead(ready(next), ready(known));
+        expect(merged.status).toBe("ready");
+        if (merged.status !== "ready") return;
+        expect(merged.value.thinksWith).toEqual(known.thinksWith);
+        expect(merged.value.unavailable).toEqual([]);
+    });
+
+    it("leaves a section that was never read unavailable", () => {
+        const known = makeOverview({ unavailable: ["thinksWith"] });
+        const next = makeOverview({ unavailable: ["thinksWith"] });
+        const merged = keepOverviewRead(ready(next), ready(known));
+        expect(merged.status === "ready" && merged.value.unavailable).toEqual(["thinksWith"]);
+    });
+
+    it("keeps the last known value when a read fails, and stays failed when none was known", () => {
+        const known = ready(makeOverview());
+        expect(keepRead({ status: "failed" as const }, known)).toBe(known);
+        expect(keepRead({ status: "failed" as const }, { status: "loading" as const })).toEqual({ status: "failed" });
+        const fresh = ready(makeOverview());
+        expect(keepRead(fresh, known)).toBe(fresh);
     });
 });
