@@ -431,7 +431,7 @@ export function KnowledgePage({
 
     // One card per idea (W40): copies whose titles match share a card, and the
     // groups cover every copy, so an action reaches all of them.
-    const meanings = useIdeaMeanings(cards, cardTitle, cardSavedAt);
+    const meanings = useIdeaMeanings(cards, cardTitle, cardSavedAt, IDEA_MEANING_THRESHOLD_KNOW_HOW);
     const ideaGroups = useMemo(() => groupIdeas(cards, cardTitle, cardSavedAt, meanings), [cards, meanings]);
     const ideaGroupOfId = useMemo(() => {
         const byId = new Map<string, IdeaGroup<main.KnowHowCard>>();
@@ -1651,6 +1651,9 @@ function PageMoreMenu({
         </DropdownMenu>
     );
 }
+
+/** Cosine threshold for know-how titles (tuned on the user's titles; see idea_meaning.go). */
+const IDEA_MEANING_THRESHOLD_KNOW_HOW = 0.65;
 
 function cardTitle(card: main.KnowHowCard): string {
     return card.title;

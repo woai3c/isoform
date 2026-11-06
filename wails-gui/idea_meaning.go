@@ -3,94 +3,227 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"math"
+	"os"
+	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
 )
 
-// One card per idea by meaning (design review v1.0.8 W40, Y33). The words of
-// two titles often differ while the idea is the same ("Approves disk cleanup
-// only after…" and "You give explicit scope… when approving destructive
-// actions"), so titles are compared with the memory store's embedder when
-// the app has one. Without an embedder it returns nothing and the page falls
-// back to its word matcher.
+// One card per idea by meaning (design review v1.0.8 W40, Y33; v1.0.9 R24).
+// Titles are compared with the memory store's embedder when the app has one.
+// Embedding is slow on a busy machine, so nothing here blocks a page: the
+// binding answers from memory or the disk cache at once, and while titles are
+// still being embedded it answers pending. The page keeps its word matcher until
+// groups arrive. Vectors are cached on disk per embedding model, so a restart
+// does not embed them again.
 
-// ideaMeaningThreshold is the cosine similarity at which two titles mean the
-// same idea. It is tuned on the local MiniLM embedder against the belief titles
-// of one user (see the PR for the pairs it was read against).
-const ideaMeaningThreshold = 0.8
+// Thresholds are the cosine similarity at which a title joins the group whose
+// first (newest) title it matches. Know-how (How you do things) uses 0.65: on
+// the user's own titles, the date-sensitive test cluster and the test-timeout
+// and not-ready-store clusters fold, and the groups sampled looked like one
+// idea each. Below 0.6 unrelated titles start to join. Beliefs use 0.75.
+const (
+	ideaMeaningThresholdKnowHow = 0.65
+	ideaMeaningThresholdBeliefs = 0.75
+)
 
-// ideaMeaningMaxCache bounds the in-memory vector cache; it is cleared when full.
-const ideaMeaningMaxCache = 20000
+// ideaMeaningBatch is how many titles one embedder call takes. Batches sleep
+// between calls so the embedder never holds the CPU for long.
+const (
+	ideaMeaningBatch     = 32
+	ideaMeaningPause     = 100 * time.Millisecond
+	ideaMeaningMaxTitles = 6000
+	ideaMeaningMaxResult = 8
+)
 
-var ideaVectors = struct {
-	sync.Mutex
-	byHash map[[sha256.Size]byte][]float64
-}{byHash: map[[sha256.Size]byte][]float64{}}
-
-// IdeaMeaningGroups returns, for each title in the given order, the index of
-// the meaning group it joins. Earlier titles head their groups, so pass the
-// newest first. It returns nil when the memory store has no embedder.
-func (a *App) IdeaMeaningGroups(titles []string) (perfValue []int, perfErr error) {
-	defer logPageBinding("IdeaMeaningGroups", time.Now(), &perfValue)
-	if a == nil || a.memoryStore == nil || a.memoryStore.embedder == nil || len(titles) == 0 {
-		return nil, nil
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	vectors, err := embedIdeaTitles(ctx, a.memoryStore.embedder, titles)
-	if err != nil {
-		return nil, err
-	}
-	return clusterIdeaMeanings(vectors), nil
+// IdeaMeaningResult is what the page reads: groups aligned with the titles it
+// sent, or pending while the app is still embedding them.
+type IdeaMeaningResult struct {
+	Groups  []int `json:"groups"`
+	Pending bool  `json:"pending"`
 }
 
-// embedIdeaTitles returns one unit-length vector per title, embedding only the
-// titles it has not seen in this process.
-func embedIdeaTitles(ctx context.Context, embedder EmbeddingProvider, titles []string) ([][]float64, error) {
-	out := make([][]float64, len(titles))
-	var missing []int
-	ideaVectors.Lock()
+type ideaMeaningStore struct {
+	mu       sync.Mutex
+	loaded   bool
+	file     string
+	vectors  map[[sha256.Size]byte][]float64
+	results  map[[sha256.Size]byte][]int
+	running  bool
+	disabled bool
+}
+
+// ideaMeaningCacheRoot is where the vectors live; tests point it elsewhere.
+var ideaMeaningCacheRoot = func() (string, error) {
+	root, err := flavorDataDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "cache", "idea-meaning"), nil
+}
+
+var ideaMeanings = &ideaMeaningStore{vectors: map[[sha256.Size]byte][]float64{}, results: map[[sha256.Size]byte][]int{}}
+
+var unsafeModelName = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
+
+// IdeaMeaningGroups returns the meaning groups for the titles, newest first,
+// joining titles at the given cosine threshold (0.5 to 0.95).
+// It never embeds on the caller's time: it answers from memory, returns
+// pending while titles are embedded in the background, and returns nil when the
+// memory store has no embedder.
+func (a *App) IdeaMeaningGroups(titles []string, threshold float64) (*IdeaMeaningResult, error) {
+	if a == nil || a.memoryStore == nil || a.memoryStore.embedder == nil || len(titles) == 0 || len(titles) > ideaMeaningMaxTitles || threshold < 0.5 || threshold > 0.95 {
+		return nil, nil
+	}
+	return ideaMeanings.lookup(a.memoryStore.embedder, titles, threshold), nil
+}
+
+func (s *ideaMeaningStore) lookup(embedder EmbeddingProvider, titles []string, threshold float64) *IdeaMeaningResult {
+	hashes := make([][sha256.Size]byte, len(titles))
+	key := sha256.New()
+	binary.Write(key, binary.LittleEndian, math.Float64bits(threshold))
 	for i, title := range titles {
-		if vec, ok := ideaVectors.byHash[sha256.Sum256([]byte(title))]; ok {
-			out[i] = vec
-		} else {
+		hashes[i] = sha256.Sum256([]byte(title))
+		key.Write(hashes[i][:])
+	}
+	var resultKey [sha256.Size]byte
+	copy(resultKey[:], key.Sum(nil))
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ensureLoaded(embedder)
+	if groups, ok := s.results[resultKey]; ok {
+		return &IdeaMeaningResult{Groups: groups}
+	}
+	if !s.running {
+		s.running = true
+		go s.build(embedder, titles, hashes, resultKey, threshold)
+	}
+	return &IdeaMeaningResult{Pending: true}
+}
+
+// build embeds the titles it lacks, in low-priority batches, then clusters.
+func (s *ideaMeaningStore) build(embedder EmbeddingProvider, titles []string, hashes [][sha256.Size]byte, resultKey [sha256.Size]byte, threshold float64) {
+	defer func() {
+		s.mu.Lock()
+		s.running = false
+		s.mu.Unlock()
+	}()
+	var missing []int
+	s.mu.Lock()
+	for i, h := range hashes {
+		if _, ok := s.vectors[h]; !ok {
 			missing = append(missing, i)
 		}
 	}
-	ideaVectors.Unlock()
-	for start := 0; start < len(missing); start += 64 {
-		end := min(start+64, len(missing))
+	s.mu.Unlock()
+	for start := 0; start < len(missing); start += ideaMeaningBatch {
+		end := min(start+ideaMeaningBatch, len(missing))
 		texts := make([]string, 0, end-start)
 		for _, i := range missing[start:end] {
 			texts = append(texts, titles[i])
 		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		vecs, err := embedder.EmbedBatch(ctx, texts)
-		if err != nil {
-			return nil, err
+		cancel()
+		if err != nil || len(vecs) != len(texts) {
+			return
 		}
-		if len(vecs) != len(texts) {
-			return nil, errIdeaMeaningShape
-		}
-		ideaVectors.Lock()
-		if len(ideaVectors.byHash) >= ideaMeaningMaxCache {
-			clear(ideaVectors.byHash)
-		}
+		s.mu.Lock()
 		for k, i := range missing[start:end] {
 			unit := normalizeVector(vecs[k])
-			out[i] = unit
-			ideaVectors.byHash[sha256.Sum256([]byte(titles[i]))] = unit
+			s.vectors[hashes[i]] = unit
+			s.appendLocked(hashes[i], unit)
 		}
-		ideaVectors.Unlock()
+		s.mu.Unlock()
+		time.Sleep(ideaMeaningPause)
 	}
-	return out, nil
+	s.mu.Lock()
+	vectors := make([][]float64, len(hashes))
+	ready := true
+	for i, h := range hashes {
+		vec, ok := s.vectors[h]
+		if !ok {
+			ready = false
+			break
+		}
+		vectors[i] = vec
+	}
+	s.mu.Unlock()
+	if !ready {
+		return
+	}
+	groups := clusterIdeaMeanings(vectors, threshold)
+	s.mu.Lock()
+	if len(s.results) >= ideaMeaningMaxResult {
+		clear(s.results)
+	}
+	s.results[resultKey] = groups
+	s.mu.Unlock()
 }
 
-var errIdeaMeaningShape = errorString("idea meaning: embedder returned a different count")
+// ensureLoaded reads the vectors for this embedding model from disk once.
+// Caller holds s.mu.
+func (s *ideaMeaningStore) ensureLoaded(embedder EmbeddingProvider) {
+	if s.loaded || s.disabled {
+		return
+	}
+	s.loaded = true
+	root, err := ideaMeaningCacheRoot()
+	if err != nil {
+		s.disabled = true
+		return
+	}
+	model := unsafeModelName.ReplaceAllString(embedder.Provider()+"-"+embedder.Model(), "_")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		s.disabled = true
+		return
+	}
+	s.file = filepath.Join(root, "vectors-"+model+".bin")
+	data, err := os.ReadFile(s.file)
+	if err != nil {
+		return
+	}
+	// Each record: a 32-byte title hash, a uint16 length, then that many float32 values.
+	for len(data) >= sha256.Size+2 {
+		var h [sha256.Size]byte
+		copy(h[:], data[:sha256.Size])
+		n := int(binary.LittleEndian.Uint16(data[sha256.Size:]))
+		data = data[sha256.Size+2:]
+		if len(data) < 4*n {
+			break
+		}
+		vec := make([]float64, n)
+		for i := range vec {
+			vec[i] = float64(math.Float32frombits(binary.LittleEndian.Uint32(data[4*i:])))
+		}
+		s.vectors[h] = vec
+		data = data[4*n:]
+	}
+}
 
-type errorString string
-
-func (e errorString) Error() string { return string(e) }
+// appendLocked writes one vector to the disk cache. Caller holds s.mu. A failed
+// write only costs a new embedding next time.
+func (s *ideaMeaningStore) appendLocked(h [sha256.Size]byte, vec []float64) {
+	if s.file == "" || len(vec) > math.MaxUint16 {
+		return
+	}
+	record := make([]byte, 0, sha256.Size+2+4*len(vec))
+	record = append(record, h[:]...)
+	record = binary.LittleEndian.AppendUint16(record, uint16(len(vec)))
+	for _, x := range vec {
+		record = binary.LittleEndian.AppendUint32(record, math.Float32bits(float32(x)))
+	}
+	f, err := os.OpenFile(s.file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	_, _ = f.Write(record)
+	_ = f.Close()
+}
 
 func normalizeVector(v []float64) []float64 {
 	var sum float64
@@ -108,16 +241,15 @@ func normalizeVector(v []float64) []float64 {
 	return out
 }
 
-// clusterIdeaMeanings assigns each vector to the first group whose head it
-// matches, else starts a group. Vectors are unit length, so a dot product is
-// the cosine similarity.
-func clusterIdeaMeanings(vectors [][]float64) []int {
+// clusterIdeaMeanings assigns each unit vector to the first group whose head it
+// matches, else starts a group. The cosine of two unit vectors is their dot product.
+func clusterIdeaMeanings(vectors [][]float64, threshold float64) []int {
 	out := make([]int, len(vectors))
 	var heads []int
 	for i, v := range vectors {
 		group := -1
 		for g, h := range heads {
-			if dot(vectors[h], v) >= ideaMeaningThreshold {
+			if dot(vectors[h], v) >= threshold {
 				group = g
 				break
 			}

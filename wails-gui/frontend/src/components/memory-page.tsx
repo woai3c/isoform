@@ -50,6 +50,9 @@ import { MEMORY_AREAS, memoryArea, sentMessageEvidence, type MemoryArea } from '
 import { groupIdeas, ideaCopyIds, ideaHead, type IdeaGroup } from '@/lib/idea-copies';
 import { useIdeaMeanings } from '@/lib/idea-meanings';
 
+/** Cosine threshold for belief titles (see idea_meaning.go). */
+const IDEA_MEANING_THRESHOLD_BELIEFS = 0.75;
+
 interface MemoryPageProps {
     onOpenActivitySession?: (sessionId: string) => void;
     initialSelectedId?: string | null;
@@ -361,7 +364,7 @@ export function MemoryPage({
     const ideaTitle = useCallback((entry: main.MemoryEntry) => (
         beliefInSecondPerson(humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '')) || memoryLabel(entry, t)
     ), [t]);
-    const meanings = useIdeaMeanings(entries, ideaTitle, bestTime);
+    const meanings = useIdeaMeanings(entries, ideaTitle, bestTime, IDEA_MEANING_THRESHOLD_BELIEFS);
     const ideaGroups = useMemo(() => groupIdeas(entries, ideaTitle, bestTime, meanings), [entries, ideaTitle, meanings]);
     const ideaGroupOf = useMemo(() => {
         const byId = new Map<string, IdeaGroup<main.MemoryEntry>>();
