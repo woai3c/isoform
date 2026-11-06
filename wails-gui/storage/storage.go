@@ -1591,6 +1591,9 @@ func (s *Store) ensureProactiveStructures() error {
 	if err := s.ensureMainChatViewIndexes(); err != nil {
 		return fmt.Errorf("main chat view indexes: %w", err)
 	}
+	if err := s.ensureStreamItemVersions(); err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -83,7 +83,9 @@ type App struct {
 	// Fixture observers measure source collection and evidence reads; nil in production.
 	todayChatCollectionObserver func()
 	// todayChatSourcesMemo shares Today source collections across callers.
-	todayChatSourcesMemo       todayChatSourcesCoalescer
+	todayChatSourcesMemo todayChatSourcesCoalescer
+	// streamPages keeps the saved first page of each chat stream.
+	streamPages                streamPageState
 	memoryEvidenceReadObserver func()
 	topicPageBeforePublish     func()
 	topicPageAfterValidate     func()
@@ -371,6 +373,10 @@ func (a *App) emitBrowserEvent(eventName string, data ...interface{}) {
 		briefPrivacyAmendSoon()
 	} else if mobileBriefReadInputEvents[eventName] {
 		noteMobileBriefReadCachesChanged()
+	}
+	a.noteStreamPageEvent(eventName)
+	if topicFindsSourceEvents[eventName] {
+		a.noteTopicFindsSourceChanged(eventName)
 	}
 	switch eventName {
 	case "memory:updated", "sensitive-apps:updated", closedEyesModeChangedEvent, "background-listening:changed", "topics:withdrawn":

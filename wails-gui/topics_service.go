@@ -72,7 +72,9 @@ type UserTopicUpdate struct {
 
 // topicsService ranks topics and keeps the user's choices about them.
 type topicsService struct {
-	app       *App
+	app *App
+	// findsSnap holds the saved Today finds view's refresh state.
+	findsSnap topicFindsSnapshotState
 	store     *topicsStore
 	snapshots *topicSnapshotStore
 	now       func() time.Time
@@ -152,6 +154,9 @@ func newTopicsService(app *App) *topicsService {
 		log.Printf("[topics] state directory is unavailable")
 	}
 	svc := &topicsService{app: app, store: newTopicsStore(dir), snapshots: newTopicSnapshotStore(dir), now: time.Now}
+	svc.findsSnap.launchAt = time.Now()
+	svc.findsSnap.launchDelay = topicFindsLaunchDelay
+	svc.findsSnap.eventDelay = topicFindsEventDelay
 	svc.collect = func(now time.Time) topicInput { return collectTopicInput(app, now) }
 	svc.interests = func() []interests.Interest { return app.interestsSvc().list() }
 	svc.following = app.interestsSvc().following

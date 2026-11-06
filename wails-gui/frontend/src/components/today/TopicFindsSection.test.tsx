@@ -43,6 +43,13 @@ beforeEach(async () => {
 });
 
 describe("TopicFindsSection", () => {
+    it("draws the skeleton, not an empty result, while the saved view is loading", () => {
+        const { container } = render(<TopicFindsSection finds={finds({ status: "loading", items: [] })} onOpenTopics={vi.fn()} now={NOW} />);
+        expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+        expect(screen.queryByTestId("topic-finds-row")).toBeNull();
+        expect(screen.queryByText(/nothing new/i)).toBeNull();
+    });
+
     it.each(["en", "zh-CN"])("keeps three title/source links in one compact row in %s", async (language) => {
         await i18n.changeLanguage(language);
         const items = [1, 2, 3, 4, 5].map((i) => ({ ...find, id: `f${i}`, title: `Find ${i}`, source: `Source ${i}` }));

@@ -426,6 +426,14 @@ func (s *Service) UpdateWorkspaceActiveSession(ctx context.Context, workspaceID,
 	return s.store.UpdateWorkspaceActiveSession(ctx, workspaceID, sessionID)
 }
 
+// StreamItemVersion returns the session's item version (see storage.StreamItemVersion).
+func (s *Service) StreamItemVersion(ctx context.Context, sessionLocalID string) (int64, error) {
+	if s.store == nil {
+		return 0, nil
+	}
+	return s.store.StreamItemVersion(ctx, sessionLocalID)
+}
+
 // LoadStreamItemsPage loads a page of stream items using cursor-based pagination.
 // If cursor < 0 the most recent `limit` items are returned; otherwise items
 // with sort_order < cursor are returned.

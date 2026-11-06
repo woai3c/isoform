@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"math"
 	"sort"
 	"strings"
@@ -138,6 +140,8 @@ func scoreMorningBrief(ctx context.Context, name, weekIntent string, goals, rule
 			if err == nil {
 				return scores, selection, nil
 			}
+			// The reply text stays out of the log: only its shape and the code.
+			log.Printf("[mobile-brief] ranked morning scores reply %d rejected: %s; shape: %s", attempt+1, safeLogError(err), morningBriefReplyShape(raw))
 		}
 		if attempt == 1 {
 			return scores, selection, err
@@ -397,6 +401,67 @@ func extractMorningBriefScores(raw string) (morningBriefScores, error) {
 	default:
 		return morningBriefScores{}, codeError("more than one scores object in reply")
 	}
+}
+
+// morningBriefReplyShape describes a scores reply for the log: its first
+// character class, its length, and how its top-level objects decoded. It holds
+// counts and error classes only, never the reply's text, keys or values.
+func morningBriefReplyShape(raw string) string {
+	text := strings.TrimSpace(raw)
+	first := "empty"
+	if text != "" {
+		switch text[0] {
+		case '{':
+			first = "object"
+		case '[':
+			first = "array"
+		case '`':
+			first = "fence"
+		default:
+			first = "text"
+		}
+	}
+	var objects, noItems, items, unknownField, typeMismatch, otherDecode, unparsed int
+	for offset := 0; offset < len(text); {
+		start := strings.IndexByte(text[offset:], '{')
+		if start < 0 {
+			break
+		}
+		start += offset
+		decoder := json.NewDecoder(strings.NewReader(text[start:]))
+		var object json.RawMessage
+		if err := decoder.Decode(&object); err != nil {
+			unparsed++
+			offset = start + 1
+			continue
+		}
+		offset = start + int(decoder.InputOffset())
+		objects++
+		var fields map[string]json.RawMessage
+		if json.Unmarshal(object, &fields) != nil {
+			otherDecode++
+			continue
+		}
+		if _, ok := fields["items"]; !ok {
+			noItems++
+			continue
+		}
+		items++
+		strict := json.NewDecoder(strings.NewReader(string(object)))
+		strict.DisallowUnknownFields()
+		var scores morningBriefScores
+		switch err := strict.Decode(&scores); {
+		case err == nil:
+		case strings.HasPrefix(err.Error(), "json: unknown field"):
+			unknownField++
+		case errors.As(err, new(*json.UnmarshalTypeError)):
+			typeMismatch++
+		default:
+			otherDecode++
+		}
+	}
+	return fmt.Sprintf("first=%s chars=%d fence=%t objects=%d no_items=%d items=%d unknown_field=%d type_mismatch=%d other_decode=%d unparsed=%d",
+		first, len(raw), strings.Contains(raw, "```"), objects, noItems, items, unknownField, typeMismatch, otherDecode, unparsed)
 }
 
 func decodeMorningBriefScoresObject(object json.RawMessage) (morningBriefScores, bool) {

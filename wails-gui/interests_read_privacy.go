@@ -260,7 +260,7 @@ func (a *App) interestsReadKeyContext(ctx context.Context) string {
 		SensitiveApps         map[string]string
 		Pauses                []observationPause
 		Activity              [2]int64
-	}{mobileBriefReadEpoch.Load(), a.memoryExternalReads.revision.Load(), fmt.Sprintf("%p", snapshot), a.IsClosedEyesModeEnabled(),
+	}{mobileBriefReadEpoch.Load(), a.memoryExternalReads.revision.Load(), snapshotIdentity(snapshot), a.IsClosedEyesModeEnabled(),
 		pii.GetUserSensitiveApps(), pauses, [2]int64{activity.sessions, activity.protected}})
 }
 
@@ -452,4 +452,19 @@ func (a *App) interestSemanticSourceAllowsRead(row SemanticEventRow) bool {
 		}
 	}
 	return true
+}
+
+// snapshotIdentity names a memory snapshot for the stamp. A settled snapshot is
+// named by its folder, write revision and signal, so the stamp holds while the
+// folder is unchanged. A snapshot still settling is named by its pointer: its
+// folder can change within the same second, which a signal cannot show, so the
+// stamp must differ from the last read's.
+func snapshotIdentity(snapshot *memoryExternalSnapshot) string {
+	if snapshot == nil {
+		return ""
+	}
+	if snapshot.settled {
+		return fmt.Sprintf("settled|%s|%d|%x", snapshot.dirKey, snapshot.revision, snapshot.signal)
+	}
+	return fmt.Sprintf("unsettled|%p", snapshot)
 }
