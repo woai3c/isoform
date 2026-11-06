@@ -109,20 +109,13 @@ export function useLatestBrief(enabled: boolean, briefId?: string, requestNonce?
             }
             refresh();
         };
+        // The brief is read again when it is stored or amended (brief:stored),
+        // or when a build starts or stops (brief:building). Source events do
+        // not re-read it: the backend refreshes Today's live signals from them,
+        // coalesced, and announces a stored change as brief:stored (R24).
         const unsubscribers = [
             EventsOn("brief:stored", onStored),
             EventsOn("brief:building", onBuilding),
-            EventsOn("mobile:updated", refresh),
-            EventsOn("cron:state", refresh),
-            EventsOn("handoff:created", refresh),
-            EventsOn("handoff:updated", refresh),
-            EventsOn("insight:saved", refresh),
-            EventsOn("memory:updated", refresh),
-            EventsOn("activity:summary-ready", refresh),
-            EventsOn("deliverables:updated", refresh),
-            // A goal or follow-up added or moved (Activity's Add follow-up,
-            // the main chat's goal tools) changes "What needs your attention".
-            EventsOn("agency:updated", refresh),
         ];
         return () => {
             version.current += 1;

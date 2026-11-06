@@ -34,11 +34,21 @@ func (s *mobileBriefService) latestWithToday() (MobileBriefV1, bool) {
 	return brief, ok
 }
 
+// todayRefreshGap is the least time between two live Today refreshes. Source
+// events ask for one as they arrive; a request inside the gap runs once when
+// the gap ends, so a burst of events costs one refresh (R24).
+const todayRefreshGap = 5 * time.Minute
+
+// todayRefreshBudget is how old the last live refresh may be before a read of
+// Today asks for another. Reads do not refresh inside it.
+const todayRefreshBudget = 15 * time.Minute
+
 // refreshTodaySoon brings the stored Today signals up to date off the read
 // path. A source read takes minutes on a busy computer, and a live refresh
 // holds todayMu throughout, so Today reads the stored brief at once
 // (GetLatestBrief) and a stored change is announced (brief:stored) for the
-// next read. A request during a refresh runs one more after it.
+// next read. A request during a refresh runs one more after it, and no
+// refresh starts sooner than todayRefreshGap after the last one.
 func (s *mobileBriefService) refreshTodaySoon() {
 	s.mu.Lock()
 	if s.stopped {
@@ -52,7 +62,14 @@ func (s *mobileBriefService) refreshTodaySoon() {
 		s.mu.Unlock()
 		return
 	}
+	if wait := s.todayRefreshWaitLocked(time.Now()); wait > 0 {
+		s.queueTodayRefreshLocked(wait)
+		s.todayRefreshMu.Unlock()
+		s.mu.Unlock()
+		return
+	}
 	s.todayRefreshing = true
+	s.todayRefreshAt = time.Now()
 	s.wg.Add(1)
 	s.todayRefreshWG.Add(1)
 	s.todayRefreshMu.Unlock()
@@ -72,9 +89,48 @@ func (s *mobileBriefService) refreshTodaySoon() {
 				return
 			}
 			s.todayRefreshAgain = false
+			if wait := s.todayRefreshWaitLocked(time.Now()); wait > 0 {
+				s.todayRefreshing = false
+				s.queueTodayRefreshLocked(wait)
+				s.todayRefreshMu.Unlock()
+				return
+			}
+			s.todayRefreshAt = time.Now()
 			s.todayRefreshMu.Unlock()
 		}
 	}()
+}
+
+// todayRefreshWaitLocked is how long a new live refresh must wait for the gap
+// after the last one to pass. todayRefreshMu must be held.
+func (s *mobileBriefService) todayRefreshWaitLocked(now time.Time) time.Duration {
+	if s.todayRefreshAt.IsZero() {
+		return 0
+	}
+	return todayRefreshGap - now.Sub(s.todayRefreshAt)
+}
+
+// queueTodayRefreshLocked runs one refresh after wait, unless one is already
+// queued. todayRefreshMu must be held.
+func (s *mobileBriefService) queueTodayRefreshLocked(wait time.Duration) {
+	if s.todayRefreshQueued {
+		return
+	}
+	s.todayRefreshQueued = true
+	time.AfterFunc(wait, func() {
+		s.todayRefreshMu.Lock()
+		s.todayRefreshQueued = false
+		s.todayRefreshMu.Unlock()
+		s.refreshTodaySoon()
+	})
+}
+
+// todayRefreshDue reports whether a read of Today should start a live refresh:
+// none has run yet, or the last one is older than the resync budget.
+func (s *mobileBriefService) todayRefreshDue(now time.Time) bool {
+	s.todayRefreshMu.Lock()
+	defer s.todayRefreshMu.Unlock()
+	return s.todayRefreshAt.IsZero() || now.Sub(s.todayRefreshAt) >= todayRefreshBudget
 }
 
 // refreshToday reads Today's live signals into the stored brief and reports

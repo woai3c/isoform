@@ -192,7 +192,9 @@ func (a *App) GetLatestBrief() (perfValue TodayBriefView, perfErr error) {
 		if latest, ok, readErr = service.finishedLatest(); readErr != nil {
 			return TodayBriefView{}, readErr
 		}
-		if !storedRead {
+		// A read starts a live refresh only when the last one is past its budget;
+		// source events refresh on their own, coalesced (R24).
+		if !storedRead && service.todayRefreshDue(time.Now()) {
 			service.refreshTodaySoon()
 		}
 	} else {

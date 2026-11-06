@@ -144,6 +144,10 @@ type mobileBriefService struct {
 	todayRefreshing   bool
 	todayRefreshAgain bool
 	todayRefreshWG    sync.WaitGroup
+	// todayRefreshAt is when the last live refresh started; todayRefreshQueued
+	// means one deferred refresh waits for the gap to pass. Guarded by todayRefreshMu.
+	todayRefreshAt     time.Time
+	todayRefreshQueued bool
 	// withheldLogged is the last withheld text latestWithToday logged, so a
 	// condition that lasts is logged once. Guarded by todayMu.
 	withheldLogged string

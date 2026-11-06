@@ -26,13 +26,13 @@ beforeEach(() => {
 });
 
 describe("Today's stored brief refresh", () => {
-    it("keeps the shown brief while a changed memory is rechecked", async () => {
+    it("keeps the shown brief while a stored brief is read again", async () => {
         getLatest.mockResolvedValueOnce({ brief: { briefId: "old", narrative: [{ text: "PT" }] }, building: false });
         let complete!: (value: unknown) => void;
         getLatest.mockReturnValueOnce(new Promise((resolve) => { complete = resolve; }));
         const { result } = renderHook(() => useLatestBrief(true));
         await waitFor(() => expect(result.current.view?.brief?.briefId).toBe("old"));
-        act(() => { events.get("memory:updated")?.(); });
+        act(() => { events.get("brief:stored")?.(); });
         expect(result.current.view?.brief?.briefId).toBe("old");
         await act(async () => complete({ brief: { briefId: "safe" }, building: false }));
         expect(result.current.view?.brief?.briefId).toBe("safe");
@@ -111,17 +111,31 @@ describe("Today's stored brief refresh", () => {
         await waitFor(() => expect(result.current.view).toEqual(older));
     });
 
-    it.each(["cron:state", "handoff:created", "handoff:updated", "insight:saved", "memory:updated", "activity:summary-ready", "deliverables:updated", "agency:updated"])("reads changed stored content on %s and unsubscribes", async (event) => {
+    // R24: a source event never re-reads the brief. The backend refreshes
+    // Today's live signals from it, coalesced, and announces a stored change as
+    // brief:stored, which is the read that shows it.
+    it.each(["cron:state", "mobile:updated", "handoff:created", "handoff:updated", "insight:saved", "memory:updated", "activity:summary-ready", "deliverables:updated", "agency:updated"])("does not re-read the brief on %s", async (event) => {
+        const { result, unmount } = renderHook(() => useLatestBrief(true));
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        await act(async () => { events.get(event)?.(); });
+        await act(async () => { events.get(event)?.(); });
+        expect(getLatest).toHaveBeenCalledTimes(1);
+        unmount();
+    });
+
+    it("reads the brief once when it is stored and once when a build stops", async () => {
         const { result, unmount } = renderHook(() => useLatestBrief(true));
         await waitFor(() => expect(result.current.loading).toBe(false));
         const updated = { brief: { briefId: "same-morning-brief" }, dailySummary: { text: "Updated during the day" }, building: false };
         getLatest.mockResolvedValue(updated);
-        await act(async () => { await events.get(event)?.(); });
+        await act(async () => { await events.get("brief:stored")?.("same-morning-brief"); });
         await waitFor(() => expect(result.current.view).toEqual(updated));
         expect(getLatest).toHaveBeenCalledTimes(2);
+        await act(async () => { await events.get("brief:building")?.(false); });
+        expect(getLatest).toHaveBeenCalledTimes(3);
         unmount();
-        await act(async () => { events.get(event)?.(); });
-        expect(getLatest).toHaveBeenCalledTimes(2);
+        await act(async () => { events.get("brief:stored")?.(); });
+        expect(getLatest).toHaveBeenCalledTimes(3);
     });
 
     // Snappy 1.0: showing the page paints what Today has; it reads again

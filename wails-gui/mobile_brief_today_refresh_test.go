@@ -78,6 +78,11 @@ func TestTodayRefreshesStoredSignalsBetweenSlots(t *testing.T) {
 	if _, err := rig.activity.SaveSummaryWithLanguage("2026-10-09", "daily", "Revised day summary", "test", false, rig.app.currentUILanguage()); err != nil {
 		t.Fatal(err)
 	}
+	// Reads refresh Today only once the last refresh is past its budget (R24).
+	// These edits came after the first refresh, so the budget has passed.
+	svc.todayRefreshMu.Lock()
+	svc.todayRefreshAt = time.Time{}
+	svc.todayRefreshMu.Unlock()
 	next, err := latestBriefAfterRefresh(t, rig.app)
 	if err != nil || next.Brief == nil || next.DailySummary == nil || len(next.Brief.Upcoming) != 0 || len(next.Brief.Sections.OpenLoops) != 0 || len(next.Brief.Sections.Learned) != 0 || next.DailySummary.Text != "Revised day summary" {
 		t.Fatalf("stale Today content: %+v, %v", next.Brief, err)

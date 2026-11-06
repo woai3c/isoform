@@ -30,14 +30,13 @@ const settings = ['GetSettingsOverview', 'GetMobileBriefSchedule', 'GetPlatformP
 const search = ['GetTodayTopics', 'ListHandoffs'];
 const firstDay = ['GetFirstWeekDay', 'GetAssistantHistory', 'GetCalendarFirstDay'];
 const everyPage = [...today, ...chat, ...activity, ...goals, ...aboutYou, ...knowHow, ...people, ...settings, ...search, ...firstDay];
-const briefEvents = ['brief:stored', 'mobile:updated', 'cron:state', 'handoff:created', 'handoff:updated', 'insight:saved', 'memory:updated', 'activity:summary-ready', 'deliverables:updated', 'agency:updated'];
 const eventReads: Record<string, string[]> = {};
 function on(names: string[], reads: string[]) {
     for (const name of names) eventReads[name] = [...new Set([...(eventReads[name] ?? []), ...reads])];
 }
-on(briefEvents, ['GetLatestBrief']);
-// A brief started or stopped being built: Today follows it instead of polling.
-on(['brief:building'], ['GetLatestBrief']);
+// The brief is read again only when it is stored or amended, or a build starts
+// or stops (R24). Source events never re-read it.
+on(['brief:stored', 'brief:building'], ['GetLatestBrief']);
 // The backend derives this event from real calendar/hold changes. Source
 // notifications alone must not clear an unchanged strip or its local preview.
 on(['today-dayshape:updated'], ['GetTodayDayShape', 'GetTodayBeforeYouTalk']);
@@ -78,7 +77,14 @@ on(['portrait:updated'], ['GetAboutYouPortrait', 'GetPortraitTodayCard']);
 // These transitions change what the backend permits a reader to see. Never
 // return a pre-transition value, even to an in-flight caller or hidden page.
 const PRIVACY_SWEEP_EVENTS = ['memory:updated', 'closed-eyes:changed', 'background-listening:changed', 'permissions:changed', 'sensitive-apps:updated'];
-on(PRIVACY_SWEEP_EVENTS, everyPage);
+// The brief is sealed by the backend for privacy changes (its own privacy class),
+// so only those re-read it. memory:updated and permissions:changed are freshness
+// events for the brief: the index emits memory:updated on every update, and a
+// re-read for each one is the R24 loop (the withdrawal path still clears it).
+const BRIEF_PRIVACY_EVENTS = ['closed-eyes:changed', 'background-listening:changed', 'sensitive-apps:updated'];
+const everyPageButBrief = everyPage.filter((name) => name !== 'GetLatestBrief');
+on(PRIVACY_SWEEP_EVENTS.filter((name) => !BRIEF_PRIVACY_EVENTS.includes(name)), everyPageButBrief);
+on(BRIEF_PRIVACY_EVENTS, everyPage);
 
 export { onPagePrivacyWithdrawal } from './page-privacy-withdrawal';
 

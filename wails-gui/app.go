@@ -365,6 +365,14 @@ type AgentStatus struct {
 // emitBrowserEvent sends an event to both the Wails runtime (native WebView)
 // and any connected browser WebSocket clients. Use this instead of
 // runtime.EventsEmit when dual-mode delivery is needed.
+// refreshMobileBriefTodaySoon asks the brief service for a coalesced live Today
+// refresh. It runs off the emitting goroutine, which may hold other stores' locks.
+func (a *App) refreshMobileBriefTodaySoon() {
+	if svc, ok := a.mobileBriefSource().(*mobileBriefService); ok && svc != nil {
+		svc.refreshTodaySoon()
+	}
+}
+
 func (a *App) emitBrowserEvent(eventName string, data ...interface{}) {
 	if mobileBriefPrivacyInputEvents[eventName] {
 		// A privacy change advances the epoch durably; the sealed briefs are
@@ -373,6 +381,12 @@ func (a *App) emitBrowserEvent(eventName string, data ...interface{}) {
 		briefPrivacyAmendSoon()
 	} else if mobileBriefReadInputEvents[eventName] {
 		noteMobileBriefReadCachesChanged()
+	}
+	if mobileBriefReadInputEvents[eventName] && !mobileBriefPrivacyInputEvents[eventName] {
+		// Source changes refresh Today's live signals in the background, at most
+		// once per todayRefreshGap. The brief is read again when that refresh
+		// stores a change (brief:stored), never for the event itself (R24).
+		go a.refreshMobileBriefTodaySoon()
 	}
 	a.noteStreamPageEvent(eventName)
 	if topicFindsSourceEvents[eventName] {
