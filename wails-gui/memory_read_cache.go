@@ -30,6 +30,20 @@ type memoryExternalReadCache struct {
 	revision atomic.Uint64
 	mu       sync.Mutex
 	snapshot *memoryExternalSnapshot
+	// inflight is the one run reading the folder now, if any; guarded by mu.
+	inflight *memoryLoad
+}
+
+// memoryLoad is one run that reads the folder with no cache lock held. A caller
+// that arrives while it runs, under the same revision and folder, waits for its
+// result. A caller after a write (a newer revision) waits for the run to finish
+// and then starts its own, so it never receives a result read before its write.
+type memoryLoad struct {
+	done     chan struct{}
+	key      string
+	revision uint64
+	snap     *memoryExternalSnapshot
+	err      error
 }
 
 type memoryExternalSnapshot struct {
@@ -187,49 +201,98 @@ func memoryFolderSignal(dir string) ([sha256.Size]byte, time.Time, error) {
 }
 
 // memorySnapshot returns the current parsed copy of memory, reading the
-// folder again only after it changed.
+// folder again only after it changed. The folder is read with no lock held:
+// concurrent readers share one run instead of queueing behind each other.
 func (a *App) memorySnapshot() (*memoryExternalSnapshot, error) {
 	key := memoryDirKey()
 	c := &a.memoryExternalReads
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	// Taken before the read: a write that lands during it leaves a stale key,
-	// so the next reader reads again instead of keeping the older copy.
-	revision := c.revision.Load()
-	now := memoryReadNow()
-	if s := c.snapshot; s != nil && s.dirKey == key && s.revision == revision {
-		if now.Sub(s.checked) < memoryFolderCheckEvery {
+	for {
+		c.mu.Lock()
+		// Taken before the read: a write that lands during it leaves a stale key,
+		// so the next reader reads again instead of keeping the older copy.
+		revision := c.revision.Load()
+		now := memoryReadNow()
+		if s := c.snapshot; s != nil && s.dirKey == key && s.revision == revision && now.Sub(s.checked) < memoryFolderCheckEvery {
+			c.mu.Unlock()
 			return s, nil
 		}
-		if signal, _, err := memoryFolderSignal(s.dir); err == nil && signal == s.signal {
-			s.checked = now
-			return s, nil
+		if run := c.inflight; run != nil {
+			if run.key == key && run.revision == revision {
+				c.mu.Unlock()
+				<-run.done
+				return run.snap, run.err
+			}
+			// Another revision or folder is being read: wait for it, then ask again.
+			c.mu.Unlock()
+			<-run.done
+			continue
+		}
+		run := &memoryLoad{done: make(chan struct{}), key: key, revision: revision}
+		prior := c.snapshot
+		c.inflight = run
+		c.mu.Unlock()
+
+		s, reused, err := readMemorySnapshot(key, revision, now, prior)
+
+		c.mu.Lock()
+		c.inflight = nil
+		if err != nil {
+			run.err = err
+		} else if reused {
+			// The folder matches the cached snapshot: it is still good, and its
+			// check time moves on.
+			if c.snapshot == prior && c.revision.Load() == revision {
+				prior.checked = now
+			}
+			s = prior
+		} else if c.revision.Load() == revision && s.settled {
+			c.snapshot = s
+		} else {
+			c.snapshot = nil
+		}
+		if err == nil {
+			run.snap = s
+		}
+		close(run.done)
+		c.mu.Unlock()
+		return run.snap, run.err
+	}
+}
+
+// readMemorySnapshot reads the folder for a run; it holds no cache lock. It
+// returns the prior snapshot, reused, when the folder's signal still matches it.
+// memoryRunGate, when set, runs at the start of each folder read; tests hold a
+// run open with it.
+var memoryRunGate func()
+
+func readMemorySnapshot(key string, revision uint64, now time.Time, prior *memoryExternalSnapshot) (*memoryExternalSnapshot, bool, error) {
+	if memoryRunGate != nil {
+		memoryRunGate()
+	}
+	if prior != nil && prior.dirKey == key && prior.revision == revision {
+		if signal, _, err := memoryFolderSignal(prior.dir); err == nil && signal == prior.signal {
+			return prior, true, nil
 		}
 	}
 	dir, err := memoryDir()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	signal, newest, err := memoryFolderSignal(dir)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	entries, err := readMemoryEntries(dir)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	recordMemoryExternalReadLoad("entries")
 	s := &memoryExternalSnapshot{dirKey: key, dir: dir, revision: revision, signal: signal, checked: now, entries: make([]memoryExternalEntry, 0, len(entries))}
 	for _, entry := range entries {
 		s.entries = append(s.entries, memoryExternalEntry{raw: entry})
 	}
-	if c.revision.Load() == revision && now.Sub(newest) >= memoryFolderSettle {
-		s.settled = true
-		c.snapshot = s
-	} else {
-		c.snapshot = nil
-	}
-	return s, nil
+	s.settled = now.Sub(newest) >= memoryFolderSettle
+	return s, false, nil
 }
 
 // memoryExternalSnapshot returns the current snapshot with its redacted,
