@@ -213,6 +213,10 @@ func todayChatAdmissionFile(ctx context.Context, digest hash.Hash, key, path str
 	if !info.Mode().IsRegular() {
 		return errTodayChatItemUnavailable
 	}
+	if sum, ok := cachedAdmissionFileSum(path, info); ok {
+		todayChatAdmissionHash(digest, key, sum)
+		return nil
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -222,7 +226,9 @@ func todayChatAdmissionFile(ctx context.Context, digest hash.Hash, key, path str
 	if _, err := io.Copy(content, todayChatAdmissionReader{ctx: ctx, reader: file}); err != nil {
 		return err
 	}
-	todayChatAdmissionHash(digest, key, content.Sum(nil))
+	sum := content.Sum(nil)
+	rememberAdmissionFileSum(path, info, sum)
+	todayChatAdmissionHash(digest, key, sum)
 	return nil
 }
 

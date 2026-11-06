@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"wails-gui/internal/pii"
@@ -54,8 +55,47 @@ func knowledgeHistoryDir(dir, entryID string) (string, error) {
 	return historyDir, nil
 }
 
+// knowledgeHistoryPresence remembers whether each history folder holds a
+// snapshot, keyed on the folder's modification time: creating or removing a
+// snapshot changes it, so a stale answer is never kept. Stats replace the
+// directory read this check used to make for every entry on every list.
+var knowledgeHistoryPresence = struct {
+	sync.Mutex
+	entries map[string]knowledgeHistoryEntry
+}{entries: map[string]knowledgeHistoryEntry{}}
+
+type knowledgeHistoryEntry struct {
+	mod int64
+	has bool
+}
+
+const knowledgeHistoryPresenceLimit = 4096
+
 func knowledgeEntryHasHistory(dir, id string) bool {
-	entries, err := os.ReadDir(filepath.Join(dir, knowledgeHistoryDirName, id))
+	historyDir := filepath.Join(dir, knowledgeHistoryDirName, id)
+	info, err := os.Stat(historyDir)
+	if err != nil {
+		return false
+	}
+	mod := info.ModTime().UnixNano()
+	knowledgeHistoryPresence.Lock()
+	if e, ok := knowledgeHistoryPresence.entries[historyDir]; ok && e.mod == mod {
+		knowledgeHistoryPresence.Unlock()
+		return e.has
+	}
+	knowledgeHistoryPresence.Unlock()
+	has := knowledgeHistoryHasSnapshot(historyDir)
+	knowledgeHistoryPresence.Lock()
+	if len(knowledgeHistoryPresence.entries) >= knowledgeHistoryPresenceLimit {
+		knowledgeHistoryPresence.entries = map[string]knowledgeHistoryEntry{}
+	}
+	knowledgeHistoryPresence.entries[historyDir] = knowledgeHistoryEntry{mod: mod, has: has}
+	knowledgeHistoryPresence.Unlock()
+	return has
+}
+
+func knowledgeHistoryHasSnapshot(historyDir string) bool {
+	entries, err := os.ReadDir(historyDir)
 	if err != nil {
 		return false
 	}
@@ -190,7 +230,9 @@ func (a *App) GetKnowledgeEntries() (perfValue []KnowledgeEntry, perfErr error) 
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".md") || isOKFReservedMarkdownFile(e.Name()) {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		// Bytes come from the size-and-mtime body cache shared with memory
+		// reads; each entry is still parsed on every list.
+		data, err := readMemoryBody(filepath.Join(dir, e.Name()))
 		if err != nil {
 			if os.IsNotExist(err) {
 				// Deleted after enumeration.
