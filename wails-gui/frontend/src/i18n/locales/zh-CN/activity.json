@@ -405,7 +405,9 @@
             "writeFailed": "无法写下你的一天。请重试。",
             "dayNotWritten": "这一天还没写。",
             "weekNotWritten": "你的这一周还没写。",
-            "writeIt": "写一下"
+            "writeIt": "写一下",
+            "loadFailed": "无法加载这一天。",
+            "tryAgain": "重试"
         },
         "languageName": {
             "en": "英文",
@@ -607,5 +609,8 @@
     },
     "timeline": {
         "sessionsFailed": "无法加载你的会话。"
+    },
+    "privacy": {
+        "privateItem": "一项私密内容"
     }
 }

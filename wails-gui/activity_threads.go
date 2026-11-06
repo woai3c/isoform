@@ -1137,10 +1137,12 @@ func (a *App) buildDayThreads(ctx context.Context, day int64) (ActivityDayThread
 // while every moment it was written from is still present and readable, then
 // the first moment's title.
 func activityThreadDisplayTitle(thread activityThreadRow, live map[string]ActivityRow, fallback string) (string, bool) {
-	if strings.TrimSpace(thread.UserTitle) != "" {
-		return thread.UserTitle, true
+	// A redaction tag never reaches a screen, in a title saved before the
+	// producer stopped writing them as well as in new ones (AR62).
+	if title := activityPrivacyMarkerStrip(thread.UserTitle); strings.TrimSpace(title) != "" {
+		return title, true
 	}
-	if strings.TrimSpace(thread.Title) != "" {
+	if title := activityPrivacyMarkerStrip(thread.Title); strings.TrimSpace(title) != "" {
 		ok := true
 		for _, id := range thread.TitleBasis {
 			if _, present := live[id]; !present {
@@ -1149,10 +1151,10 @@ func activityThreadDisplayTitle(thread activityThreadRow, live map[string]Activi
 			}
 		}
 		if ok {
-			return thread.Title, false
+			return title, false
 		}
 	}
-	return fallback, false
+	return activityPrivacyMarkerStrip(fallback), false
 }
 
 // MoveActivityToThread moves a moment into another thread of its day, or into

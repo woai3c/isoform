@@ -264,8 +264,8 @@ export function AboutUpdates() {
                                 </div>
                             </div>
                         ) : (
-                            t("aboutPolish.version", {
-                                version: info.releaseNotesVersion || info.version,
+                            t("aboutPolish.productVersion", {
+                                version: (info.releaseNotesVersion || info.version).replace(/^v/, ""),
                             })
                         )
                     }
@@ -290,6 +290,9 @@ export function AboutUpdates() {
                             {t(
                                 `aboutPolish.builds.${info.build === "release" ? "release" : info.build === "staging" ? "staging" : "development"}`,
                             )}
+                            {info.build === "staging" &&
+                                info.commit &&
+                                t("aboutPolish.buildCommit", { commit: info.commit })}
                             {info.buildTime &&
                                 t("aboutPolish.buildDate", {
                                     date:

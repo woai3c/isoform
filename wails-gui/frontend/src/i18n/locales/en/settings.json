@@ -3750,6 +3750,7 @@
         "notesVersion": "v{{version}}:",
         "product": "Isoform for your computer",
         "version": "v{{version}}",
+        "productVersion": "Isoform {{version}}",
         "versionReady": "v{{version}} · v{{next}} is downloaded",
         "idle": "Check for updates when you are ready.",
         "checking": "Checking for updates…",
@@ -3774,6 +3775,7 @@
             "staging": "Staging",
             "development": "Development"
         },
+        "buildCommit": " · {{commit}}",
         "buildDate": " · {{date}}",
         "computer": "Computer",
         "computerDetails": "{{model}} · {{os}} · {{phone}}",

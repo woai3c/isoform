@@ -9,6 +9,7 @@ import {
 } from '../../../wailsjs/go/main/App';
 import { ListCronJobs } from '@/lib/page-queries';
 import { invalidateActivitySessionCache, useActivitySessionQuery, useActivitySessionQueryState } from './activity-session-cache';
+import { useDaySummaryRetry } from './day-summary-retry';
 import type { StreamItem } from '@/types';
 import type { CronJobState, CronRunState } from '@/hooks/useCronJobs';
 import i18n from '@/i18n';
@@ -134,6 +135,10 @@ export function useCalendarData(
     const summaryState = useActivitySessionQueryState(`summary:${dateStr}`, loadSummary);
     const dailyData = summaryState.data ?? null;
     const dayLoading = summaryState.loading;
+    const daySummary = useDaySummaryRetry({
+        key: `summary:${dateStr}`, load: loadSummary, dateStr,
+        hasData: !!dailyData, failing: !dailyData && !dayLoading && !!summaryState.error,
+    });
     useEffect(() => { if (dailyData) markPageContent('activity'); }, [dailyData]);
     const start = dayStartMs(selectedDate);
     const end = dayEndMs(selectedDate);
@@ -256,6 +261,9 @@ export function useCalendarData(
         // Day data
         dailyData,
         dayLoading,
+        dayPending: dayLoading || daySummary.pending,
+        dayFailed: daySummary.failed,
+        retryDay: daySummary.retryNow,
         learnedLoading: allKnowledge === undefined || allMemory === undefined,
         automationRuns,
         createdAutomations,

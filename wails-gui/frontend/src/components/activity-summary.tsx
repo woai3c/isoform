@@ -61,7 +61,7 @@ function formatGeneratedAt(ms: number): string {
 
 // ── Digest card ──
 
-export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage, generating, autoStatus, onGenerate, askContext, scope, summaryCreatedAt, children, emptyActionLabel, emptyText }: {
+export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage, generating, autoStatus, onGenerate, askContext, scope, summaryCreatedAt, children, emptyActionLabel, emptyText, pending = false, failed = false, onRetry }: {
     isToday?: boolean; summary: string; summaryStatus: string;
     cachedLanguage?: string;
     generating: boolean;
@@ -81,6 +81,12 @@ export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage,
     emptyActionLabel?: string;
     /** The sentence beside emptyActionLabel ("This day isn't written yet."). */
     emptyText?: string;
+    /** The read that answers whether a summary exists has not returned yet.
+     *  Holds the card's final layout with no sentence and no button (AR63). */
+    pending?: boolean;
+    /** The read failed twice and nothing is saved: say it couldn't load, with a retry. */
+    failed?: boolean;
+    onRetry?: () => void;
 }) {
     const { t, i18n } = useTranslation('activity');
     const [copied, setCopied] = useState(false);
@@ -128,9 +134,9 @@ export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage,
 
     return (
         <div className="rounded-xl border border-border bg-panel p-6 space-y-4 shadow-[var(--shadow-soft)]">
-            {busy && !displaySummary ? (
+            {(busy || pending) && !displaySummary ? (
                 <div className="space-y-3">
-                    {writingLine}
+                    {busy && writingLine}
                     <div className="space-y-2.5 animate-pulse">
                         <div className="h-3.5 bg-border/40 rounded w-5/6" />
                         <div className="h-3.5 bg-border/40 rounded w-full" />
@@ -172,6 +178,15 @@ export function AISummaryCard({ isToday, summary, summaryStatus, cachedLanguage,
                         <DigestFreshnessFooter text={t('summary.card.languageHint', { lang: languageDisplayName(cachedLang) })} />
                     ) : null}
                 </>
+            ) : failed ? (
+                <div className="flex items-center justify-between gap-3">
+                    <p className="text-[13px] text-muted/80 leading-relaxed">
+                        {t('summary.card.loadFailed') as string}{' '}
+                        <button type="button" onClick={onRetry} className="text-ink underline underline-offset-2 hover:text-accent transition-colors">
+                            {t('summary.card.tryAgain') as string}
+                        </button>
+                    </p>
+                </div>
             ) : emptyActionLabel ? (
                 <div className="flex items-center justify-between gap-3">
                     {emptyText && <p className="text-[13px] text-muted/80 leading-relaxed">{emptyText}</p>}

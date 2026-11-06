@@ -102,6 +102,7 @@ import { ProjectThreadStatus } from "@/components/project-thread-status";
 
 // import { PRButton } from '@/components/pr-button'; // TODO: re-enable after PR bug fix
 import { LazyActivityPage, LazySettingsPage, useLazyPagesIdleWarm, LazyTerminalPanel } from "@/lib/lazy-pages";
+import { SettingsLoadingShell } from "@/components/settings-loading-shell";
 import type { ActivitySectionId } from "@/components/activity-page";
 import { RetainedDialogContent } from "@/components/retained-dialog-content";
 import { ActivityOpenChatContext } from "@/components/activity-ask-inline";
@@ -3499,7 +3500,7 @@ export default function App() {
                             <X className="h-4 w-4" />
                         </button>
                     </DialogClose>
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<SettingsLoadingShell showDevTools={devToolsUnlocked} />}>
                         <LazySettingsPage
                             active={settings.settingsOpen}
                             onClose={() => {

@@ -11,9 +11,11 @@ import (
 
 // AboutInfo contains device and updater metadata, never keys or observed content.
 type AboutInfo struct {
-	Version             string       `json:"version"`
-	Build               string       `json:"build"`
-	BuildTime           string       `json:"buildTime"`
+	Version   string `json:"version"`
+	Build     string `json:"build"`
+	BuildTime string `json:"buildTime"`
+	// Commit names a staging build by its short commit; a release never has one.
+	Commit              string       `json:"commit,omitempty"`
 	Computer            string       `json:"computer"`
 	OS                  string       `json:"os"`
 	Phones              []string     `json:"phones"`
@@ -56,6 +58,7 @@ func (a *App) GetAboutInfo() (AboutInfo, error) {
 	} else if a.GetEnvironment().IsStaging {
 		out.Build = "staging"
 	}
+	out.Commit = aboutStagingCommit(out.Build)
 	if runtime.GOOS == "darwin" {
 		if raw, err := exec.Command("/usr/sbin/sysctl", "-n", "hw.model").Output(); err == nil {
 			out.Computer = strings.TrimSpace(string(raw))
@@ -101,4 +104,17 @@ func (a *App) OpenDataFolder() error {
 		cmd = exec.Command("xdg-open", root)
 	}
 	return cmd.Run()
+}
+
+// aboutStagingCommit is the short commit a staging build shows in Build (ST85).
+// Only a staging build names its commit; a release build never does.
+func aboutStagingCommit(build string) string {
+	if build != "staging" {
+		return ""
+	}
+	commit := strings.TrimSpace(GitCommit)
+	if len(commit) > 8 {
+		commit = commit[:8]
+	}
+	return commit
 }

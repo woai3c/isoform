@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { ChevronLeft, ChevronRight, Undo2 } from 'lucide-react';
 import { ACTION_LINK, ActivityInlineNotice, errorNotice, type ActivityNotice } from './activity-inline-notice';
+import { stripPrivacyMarkers } from '@/lib/activity-privacy-marker';
 import {
     ConfirmActivityThreadLink,
     MoveActivityToThread,
@@ -57,7 +58,7 @@ export interface StitchedThread {
 function ungroupedThread(moment: ActivityView): ActivityThreadView {
     return {
         id: `moment:${moment.id}`,
-        title: moment.title,
+        title: stripPrivacyMarkers(moment.title),
         kind: 'work',
         userTitled: false,
         startMs: moment.startMs,
@@ -163,7 +164,9 @@ export function stitchedRows(items: StitchedThread[], resumeThreadId?: string) {
     };
 }
 
-export function splitThreadTitle(title: string) {
+export function splitThreadTitle(raw: string) {
+    // A redaction tag never shows on a surface (AR62); stripped text is the title.
+    const title = stripPrivacyMarkers(raw);
     const colon = title.indexOf(':');
     return colon < 0 ? { title, detail: '' } : { title: title.slice(0, colon).trim(), detail: title.slice(colon + 1).trim() };
 }
@@ -578,7 +581,7 @@ function PickUpCard({
                 <span className={cn('text-[11px] font-medium tracking-[0.08em] text-muted', i18n.language.startsWith('zh') ? 'normal-case' : 'uppercase')}>
                     {t('stitched.pickUp.label')}
                 </span>
-                <span className="text-[14px] font-semibold text-ink">{t('stitched.pickUp.title', { title: notice.title })}</span>
+                <span className="text-[14px] font-semibold text-ink">{t('stitched.pickUp.title', { title: notice.title || t('privacy.privateItem') })}</span>
                 <span className="text-[13px] text-muted">{pickUpBody(t, notice, i18n.language)}</span>
             </div>
             <Button size="sm" onClick={() => onShow(notice)}>
@@ -707,7 +710,7 @@ function StitchedTimeline({
             ? t('stitched.laneDetailMeta', { detail, active: formatDurationMs(activeTime(item)) })
             : t('stitched.laneMeta', { active: formatDurationMs(activeTime(item)) });
         const threadSpan = formatTimeRangeFromMs(item.stretches[0].start, item.stretches[item.stretches.length - 1].end, i18n.language);
-        const laneTip = t('stitched.segmentTip', { title: item.thread.title, span: threadSpan });
+        const laneTip = t('stitched.segmentTip', { title: stripPrivacyMarkers(item.thread.title), span: threadSpan });
         const activeSuffix = detail ? t('stitched.laneActiveSuffix', { active: formatDurationMs(activeTime(item)) }) : meta;
         // Idle inside the same work splits the bar but is no resume: no link.
         const gaps = item.gaps.filter((gap) => isInterruption(gap) && gapVisible(gap, span, trackWidth)).map((gap) => {
@@ -720,7 +723,7 @@ function StitchedTimeline({
         });
         const stretches = item.stretches.map((stretch) => ({
             stretch,
-            tip: t('stitched.segmentTip', { title: item.thread.title, span: formatTimeRangeFromMs(stretch.start, stretch.end, i18n.language) }),
+            tip: t('stitched.segmentTip', { title: stripPrivacyMarkers(item.thread.title), span: formatTimeRangeFromMs(stretch.start, stretch.end, i18n.language) }),
         }));
         const gapSummary = rowGapLabel(t, item, items);
         return { item, id, title, detail, meta, threadSpan, laneTip, activeSuffix, gaps, stretches, gapSummary };
@@ -732,8 +735,8 @@ function StitchedTimeline({
         { id: 'aggregate:short', members: rows.shortMoments, short: true },
     ].filter((group) => group.members.length > 0).map(({ id, members, short }) => {
         const entries = (short ? members.flatMap((item) => item.moments.length ? item.moments.map((moment) => ({ id: moment.id, title: moment.title, start: moment.startMs, end: moment.endMs }))
-            : [{ id: item.thread.id, title: item.thread.title, start: item.thread.startMs, end: item.thread.endMs }])
-            : members.map((item) => ({ id: item.thread.id, title: item.thread.title, start: item.thread.startMs, end: item.thread.endMs })))
+            : [{ id: item.thread.id, title: stripPrivacyMarkers(item.thread.title), start: item.thread.startMs, end: item.thread.endMs }])
+            : members.map((item) => ({ id: item.thread.id, title: stripPrivacyMarkers(item.thread.title), start: item.thread.startMs, end: item.thread.endMs })))
             .sort((a, b) => a.start - b.start);
         const label = t(short ? 'stitched.shortMoments' : 'stitched.otherWork', {
             count: entries.length, minutes: Math.floor(members.reduce((sum, item) => sum + activeTime(item), 0) / 60_000),
@@ -774,7 +777,7 @@ function StitchedTimeline({
                             <button key={id} type="button" data-thread-lane={id} data-interruption={item.interruption ? 'true' : undefined}
                                 aria-pressed={selected} onClick={() => select(id)} className={rowClass(id)}>
                                 <span className={cn(LABEL_COLUMN, 'flex flex-col gap-px pl-2 pr-3')} title={laneTip}>
-                                    <span className="break-words text-[13px] font-semibold text-ink" title={item.thread.title}>{titles.get(id) ?? title.title}</span>
+                                    <span className="break-words text-[13px] font-semibold text-ink" title={stripPrivacyMarkers(item.thread.title)}>{titles.get(id) ?? title.title}</span>
                                     {item.continuesBefore && <span className="text-[11px] text-muted">{t('stitched.continuesBefore')}</span>}
                                     <span className="break-words text-[11.5px] text-muted" title={meta}>
                                         {detail}
@@ -934,7 +937,7 @@ const ThreadCard = memo(function ThreadCard({ item, title, threads, selected }: 
     const { thread, stretches, gaps } = item;
     // Timeline labels may show only the leading segment. A full card keeps
     // the original title unless the day supplied a disambiguated name.
-    const cardTitle = title === splitThreadTitle(thread.title).title ? thread.title : title;
+    const cardTitle = (title === splitThreadTitle(thread.title).title ? stripPrivacyMarkers(thread.title) : title) || t('privacy.privateItem');
     const { renaming, setRenaming, busy: renameBusy, rename, renameFailed } = useThreadRename(thread.id);
     const [busy, setBusy] = useState(false);
     // A confirmation holds for the members it was given to; Go clears it

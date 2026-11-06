@@ -456,7 +456,30 @@ it('settles a failed digest and thread read so the existing summary and source c
         id: 'source', kind: 'follow_up', momentId: 'recoverable-row', momentTitle: 'Recoverable public row', momentStartMs: new Date(2026, 9, 15, 9).getTime(), text: 'Check the public row', why: '',
     }]);
     render(<Harness initialDate="2026-10-15" />);
-    expect(await screen.findByRole('button', { name: enActivity.summary.card.writeIt })).toBeEnabled();
+    // AR63: a failed read is never an answer. Write it and "isn't written" wait
+    // for the automatic retry; the day then says it couldn't load, with a retry.
+    expect(await screen.findByText(enActivity.summary.card.loadFailed, {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: enActivity.summary.card.writeIt })).toBeNull();
+    expect(screen.queryByText(enActivity.summary.card.dayNotWritten)).toBeNull();
+    expect(screen.getByRole('button', { name: enActivity.summary.card.tryAgain })).toBeEnabled();
     fireEvent.click(await screen.findByRole('button', { name: /From .*Recoverable public row/ }));
     expect(await screen.findByRole('button', { name: 'Delete from history' })).toBeInTheDocument();
+});
+
+// AR63 guard: a failed read followed by a successful retry shows the saved day,
+// and the placeholder never says the day is unwritten in between.
+it('holds the day through a failed read and shows the saved summary after its retry', async () => {
+    await i18n.changeLanguage('en');
+    resetActivitySessionCache();
+    fixture.listeners.clear();
+    for (const mock of fixture.bindings.values()) mock.mockReset().mockResolvedValue([]);
+    binding('EnsureDailySummary')
+        .mockRejectedValueOnce(new Error('temporary read failure'))
+        .mockResolvedValue({ aiSummary: 'Saved after the retry', aiSummaryStatus: 'ready', hourlyActive: [], appBreakdown: [] });
+    render(<Harness initialDate="2026-10-15" />);
+    expect(screen.queryByText(enActivity.summary.card.dayNotWritten)).toBeNull();
+    expect(screen.queryByRole('button', { name: enActivity.summary.card.writeIt })).toBeNull();
+    expect(await screen.findByText('Saved after the retry', {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.queryByText(enActivity.summary.card.loadFailed)).toBeNull();
+    expect(binding('EnsureDailySummary').mock.calls.length).toBeGreaterThanOrEqual(2);
 });

@@ -4000,6 +4000,9 @@ export function ActivityPage({ onClose, initialSessionId, initialDate, noticedFo
                             bridgePort={bridgePort}
                             dailyData={calendarData.dailyData}
                             dayLoading={calendarData.dayLoading}
+                            dayPending={calendarData.dayPending}
+                            dayFailed={calendarData.dayFailed}
+                            onRetryDay={calendarData.retryDay}
                             automationRuns={calendarData.automationRuns}
                             knowledge={calendarData.knowledge}
                             memoryEntries={calendarData.memoryEntries}

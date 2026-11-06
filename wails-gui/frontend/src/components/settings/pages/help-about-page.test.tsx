@@ -316,6 +316,20 @@ describe("Settings About", () => {
             "42",
         );
     });
+    it("names a staging build by its short commit and a release build never by one (ST85)", async () => {
+        info = { ...info, build: "staging", commit: "d1282d52", buildTime: new Date(2026, 9, 22, 22, 22).toISOString() };
+        render(<HelpAboutPage onReplayOnboarding={vi.fn()} />);
+        const build = await screen.findByText("Build");
+        const row = build.closest("[data-about-row]") ?? build.parentElement!;
+        expect(row.textContent).toBe("BuildStaging · d1282d52 · Oct 22 at 10:22 PM");
+    });
+    it("names a release build by the version people know, Isoform 1.0.32 (ST85)", async () => {
+        info = { ...info, version: "1.0.32", build: "release", releaseNotesVersion: "1.0.32", commit: "d1282d52" };
+        render(<HelpAboutPage onReplayOnboarding={vi.fn()} />);
+        expect(await screen.findByText("Isoform 1.0.32")).toBeInTheDocument();
+        expect(screen.queryByText(/d1282d52/)).toBeNull();
+        expect(screen.queryByText(/v0\.1\.301/)).toBeNull();
+    });
     it("keeps the version readable when richer About metadata is unavailable", async () => {
         mocks.getAbout.mockRejectedValue(
             new Error("native metadata unavailable"),

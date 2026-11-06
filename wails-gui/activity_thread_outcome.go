@@ -81,8 +81,10 @@ func migrateActivityThreadOutcome(tx *sql.Tx) error {
 // again on model output, alongside both shared secret redactors.
 var threadOrderNumber = regexp.MustCompile(`(?i)(\b(?:order|confirmation)\s*(?:number|no\.?|id|#)\s*[:#]?\s*|(?:订单(?:号|编号)|訂單(?:號|編號)|确认(?:号|编号)|確認(?:號|編號))[:：#\s]*)[a-z0-9][a-z0-9-]{2,}`)
 
+// threadOutcomeText is the display form of an outcome line: a redaction tag
+// the model wrote back is written around, never shown (AR62).
 func threadOutcomeText(value string, limit int) string {
-	return mobileBriefText(redactThreadOutcomeText(value), limit)
+	return mobileBriefText(activityPrivacyMarkerStrip(redactThreadOutcomeText(value)), limit)
 }
 
 // threadOutcomeRedactions holds recent outcome redactions: readers check the

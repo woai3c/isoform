@@ -3750,6 +3750,7 @@
         "notesVersion": "v{{version}}：",
         "product": "电脑版 Isoform",
         "version": "v{{version}}",
+        "productVersion": "Isoform {{version}}",
         "versionReady": "v{{version}} · v{{next}} 已下载",
         "idle": "准备好后可以检查更新。",
         "checking": "正在检查更新…",
@@ -3774,6 +3775,7 @@
             "staging": "预发布版",
             "development": "开发版"
         },
+        "buildCommit": " · {{commit}}",
         "buildDate": " · {{date}}",
         "computer": "电脑",
         "computerDetails": "{{model}} · {{os}} · {{phone}}",

@@ -164,6 +164,11 @@ export interface ActivityDayViewProps {
     /** Day data from the page-level useCalendarData. */
     dailyData: main.DailySummaryData | null;
     dayLoading: boolean;
+    /** The day has no answer yet, or its first failed read is being retried: hold the card. */
+    dayPending?: boolean;
+    /** The day's read failed twice and nothing is saved: say so, with a retry. */
+    dayFailed?: boolean;
+    onRetryDay?: () => void;
     automationRuns: CronRunWithJobName[];
     knowledge: main.KnowledgeEntry[];
     memoryEntries: main.MemoryEntry[];
@@ -202,6 +207,9 @@ export function ActivityDayView({
     bridgePort,
     dailyData,
     dayLoading,
+    dayPending: dayPendingProp,
+    dayFailed = false,
+    onRetryDay,
     automationRuns,
     knowledge,
     memoryEntries,
@@ -591,8 +599,12 @@ export function ActivityDayView({
               ? topTwoApps[0].appName
               : t('day.appsJoin', { first: topTwoApps[0].appName, second: topTwoApps[1].appName });
     const isFuture = dayStart > dayStartMs(new Date());
+    const dayPending = dayPendingProp ?? dayLoading;
+    // Empty copy and Write it need an answer: a saved day, or a read that settled with none.
+    const dayAnswered = !!dailyData && !dayPending && !dayFailed;
     const nothingToShow =
-        !dayLoading &&
+        !dayPending &&
+        !dayFailed &&
         !displaySummary &&
         activeMs === 0 &&
         workItems.length === 0 &&
@@ -618,8 +630,11 @@ export function ActivityDayView({
                     scope="daily"
                     isPartial={dailyData?.isPartial}
                     summaryCreatedAt={dailyData?.summaryCreatedAt}
-                    emptyActionLabel={isFuture ? undefined : t('summary.card.writeIt')}
-                    emptyText={isFuture ? undefined : t('summary.card.dayNotWritten')}
+                    emptyActionLabel={isFuture || !dayAnswered ? undefined : t('summary.card.writeIt')}
+                    emptyText={isFuture || !dayAnswered ? undefined : t('summary.card.dayNotWritten')}
+                    pending={dayPending}
+                    failed={dayFailed}
+                    onRetry={onRetryDay}
                 >
                     {activeMs > 0 && (
                         <div className="border-t border-border/60 pt-3 space-y-3">
@@ -856,7 +871,7 @@ export function ActivityDayView({
                     <p className="py-16 text-center text-[13px] text-muted/70">{t('day.empty')}</p>
                 ) : (
                     <>
-                        {(dailyData || !dayLoading) && yourDaySection}
+                        {yourDaySection}
                         {(workItems.length > 0 || query || activitiesFailed || threadsFailed) && workedOnSection}
                         {(learnedEntries.length > 0 || query) && learnedSection}
                     </>

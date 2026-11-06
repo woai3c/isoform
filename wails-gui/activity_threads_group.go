@@ -683,7 +683,8 @@ func threadNormKind(kind string) string {
 
 func threadCleanTitle(title string) string {
 	title = strings.Trim(strings.Join(strings.Fields(title), " "), `"'`)
-	return threadPromptText(redactThreadOutcomeText(title), threadTitleMaxRunes)
+	// Tags are stripped before the length cut, so no partial tag can survive it (AR62).
+	return threadPromptText(activityPrivacyMarkerStrip(redactThreadOutcomeText(title)), threadTitleMaxRunes)
 }
 
 func parseThreadModelResponse(raw string) (threadModelResponse, error) {

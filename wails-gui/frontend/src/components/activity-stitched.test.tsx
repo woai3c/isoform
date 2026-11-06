@@ -1323,3 +1323,15 @@ describe('Activity clock times', () => {
         expect(formatTimeRangeFromMs(at(9, 12), at(10, 2), 'zh-CN')).not.toMatch(/0\d:|:\d\d:\d\d/);
     });
 });
+
+// AR62: a redaction tag never reaches a title on any Activity surface.
+describe('Redaction tags never show in a thread title', () => {
+    it('writes around the tag, so the pick-up title reads Isoform release', () => {
+        expect(splitThreadTitle('Isoform · [REDACTED:code] release').title).toBe('Isoform release');
+        expect(splitThreadTitle('Isoform: [REDACTED:code] release')).toEqual({ title: 'Isoform release', detail: '' });
+    });
+
+    it('leaves a title that is only a tag empty, so the view shows a private item', () => {
+        expect(splitThreadTitle('[REDACTED:api_key]').title).toBe('');
+    });
+});

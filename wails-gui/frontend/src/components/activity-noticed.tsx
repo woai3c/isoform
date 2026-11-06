@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatTimeFromMs } from './timeline/useCalendarData';
 import { pickUpBody, stitchedClock, type PickUpNotice } from './activity-stitched';
+import { stripPrivacyMarkers } from '@/lib/activity-privacy-marker';
 
 // "Isoform noticed" (backlog item 62, step 4): at most three suggestions from
 // the day, made with the day's summary and checked by Go on every read. A
@@ -238,7 +239,7 @@ export function ActivityNoticed({
             <ul className="divide-y divide-border/60 rounded-xl border border-border bg-panel overflow-hidden">
                 {pickUp && (
                     <li className="px-4 py-3 space-y-1.5" data-testid="noticed-pick-up">
-                        <p className="text-[13px] font-medium text-ink">{t('stitched.pickUp.title', { title: pickUp.title })}</p>
+                        <p className="text-[13px] font-medium text-ink">{t('stitched.pickUp.title', { title: stripPrivacyMarkers(pickUp.title) || t('privacy.privateItem') })}</p>
                         <p className="text-[12px] text-muted">{pickUpBody(t, pickUp, i18n.language)}</p>
                         {pickUp.momentId && (
                             <button

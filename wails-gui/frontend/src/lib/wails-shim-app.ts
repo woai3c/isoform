@@ -6112,6 +6112,8 @@ export interface AboutInfo {
     version: string;
     build: string;
     buildTime: string;
+    /** Short commit, set only for a staging build (ST85). */
+    commit?: string;
     computer: string;
     os: string;
     phones: string[];

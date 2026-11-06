@@ -405,7 +405,9 @@
             "writeFailed": "Couldn't write your day. Try again.",
             "dayNotWritten": "This day isn't written yet.",
             "weekNotWritten": "Your week isn't written yet.",
-            "writeIt": "Write it"
+            "writeIt": "Write it",
+            "loadFailed": "Couldn't load your day.",
+            "tryAgain": "Try again"
         },
         "languageName": {
             "en": "English",
@@ -607,5 +609,8 @@
     },
     "timeline": {
         "sessionsFailed": "Couldn't load your sessions."
+    },
+    "privacy": {
+        "privateItem": "a private item"
     }
 }
