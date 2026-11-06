@@ -154,6 +154,9 @@ static void install_system_state_observers(void) {
 		[center addObserverForName:NSWorkspaceWillPowerOffNotification object:nil queue:nil usingBlock:^(NSNotification *note) {
 			goSystemStateChanged("poweroff");
 		}];
+		[center addObserverForName:NSWorkspaceDidActivateApplicationNotification object:nil queue:nil usingBlock:^(NSNotification *note) {
+			goSystemStateChanged("app-activated");
+		}];
 		[center addObserverForName:NSWorkspaceDidWakeNotification object:nil queue:nil usingBlock:^(NSNotification *note) {
 			goSystemStateChanged("wake");
 		}];
@@ -193,6 +196,10 @@ func PowerSource() PowerState {
 		return PowerState{Percent: -1}
 	}
 }
+
+// SystemStateEventsSupported is true here: the lock, sleep and frontmost-app
+// changes arrive as notifications, so screen-state consumers need no poll.
+const SystemStateEventsSupported = true
 
 // StartSystemStateObservers installs the lock, unlock, sleep and wake
 // observers once; changes arrive on SystemStateChanges.

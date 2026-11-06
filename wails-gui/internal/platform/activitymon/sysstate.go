@@ -21,6 +21,9 @@ const (
 	SystemStateSleep    SystemStateKind = "sleep"
 	SystemStateWake     SystemStateKind = "wake"
 	SystemStatePowerOff SystemStateKind = "poweroff"
+	// SystemStateAppActivated is the frontmost app changing. It is not a
+	// system state change: it only asks screen-state consumers to look again.
+	SystemStateAppActivated SystemStateKind = "app-activated"
 )
 
 // SystemStateChange is one notification from the OS.
@@ -98,7 +101,48 @@ func LatestSystemSleepState() SystemStateChange {
 // Call StartSystemStateObservers once first.
 func SystemStateChanges() <-chan SystemStateChange { return systemStateChanges }
 
+// screenSubscribers receive a ping after each lock, unlock, sleep, wake or app
+// activation. A ping says only "look again": the consumer reads the current
+// screen lock and frontmost app itself. The buffer of one coalesces a burst.
+var screenSubscribers = struct {
+	sync.Mutex
+	entries map[chan struct{}]struct{}
+}{entries: make(map[chan struct{}]struct{})}
+
+// SubscribeScreenState returns pings for screen-state checks. Use
+// SystemStateEventsSupported to decide whether a poll is still needed.
+func SubscribeScreenState() (<-chan struct{}, func()) {
+	ch := make(chan struct{}, 1)
+	screenSubscribers.Lock()
+	screenSubscribers.entries[ch] = struct{}{}
+	screenSubscribers.Unlock()
+	return ch, func() {
+		screenSubscribers.Lock()
+		delete(screenSubscribers.entries, ch)
+		screenSubscribers.Unlock()
+	}
+}
+
+func pingScreenSubscribers() {
+	screenSubscribers.Lock()
+	defer screenSubscribers.Unlock()
+	for ch := range screenSubscribers.entries {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
+}
+
 func pushSystemStateChange(kind SystemStateKind) {
+	switch kind {
+	case SystemStateLocked, SystemStateUnlocked, SystemStateSleep, SystemStateWake, SystemStateAppActivated:
+		pingScreenSubscribers()
+	}
+	if kind == SystemStateAppActivated {
+		// Activations are frequent; they stay out of the bounded state stream.
+		return
+	}
 	change := SystemStateChange{Kind: kind, At: time.Now()}
 	switch kind {
 	case SystemStateSleep, SystemStatePowerOff:

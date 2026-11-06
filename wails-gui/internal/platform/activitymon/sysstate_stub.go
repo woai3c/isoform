@@ -16,5 +16,9 @@ func CameraInUse() bool { return false }
 // PowerSource is unknown outside macOS.
 func PowerSource() PowerState { return PowerState{Percent: -1} }
 
+// SystemStateEventsSupported is false: nothing announces lock or app changes
+// here, so screen-state consumers must poll.
+const SystemStateEventsSupported = false
+
 // StartSystemStateObservers has nothing to observe outside macOS.
 func StartSystemStateObservers() {}

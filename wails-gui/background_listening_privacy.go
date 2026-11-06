@@ -10,7 +10,13 @@ import (
 	"wails-gui/internal/platform/activitymon"
 )
 
+// backgroundListeningPrivacyPollInterval is the screen check's cadence where the
+// platform announces nothing (not macOS).
 const backgroundListeningPrivacyPollInterval = time.Second
+
+// backgroundListeningBackstopPollInterval is the check on macOS when no event
+// came: a missed announcement costs at most this long, never forever.
+const backgroundListeningBackstopPollInterval = 30 * time.Second
 
 const (
 	backgroundAudioSuspendedDesktopLocked = "desktop_locked"
@@ -66,27 +72,50 @@ func (a *App) startBackgroundListeningPrivacyMonitor(ctx context.Context) {
 	go a.runBackgroundListeningPrivacyMonitor(ctx)
 }
 
+// subscribeScreenState is the screen-state ping source; tests replace it.
+var subscribeScreenState = activitymon.SubscribeScreenState
+
+// The monitor looks at two things only: the screen lock, and whether the
+// frontmost app is the login window (both read by backgroundListeningDesktopProtected).
+// Sensitive apps and private windows are not read here; they are handled where
+// the activity monitor and the transcription filter read them.
+//
+// The check runs when the OS announces a lock, unlock, sleep, wake or app
+// activation (source=event). On macOS a backstop poll (source=poll) catches an
+// announcement that was missed. Every transition is logged with its source, so
+// a poll-caused transition shows that an event was missed.
 func (a *App) runBackgroundListeningPrivacyMonitor(ctx context.Context) {
-	ticker := time.NewTicker(backgroundListeningPrivacyPollInterval)
+	activitymon.StartSystemStateObservers()
+	changes, stopChanges := subscribeScreenState()
+	defer stopChanges()
+	interval := backgroundListeningPrivacyPollInterval
+	if activitymon.SystemStateEventsSupported {
+		interval = backgroundListeningBackstopPollInterval
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	state := backgroundListeningLockState{}
-	reconcile := func() {
+	reconcile := func(source string) {
 		switch state.observe(a.isBackgroundListeningScreenLocked()) {
 		case backgroundListeningLockSuspend:
+			log.Printf("[listening-privacy] paused reason=lock source=%s", source)
 			a.suspendBackgroundListeningForScreenLock()
 		case backgroundListeningLockResume:
+			log.Printf("[listening-privacy] resumed reason=lock source=%s", source)
 			a.resumeBackgroundListeningAfterScreenUnlock()
 		}
 	}
 
-	reconcile()
+	reconcile("start")
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-changes:
+			reconcile("event")
 		case <-ticker.C:
-			reconcile()
+			reconcile("poll")
 		}
 	}
 }
