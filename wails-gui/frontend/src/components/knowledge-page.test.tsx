@@ -1126,7 +1126,9 @@ describe('candidate privacy transitions', () => {
         expect(screen.getByRole('status')).toHaveTextContent('Not how.');
         mocks.getCandidate.mockImplementation(() => new Promise(() => {}));
         await emit(event, payload);
-        expect(screen.queryByRole('status')).toBeNull();
+        // The page's own privacy reload shows a role="status" skeleton until
+        // its card list re-reads, so wait for that reload to settle first.
+        await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
         expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
     });
 
@@ -1195,8 +1197,12 @@ describe('candidate privacy transitions', () => {
         });
         mocks.getCandidate.mockImplementation(() => new Promise(() => {}));
         await emit(event, payload);
-        expect(screen.queryByRole('status')).toBeNull();
+        // Wait for the page's privacy reload to settle (its role="status"
+        // skeleton clears); the late Undo result is then delivered below.
+        await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
         await act(async () => finishUndo());
+        await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
+        expect(screen.queryByRole('button', { name: 'Undo' })).toBeNull();
         expect(screen.queryByTestId('know-how-candidate')).toBeNull();
         expect(screen.queryByText('Draft how-to')).toBeNull();
     });
