@@ -20,6 +20,8 @@ const STOP_WORDS = new Set([
     'the', 'a', 'an', 'to', 'of', 'and', 'or', 'in', 'on', 'for', 'with', 'by', 'is', 'it', 'that', 'as', 'be', 'at',
     'this', 'from', 'you', 'your', 'wants', 'want', 'prefers', 'prefer', 'rather', 'than', 'does', 'do', 'their', 'its',
     'only', 'so', 'into', 'all', 'are', 'when', 'after', 'before', 'every', 'each',
+    // The framing of a belief written as "You care about …" or "You're careful …" (Y28).
+    'care', 'about', 'careful',
 ]);
 /** Words that flip a title's meaning; a title with one never joins a title without it. */
 const NEGATIONS = new Set(['never', 'no', 'nothing', 'without', "don't", 'dont']);
@@ -100,22 +102,57 @@ export function groupIdeas<T>(
     savedAtOf: (item: T) => number,
     /**
      * The meaning group of each item (from the app's embedder), aligned with
-     * items. When given, items group by meaning and words only split off
-     * negated titles; when absent, the word matcher decides.
+     * items. When given, two items join one idea when their meaning groups match
+     * or their words match (launch walk Y33 and W40: a paraphrase can share no
+     * words, and a short title can share words without sharing a meaning).
      */
     meanings?: readonly number[] | null,
 ): IdeaGroup<T>[] {
     const order = items.map((_, index) => index).sort((a, b) => savedAtOf(items[b]) - savedAtOf(items[a]) || a - b);
     const sets = items.map((item) => ideaWords(titleOf(item)));
-    if (meanings && meanings.length === items.length) {
-        return groupByMeaning(items, sets, order, meanings);
+    const wordGroups = wordMemberGroups(sets, order);
+    const hasMeanings = !!meanings && meanings.length === items.length;
+    if (!hasMeanings) return toIdeaGroups(items, sets, order, wordGroups);
+    const meaningGroups = new Map<string, number[]>();
+    for (const index of order) {
+        const negations = [...sets[index]].filter((word) => word.startsWith('!')).sort().join(' ');
+        const key = `${meanings[index]}|${negations}`;
+        const list = meaningGroups.get(key);
+        if (list) list.push(index);
+        else meaningGroups.set(key, [index]);
     }
+    // Union-find over both partitions: items linked by either join one idea.
+    const parent = items.map((_, index) => index);
+    const find = (x: number): number => {
+        while (parent[x] !== x) {
+            parent[x] = parent[parent[x]];
+            x = parent[x];
+        }
+        return x;
+    };
+    const link = (members: number[]) => {
+        for (let k = 1; k < members.length; k++) parent[find(members[k])] = find(members[0]);
+    };
+    for (const members of wordGroups) link(members);
+    for (const members of meaningGroups.values()) link(members);
+    const byRoot = new Map<number, number[]>();
+    for (const index of order) {
+        const root = find(index);
+        const list = byRoot.get(root);
+        if (list) list.push(index);
+        else byRoot.set(root, [index]);
+    }
+    return toIdeaGroups(items, sets, order, [...byRoot.values()]);
+}
+
+/** The groups of items whose words make them one idea, newest first. */
+function wordMemberGroups(sets: Set<string>[], order: number[]): number[][] {
+    const n = sets.length;
     // Document frequency and smoothed inverse document frequency across the list.
     const df = new Map<string, number>();
     for (const words of sets) {
         for (const word of words) if (!word.startsWith('!')) df.set(word, (df.get(word) ?? 0) + 1);
     }
-    const n = items.length;
     const weight = new Map<string, number>();
     for (const [word, count] of df) weight.set(word, Math.log((1 + n) / (1 + count)) + 1);
     // On a long list, a word in a fifth of the titles or more is too common to
@@ -152,27 +189,22 @@ export function groupIdeas<T>(
             else headsByWord.set(word, [headNumber]);
         }
     }
-    return heads
-        .map((head) => ({
-            firstSeen: Math.min(...head.members),
-            key: [...prepared[head.index].words].sort().join(' '),
-            copies: head.members.map((index) => items[index]),
-        }))
-        .sort((a, b) => a.firstSeen - b.firstSeen)
-        .map(({ key, copies }) => ({ key, copies }));
+    return heads.map((head) => head.members);
 }
 
-function groupByMeaning<T>(items: readonly T[], sets: Set<string>[], order: number[], meanings: readonly number[]): IdeaGroup<T>[] {
-    const groups = new Map<string, { firstSeen: number; members: number[] }>();
-    for (const index of order) {
-        const negations = [...sets[index]].filter((word) => word.startsWith('!')).sort().join(' ');
-        const key = `${meanings[index]}|${negations}`;
-        const group = groups.get(key);
-        if (group) group.members.push(index);
-        else groups.set(key, { firstSeen: index, members: [index] });
-    }
-    return [...groups.entries()]
-        .map(([key, group]) => ({ key, firstSeen: Math.min(...group.members), copies: group.members.map((index) => items[index]) }))
+/** Turns member groups into idea groups: copies newest first, groups in first-seen order. */
+function toIdeaGroups<T>(items: readonly T[], sets: Set<string>[], order: number[], memberGroups: number[][]): IdeaGroup<T>[] {
+    const position = new Map<number, number>();
+    order.forEach((index, at) => position.set(index, at));
+    return memberGroups
+        .map((members) => {
+            const sorted = [...members].sort((a, b) => (position.get(a) ?? 0) - (position.get(b) ?? 0));
+            return {
+                firstSeen: Math.min(...sorted),
+                key: [...sets[sorted[0]]].filter((word) => !word.startsWith('!')).sort().join(' '),
+                copies: sorted.map((index) => items[index]),
+            };
+        })
         .sort((a, b) => a.firstSeen - b.firstSeen)
         .map(({ key, copies }) => ({ key, copies }));
 }

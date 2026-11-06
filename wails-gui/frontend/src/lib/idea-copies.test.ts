@@ -99,6 +99,42 @@ describe('groupIdeas by meaning', () => {
     });
 });
 
+describe('groupIdeas joins by words or by meaning (launch walk Y33, W40)', () => {
+    it('joins titles that share a meaning group even when the meaning split them', () => {
+        const rows: Row[] = [
+            { id: 'a', title: 'Offer naming only after both reads settle', savedAt: 2 },
+            { id: 'b', title: 'Gate the naming prompt on settled reads', savedAt: 1 },
+        ];
+        expect(groupIdeas(rows, titleOf, savedAtOf, [0, 0])).toHaveLength(1);
+    });
+
+    it('joins titles that share words even when the meaning split them', () => {
+        const rows: Row[] = [
+            { id: 'a', title: 'Ship the release notes on Monday', savedAt: 2 },
+            { id: 'b', title: 'Ship the release notes on Friday', savedAt: 1 },
+        ];
+        expect(groupIdeas(rows, titleOf, savedAtOf, [0, 1])).toHaveLength(1);
+    });
+
+    it('keeps unrelated titles apart when neither words nor meaning link them', () => {
+        const rows: Row[] = [
+            { id: 'a', title: 'Keeps home folder paths out of committed docs', savedAt: 2 },
+            { id: 'b', title: 'Waits for the nightly build before deploying', savedAt: 1 },
+        ];
+        expect(groupIdeas(rows, titleOf, savedAtOf, [0, 1])).toHaveLength(2);
+    });
+});
+
+describe('framing of You-sentences does not join beliefs (Y28)', () => {
+    it('does not join two beliefs only because both read You care about', () => {
+        const rows: Row[] = [
+            { id: 'a', title: 'You care about Fact 1', savedAt: 2 },
+            { id: 'b', title: 'You care about Fact 2', savedAt: 1 },
+        ];
+        expect(groupIdeas(rows, titleOf, savedAtOf)).toHaveLength(2);
+    });
+});
+
 describe('uniqueBy', () => {
     it('keeps the first item for each key', () => {
         expect(uniqueBy([{ k: 1, v: 'a' }, { k: 1, v: 'b' }, { k: 2, v: 'c' }], (item) => String(item.k)).map((item) => item.v)).toEqual(['a', 'c']);

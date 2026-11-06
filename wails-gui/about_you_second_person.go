@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -34,6 +35,7 @@ var beliefSelfVerbs = map[string]bool{
 	"rebuild": true, "replace": true, "scan": true, "stop": true, "validate": true, "wait": true,
 	"provide": true, "reuse": true, "summarize": true, "archive": true, "pin": true, "pick": true,
 	"stash": true, "tag": true, "upload": true, "label": true, "file": true, "pass": true, "hold": true,
+	"maintain": true, "prepare": true, "research": true, "caution": true,
 }
 
 // beliefGerundNouns are words ending in "ing" that are usually nouns, so
@@ -53,7 +55,63 @@ var beliefIrregularVerbs = map[string]string{"is": "are", "was": "were", "has": 
 // both read "You use design reviews…". Quotation marks around it go.
 // Anything else (Chinese, a noun phrase, already "You …") is unchanged.
 func beliefInSecondPerson(text string) string {
-	return beliefAgreeWithYou(beliefFirstPersonToYou(text))
+	return beliefAgreeWithYou(beliefFirstPersonToYou(beliefDisplayName(text)))
+}
+
+// beliefProperNouns keep their capital when a noun phrase is turned into "You
+// care about …" (launch walk Y28): the first word is a name, not a common word.
+var beliefProperNouns = map[string]bool{
+	"Claude": true, "Codex": true, "Isoform": true, "Devin": true, "Kimi": true, "GitHub": true,
+	"Slack": true, "Xero": true, "Wails": true, "Go": true, "iPhone": true, "macOS": true, "Apple": true,
+	"Google": true, "Chrome": true, "Safari": true, "Telegram": true, "WeChat": true, "Discord": true,
+}
+
+// beliefCommonWords are nouns that open many subjectless beliefs; only these
+// lose their capital. Any other capitalised first word is kept: it may be a name.
+var beliefCommonWords = map[string]bool{
+	"tools": true, "news": true, "process": true, "notes": true, "meeting": true, "meetings": true,
+	"product": true, "release": true, "releases": true, "work": true, "project": true, "projects": true,
+	"research": true, "direction": true, "plans": true, "preferences": true, "habits": true, "routine": true,
+	"routines": true, "reviews": true, "tests": true, "testing": true, "status": true, "summary": true,
+	"workflow": true, "setup": true, "ideas": true, "goals": true, "team": true, "customers": true,
+	"messages": true, "updates": true, "rules": true, "policy": true, "docs": true, "documents": true,
+	"design": true, "backlog": true, "brief": true, "briefs": true, "checks": true, "priorities": true,
+	"pull": true, "requests": true, "branch": true, "branches": true, "hardware": true, "content": true,
+}
+
+// beliefDisplayName shows the product under its current name. Stored beliefs
+// may still say the old name (launch walk Y28: a project entry never shows Yansu).
+func beliefDisplayName(text string) string {
+	return beliefOldName.ReplaceAllStringFunc(text, func(match string) string {
+		if r, _ := utf8.DecodeRuneInString(match); unicode.IsUpper(r) {
+			return "Isoform"
+		}
+		return "isoform"
+	})
+}
+
+var beliefOldName = regexp.MustCompile(`(?i)\byansu\b`)
+
+// beliefNounPhrase turns a subjectless noun phrase ("Yansu product direction…")
+// into a You sentence the honest way: "You care about …" (launch walk Y28).
+func beliefNounPhrase(trimmed string) (string, bool) {
+	r, _ := utf8.DecodeRuneInString(trimmed)
+	if r > unicode.MaxASCII || !unicode.IsLetter(r) {
+		return "", false
+	}
+	first, rest, _ := strings.Cut(trimmed, " ")
+	// A past-tense first word is an event ("Prepared a weekly update"), not a belief.
+	// A bare verb opens an instruction ("Use examples."), which stays as written.
+	if first == "You" || first == "Your" || first == "You're" || strings.HasSuffix(first, "ed") || beliefSelfVerbs[strings.ToLower(first)] {
+		return "", false
+	}
+	if beliefCommonWords[strings.ToLower(first)] && !beliefProperNouns[first] && unicode.IsUpper(r) && strings.IndexFunc(first[1:], unicode.IsUpper) < 0 {
+		first = strings.ToLower(first[:1]) + first[1:]
+	}
+	if rest == "" {
+		return "You care about " + first, true
+	}
+	return "You care about " + first + " " + rest, true
 }
 
 // beliefAgreeWithYou makes every verb agree with "you" (v1.0.2 Y28):
@@ -128,6 +186,16 @@ func beliefFirstPersonToYou(text string) string {
 	// Launch walk Y28: "Building the desktop app…" is an action in progress.
 	if gerund, ok := beliefGerundOf(first); ok {
 		return "You're " + gerund + " " + rest
+	}
+	// Launch walk Y28: Title Case entries with no subject.
+	if strings.EqualFold(first, "preferences") && strings.HasPrefix(rest, "for ") {
+		return "You prefer " + strings.TrimPrefix(rest, "for ")
+	}
+	if strings.EqualFold(first, "caution") && strings.HasPrefix(rest, "before ") {
+		return "You're careful " + rest
+	}
+	if phrase, ok := beliefNounPhrase(trimmed); ok {
+		return phrase
 	}
 	return beliefKeepOrTrim(text, trimmed)
 }

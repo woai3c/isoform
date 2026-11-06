@@ -82,7 +82,7 @@ export function memoryPoints(content: string): MemoryPoint[] {
 // Mirrors beliefInSecondPerson in about_you_second_person.go: a belief reads
 // in second person (about-you v1.0.1 Y28), so "Uses design reviews…" and
 // "I use design reviews…" both read "You use design reviews…".
-const SELF_VERBS = new Set('accept answer approve archive ask attend avoid batch block build call care check choose clean code commit compare configure confirm coordinate create debug decline delegate delete deploy describe design dictate disable draft drink edit email enable enjoy ensure exercise expect explain favor favour file find fix follow gather get give group guard hand handle hold install keep label lead learn let like listen live log love make manage meet merge monitor need open organize pass pause pick pin plan prefer prioritize protect provide publish push put queue read rebuild record refactor reject release rely remove rename replace reply report require reset restart restore resume reuse review run say scan schedule send set share ship sign skip sleep speak split start stash stop study summarize tag take talk teach tend test think track travel treat trust try turn type update upload use validate value verify wait wake walk want watch work write'.split(' '));
+const SELF_VERBS = new Set('accept answer approve archive ask attend avoid batch block build call care check choose clean code commit compare configure confirm coordinate create debug decline delegate delete deploy describe design dictate disable draft drink edit email enable enjoy ensure exercise expect explain favor favour file find fix follow gather get give group guard hand handle hold install keep label lead learn let like listen live log love make manage meet merge monitor need open organize pass pause pick pin plan prefer prioritize protect provide publish push put queue read rebuild record refactor reject release rely remove rename replace reply report require reset restart restore resume reuse review run say scan schedule send set share ship sign skip sleep speak split start stash stop study summarize tag take talk teach tend test think track travel treat trust try turn type update upload use validate value verify wait wake walk want watch work write maintain prepare research caution'.split(' '));
 const IRREGULAR_VERBS: Record<string, string> = { is: 'are', was: 'were', has: 'have', does: 'do', goes: 'go', requires: 'need' };
 // Launch walk Y28: these -ing words are nouns, so they never become "You're …".
 const GERUND_NOUNS = new Set('meeting setting morning evening reading greeting feeling thing string spring painting clothing listing heading ring writing coding styling planning testing branding marketing training shopping cooking drawing tracking'.split(' '));
@@ -115,11 +115,38 @@ function agreeWithYou(sentence: string): string {
     });
 }
 
-export function beliefInSecondPerson(text: string): string {
-    return agreeWithYou(firstPersonToYou(text));
+/** Launch walk Y28: nouns that open many subjectless beliefs lose their capital. */
+const COMMON_WORDS = new Set(('tools news process notes meeting meetings product release releases work project projects research direction plans preferences habits routine routines reviews tests testing status summary workflow setup ideas goals team customers messages updates rules policy docs documents design backlog brief briefs checks priorities pull requests branch branches hardware content').split(' '));
+/** Names that keep their capital when a noun phrase becomes "You care about …". */
+const PROPER_NOUNS = new Set('Claude Codex Isoform Devin Kimi GitHub Slack Xero Wails Go iPhone macOS Apple Google Chrome Safari Telegram WeChat Discord'.split(' '));
+
+/** Shows the product under its current name (a project entry never shows Yansu). */
+function displayName(text: string): string {
+    return text.replace(/\byansu\b/gi, (match) => (/^[A-Z]/.test(match) ? 'Isoform' : 'isoform'));
 }
 
-function firstPersonToYou(text: string): string {
+/** A subjectless noun phrase reads "You care about …" (launch walk Y28). */
+function nounPhrase(trimmed: string): string | null {
+    const first = trimmed.split(' ')[0];
+    const rest = trimmed.slice(first.length).trimStart();
+    // A past-tense first word is an event ("Prepared a weekly update"), not a belief.
+    // A bare verb opens an instruction ("Use examples."), which stays as written.
+    if (!/^[A-Za-z]/.test(first) || /^You(’re|'re)?$/.test(first) || first === 'Your' || /ed$/i.test(first) || SELF_VERBS.has(first.toLowerCase())) return null;
+    let head = first;
+    if (COMMON_WORDS.has(first.toLowerCase()) && !PROPER_NOUNS.has(first) && /^[A-Z][a-z]*$/.test(first)) head = first[0].toLowerCase() + first.slice(1);
+    return rest ? `You care about ${head} ${rest}` : `You care about ${head}`;
+}
+
+/**
+ * A belief as a You sentence. Titles and headings pass `nounPhrase: false`, so a
+ * memory's name ("Writing style") is not turned into "You care about …".
+ */
+export function beliefInSecondPerson(text: string, options: { nounPhrase?: boolean } = {}): string {
+    const converted = agreeWithYou(firstPersonToYou(displayName(text), options.nounPhrase ?? true));
+    return converted;
+}
+
+function firstPersonToYou(text: string, allowNounPhrase = true): string {
     let trimmed = text.trim();
     const unquoted = trimmed.replace(/^["“”'‘’]+|["“”'‘’]+$/g, '').trim();
     if (unquoted) trimmed = unquoted;
@@ -146,7 +173,11 @@ function firstPersonToYou(text: string): string {
         if (SELF_VERBS.has(stem) || SELF_VERBS.has(`${stem}e`)) return `You're ${gerund} ${rest}`;
     }
     const base = baseVerb(first);
-    return base ? `You ${base} ${rest}` : trimmed;
+    if (base) return `You ${base} ${rest}`;
+    // Launch walk Y28: Title Case entries with no subject.
+    if (first.toLowerCase() === 'preferences' && rest.toLowerCase().startsWith('for ')) return `You prefer ${rest.slice(4)}`;
+    if (first.toLowerCase() === 'caution' && rest.toLowerCase().startsWith('before ')) return `You're careful ${rest}`;
+    return (allowNounPhrase ? nounPhrase(trimmed) : null) ?? trimmed;
 }
 
 export function memoryText(entry: main.MemoryEntry): string {
@@ -163,7 +194,7 @@ export function memoryLabel(
     const typeLabel =
         /^(?:(?:isoform|yansu) )?memory(?: points)?$|^user_insight$|^topic_highlight$|^deep_user_model$|^agentic_memory$|^user insights?$|^topic highlights?$|^deep user model$|^ai operational$|^a preference$|^a fact about a person$|^something i learned about you$|^记忆(?:要点)?$/i;
     if (title && entry.title !== entry.id && !typeLabel.test(title))
-        return beliefInSecondPerson(title);
+        return beliefInSecondPerson(title, { nounPhrase: false });
     const heading = entry.content.match(/^# (.+)$/m)?.[1];
     if (
         heading &&
@@ -171,10 +202,11 @@ export function memoryLabel(
         heading !== entry.id &&
         humanMemoryText(heading)
     )
-        return beliefInSecondPerson(humanMemoryText(heading));
+        return beliefInSecondPerson(humanMemoryText(heading), { nounPhrase: false });
     return (
         beliefInSecondPerson(
             humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '').slice(0, 120),
+            { nounPhrase: false },
         ) || t('row.empty')
     );
 }

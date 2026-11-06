@@ -26,9 +26,9 @@ func TestBeliefInSecondPerson(t *testing.T) {
 		"I am a morning writer":                                                          "You are a morning writer",
 		"My mornings are for deep work":                                                  "Your mornings are for deep work",
 		"You keep emails to three sentences":                                             "You keep emails to three sentences",
-		"Tools for the Lisbon trip":                                                      "Tools for the Lisbon trip",
-		"News about Maya Okafor":                                                         "News about Maya Okafor",
-		"Process notes":                                                                  "Process notes",
+		"Tools for the Lisbon trip":                                                      "You care about tools for the Lisbon trip",
+		"News about Maya Okafor":                                                         "You care about news about Maya Okafor",
+		"Process notes":                                                                  "You care about process notes",
 		"Keeps 8 to 11 AM free for writing and code review, and declines meetings then.": "You keep 8 to 11 AM free for writing and code review, and decline meetings then.",
 		"You keep 8 to 11 AM free, and declines meetings then":                           "You keep 8 to 11 AM free, and decline meetings then",
 		"Drafts a reply and sends it before noon":                                        "You draft a reply and send it before noon",
@@ -61,11 +61,39 @@ func TestBeliefInSecondPersonWritesSubjectlessBeliefsAsYou(t *testing.T) {
 		"Approves disk cleanup only after reviewing a size audit of candidates":   "You approve disk cleanup only after reviewing a size audit of candidates",
 		"Requires the focused tests to pass before pushing":                       "You need the focused tests to pass before pushing",
 		"Building Isoform desktop app and iPhone companion with Claude and Codex": "You're building Isoform desktop app and iPhone companion with Claude and Codex",
-		"Meeting notes stay in the hub":                                           "Meeting notes stay in the hub",
+		"Meeting notes stay in the hub":                                           "You care about meeting notes stay in the hub",
 	}
 	for in, want := range cases {
 		if got := beliefInSecondPerson(in); got != want {
 			t.Errorf("beliefInSecondPerson(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// Launch walk Y28 (reopened): Title Case entries with no subject read as You
+// sentences, and the product always shows under its current name.
+func TestBeliefInSecondPersonReadsTitleCaseEntriesAsYou(t *testing.T) {
+	cases := map[string]string{
+		"Preferences for short release notes and quiet hours":    "You prefer short release notes and quiet hours",
+		"Caution before sending alerts to outside teams":         "You're careful before sending alerts to outside teams",
+		"Maintaining the sample backlog document weekly":         "You're maintaining the sample backlog document weekly",
+		"Atlas product direction and wearable hardware research": "You care about Atlas product direction and wearable hardware research",
+		"Yansu release checklist for pilot customers":            "You care about Isoform release checklist for pilot customers",
+		"Claude Code sessions stay in their own worktree":        "You care about Claude Code sessions stay in their own worktree",
+		"You keep the release notes short":                       "You keep the release notes short",
+	}
+	for in, want := range cases {
+		if got := beliefInSecondPerson(in); got != want {
+			t.Errorf("beliefInSecondPerson(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// Launch walk Y28: a bare instruction and a past-tense event stay as written.
+func TestBeliefInSecondPersonKeepsInstructionsAndEventsAsWritten(t *testing.T) {
+	for _, in := range []string{"Use examples.", "Keep replies short.", "Prepared a weekly update."} {
+		if got := beliefInSecondPerson(in); got != in {
+			t.Errorf("beliefInSecondPerson(%q) = %q", in, got)
 		}
 	}
 }

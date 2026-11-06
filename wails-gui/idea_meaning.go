@@ -78,10 +78,16 @@ func (a *App) IdeaMeaningGroups(titles []string, threshold float64) (*IdeaMeanin
 	if a == nil || a.memoryStore == nil || a.memoryStore.embedder == nil || len(titles) == 0 || len(titles) > ideaMeaningMaxTitles || threshold < 0.5 || threshold > 0.95 {
 		return nil, nil
 	}
-	return ideaMeanings.lookup(a.memoryStore.embedder, titles, threshold), nil
+	return ideaMeanings.lookup(a.memoryStore.embedder, titles, threshold, func() {
+		a.emitBrowserEvent(ideaMeaningsReadyEvent)
+	}), nil
 }
 
-func (s *ideaMeaningStore) lookup(embedder EmbeddingProvider, titles []string, threshold float64) *IdeaMeaningResult {
+// ideaMeaningsReadyEvent tells the pages that groups finished building, so they
+// re-read once. Nothing re-reads on a timer.
+const ideaMeaningsReadyEvent = "idea-meanings:ready"
+
+func (s *ideaMeaningStore) lookup(embedder EmbeddingProvider, titles []string, threshold float64, ready func()) *IdeaMeaningResult {
 	hashes := make([][sha256.Size]byte, len(titles))
 	key := sha256.New()
 	binary.Write(key, binary.LittleEndian, math.Float64bits(threshold))
@@ -100,13 +106,13 @@ func (s *ideaMeaningStore) lookup(embedder EmbeddingProvider, titles []string, t
 	}
 	if !s.running {
 		s.running = true
-		go s.build(embedder, titles, hashes, resultKey, threshold)
+		go s.build(embedder, titles, hashes, resultKey, threshold, ready)
 	}
 	return &IdeaMeaningResult{Pending: true}
 }
 
 // build embeds the titles it lacks, in low-priority batches, then clusters.
-func (s *ideaMeaningStore) build(embedder EmbeddingProvider, titles []string, hashes [][sha256.Size]byte, resultKey [sha256.Size]byte, threshold float64) {
+func (s *ideaMeaningStore) build(embedder EmbeddingProvider, titles []string, hashes [][sha256.Size]byte, resultKey [sha256.Size]byte, threshold float64, ready func()) {
 	defer func() {
 		s.mu.Lock()
 		s.running = false
@@ -143,17 +149,17 @@ func (s *ideaMeaningStore) build(embedder EmbeddingProvider, titles []string, ha
 	}
 	s.mu.Lock()
 	vectors := make([][]float64, len(hashes))
-	ready := true
+	allEmbedded := true
 	for i, h := range hashes {
 		vec, ok := s.vectors[h]
 		if !ok {
-			ready = false
+			allEmbedded = false
 			break
 		}
 		vectors[i] = vec
 	}
 	s.mu.Unlock()
-	if !ready {
+	if !allEmbedded {
 		return
 	}
 	groups := clusterIdeaMeanings(vectors, threshold)
@@ -163,6 +169,9 @@ func (s *ideaMeaningStore) build(embedder EmbeddingProvider, titles []string, ha
 	}
 	s.results[resultKey] = groups
 	s.mu.Unlock()
+	if ready != nil {
+		ready()
+	}
 }
 
 // ensureLoaded reads the vectors for this embedding model from disk once.

@@ -147,8 +147,8 @@ describe('beliefInSecondPerson (about-you v1.0.1 Y28)', () => {
         ['I am a morning writer', 'You are a morning writer'],
         ['My mornings are for deep work', 'Your mornings are for deep work'],
         ['You keep emails to three sentences', 'You keep emails to three sentences'],
-        ['Tools for the Lisbon trip', 'Tools for the Lisbon trip'],
-        ['News about Maya Okafor', 'News about Maya Okafor'],
+        ['Tools for the Lisbon trip', 'You care about tools for the Lisbon trip'],
+        ['News about Maya Okafor', 'You care about news about Maya Okafor'],
         ['习惯在终端里用语音输入', '习惯在终端里用语音输入'],
         // v1.0.2 Y28: every verb agrees with "you".
         ['Keeps 8 to 11 AM free for writing and code review, and declines meetings then.', 'You keep 8 to 11 AM free for writing and code review, and decline meetings then.'],
@@ -172,8 +172,31 @@ describe('beliefInSecondPerson subjectless beliefs (launch walk Y28)', () => {
         ['Approves disk cleanup only after reviewing a size audit of candidates', 'You approve disk cleanup only after reviewing a size audit of candidates'],
         ['Requires the focused tests to pass before pushing', 'You need the focused tests to pass before pushing'],
         ['Building Isoform desktop app and iPhone companion with Claude and Codex', "You're building Isoform desktop app and iPhone companion with Claude and Codex"],
-        ['Meeting notes stay in the hub', 'Meeting notes stay in the hub'],
+        ['Meeting notes stay in the hub', 'You care about meeting notes stay in the hub'],
     ])('%s', (input, want) => {
         expect(beliefInSecondPerson(input)).toBe(want);
+    });
+});
+
+describe('beliefInSecondPerson Title Case entries (launch walk Y28, reopened)', () => {
+    it.each([
+        ['Preferences for short release notes and quiet hours', 'You prefer short release notes and quiet hours'],
+        ['Caution before sending alerts to outside teams', "You're careful before sending alerts to outside teams"],
+        ['Maintaining the sample backlog document weekly', "You're maintaining the sample backlog document weekly"],
+        ['Atlas product direction and wearable hardware research', 'You care about Atlas product direction and wearable hardware research'],
+        ['Yansu release checklist for pilot customers', 'You care about Isoform release checklist for pilot customers'],
+    ])('%s', (input, want) => {
+        expect(beliefInSecondPerson(input)).toBe(want);
+    });
+
+    it('keeps a memory title unconverted apart from the product name', () => {
+        expect(beliefInSecondPerson('Writing style', { nounPhrase: false })).toBe('Writing style');
+        expect(beliefInSecondPerson('Yansu roadmap', { nounPhrase: false })).toBe('Isoform roadmap');
+    });
+});
+
+describe('bare instructions and events stay as written (launch walk Y28)', () => {
+    it.each(['Use examples.', 'Keep replies short.', 'Prepared a weekly update.'])('%s', (input) => {
+        expect(beliefInSecondPerson(input)).toBe(input);
     });
 });

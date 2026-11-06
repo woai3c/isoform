@@ -118,7 +118,7 @@ function EvidenceArticle({ item, onReject }: { item: ReadableEvidence; onReject:
     const { t } = useTranslation('memory');
     const duration = durationWords(t, item.durationMs);
     const seen = t('aboutYou.evidence.seen', { when: relativeWords(t, item.at) });
-    const said = beliefInSecondPerson(humanMemoryText(item.text));
+    const said = beliefInSecondPerson(humanMemoryText(item.text), { nounPhrase: false });
     const words = item.appName
         ? t('aboutYou.evidence.from', { app: item.appName, text: said.replace(/^You(r?)\b/, 'you$1') })
         : said;

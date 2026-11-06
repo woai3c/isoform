@@ -431,7 +431,7 @@ export function KnowledgePage({
 
     // One card per idea (W40): copies whose titles match share a card, and the
     // groups cover every copy, so an action reaches all of them.
-    const meanings = useIdeaMeanings(cards, cardTitle, cardSavedAt, IDEA_MEANING_THRESHOLD_KNOW_HOW);
+    const meanings = useIdeaMeanings(cards, cardTitle, cardSavedAt, IDEA_MEANING_THRESHOLD_KNOW_HOW, cardMeaningText);
     const ideaGroups = useMemo(() => groupIdeas(cards, cardTitle, cardSavedAt, meanings), [cards, meanings]);
     const ideaGroupOfId = useMemo(() => {
         const byId = new Map<string, IdeaGroup<main.KnowHowCard>>();
@@ -1652,11 +1652,20 @@ function PageMoreMenu({
     );
 }
 
-/** Cosine threshold for know-how titles (tuned on the user's titles; see idea_meaning.go). */
-const IDEA_MEANING_THRESHOLD_KNOW_HOW = 0.65;
+/**
+ * Cosine threshold for know-how. The embedder reads the title and the takeaway
+ * together (launch walk W40), which lifts paraphrases to about 0.78 and leaves
+ * unrelated pairs near 0; 0.7 keeps sampled groups to one idea each.
+ */
+const IDEA_MEANING_THRESHOLD_KNOW_HOW = 0.7;
 
 function cardTitle(card: main.KnowHowCard): string {
     return card.title;
+}
+
+/** What the embedder reads for a card: its title and its takeaway. */
+function cardMeaningText(card: main.KnowHowCard): string {
+    return card.takeaway ? `${card.title}. ${card.takeaway}` : card.title;
 }
 
 function cardSavedAt(card: main.KnowHowCard): number {
