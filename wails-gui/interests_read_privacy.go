@@ -29,32 +29,37 @@ func (a *App) interestsReadFilter() func(interests.Interest) bool {
 			_, policyErr = a.activityReadPrivacyPolicy()
 		})
 	}
-	checked := map[interests.Ref]bool{}
-	allowed := map[interests.Ref]bool{}
-	// Remembered decisions are shared by every filter built while the key
-	// holds (the request path and the background topic rebuild), so they
-	// are guarded by the shared lock, not one local to this filter.
-	decisionsMu := &sync.Mutex{}
+	// Remembered decisions and the sources they were derived from are shared
+	// by every filter built while the key holds (the request path and the
+	// background topic rebuild), so they are guarded by the shared lock, not
+	// one local to this filter.
+	shared := &interestsReadDecisions{checked: map[interests.Ref]bool{}, allowed: map[interests.Ref]bool{}}
 	if a != nil {
 		if remembered := a.interestsReads.decisions(a.interestsReadKey(), time.Now()); remembered != nil {
-			checked, allowed, decisionsMu = remembered.checked, remembered.allowed, &remembered.mu
+			shared = remembered
 		}
 	}
-	var purposes map[string]PurposeOpenLoopDetail
-	var hashes map[string]bool
+	decisionsMu := &shared.mu
+	checked, allowed := shared.checked, shared.allowed
 	// collectible rebuilds the search/named hashes the evidence pass would
 	// derive right now, with the same collection logic and the same window.
 	// A stored hash one of them still produces names something the sources
-	// may still show; a hash they no longer produce is refused.
+	// may still show; a hash they no longer produce is refused. The result
+	// lives as long as the decisions it serves (same key, same expiry), so it
+	// never outlives a source change that would change the decisions.
 	collectible := func() map[string]bool {
-		if hashes != nil {
-			return hashes
+		decisionsMu.Lock()
+		if built := shared.hashes; built != nil {
+			decisionsMu.Unlock()
+			return built
 		}
-		hashes = map[string]bool{}
+		decisionsMu.Unlock()
+		hashes := map[string]bool{}
 		now := time.Now()
 		in := collectInterestInput(a, now.Add(-interests.RefreshWindow), now)
 		if in.PeopleUnknown {
-			// Without the people list nothing may be re-authorized.
+			// Without the people list nothing may be re-authorized, and an
+			// empty answer is not remembered.
 			return hashes
 		}
 		items, _ := interestItems(in)
@@ -65,7 +70,36 @@ func (a *App) interestsReadFilter() func(interests.Interest) bool {
 			default:
 			}
 		}
+		decisionsMu.Lock()
+		if shared.hashes == nil {
+			shared.hashes = hashes
+		}
+		hashes = shared.hashes
+		decisionsMu.Unlock()
 		return hashes
+	}
+	// goalPurposes is Today's complete Purpose evidence closure, reused by
+	// every goal reference under the same key.
+	goalPurposes := func() map[string]PurposeOpenLoopDetail {
+		decisionsMu.Lock()
+		if built := shared.purposes; built != nil {
+			decisionsMu.Unlock()
+			return built
+		}
+		decisionsMu.Unlock()
+		// Reuse Today's complete Purpose evidence closure, including
+		// corrections and carried-forward fields from earlier events.
+		purposes := map[string]PurposeOpenLoopDetail{}
+		for _, detail := range a.collectTodayChatSources(context.Background(), time.Now()).Purposes {
+			purposes[detail.OpenLoop.ID] = detail
+		}
+		decisionsMu.Lock()
+		if shared.purposes == nil {
+			shared.purposes = purposes
+		}
+		purposes = shared.purposes
+		decisionsMu.Unlock()
+		return purposes
 	}
 	check := func(ref interests.Ref) bool {
 		readPolicy()
@@ -122,15 +156,7 @@ func (a *App) interestsReadFilter() func(interests.Interest) bool {
 			if kind != "goal" {
 				return false
 			}
-			if purposes == nil {
-				// Reuse Today's complete Purpose evidence closure, including
-				// corrections and carried-forward fields from earlier events.
-				purposes = map[string]PurposeOpenLoopDetail{}
-				for _, detail := range a.collectTodayChatSources(context.Background(), time.Now()).Purposes {
-					purposes[detail.OpenLoop.ID] = detail
-				}
-			}
-			detail, ok := purposes[id]
+			detail, ok := goalPurposes()[id]
 			return ok && detail.Current.Title != "" && detail.Current.OccurredAt == ref.At
 		case interests.SourceSearch, interests.SourceNamed:
 			// The reference stores only a content hash, but it stands for one
@@ -177,10 +203,14 @@ type interestsReadCache struct {
 }
 
 type interestsReadDecisions struct {
-	mu               sync.Mutex // guards checked and allowed
+	mu               sync.Mutex // guards every field below
 	key              string
 	at               time.Time
 	checked, allowed map[interests.Ref]bool
+	// hashes and purposes are the collection results the decisions were
+	// derived from; nil until a filter builds them.
+	hashes   map[string]bool
+	purposes map[string]PurposeOpenLoopDetail
 }
 
 // decisions returns the remembered decisions for key, starting new ones when
