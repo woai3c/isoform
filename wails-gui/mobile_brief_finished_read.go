@@ -454,8 +454,14 @@ func (s *mobileBriefService) sealedReadOrPending(source MobileBriefV1) (MobileBr
 		if s.isStopped() {
 			return MobileBriefV1{}, mobileBriefWithholding{}, false, errMobileBriefUnavailable
 		}
+		// A brief that could not be sealed recently is not gated again on every
+		// read; it stays withheld until its backoff ends or its content changes.
+		if sealRetryBackedOff(source.BriefID, mobileBriefSourceDigest(source), time.Now()) {
+			return MobileBriefV1{}, mobileBriefWithholding{}, true, nil
+		}
 		sealed, withheld, wrote := s.seal(context.Background(), source)
 		if !wrote {
+			s.scheduleSealRetry(source)
 			return MobileBriefV1{}, mobileBriefWithholding{}, true, nil
 		}
 		s.noteLatestShownIfNewer(sealed)
@@ -670,13 +676,49 @@ func (s *mobileBriefService) sealAndAnnounce(source MobileBriefV1) {
 // (a store still opening) is sealed again. Its surfaces refresh when it is saved.
 var sealRetryDelays = []time.Duration{time.Second, 3 * time.Second, 10 * time.Second, 30 * time.Second}
 
+// sealRetryBackoff is how long a brief whose seal still fails after its retries
+// is left alone. Reads in that window keep showing the withheld brief and do not
+// run the gates again. A change to the brief's stored content (a new digest) or
+// a restart tries again at once.
+const sealRetryBackoff = time.Hour
+
+// sealRetryPause is the backoff of one brief: the stored-content digest it failed
+// under and the time before which no new attempt is made for that digest.
+type sealRetryPause struct {
+	digest string
+	until  time.Time
+}
+
+// sealRetryPaused maps a brief ID to its sealRetryPause.
+var sealRetryPaused sync.Map
+
+// mobileBriefSealRetryAttempts counts the sealing attempts the background retries
+// make, so tests can see that a backed-off brief is not tried again on each read.
+var mobileBriefSealRetryAttempts atomic.Uint64
+
+// sealRetryBackedOff reports whether a brief failed to seal under this digest
+// recently enough that it should not be tried again yet.
+func sealRetryBackedOff(briefID, digest string, now time.Time) bool {
+	value, ok := sealRetryPaused.Load(briefID)
+	if !ok {
+		return false
+	}
+	pause := value.(sealRetryPause)
+	return pause.digest == digest && now.Before(pause.until)
+}
+
 // sealRetrying names the briefs with a retry in flight, so each has one.
 var sealRetrying sync.Map
 
 // scheduleSealRetry seals a brief again in the background while its gates cannot
 // decide, then announces it (brief:stored) so Today and the other surfaces read
 // it. The waits poll the service's stop flag, so shutdown never waits on one.
+// When every retry fails, the reason is logged once and the brief is left alone
+// for sealRetryBackoff, unless its stored content changes first.
 func (s *mobileBriefService) scheduleSealRetry(source MobileBriefV1) {
+	if sealRetryBackedOff(source.BriefID, mobileBriefSourceDigest(source), time.Now()) {
+		return
+	}
 	if _, busy := sealRetrying.LoadOrStore(source.BriefID, true); busy {
 		return
 	}
@@ -687,6 +729,7 @@ func (s *mobileBriefService) scheduleSealRetry(source MobileBriefV1) {
 	go func() {
 		defer s.wg.Done()
 		defer sealRetrying.Delete(source.BriefID)
+		var last mobileBriefWithholding
 		for _, wait := range sealRetryDelays {
 			if !s.sleepUnlessStopped(wait) {
 				return
@@ -695,16 +738,24 @@ func (s *mobileBriefService) scheduleSealRetry(source MobileBriefV1) {
 			if !ok {
 				return
 			}
-			sealed, _, wrote := s.seal(context.Background(), current)
+			mobileBriefSealRetryAttempts.Add(1)
+			sealed, withheld, wrote := s.seal(context.Background(), current)
 			if wrote {
+				sealRetryPaused.Delete(source.BriefID)
 				s.noteLatestShownIfNewer(sealed)
 				if s.app != nil {
 					s.app.emitBrowserEvent("brief:stored", source.BriefID)
 				}
 				return
 			}
+			last = withheld
 		}
-		log.Printf("[mobile-brief] the brief %s could not be sealed yet; it is read again on its next open", source.BriefID)
+		sealRetryPaused.Store(source.BriefID, sealRetryPause{
+			digest: mobileBriefSourceDigest(source),
+			until:  time.Now().Add(sealRetryBackoff),
+		})
+		log.Printf("[mobile-brief] the brief %s could not be sealed yet (reason=%s kind=%s); the next try is in %s unless the brief changes",
+			source.BriefID, last.Reason, last.SourceKind, sealRetryBackoff)
 	}()
 }
 
