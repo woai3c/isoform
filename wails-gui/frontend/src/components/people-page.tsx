@@ -120,6 +120,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
     });
     const [overview, setOverview] = useState<PeopleOverview | null>(initial?.overview ?? null);
     const [entries, setEntries] = useState<PrincipalWithStatsDTO[]>(initial?.entries ?? []);
+    const [entriesReady, setEntriesReady] = useState(false);
     const [load, setLoad] = useState<LoadState>(initial ? 'ready' : 'loading');
     const [refreshing, setRefreshing] = useState(false);
     const [revision, setRevision] = useState(0);
@@ -183,10 +184,11 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
         }).catch(() => {
             if (seq === readSeq.current && !hasData.current) setLoad('failed');
         });
-        const entriesRead = ListPrincipalsWithStats().then((rows) => {
+        const entriesRead = readWithRetry(() => ListPrincipalsWithStats()).then((rows) => {
             if (seq !== readSeq.current) return;
             entriesRef.current = rows ?? [];
             setEntries(entriesRef.current);
+            setEntriesReady(true);
             if (overviewRef.current) savePeopleView(overviewRef.current, entriesRef.current);
         }).catch(() => {});
         await Promise.all([overviewRead, entriesRead]);
@@ -211,6 +213,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
         clearSavedPeopleView();
         setOverview(null);
         setEntries([]);
+        setEntriesReady(false);
         setLoad('loading');
         setSelectedID(null);
         setKeyword('');
@@ -300,6 +303,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
             open: overview?.open ?? [],
             others: everyone.filter((c) => kindOf(c) !== 'self' && !isUnnamedKind(kindOf(c))),
             self: entries.find((e) => e.principal.kind === 'self') ?? null,
+            selfCard: [...(overview?.open ?? []), ...everyone].find((c) => c.kind === 'self') ?? null,
             // Anyone Isoform knows by name, open or not: decides which empty
             // hint "Everyone else" shows.
             hasNamed: entries.some((e) => e.principal.kind !== 'self' && !isUnnamedKind(e.principal.kind)),
@@ -313,10 +317,13 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
     // The senders for the sort-out sheet: unidentified ones without an open
     // loop (those with one are in Open between you), most recently seen first.
     const senders = useMemo(
-        () =>
-            entries
-                .filter((e) => e.principal.kind === 'anonymous' && (cardsById.get(e.principal.id)?.loops.length ?? 0) === 0)
-                .sort((a, b) => (cardsById.get(b.principal.id)?.lastSeenAt ?? 0) - (cardsById.get(a.principal.id)?.lastSeenAt ?? 0)),
+        () => {
+            const ids = new Set(entries.filter((e) => e.principal.kind === 'anonymous').map((e) => e.principal.id));
+            for (const card of cardsById.values()) if (card.kind === 'anonymous') ids.add(card.id);
+            return [...ids]
+                .filter((id) => (cardsById.get(id)?.loops.length ?? 0) === 0)
+                .sort((a, b) => (cardsById.get(b)?.lastSeenAt ?? 0) - (cardsById.get(a)?.lastSeenAt ?? 0));
+        },
         [entries, cardsById],
     );
 
@@ -333,8 +340,9 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
         if (load !== 'ready' || appliedSelection.current === initialSelection) return;
         appliedSelection.current = initialSelection;
         if (initialSelection === 'self') {
-            if (groups.self) setSelectedID(groups.self.principal.id);
-            else setSelfCreateOpen(true);
+            if (groups.self || groups.selfCard) setSelectedID(groups.self?.principal.id ?? groups.selfCard!.id);
+            else if (entriesReady) setSelfCreateOpen(true);
+            else { appliedSelection.current = null; }
             return;
         }
         if (initialSelection && (byId.has(initialSelection.personId) || cardsById.has(initialSelection.personId))) {
@@ -344,7 +352,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
         const first = groups.open[0] ?? groups.others[0];
         if (first) setSelectedID(first.id);
         else if (groups.self) setSelectedID(groups.self.principal.id);
-    }, [load, initialSelection, groups, byId, cardsById]);
+    }, [load, initialSelection, groups, byId, cardsById, entriesReady]);
 
     // A selected person who disappeared (deleted, merged away) leaves the
     // detail empty rather than pointing at a missing row.
@@ -646,9 +654,9 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                 <h2 id="people-you-h" className="mb-2 text-[18px] font-semibold text-ink">
                                     {tr('groupSelf')}
                                 </h2>
-                                {groups.self ? (
-                                    <PersonRow entry={groups.self} card={cardsById.get(groups.self.principal.id)} selected={selectedID === groups.self.principal.id} onSelect={setSelectedID} />
-                                ) : (
+                                {groups.self || groups.selfCard ? (
+                                    <PersonRow entry={groups.self ?? undefined} card={groups.selfCard ?? undefined} selected={selectedID === (groups.self?.principal.id ?? groups.selfCard?.id)} onSelect={setSelectedID} />
+                                ) : entriesReady ? (
                                     <div className="flex flex-col items-start gap-2.5">
                                         <p className="text-[13px] leading-relaxed text-muted">{tr('emptySelf')}</p>
                                         <Button variant="secondary" size="sm" onClick={() => setSelfCreateOpen(true)}>
@@ -656,7 +664,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                                             {tr('nameYourselfButton')}
                                         </Button>
                                     </div>
-                                )}
+                                ) : null}
                             </section>
                         </>
                     )}
@@ -820,12 +828,12 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
                     setCleanupOpen(true);
                 }}
             >
-                {senders.map((e) => (
+                {senders.map((id) => (
                     <PersonRow
-                        key={e.principal.id}
-                        entry={e}
-                        card={cardsById.get(e.principal.id)}
-                        selected={selectedID === e.principal.id}
+                        key={id}
+                        entry={byId.get(id)}
+                        card={cardsById.get(id)}
+                        selected={selectedID === id}
                         onSelect={(id) => {
                             // Same as before: a row selects the person, and their
                             // detail (name, merge, delete) opens beside the list.
@@ -974,6 +982,7 @@ function PersonRow({ entry, card, selected, landed = false, onSelect }: { entry?
     const tr: Translate = (key, options) => t(key as never, options as never) as unknown as string;
     const id = entry?.principal.id ?? card?.id ?? '';
     const name = personName(entry, card?.name || tr('unnamed'));
+    const isSelf = (entry?.principal.kind ?? card?.kind) === 'self';
     return (
         <button
             ref={ref}
@@ -988,9 +997,9 @@ function PersonRow({ entry, card, selected, landed = false, onSelect }: { entry?
             )}
         >
             <Avatar src={entry?.principal.contactPhoto || card?.photo} alt="" fallback={name} />
-            <span className="min-w-0 flex-[1_1_160px] truncate text-[13px] font-medium">{name}</span>
+            <span className="min-w-0 flex-[1_1_160px] truncate text-[13px] font-medium">{isSelf ? tr('overview.selfNamed', { name }) : name}</span>
             <span className="min-w-0 flex-[2_1_200px] truncate text-[12.5px] text-muted">
-                {roleWords(tr, (key) => t(key as never) as unknown as string, (key) => i18n.exists(key), entry, card)}
+                {!isSelf && roleWords(tr, (key) => t(key as never) as unknown as string, (key) => i18n.exists(key), entry, card)}
             </span>
             <span className="text-[12px] text-muted">{lastWords(tr, i18n.language, card)}</span>
         </button>

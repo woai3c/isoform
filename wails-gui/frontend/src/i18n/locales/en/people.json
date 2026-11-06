@@ -171,6 +171,7 @@
     "contactsFileConsentWhat": "Isoform reads the names, phone numbers and email addresses in a contact file you choose. Contacts from a file are saved on this computer; file imports do not refresh automatically.",
     "contactsFileConsentSummary": "Contacts from a file are saved on this computer. Their details may be shared with your chosen assistant and used in your phone experience. Imported people are never researched automatically.",
     "overview": {
+        "selfNamed": "{{name}} · You",
         "searchLabel": "Search people",
         "subline_one": "{{count}} person. Anyone with something open comes first.",
         "subline_other": "{{count}} people. Anyone with something open comes first.",

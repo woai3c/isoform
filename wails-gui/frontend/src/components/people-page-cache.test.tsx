@@ -153,6 +153,27 @@ describe("Who you know first open (N40)", () => {
         expect(within(main).queryByRole("alert")).toBeNull();
     });
 
+    it("keeps a known self visible while the directory read fails", async () => {
+        const self = { ...OVERVIEW.everyone[0], id: "self", kind: "self", name: "Bo" };
+        binding("ListPeopleOverview").mockResolvedValue({ ...OVERVIEW, everyone: [...OVERVIEW.everyone, self] });
+        binding("ListPrincipalsWithStats").mockRejectedValue(new Error("busy"));
+        const { container } = render(<PeoplePage />);
+        const main = mainOf(container);
+        expect(await within(main).findByText("Bo · You")).toBeInTheDocument();
+        expect(within(main).queryByRole("button", { name: "Name yourself" })).toBeNull();
+    });
+
+    it("keeps the sender sort-out line and sheet when directory statistics fail", async () => {
+        const sender = { ...OVERVIEW.everyone[0], id: "sender", kind: "anonymous", name: "Sender" };
+        binding("ListPeopleOverview").mockResolvedValue({ ...OVERVIEW, everyone: [...OVERVIEW.everyone, sender] });
+        binding("ListPrincipalsWithStats").mockRejectedValue(new Error("busy"));
+        const { container } = render(<PeoplePage />);
+        const main = mainOf(container);
+        expect(await within(main).findByText("Isoform couldn't tell who 1 sender is.")).toBeInTheDocument();
+        await act(async () => { within(main).getByRole("button", { name: "Sort them out" }).click(); });
+        expect(within(document.body).getByRole("dialog", { name: "Senders to sort out" })).toHaveTextContent("Sender");
+    });
+
     it("keeps the saved view and says nothing when the read behind it fails", async () => {
         savePeopleView(OVERVIEW, []);
         binding("ListPeopleOverview").mockRejectedValue(new Error("busy"));

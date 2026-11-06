@@ -1,7 +1,6 @@
 package main
 
 import (
-	"sync"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -13,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 )
@@ -501,6 +501,9 @@ func (a *App) saveNoticed(dateStr, language string, generation int, raws []notic
 		raw.Why = secondPersonLine(raw.Why, self)
 		kind := strings.TrimSpace(raw.Kind)
 		text := activityCorrectionText(raw.Text, noticedTextMaxRunes)
+		if kind == noticedKindFollowUp && normalizeSummaryLanguage(language) == "en" {
+			text = plainInvoiceFollowup(text)
+		}
 		if (kind != noticedKindFollowUp && kind != noticedKindRoutine) || text == "" {
 			continue
 		}

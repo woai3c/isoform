@@ -171,6 +171,7 @@
     "contactsFileConsentSummary": "文件中的联系人会保存在这台电脑上。相关资料可能分享给你选择的助手，并用于手机体验。导入的联系人绝不会被自动调查。",
     "rowMessages_one": "{{count}} 条消息",
     "overview": {
+        "selfNamed": "{{name}} · 你",
         "searchLabel": "搜索人物",
         "subline_one": "共 {{count}} 人。有未完成的事的人排在前面。",
         "subline_other": "共 {{count}} 人。有未完成的事的人排在前面。",

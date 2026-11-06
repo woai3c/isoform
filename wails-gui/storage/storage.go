@@ -317,13 +317,13 @@ func (s *Store) ClearActiveSessionReferences(ctx context.Context, sessionLocalID
 }
 
 // schemaVersion is the latest migration this binary implements and may stamp.
-const schemaVersion = 73
+const schemaVersion = 74
 
 // supportedSchemaVersion is the audited compatibility ceiling. Keep the newer
 // stamp refusal in place when raising this ceiling alongside implemented
 // migrations. Contact provenance uses v61, contact links v62. RC 1 topics (#140)
 // v63, context uses v64, People merges v65, answer chips v66, outbound sends v67.
-const supportedSchemaVersion = 73
+const supportedSchemaVersion = 74
 
 // SchemaVersion is the schema this binary stamps, for tests outside the package.
 const SchemaVersion = schemaVersion
@@ -1540,6 +1540,11 @@ func (s *Store) migrate() error {
 	if version < 73 {
 		if err := s.migrateOpenAnswerLearned(); err != nil {
 			return fmt.Errorf("migration v73 learned answers: %w", err)
+		}
+	}
+	if version < 74 {
+		if err := s.migrateSenderTimestampNames(); err != nil {
+			return fmt.Errorf("migration v74 sender timestamp names: %w", err)
 		}
 	}
 

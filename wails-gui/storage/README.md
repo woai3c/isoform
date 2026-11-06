@@ -30,7 +30,7 @@ Deleting a project cascades through its workspaces, sessions, and all associated
 
 | File | Responsibility |
 |---|---|
-| `storage.go` | `Store` struct, `New()`, schema migrations (v1–v73), orphan cleanup, `Vacuum()` |
+| `storage.go` | `Store` struct, `New()`, schema migrations (v1–v74), orphan cleanup, `Vacuum()` |
 | `types.go` | Plain-Go row structs for all tables |
 | `principals_import_migration.go` | Transactional v61 import provenance migration and legacy contact backfill |
 | `projects.go` | Project CRUD, sort-order management, atomic project+sessions save |
@@ -59,13 +59,13 @@ defer store.Close()
 
 `New` checks existing database headers and then uses a read-only connection to include any newer version committed in the WAL. A stored schema newer than the audited compatibility ceiling (**73**) returns a typed `*SchemaVersionError` before opening for writes or changing the journal mode. The header check avoids creating WAL sidecars just to reject an already-newer database. The app can present a localized error using its `StoredVersion` and `SupportedVersion` fields.
 
-The schema is currently **73**. The migration target and compatibility ceiling are both **73**. Databases stamped 57, 58, 59, or 60 upgrade to 73, preserving existing data and applying the pre-migration snapshot policy below. Route history remains migration v60: it adds columns with defaults to `cron_runs` and the independent `agent_run_routes` table, and tolerates populated route objects from earlier assistant-first builds that used v58. Versions above 73 are refused before writes.
+The schema is currently **74**. The migration target and compatibility ceiling are both **74**. Earlier databases upgrade to 74 with the pre-migration snapshot policy below. Route history remains migration v60: it adds columns with defaults to `cron_runs` and the independent `agent_run_routes` table, and tolerates populated route objects from earlier assistant-first builds that used v58. Versions above 74 are refused before writes.
 
 Migration v62 adds `imported_contact_cards`, `contact_handle_provenance` and `principal_contact_links` and `principal_contact_link_updates`. Link receipts and merges commit together. Unlink restores the card and its handles, aliases and the original kind of the seen person; pre-link activity returns to its original person, while later observations and merges are preserved. A schema-61 binary needs the pre-migration snapshot when reverting.
 
 Migration v61 adds `principals.source` and `principals.external_ref` in one transaction, both defaulting to an empty string. Existing principals with `created_from` equal to `system_contacts` or `vcard` receive the same source; their earliest nonempty `contacts` or `vcard` app handle supplies the external reference when available. Other principals remain unmarked, including manually curated people that own imported handles. Existing nonempty provenance and `created_from` values are preserved on replay. New imports persist provenance with the principal insert, and merges retain the destination principal's provenance. A build whose compatibility ceiling is 60 refuses a migrated v61 database; use the snapshot recovery procedure below when rolling back to that build.
 
-The migration ledger keeps v58 and v59 for proactive chat structures, v60 for assistant-first and v61 for contact import provenance; v62 for the local contact cache, per-handle provenance and reversible link receipts; v63 implements RC 1 main-chat topics (#140); v64 adds the C5 context-use log (#144); v65 adds reversible People merges (#143). Chat chips (C2) follow at v66, the durable outbound-send ledger at v67, open-answer storage at v68, answer preferences at v69, open-answer check state at v70, ask state at v71, quiet-hour answer holds at v72, and learned open-answer state at v73. These historical migrations remain implemented here. Audit sibling schema changes before raising `supportedSchemaVersion`.
+The migration ledger keeps v58 and v59 for proactive chat structures, v60 for assistant-first and v61 for contact import provenance; v62 for the local contact cache, per-handle provenance and reversible link receipts; v63 implements RC 1 main-chat topics (#140); v64 adds the C5 context-use log (#144); v65 adds reversible People merges (#143). Chat chips (C2) follow at v66, the durable outbound-send ledger at v67, open-answer storage at v68, answer preferences at v69, open-answer check state at v70, ask state at v71, quiet-hour answer holds at v72, and learned open-answer state at v73. Version 74 removes captured timestamp suffixes from saved principal names. These historical migrations remain implemented here. Audit sibling schema changes before raising `supportedSchemaVersion`.
 
 The v58 indexes and v59 identity tables, indexes and triggers are created with `IF NOT EXISTS` regardless of the stored version. This repairs a database stamped by another build that did not include them. Missing tables or maintenance triggers trigger one transactional identity backfill; healthy reopens never rescan all historical chat payloads. The final stamp advances only when the stored version is below the implemented target and all migrations succeeded; it never decreases a newer stamp.
 
@@ -83,7 +83,7 @@ The target now includes #140 (v63), merged here before C5 (v64); #143 follows at
 
 ### Schema migrations
 
-Migrations are additive and idempotent. Each version block checks for `duplicate column` errors before failing, so re-running a migration on an already-upgraded database is safe. The current schema version is stamped in `PRAGMA user_version` (currently **72**).
+Migrations are idempotent. Schema additions tolerate existing columns, and the v74 name repair leaves unrelated names alone. The current schema version is stamped in `PRAGMA user_version` (currently **74**).
 
 | Version | Changes |
 |---|---|
