@@ -37,7 +37,7 @@ func classifyMemoryArea(words, kind string) string {
 	}
 	rules := []struct{ area, words string }{
 		{"communication", "email|emails|message|messages|reply|replies|concise|tone|communication|communicate|writing|沟通|邮件|回复"},
-		{"tools", "tool|tools|editor|terminal|software|keyboard|browser|bun|npm|pnpm|git|vscode|package|packages|automation|automations|repo|repos|repository|backup|hub|script|scripts|工具|编辑器|终端|自动化|仓库"},
+		{"tools", "tool|tools|editor|terminal|software|keyboard|browser|bun|npm|pnpm|git|vscode|package|packages|automation|automations|automatic|automatically|automate|automated|replay|replays|replayed|repo|repos|repository|backup|hub|script|scripts|工具|编辑器|终端|自动化|仓库"},
 		{"people", "colleague|colleagues|coworker|coworkers|manager|family|friend|friends|partner|teammate|teammates|同事|家人|朋友"},
 		{"routines", "routine|routines|daily|weekly|morning|evening|habit|habits|每天|每周|早上|习惯"},
 		{"interests", "hobby|hobbies|enjoy|enjoys|music|reading|photography|cooking|hiking|兴趣|音乐|摄影"},
@@ -47,9 +47,18 @@ func classifyMemoryArea(words, kind string) string {
 	// the title wins, so "Uses an automation to check for replies" is tools.
 	title, _, _ := strings.Cut(words, "\n")
 	titleTokens := " " + strings.Join(strings.FieldsFunc(title, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsNumber(r) }), " ") + " "
+	// A reply that replays on its own is about automation, not writing (About
+	// you Y33): the reply words don't make it a communication belief.
+	automated := false
+	for _, word := range []string{"automatic", "automatically", "automate", "automated", "replay", "replays", "replayed"} {
+		automated = automated || strings.Contains(titleTokens, " "+word+" ")
+	}
 	best, bestAt := "", -1
 	for _, rule := range rules {
 		for _, word := range strings.Split(rule.words, "|") {
+			if automated && rule.area == "communication" && (word == "reply" || word == "replies") {
+				continue
+			}
 			at := strings.Index(titleTokens, " "+word+" ")
 			if []rune(word)[0] > unicode.MaxASCII {
 				at = strings.Index(title, word)

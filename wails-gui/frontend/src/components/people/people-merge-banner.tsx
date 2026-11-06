@@ -125,7 +125,7 @@ function MergeBanner({
                     )}
                 </div>
                 <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-0.5">
-                    <span className="text-[14px] font-semibold text-ink">{tr('merge.title', { count: group.memberIds.length, name: targetName })}</span>
+                    <span className="text-[14px] font-semibold text-ink">{targetName}</span>
                     <span className="text-[13px] text-muted">{reason}</span>
                 </div>
                 <div className="flex items-center gap-1">

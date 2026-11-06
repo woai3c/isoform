@@ -736,6 +736,15 @@ describe("N2: Brief me and Draft a reply work in the detail", () => {
 });
 
 describe("Merge", () => {
+    it("titles a merge suggestion with the name only, and lists the two display names under it", async () => {
+        world();
+        render(<PeoplePage />);
+        const banner = await screen.findByRole("region", { name: "2 profiles look like one person: Mei Chen ex-Stability" });
+        // N50 follow-up: the visible title is the name alone; the count stays in the accessible name.
+        expect(within(banner).getByText("Mei Chen ex-Stability", { exact: true })).toBeInTheDocument();
+        expect(within(banner).queryByText(/look like one person/)).toBeNull();
+        expect(banner).toHaveTextContent("Same WeChat account under different display names: “Mei Chen ex-Stability” and “陈美 Mei”.");
+    });
     it("merges a duplicate group into one and undoes it", async () => {
         world();
         mocks.merge.mockResolvedValue({ mergeId: "m-1", target: card("mei1", "anonymous", "Mei Chen ex-Stability") });

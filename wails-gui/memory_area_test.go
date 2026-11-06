@@ -35,6 +35,9 @@ func TestMemoryAreaClassifier(t *testing.T) {
 		{"Uses a scheduled automation to check daily for replies\nRuns at 9 AM.", "user_insight", "tools"},
 		{"Keeps the backup hub read-only\nReplies about it go to Maya.", "user_insight", "tools"},
 		{"Replies to Maya Okafor in two sentences", "user_insight", "communication"},
+		// About you Y33 (the walk): a reply that replays on its own is about automation.
+		{"You never let uncertain replies replay automatically", "user_insight", "tools"},
+		{"Replies stay short and warm", "user_insight", "communication"},
 	} {
 		t.Run(tc.belief, func(t *testing.T) {
 			if got := classifyMemoryArea(tc.belief, tc.kind); got != tc.want {
@@ -227,5 +230,10 @@ func TestStoredCommunicationAreaNeedsTitleWords(t *testing.T) {
 	titled := "Writes short replies to colleagues\n- Keeps messages brief"
 	if got := memoryAreaOnReadWithWords("", fm, func() string { return titled }); got != "communication" {
 		t.Fatalf("titled communication belief = %q", got)
+	}
+	// A stored communication area is read again, so a saved automation belief leaves the group.
+	replay := "You never let uncertain replies replay automatically\n- Keeps messages brief"
+	if got := memoryAreaOnReadWithWords("", fm, func() string { return replay }); got != "tools" {
+		t.Fatalf("saved replay belief = %q, want tools", got)
 	}
 }
