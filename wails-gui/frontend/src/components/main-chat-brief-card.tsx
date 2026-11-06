@@ -13,12 +13,14 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  *  has a recording with its words, and Read it, which opens the brief in
  *  the card. The brief is read by its id from the same brief service
  *  Today reads. */
-export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpenBrief, trailing, meta }: {
+export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead: leadWithCard, onOpenBrief, trailing, meta }: {
     /** The card's ···, at the right of the button row. */
     trailing?: React.ReactNode;
     briefId: string;
     weeklyRecap?: boolean;
     display?: { slot: string; asOf: string; timezone: string };
+    /** The first words, read with the card, so it draws whole before the brief loads. */
+    lead?: string;
     /** Source details appear between the words and the actions. */
     meta?: (brief: MobileBriefDocument | null) => React.ReactNode;
     /** Read it on a brief whose words aren't here yet opens it where it lives. */
@@ -67,7 +69,8 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
     const projected = current?.narrative?.map((paragraph) => mainChatBriefRelativeText(current, paragraph, clock, language, (key, options) => t(key as never, options as never) as unknown as string).trim()) ?? [];
     const changedWords = current?.narrative?.some((paragraph, index) => paragraph.text?.trim() !== projected[index]) ?? false;
     const paragraphs = projected.filter(Boolean);
-    const lead = paragraphs[0] ?? '';
+    // Until the brief is read, the words that came with the card stand in.
+    const lead = current ? (paragraphs[0] ?? '') : (leadWithCard ?? '');
     // Read it opens the brief in the card (§5), not on Today.
     // The week's brief has its own sections beyond the words; it opens on Today.
     const week = current ? briefKind(current) === 'week' : false;
@@ -84,10 +87,19 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, onOpe
     return (
         <div className="flex flex-col gap-2" data-testid="main-chat-brief-card" aria-busy={!current && !failed}>
             <h3 className="break-words text-[15px] font-semibold leading-snug text-ink">{title}</h3>
+            {/* The body holds one line from the first paint while its words are
+                missing, so they arriving do not push the card below. A failed
+                read has no words and holds nothing. */}
             {reading
                 ? paragraphs.map((text, index) => <p key={index} className="whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{text}</p>)
-                : lead && <p className="line-clamp-3 whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{lead}</p>}
-            {(current || failed) && meta?.(current)}
+                : (lead || !failed) && (
+                    // One line is held while the words are still missing; it is never three.
+                    <div className="min-h-[21px]" data-brief-body>
+                        {lead && <p className="line-clamp-3 whitespace-pre-wrap break-words text-[14px] leading-normal text-ink">{lead}</p>}
+                    </div>
+                )}
+            {/* The source line comes from the message, so it renders while the brief loads. */}
+            {meta?.(current)}
             {failed && (
                 // A brief that can't open says so in copper; Try again is the accent and Read it hides (H5).
                 <p role="alert" className="text-[13px] text-copper" data-brief-open-failed>

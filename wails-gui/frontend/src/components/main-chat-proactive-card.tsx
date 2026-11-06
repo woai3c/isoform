@@ -470,6 +470,7 @@ function ProactiveMessage({ item, message, onOpenTarget, nested = false, topicId
                     briefId={message.briefId}
                     weeklyRecap={message.kind === 'weekly_recap'}
                     display={briefDisplay}
+                    lead={message.briefLead}
                     onOpenBrief={onOpenTarget ? () => onOpenTarget({ kind: 'today', id: message.briefId }) : undefined}
                     trailing={moreMenu}
                     meta={() => <>

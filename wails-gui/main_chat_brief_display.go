@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 )
 
-// Only non-sensitive title metadata is projected; narrative and actions still
-// pass through the normal brief reader's current privacy checks.
+// Title metadata and the card's first words are projected. The words come from
+// the same privacy-processed brief read Today uses (finishedBrief); the rest of
+// the narrative and the actions never enter a stream item.
 type mainChatBriefDisplay struct {
 	Slot     string `json:"slot"`
 	AsOf     string `json:"asOf"`
@@ -56,6 +58,7 @@ func (a *App) mainChatBriefDisplayProjector() func(string, string) string {
 	var state upcomingBriefState
 	loaded := false
 	cache := map[string]*mainChatBriefDisplay{}
+	leads := map[string]string{}
 	return func(tool, input string) string {
 		if tool != mainChatProactiveTool {
 			return input
@@ -128,6 +131,18 @@ func (a *App) mainChatBriefDisplayProjector() func(string, string) string {
 				}
 				if display != nil {
 					item["briefDisplay"], _ = json.Marshal(display)
+					// The card's first words come with the card, from the same
+					// privacy-processed read Today uses, so the card draws whole.
+					lead, seenLead := leads[briefID]
+					if !seenLead {
+						if brief, found, err := service.finishedBrief(briefID); err == nil && found {
+							lead = mainChatBriefLead(brief)
+						}
+						leads[briefID] = lead
+					}
+					if lead != "" {
+						item["briefLead"], _ = json.Marshal(lead)
+					}
 				}
 			}
 			var children []json.RawMessage
@@ -149,4 +164,15 @@ func (a *App) mainChatBriefDisplayProjector() func(string, string) string {
 		}
 		return string(encoded)
 	}
+}
+
+// mainChatBriefLead is the first paragraph of a brief's words, trimmed, or ""
+// when the brief has none to show.
+func mainChatBriefLead(brief MobileBriefV1) string {
+	for _, paragraph := range brief.Narrative {
+		if text := strings.TrimSpace(paragraph.Text); text != "" {
+			return text
+		}
+	}
+	return ""
 }

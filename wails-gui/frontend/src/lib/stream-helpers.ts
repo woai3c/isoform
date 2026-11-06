@@ -175,6 +175,8 @@ export interface MainChatProactivePayload {
     /** Why capture stopped: "permission" or "stopped"; absent for a pause nobody needs told about. */
     captureCause?: string;
     briefDisplay?: { slot: string; asOf: string; timezone: string };
+    /** The brief card's first words, read with the card. */
+    briefLead?: string;
     personName?: string;
     event?: MainChatProactiveEvent;
     events?: MainChatProactiveEvent[];
@@ -344,6 +346,7 @@ function proactivePayload(raw: unknown, nested = false): MainChatProactivePayloa
         captureStartAt: typeof payload.captureStartAt === 'number' && Number.isFinite(new Date(payload.captureStartAt).getTime()) && payload.captureStartAt > 0 ? payload.captureStartAt : undefined,
         captureEndAt: typeof payload.captureEndAt === 'number' && Number.isFinite(new Date(payload.captureEndAt).getTime()) && payload.captureEndAt > 0 ? payload.captureEndAt : undefined,
         briefId: typeof payload.briefId === 'string' ? payload.briefId : undefined,
+        briefLead: typeof payload.briefLead === 'string' && payload.briefLead.trim() ? payload.briefLead : undefined,
         briefDisplay: payload.briefDisplay && typeof payload.briefDisplay.slot === 'string' && typeof payload.briefDisplay.asOf === 'string' && typeof payload.briefDisplay.timezone === 'string' ? payload.briefDisplay : undefined,
         personName: typeof payload.personName === 'string' ? payload.personName : undefined,
         event: proactiveEvent(payload.event),

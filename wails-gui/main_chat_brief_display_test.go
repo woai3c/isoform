@@ -63,3 +63,54 @@ func TestMainChatBriefDisplayProjectionKeepsUnknownFieldsAndWithholdsWithdrawn(t
 		t.Fatalf("withdrawn source gained title metadata: %+v", shown)
 	}
 }
+
+// The card's first words are the brief's first non-empty paragraph, trimmed.
+func TestMainChatBriefLeadIsTheFirstSavedParagraph(t *testing.T) {
+	cases := map[string]struct {
+		paragraphs []MobileBriefPara
+		want       string
+	}{
+		"first paragraph":  {[]MobileBriefPara{{Text: "  Two replies are waiting on you.  "}, {Text: "Later."}}, "Two replies are waiting on you."},
+		"skips empty ones": {[]MobileBriefPara{{Text: " "}, {Text: "The deck is due."}}, "The deck is due."},
+		"no words":         {nil, ""},
+	}
+	for name, tc := range cases {
+		if got := mainChatBriefLead(MobileBriefV1{Narrative: tc.paragraphs}); got != tc.want {
+			t.Fatalf("%s: got %q want %q", name, got, tc.want)
+		}
+	}
+}
+
+// The lead is read through the same finished read Today uses, so it is exactly
+// what that read returns, and a withdrawn card (no evidence) carries none.
+func TestMainChatBriefDisplayLeadFollowsTheFinishedRead(t *testing.T) {
+	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(18, 0)}
+	service, _ := newTestMobileBriefService(t, clock)
+	service.app.mobileBriefSvc = service
+	brief := MobileBriefV1{BriefID: "2026-10-09-evening", Slot: "evening", LocalDate: "2026-10-09", AsOf: "2026-10-09T18:00:00Z", Timezone: "UTC", NarrativeStatus: "ok",
+		Narrative: []MobileBriefPara{{Text: "Two replies are waiting on you."}}}
+	if err := service.store.save(brief, clock.Now()); err != nil {
+		t.Fatal(err)
+	}
+	finished, _, err := service.finishedBrief(brief.BriefID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	project := service.app.mainChatBriefDisplayProjector()
+	var shown map[string]any
+	input := `{"kind":"brief_ready","briefId":"2026-10-09-evening","evidence":[{"kind":"brief"}]}`
+	if err := json.Unmarshal([]byte(project(mainChatProactiveTool, input)), &shown); err != nil {
+		t.Fatal(err)
+	}
+	if want := mainChatBriefLead(finished); want != "" && shown["briefLead"] != want {
+		t.Fatalf("the card's words differ from the finished read: got %v want %q", shown["briefLead"], want)
+	}
+	shown = nil
+	withdrawn := `{"kind":"brief_ready","briefId":"2026-10-09-evening","evidence":[]}`
+	if err := json.Unmarshal([]byte(project(mainChatProactiveTool, withdrawn)), &shown); err != nil {
+		t.Fatal(err)
+	}
+	if _, leaked := shown["briefLead"]; leaked {
+		t.Fatalf("a withdrawn card carried words: %+v", shown)
+	}
+}

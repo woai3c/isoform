@@ -89,6 +89,7 @@ it.each(['en', 'zh-CN'])('counts unseen replies and jumps from a floating stream
     const viewport = view.container.querySelector('[data-radix-scroll-area-viewport]')!;
     Object.defineProperties(viewport, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 200 } });
     viewport.scrollTop = 100;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     scrolled.length = 0;
     const first: StreamItem = { id: 'new-reply', kind: 'assistant', content: 'The new reply.' };
@@ -125,6 +126,7 @@ it('clears unseen replies on manual return, conversation change and unmount with
     const viewport = view.container.querySelector('[data-radix-scroll-area-viewport]')!;
     Object.defineProperties(viewport, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 200 } });
     viewport.scrollTop = 100;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     const tool: StreamItem = { id: 'new-tool', kind: 'tool', toolName: 'search', content: 'Working.' };
     view.rerender(<StreamBody items={[...ITEMS, tool]} streaming hasProject vimMode={false} />);
@@ -133,9 +135,11 @@ it('clears unseen replies on manual return, conversation change and unmount with
     view.rerender(<StreamBody items={[...ITEMS, tool, reply]} streaming={false} hasProject vimMode={false} />);
     expect(screen.getByRole('button', { name: /1 new reply|1 条新回复/ })).toBeInTheDocument();
     viewport.scrollTop = 1800;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     expect(screen.queryByRole('button', { name: /new repl|新回复/ })).not.toBeInTheDocument();
     viewport.scrollTop = 100;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     const another: StreamItem = { id: 'another', kind: 'assistant', content: 'One more reply.' };
     view.rerender(<StreamBody items={[...ITEMS, tool, reply, another]} streaming={false} hasProject vimMode={false} />);
@@ -153,14 +157,17 @@ it('offers a bare down arrow only beyond a screen, then hides on manual return',
     const viewport = view.container.querySelector('[data-radix-scroll-area-viewport]')!;
     Object.defineProperties(viewport, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 200 } });
     viewport.scrollTop = 1650;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     expect(screen.queryByTestId('jump-to-newest')).not.toBeInTheDocument();
     viewport.scrollTop = 100;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     const button = screen.getByTestId('jump-to-newest');
     expect(button.querySelector('svg')).toBeInTheDocument();
     expect(button.textContent).toBe('');
     viewport.scrollTop = 1800;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     expect(screen.queryByTestId('jump-to-newest')).not.toBeInTheDocument();
 });
@@ -172,6 +179,7 @@ it('attaches navigation when a conversation opens after the empty project state'
     const viewport = view.container.querySelector('[data-radix-scroll-area-viewport]')!;
     Object.defineProperties(viewport, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 200 } });
     viewport.scrollTop = 100;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     expect(screen.getByTestId('jump-to-newest')).toBeInTheDocument();
 });
@@ -185,6 +193,7 @@ it.each([false, true])('announces the current answer growing and finishing 100px
     const viewport = view.container.querySelector('[data-radix-scroll-area-viewport]')!;
     Object.defineProperties(viewport, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 400 } });
     viewport.scrollTop = 1500;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     expect(screen.queryByTestId('jump-to-newest')).not.toBeInTheDocument();
     scrolled.length = 0;
@@ -211,13 +220,16 @@ it('announces completion without a new row or final content change, and acknowle
     const viewport = view.container.querySelector('[data-radix-scroll-area-viewport]')!;
     Object.defineProperties(viewport, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 400 } });
     viewport.scrollTop = 1500;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     view.rerender(draw(false));
     expect(screen.getByRole('button', { name: '1 new reply' })).toBeInTheDocument();
     viewport.scrollTop = 1600;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     expect(screen.queryByTestId('jump-to-newest')).not.toBeInTheDocument();
     viewport.scrollTop = 1500;
+    fireEvent.wheel(viewport);
     fireEvent.scroll(viewport);
     view.rerender(<StreamBody items={[...items.slice(0, -1), { ...items.at(-1)!, content: 'Later growth' }]} streaming hasProject />);
     view.rerender(draw(false));

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { markPageContent } from '@/lib/page-switch-timing';
+import { RetainedPageActiveContext } from '@/lib/retained-page-active';
 
 /** One instance per page, kept in the main column after its first visit. */
 export function RetainedPage({ active, page, children }: { active: boolean; page: string; children: ReactNode }) {
@@ -16,5 +17,9 @@ export function RetainedPage({ active, page, children }: { active: boolean; page
         wasActive.current = active;
     }, [active, visited, page]);
     if (!active && !visited) return null;
-    return <div data-retained-page={page} className="flex flex-1 min-h-0 flex-col" style={{ display: active ? undefined : 'none' }}>{children}</div>;
+    return (
+        <RetainedPageActiveContext.Provider value={active}>
+            <div data-retained-page={page} className="flex flex-1 min-h-0 flex-col" style={{ display: active ? undefined : 'none' }}>{children}</div>
+        </RetainedPageActiveContext.Provider>
+    );
 }

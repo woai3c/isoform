@@ -38,16 +38,30 @@ test('windowed stream anchors prepends and never moves on appends', async ({ pag
     const afterPrepend = (await marker.boundingBox())!;
     expect(Math.abs(afterPrepend.y - before.y)).toBeLessThanOrEqual(24);
 
-    // Appends while reading history must not move the reading position.
-    await page.locator('[data-radix-scroll-area-viewport]').evaluate((el) => {
-        el.scrollTop = 500;
-        el.dispatchEvent(new Event('scroll', { bubbles: true }));
-    });
-    await page.waitForTimeout(200);
+    // Appends while reading history must not move the reading position. The
+    // reader scrolls with a real wheel gesture; only that input marks them as
+    // away from the bottom, so a programmatic scroll alone would not hold.
+    await page.mouse.move(600, 300);
+    // Scroll up to the region the original guard measured (scrollTop near 500).
+    for (let i = 0; i < 40; i++) {
+        if ((await viewportMetrics(page)).scrollTop < 800) break;
+        await page.mouse.wheel(0, -1500);
+        await page.waitForTimeout(120);
+    }
+    // Wheel momentum keeps scrolling after the gesture: wait for it to settle.
+    let settled = await viewportMetrics(page);
+    for (let i = 0; i < 20; i++) {
+        await page.waitForTimeout(150);
+        const next = await viewportMetrics(page);
+        if (next.scrollTop === settled.scrollTop) break;
+        settled = next;
+    }
+    const reading = settled;
+    expect(reading.scrollHeight - (reading.scrollTop + reading.clientHeight)).toBeGreaterThanOrEqual(80);
     await page.getByTestId('append').click();
     await page.waitForTimeout(600);
     const afterAppend = await viewportMetrics(page);
-    expect(afterAppend.scrollTop).toBe(500);
+    expect(afterAppend.scrollTop).toBe(reading.scrollTop);
 
     // Native find covers the recent section: after the append, all 150
     // recent rows (turns 1100-1249) are mounted.

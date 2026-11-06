@@ -160,6 +160,10 @@ it('shows each stop once, counts what it shows, and drops sleep, lock and chosen
     }
 });
 it('reads the day words of a past fold line from its own day on the page and in the panel (Thursday polish C2)', () => {
+    // The clock is pinned: "Thursday" is the day name for a day within the week,
+    // so the expectation must not depend on when the suite runs.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 2, 12));
     const rows: StreamItem[] = [{ id: 'status', kind: 'system', toolName: 'main_chat_status', localDay: '2026-10-29', rowClass: 'routine', toolInput: { period: '2026-10-29', entries: [
         { id: 'pt', kind: 'observing', text: 'PT is due Thursday.', target: { kind: 'none' } },
         { id: 'forms', kind: 'observing', text: 'The library forms are due tomorrow.', target: { kind: 'none' } },
@@ -169,6 +173,7 @@ it('reads the day words of a past fold line from its own day on the page and in 
         expect(foldLines(surface).map(([text]) => text)).toEqual(['PT was due Thursday. · From Observing', 'The library forms were due Friday. · From Observing']);
         for (const [text] of foldLines(surface)) expect(text).not.toMatch(/\bis due\b|\btoday\b|\btomorrow\b/i);
     }
+    vi.useRealTimers();
 });
 it('lists background lines right under the day fold, with no fold inside it (Thursday polish C3)', () => {
     const day = '2026-10-29';
@@ -257,6 +262,7 @@ it.each(['main', 'topic'])('keeps the %s panel scrolled up and uses a short coun
     const list = screen.getByTestId(kind === 'main' ? 'main-chat-panel-list' : 'topic-panel-list');
     Object.defineProperties(list, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 300 } });
     list.scrollTop = 100;
+    fireEvent.wheel(list);
     fireEvent.scroll(list);
     expect(screen.getByTestId('jump-to-newest').textContent).toBe('');
     fixture.items = [...fixture.items, { id: 'new1', kind: 'assistant', content: 'First answer' }, { id: 'new2', kind: 'assistant', content: 'Second answer' }];
@@ -314,6 +320,7 @@ it.each(['main', 'topic'])('announces the current %s panel answer growing and fi
     const list = screen.getByTestId(kind === 'main' ? 'main-chat-panel-list' : 'topic-panel-list');
     Object.defineProperties(list, { scrollHeight: { configurable: true, value: 2000 }, clientHeight: { configurable: true, value: 400 } });
     list.scrollTop = 1500;
+    fireEvent.wheel(list);
     fireEvent.scroll(list);
     fixture.items = [...fixture.items.slice(0, -1), { ...fixture.items.at(-1)!, content: 'Started and grew' }];
     view.rerender(panel(kind));

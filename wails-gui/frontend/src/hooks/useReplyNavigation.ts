@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState, type RefObject } from 'react';
+import { RetainedPageActiveContext } from '@/lib/retained-page-active';
 
 interface ReplyRow {
     id: string;
@@ -17,6 +18,9 @@ function currentAnswer(items: readonly ReplyRow[] | null) {
     }
     return null;
 }
+
+/** How long after reader input a scroll still counts as the reader's. */
+const USER_INPUT_WINDOW_MS = 500;
 
 /** Tracks appended answers separately from history and streaming text. The
  * reader keeps their place until they return to the bottom or explicitly jump. */
@@ -85,19 +89,50 @@ export function useReplyNavigation(
         wasStreaming.current = streaming;
     }, [items, enabled, streaming, clear]);
 
+    // Only the reader's own input may move `userScrolledRef`: a wheel, touch,
+    // pointer or key event on the viewport opens a short window in which a
+    // scroll counts as the reader's. Every other scroll (an open-at-newest
+    // jump, a virtual list settling, a layout shift) leaves the reader's
+    // place as it was.
+    const lastInputAt = useRef(0);
     useEffect(() => {
         if (!enabled) return;
         const list = viewport();
         if (!list) return;
+        const markInput = () => { lastInputAt.current = Date.now(); };
+        const inputEvents = ['wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'] as const;
+        for (const event of inputEvents) list.addEventListener(event, markInput, { passive: true });
         const onScroll = () => {
+            if (list.clientHeight === 0) return;
+            if (Date.now() - lastInputAt.current > USER_INPUT_WINDOW_MS) return;
             const distance = list.scrollHeight - list.scrollTop - list.clientHeight;
             userScrolledRef.current = distance >= 80;
             if (!userScrolledRef.current) clear();
             else setFarUp(distance > list.clientHeight);
         };
         list.addEventListener('scroll', onScroll, { passive: true });
-        return () => list.removeEventListener('scroll', onScroll);
+        return () => {
+            list.removeEventListener('scroll', onScroll);
+            for (const event of inputEvents) list.removeEventListener(event, markInput);
+        };
     }, [viewport, clear, enabled]);
+
+    // A pane opens on its newest item when its page is opened or shown again
+    // (RetainedPage goes from inactive to active). Window focus, the screen
+    // unlocking or the display waking leave the reader's place alone.
+    const pageActive = useContext(RetainedPageActiveContext);
+    const wasPageActive = useRef(pageActive);
+    useEffect(() => {
+        const was = wasPageActive.current;
+        wasPageActive.current = pageActive;
+        if (!enabled || pageActive !== true || was !== false) return;
+        const list = viewport();
+        if (!list) return;
+        userScrolledRef.current = false;
+        clear();
+        if (bottom?.current) bottom.current.scrollIntoView({ block: 'end', behavior: 'instant' as ScrollBehavior });
+        else list.scrollTop = list.scrollHeight;
+    }, [pageActive, enabled, viewport, clear, bottom]);
 
     return { count, visible: enabled && (count > 0 || farUp), jumpToLatest, userScrolledRef };
 }
