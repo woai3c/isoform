@@ -127,12 +127,14 @@ func mobileBriefCardFacts(brief MobileBriefV1, item MobileBriefItem, extra strin
 		ref := evidence[id]
 		sources = append(sources, ref.SourceKind+"\x00"+ref.SourceID)
 	}
+	// Since is filled in when the brief is read (the time since the item was
+	// seen), so it is display-time text and is not part of the facts.
 	raw, _ := json.Marshal(struct {
-		Title, Status, Kind, DueAt, At, Since, Reason, NextStep, Extra string
-		Rank                                                           int
-		Sources                                                        []string
-		Day                                                            string
-	}{item.Title, item.Status, item.Kind, item.DueAt, item.At, item.Since, item.AttentionReason, item.NextStep, extra,
+		Title, Status, Kind, DueAt, At, Reason, NextStep, Extra string
+		Rank                                                    int
+		Sources                                                 []string
+		Day                                                     string
+	}{item.Title, item.Status, item.Kind, item.DueAt, item.At, item.AttentionReason, item.NextStep, extra,
 		item.AttentionRank, sources, brief.LocalDate})
 	return agencyPayloadHash(raw)
 }

@@ -106,9 +106,15 @@ func TestStoredBriefKeepsItsTextAcrossARestart(t *testing.T) {
 				mobileGoalMailRows = func(*App) ([]storage.MailMessageRow, error) { return nil, errors.New("mail is not open") }
 				restore = func() { mobileGoalMailRows = original }
 			}
+			// A failed assertion below must not leave the replaced reader in place
+			// for the rest of the package's tests.
+			t.Cleanup(restore)
+			// The approved rule (brief rebuild, PR 1): a sealed brief keeps showing
+			// while a store is unavailable at read time. The words were checked
+			// when they were sealed, and a read calls no store to hide them.
 			latest, _ := svc.LatestMobileBrief()
-			if len(latest.Narrative) != 0 {
-				t.Fatal("text was shown while its sources could not be checked")
+			if len(latest.Narrative) != 1 || latest.NarrativeStatus != "ok" {
+				t.Fatalf("a sealed brief hid its text while %s: %+v", condition, latest.Narrative)
 			}
 			restore()
 			if stored := keptTextStored(t, svc, brief.BriefID); len(stored.Narrative) != 1 || stored.NarrativeStatus != "ok" || stored.Audio == nil {

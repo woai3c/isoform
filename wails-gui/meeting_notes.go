@@ -110,6 +110,8 @@ func (a *App) storedMeetingTitle(sessionID string) string {
 // startup recovery from writing the notes again.
 // What the learning pass merged into other entries stays there.
 func (a *App) DeleteMeetingNotes(meetingKey string) error {
+	// Removed notes are a source a sealed brief may cite: seal again before it is shown.
+	defer briefPrivacyChanged()
 	if a.activity == nil || a.activity.store == nil {
 		return fmt.Errorf("activity store not initialized")
 	}

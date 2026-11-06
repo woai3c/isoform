@@ -127,6 +127,8 @@ func todayWeekRewordMemory(content, wording string) string {
 // The selected source must still be readable under the same publication
 // barriers used by Today chat. The database fence is held across the write.
 func (a *App) withTodayWeekBelief(ctx context.Context, id, digest string, check, write func(MemoryEntry, string) error) error {
+	// A corrected or undone belief is a source change for the briefs that cite it.
+	defer briefSourceChanged()
 	for _, lock := range []struct {
 		try     func() bool
 		release func()
@@ -187,10 +189,18 @@ func (a *App) CorrectTodayWeekBelief(briefID, id, expectedText, words, correlati
 	if a == nil || len(todayWeekBeliefKey) != 32 || !mobileBriefIDPattern.MatchString(briefID) || id == "" || expectedText == "" || len(expectedText) > 4096 || len(words) > 4096 || len(correlation) > 80 {
 		return "", errTodayChatItemUnavailable
 	}
-	view, err := a.GetTodayBriefByID(briefID)
-	if err != nil || view.Brief == nil || view.Brief.BriefID != briefID || view.Brief.YourWeek == nil {
+	// The belief is checked against the stored brief through the live gates, not
+	// the display copy, which may predate the belief's last change.
+	var week MobileBriefV1
+	if service, isService := a.ensureMobileBriefService().(*mobileBriefService); isService && service != nil {
+		if stored, found := service.storedSource(briefID); found {
+			week = a.mobileBriefForDelivery(stored)
+		}
+	}
+	if week.BriefID != briefID || week.YourWeek == nil {
 		return "", errTodayChatItemUnavailable
 	}
+	view := TodayBriefView{Brief: &week}
 	selected := false
 	for _, row := range view.Brief.YourWeek.Learned {
 		if row.MemoryID == id && row.Kind == yourWeekLearnedMemory && (row.Text == expectedText || pii.DisplayModelText(row.Text, a.modelDisplayLanguage()) == expectedText) {

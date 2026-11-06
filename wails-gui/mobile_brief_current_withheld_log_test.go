@@ -6,8 +6,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"wails-gui/internal/pii"
 )
 
 // When the current brief's words are withheld, the reason is logged (once per brief
@@ -32,7 +30,11 @@ func TestCurrentBriefWithheldReasonIsLogged(t *testing.T) {
 	log.SetOutput(&out)
 	t.Cleanup(func() { log.SetOutput(previous) })
 	currentBriefWithheldLogged = ""
-	pii.SetUserSensitiveApps(map[string]string{"com.example.test": "TestApp"})
+	// The real protection path: it advances the privacy epoch and re-seals the
+	// stored briefs before it returns, as a person's change does.
+	if err := app.AddSensitiveApp("com.example.test", "TestApp"); err != nil {
+		t.Fatal(err)
+	}
 	got, _ := svc.CurrentMobileBrief()
 	if got.BriefID != older.BriefID {
 		t.Fatalf("current = %s, want the readable earlier brief %s (withdrawn %s)", got.BriefID, older.BriefID, withdrawn.BriefID)

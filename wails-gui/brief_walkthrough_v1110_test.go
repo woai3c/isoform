@@ -307,10 +307,9 @@ func TestBriefV1111LegacyBriefOnScreenIsRemadeOnce(t *testing.T) {
 	// A reworded line a text match misses, written before refs.
 	brief.Narrative = []MobileBriefPara{{Text: "Your physio exercises for the brace were due yesterday."}, {Text: "You shipped the plan."}}
 	brief.Audio = &MobileBriefAudio{Status: mobileBriefAudioStatusOK, Bytes: 1}
-	if err := svc.store.save(brief, now); err != nil {
-		t.Fatal(err)
-	}
-	svc.app.mobileBriefSvc = svc
+	// The preference is written before the brief is stored: storing seals the
+	// brief, and that read caches the memory snapshot. A direct file write after
+	// it would stay invisible until the cache re-checks the folder.
 	dir, err := memoryDir()
 	if err != nil {
 		t.Fatal(err)
@@ -318,6 +317,10 @@ func TestBriefV1111LegacyBriefOnScreenIsRemadeOnce(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "brief-preference.md"), []byte("# Brief preference\n\nKeep PT out of my briefs.\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	if err := svc.store.save(brief, now); err != nil {
+		t.Fatal(err)
+	}
+	svc.app.mobileBriefSvc = svc
 	syntheses := 0
 	spoken := ""
 	speaker := fakeSpeaker("en", testWAV(1), nil)

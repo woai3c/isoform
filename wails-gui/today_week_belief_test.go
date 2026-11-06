@@ -38,6 +38,7 @@ func todayWeekBeliefFixture(t *testing.T) (*App, MobileBriefV1, string) {
 	if err := service.store.save(brief, now); err != nil {
 		t.Fatal(err)
 	}
+	service.wg.Wait()
 	view, err := app.GetTodayBriefByID(brief.BriefID)
 	if err != nil || view.Brief == nil || view.Brief.YourWeek == nil || len(view.Brief.YourWeek.Learned) == 0 {
 		t.Fatalf("fixture week not readable: %+v, %v", view.Brief, err)
@@ -63,6 +64,7 @@ func TestTodayWeekBeliefCorrectionAndUndo(t *testing.T) {
 			if words != "" && (!strings.Contains(entry.Content, words) || !memoryInUse(entry.Content)) {
 				t.Fatalf("wording not saved: %s", entry.Content)
 			}
+			app.ensureMobileBriefService().(*mobileBriefService).wg.Wait()
 			view, err := app.GetTodayBriefByID(brief.BriefID)
 			if err != nil {
 				t.Fatal(err)

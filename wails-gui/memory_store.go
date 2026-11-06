@@ -328,6 +328,9 @@ func (s *MemoryStore) Run(ctx context.Context) {
 			return
 		case <-watchTicker.C:
 			if s.detectFileChanges() {
+				// A changed file may be unreadable or protected now; the briefs
+				// that rely on it are amended (outside the store's lock).
+				memorySourcesChangedOnDisk()
 				s.mu.Lock()
 				s.dirty = true
 				s.lastReason = "watch"

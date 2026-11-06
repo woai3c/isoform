@@ -774,7 +774,12 @@ func TestMobileBriefAudioUploadConcurrentRequestsReturnBusyAndReuseAttachment(t 
 	go func() {
 		result <- svc.prepareMobileBriefAudio(context.Background(), brief.BriefID, mobileBriefAudioVersion(brief), upload)
 	}()
-	<-started
+	select {
+	case <-started:
+	case err := <-result:
+		// Fail instead of waiting forever: the upload never began.
+		t.Fatalf("the upload never started: %v", err)
+	}
 	busy := svc.prepareMobileBriefAudio(context.Background(), brief.BriefID, mobileBriefAudioVersion(brief), upload)
 	close(release)
 	if !errors.Is(busy, errMobileBriefAudioBusy) {

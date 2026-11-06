@@ -516,6 +516,10 @@ func (a *App) MoveGoal(input GoalMoveInput) (GoalMoveResult, error) {
 	default:
 		return GoalMoveResult{}, errGoalMoveInvalid
 	}
+	// A goal closed or reopened changes what a sealed brief may say (its words
+	// and recording), so the briefs are sealed again before they are shown.
+	defer briefSourceChanged()
+	defer briefPrivacyChanged()
 	detail, err := a.moveUserPurpose(userPurposeTransition{
 		Key: "computer:" + key, Origin: "computer", OpenLoopID: input.GoalID,
 		ExpectedEventID: input.ExpectedEventID, Action: input.Action, WaitingOn: input.WaitingOn,

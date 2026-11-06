@@ -19,10 +19,21 @@ type Store struct {
 	dir         string
 	mu          sync.Mutex
 	publication sync.RWMutex
+	// pendingChanged holds saved IDs whose ChangedHook has not run yet (guarded by mu).
+	pendingChanged []string
 
 	// Now is overridable in tests; nil falls back to time.Now.
 	Now func() time.Time
 }
+
+// RemovalHook, when set, runs after any store's Delete removes a handoff. The
+// app sets it to its privacy-change hook: a sealed brief may cite a work record.
+var RemovalHook func(id string)
+
+// ChangedHook, when set, runs after any store's save of a handoff. A brief that
+// cites the handoff is sealed again in the background (a source change, not a
+// privacy change).
+var ChangedHook func(id string)
 
 // NewStore opens (creating if needed) the handoff directory.
 func NewStore(dir string) (*Store, error) {
@@ -57,7 +68,31 @@ func (s *Store) pathFor(id string) string {
 }
 
 func (s *Store) saveLocked(e Entry) (Entry, error) {
-	return s.saveLockedWithLinkedDraft(e, false)
+	return s.noteChanged(s.saveLockedWithLinkedDraft(e, false))
+}
+
+// noteChanged records a successful save under the store's lock. The hook runs
+// from flushChanged, after the lock is released, so a hook may read the store.
+func (s *Store) noteChanged(saved Entry, err error) (Entry, error) {
+	if err == nil {
+		s.pendingChanged = append(s.pendingChanged, saved.ID)
+	}
+	return saved, err
+}
+
+// flushChanged runs ChangedHook for the saves a call made. Every public method
+// that saves defers it first, so it runs after that method's locks are released.
+func (s *Store) flushChanged() {
+	s.mu.Lock()
+	ids := s.pendingChanged
+	s.pendingChanged = nil
+	s.mu.Unlock()
+	if ChangedHook == nil {
+		return
+	}
+	for _, id := range ids {
+		ChangedHook(id)
+	}
 }
 
 func (s *Store) saveLockedWithLinkedDraft(e Entry, linkedDraftCompletion bool) (Entry, error) {
@@ -125,6 +160,7 @@ func (s *Store) saveLockedWithLinkedDraft(e Entry, linkedDraftCompletion bool) (
 // CompleteLinkedDraft records an outcome already confirmed by the existing
 // source-checked draft action. It never performs a send itself.
 func (s *Store) CompleteLinkedDraft(id, draftID string, outcome Outcome) (Entry, error) {
+	defer s.flushChanged()
 	s.publication.Lock()
 	defer s.publication.Unlock()
 	s.mu.Lock()
@@ -160,7 +196,7 @@ func (s *Store) CompleteLinkedDraft(id, draftID string, outcome Outcome) (Entry,
 	entry.Thread.Outcome = &outcome
 	entry.Status = StatusCompleted
 	entry.UpdatedAt = s.now().UnixMilli()
-	return s.saveLockedWithLinkedDraft(entry, true)
+	return s.noteChanged(s.saveLockedWithLinkedDraft(entry, true))
 }
 
 func (s *Store) getLocked(id string) (Entry, error) {
@@ -231,6 +267,7 @@ func (s *Store) listLocked() ([]Entry, error) {
 // CreatedAt/UpdatedAt to now when unset, and returns the normalized entry
 // actually persisted. Explicit timestamps are preserved (e.g. migration).
 func (s *Store) Save(e Entry) (Entry, error) {
+	defer s.flushChanged()
 	s.publication.Lock()
 	defer s.publication.Unlock()
 	s.mu.Lock()
@@ -242,6 +279,7 @@ func (s *Store) Save(e Entry) (Entry, error) {
 // readers. PublishListBatch exposes the complete selection with one marker.
 // A retry never overwrites an existing task, including after it was renamed.
 func (s *Store) StageNewListBatch(entries []Entry) ([]Entry, error) {
+	defer s.flushChanged()
 	s.publication.Lock()
 	defer s.publication.Unlock()
 	s.mu.Lock()
@@ -496,18 +534,21 @@ func (s *Store) UpdateStatus(id string, st Status) (Entry, error) {
 // applies mutate and saves the result under the store lock. An empty allowed
 // slice means any current status is accepted.
 func (s *Store) MutateIfStatus(id string, allowed []Status, mutate func(*Entry)) (Entry, error) {
+	defer s.flushChanged()
 	return s.mutate(id, nil, allowed, mutate)
 }
 
 // MutateIfAttempt additionally fences a mutation to the exact running attempt.
 // An empty attemptID matches legacy entries whose attempt ID is also empty.
 func (s *Store) MutateIfAttempt(id, attemptID string, allowed []Status, mutate func(*Entry)) (Entry, error) {
+	defer s.flushChanged()
 	return s.mutate(id, &attemptID, allowed, mutate)
 }
 
 // MutateThread changes only a task's thread bookkeeping (opened, deferred)
 // without moving its update time, so reading a thread is not news.
 func (s *Store) MutateThread(id string, mutate func(*Thread)) (Entry, error) {
+	defer s.flushChanged()
 	return s.mutateWith(id, nil, nil, func(e *Entry) {
 		if e.Thread == nil {
 			e.Thread = &Thread{}
@@ -567,6 +608,14 @@ func (s *Store) mutateWith(id string, attemptID *string, allowed []Status, mutat
 
 // Delete removes a handoff file. A missing file is not an error.
 func (s *Store) Delete(id string) error {
+	err := s.remove(id)
+	if err == nil && RemovalHook != nil {
+		RemovalHook(id)
+	}
+	return err
+}
+
+func (s *Store) remove(id string) error {
 	s.publication.Lock()
 	defer s.publication.Unlock()
 	s.mu.Lock()
@@ -648,6 +697,7 @@ func (s *Store) ActiveForChips(limit int) ([]Entry, error) {
 // ttl or been superseded by a newer handoff sharing the same SourceID. Returns
 // the entries that were transitioned. Non-active handoffs are never touched.
 func (s *Store) MarkStale(ttl time.Duration) ([]Entry, error) {
+	defer s.flushChanged()
 	s.publication.Lock()
 	defer s.publication.Unlock()
 	s.mu.Lock()

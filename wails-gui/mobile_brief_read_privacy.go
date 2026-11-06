@@ -116,6 +116,15 @@ func (a *App) mobileBriefForGeneration(brief MobileBriefV1) MobileBriefV1 {
 }
 
 func (a *App) mobileBriefForProjectionContext(ctx context.Context, brief MobileBriefV1, useRunTiming bool) MobileBriefV1 {
+	brief, _ = a.mobileBriefForProjectionWithholding(ctx, brief, useRunTiming)
+	return brief
+}
+
+// mobileBriefForProjectionWithholding is mobileBriefForProjectionContext with why the
+// read withheld the model's text (an empty Reason when it did not). The sealed read
+// (mobile_brief_finished_read.go) needs that reason to tell a transient hold from a
+// privacy hold.
+func (a *App) mobileBriefForProjectionWithholding(ctx context.Context, brief MobileBriefV1, useRunTiming bool) (MobileBriefV1, mobileBriefWithholding) {
 	// Audio and feed readers need only the privacy projection. Navigation is
 	// added by card/phone readers with their request's existing source snapshot.
 	quiet := brief.NarrativeStatus == "quiet"
@@ -128,7 +137,7 @@ func (a *App) mobileBriefForProjectionContext(ctx context.Context, brief MobileB
 			brief.Generation = nil
 		}
 	}
-	brief, _ = a.mobileBriefDeliveryContext(ctx, brief)
+	brief, withheld := a.mobileBriefDeliveryContext(ctx, brief)
 	if quiet {
 		brief.NarrativeStatus = "quiet"
 	}
@@ -163,7 +172,7 @@ func (a *App) mobileBriefForProjectionContext(ctx context.Context, brief MobileB
 	brief.WeekQuestion = a.morningBriefWeekQuestion(brief, time.Now())
 	brief.ConversationKey = mobileBriefConversationKey(brief)
 	brief.Audio = mobileBriefAudioForRead(brief)
-	return brief
+	return brief, withheld
 }
 
 func mobileBriefWeeklyRecapMatches(left, right []MobileBriefPara) bool {
@@ -250,6 +259,10 @@ func (a *App) mobileBriefDelivery(brief MobileBriefV1) (MobileBriefV1, mobileBri
 // start). A store that never opens is still withheld, after these waits.
 var mobileBriefReadyBackoff = []time.Duration{300 * time.Millisecond, 600 * time.Millisecond}
 
+// mobileBriefGateHold, when set by a test, says the stores are still opening: the
+// gate then withholds the text as store_unavailable. Nil in the app.
+var mobileBriefGateHold func() bool
+
 // mobileBriefRetryNotReady runs the gate again while it withholds only because a
 // store is not ready, waiting backoff[i] before attempt i+1. Any other outcome, or a
 // cancelled context, returns at once. Privacy reasons are never retried.
@@ -279,6 +292,12 @@ func (a *App) mobileBriefDeliveryContext(ctx context.Context, brief MobileBriefV
 
 // mobileBriefDeliveryOnce applies the read-time gates once.
 func (a *App) mobileBriefDeliveryOnce(ctx context.Context, brief MobileBriefV1) (MobileBriefV1, mobileBriefWithholding) {
+	mobileBriefGateRuns.Add(1)
+	if mobileBriefGateHold != nil && mobileBriefGateHold() {
+		// Tests stand in for a store that is still opening.
+		brief.Narrative = nil
+		return brief, mobileBriefWithholding{Reason: mobileBriefWithheldNotReady}
+	}
 	staticEmpty := mobileBriefStaticEmpty(brief)
 	subjects, mailErr := mobileBriefMailSubjects(a)
 	// One read checks its refs as a batch: the work records are listed once,

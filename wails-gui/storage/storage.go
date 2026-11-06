@@ -171,6 +171,14 @@ func newStoreWithSnapshotOptions(dbPath string, snapshots snapshotOptions) (*Sto
 	return s, nil
 }
 
+// Closing reports whether Close has begun. It reads memory only, so a read can
+// ask it without touching the database.
+func (s *Store) Closing() bool {
+	s.closeMu.Lock()
+	defer s.closeMu.Unlock()
+	return s.closing
+}
+
 // Close closes the underlying database connection.
 func (s *Store) Close() error {
 	s.closeOnce.Do(func() {

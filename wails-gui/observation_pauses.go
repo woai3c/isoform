@@ -86,7 +86,11 @@ func (a *App) saveObservationPauses(pauses []observationPause) {
 	}
 	if err := a.store.SetUIState(context.Background(), observationPausesKey, string(raw)); err != nil {
 		log.Printf("[observation] save pause log: %v", err)
+		return
 	}
+	// An observation pause changes what a sealed brief may show: re-seal before returning.
+	briefPrivacyChanged()
+	briefSourceChanged()
 }
 
 // recordObservationPause opens a pause when observing is paused and closes

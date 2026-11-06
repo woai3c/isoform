@@ -125,7 +125,7 @@ func TestTodayLatestBriefReadsTheStoredBriefWithoutWaiting(t *testing.T) {
 	t.Cleanup(func() { mainChatReadMemoLoad = previous })
 	// Something the read depends on changed, so it is worked out once more,
 	// while a live refresh holds todayMu for its whole source read.
-	noteMobileBriefReadInputsChanged()
+	briefPrivacyChanged()
 	svc.todayMu.Lock()
 	started := time.Now()
 	view, err := app.GetLatestBrief()

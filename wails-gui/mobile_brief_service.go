@@ -55,6 +55,9 @@ var _ mobileBriefSource = (*mobileBriefService)(nil)
 type mobileBriefService struct {
 	// loggedFailureKeys remembers which failure kinds were logged, once each.
 	loggedFailureKeys map[string]bool
+	// amend coalesces the amendment of sealed briefs after a privacy change: at
+	// most one pass runs, and a change during it sets dirty so one more runs.
+	amend    briefAmendState
 	app      *App
 	store    *mobileBriefStore
 	config   *mobileBriefConfigStore
@@ -155,6 +158,15 @@ type mobileBriefPendingRequest struct {
 }
 
 func newMobileBriefService(app *App) *mobileBriefService {
+	s := buildMobileBriefService(app)
+	if s != nil {
+		// The live service is the one stored briefs and source changes re-seal.
+		mobileBriefLive.Store(s)
+	}
+	return s
+}
+
+func buildMobileBriefService(app *App) *mobileBriefService {
 	stateDir, err := mobileBriefStateDir()
 	if err != nil {
 		log.Printf("[mobile-brief] state directory is unavailable")
@@ -1223,7 +1235,9 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 		brief.Generation = &captured
 	}
 	firstReadBriefMu.Lock()
-	err = s.store.save(brief, asOf)
+	// The copy is sealed after patchMu is released (below), so the save does not
+	// announce or seal under the lock.
+	err = s.store.saveDocument(brief, asOf)
 	s.patchMu.Unlock()
 	if err != nil {
 		firstReadBriefMu.Unlock()
@@ -1408,15 +1422,26 @@ func (s *mobileBriefService) addAudioWithLatestGuard(ctx context.Context, brief 
 	if ctx.Err() != nil {
 		return
 	}
-	// The stored document may have been replaced meanwhile (a fresh on-request
-	// brief); the audio then belongs to the older brief and is left alone.
+	// The projection reads sources, so it runs before patchMu; the write under
+	// the lock is valid only if the privacy state and the stored brief are the
+	// ones it saw. A stored document replaced meanwhile (a fresh on-request
+	// brief) leaves the audio with the older brief, which is left alone.
+	pre, preFound := s.store.load(brief.BriefID)
+	preEpoch := ""
+	preCurrent := pre
+	if s.app != nil {
+		preEpoch = s.app.briefPrivacyPrint()
+		if preFound {
+			preCurrent = s.app.mobileBriefForDelivery(pre)
+		}
+	}
 	s.patchMu.Lock()
 	stored, found := s.store.load(brief.BriefID)
-	current := stored
-	if found && s.app != nil {
-		current = s.app.mobileBriefForDelivery(stored)
+	if s.app != nil && s.app.briefPrivacyPrint() != preEpoch {
+		s.patchMu.Unlock()
+		return
 	}
-	if !found || input != mobileBriefAudioBinding(current, lang) {
+	if !found || !preFound || stored.AsOf != pre.AsOf || input != mobileBriefAudioBinding(preCurrent, lang) {
 		s.patchMu.Unlock()
 		return
 	}
@@ -1428,7 +1453,8 @@ func (s *mobileBriefService) addAudioWithLatestGuard(ctx context.Context, brief 
 		}
 	}
 	stored.Audio = &shaped
-	if err := s.store.save(stored, asOf); err != nil {
+	// Saved without sealing under the lock: the copy is sealed after the unlock.
+	if err := s.store.saveDocument(stored, asOf); err != nil {
 		s.patchMu.Unlock()
 		log.Printf("[mobile-brief] the spoken %s brief could not be recorded", brief.Slot)
 		return
@@ -1595,11 +1621,11 @@ func (s *mobileBriefService) holdPower(reason string) func() {
 
 // LatestMobileBrief refreshes local signals in the newest stored brief.
 func (s *mobileBriefService) LatestMobileBrief() (MobileBriefV1, bool) {
-	brief, ok := s.latestWithToday()
-	if ok {
-		brief = s.deliveredWithAudio(brief)
-	}
-	return brief, ok
+	// The live signals are brought up to date first, as before (latestWithToday);
+	// the read after it is the sealed read every surface shares.
+	s.latestWithToday()
+	brief, ok, err := s.finishedLatest()
+	return brief, ok && err == nil
 }
 
 // ListMobileBriefs returns summaries of stored briefs, newest first.
@@ -1610,18 +1636,8 @@ func (s *mobileBriefService) ListMobileBriefs(limit int) []MobileBriefSummary {
 // GetMobileBrief returns one stored brief. The ID is validated before any file
 // is opened.
 func (s *mobileBriefService) GetMobileBrief(briefID string) (MobileBriefV1, bool) {
-	if brief, ok := s.store.load(briefID); ok {
-		return s.deliveredWithAudio(brief), true
-	}
-	brief, ok := s.store.currentToday()
-	loc := s.location
-	if loc == nil {
-		loc = time.Local
-	}
-	if !ok || brief.BriefID != briefID || brief.LocalDate != s.now().In(loc).Format("2006-01-02") {
-		return MobileBriefV1{}, false
-	}
-	return s.deliveredWithAudio(brief), true
+	brief, ok, err := s.finishedBrief(briefID)
+	return brief, ok && err == nil
 }
 
 // RequestMobileBrief starts an on-demand brief. The result is "started" when a

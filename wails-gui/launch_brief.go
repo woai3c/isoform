@@ -1,7 +1,5 @@
 package main
 
-import "time"
-
 // The brief store already persists both generated documents and the last-good
 // local Today projection, atomically and with provenance beside the document.
 // Do not introduce a second content cache or treat yesterday as today's brief.
@@ -10,27 +8,18 @@ func (s *mobileBriefService) storedLatestForLaunch() (MobileBriefV1, bool) {
 	return brief, ok
 }
 
-// finishedLatest is the current brief as Today opens it: its finished read
-// (mobileBriefFinishedRead). An error is a saved read that cannot be read.
+// finishedLatest is the latest brief as every surface reads it (latestShown).
+// Before any brief is stored, today's snapshot stands in. An error is a saved
+// read that cannot be read.
 func (s *mobileBriefService) finishedLatest() (MobileBriefV1, bool, error) {
-	// The same current brief the Mac's display and the phone routes read; the
-	// day's snapshot stands in only before any brief is stored.
-	brief, ok := s.store.current()
-	loc := s.location
-	if loc == nil {
-		loc = time.Local
+	brief, ok, err := s.latestShown()
+	if err != nil || ok {
+		return brief, ok, err
 	}
-	day := s.now().In(loc).Format("2006-01-02")
-	if !ok {
-		brief, ok = s.store.currentToday()
-		ok = ok && brief.LocalDate == day
-	}
-	if !ok {
+	snapshot, ok := s.store.currentToday()
+	if !ok || snapshot.LocalDate != s.readDay() {
 		return MobileBriefV1{}, false, nil
 	}
-	// Stored text is evidence, never authorization: the finished read was
-	// made by the normal delivery gates and is made again when what they
-	// read changes.
-	read, err := s.finishedRead(brief)
+	read, err := s.finishedRead(snapshot)
 	return read, err == nil, err
 }

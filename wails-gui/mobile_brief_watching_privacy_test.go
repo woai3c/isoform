@@ -43,6 +43,7 @@ func TestMobileBriefWatchingRechecksStoredBrowserSources(t *testing.T) {
 			if err := svc.store.save(brief, now); err != nil {
 				t.Fatal(err)
 			}
+			svc.wg.Wait()
 			// Exercise JSON persistence and the Today projection before and after
 			// browser retention. Neither may lose the original capture identity.
 			for _, prune := range []bool{false, true} {

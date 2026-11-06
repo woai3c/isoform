@@ -321,6 +321,23 @@ func (s *mobileBriefService) prepareMobileBriefAudioLocked(ctx context.Context, 
 	if attachment == nil {
 		return errors.New("audio attachment unavailable")
 	}
+	// The projection reads sources, which may be slow, so it runs before patchMu.
+	// The write under the lock is valid only if the privacy state and the stored
+	// brief are the ones the projection saw; otherwise the attachment is dropped.
+	pre, preFound := s.store.load(briefID)
+	preEpoch := s.app.briefPrivacyPrint()
+	preProjected := s.app.mobileBriefForDelivery(pre)
+	if !preFound || mobileBriefAudioVersion(preProjected) != version || preProjected.Audio == nil || preProjected.Audio.SHA256 != brief.Audio.SHA256 {
+		return errMobileBriefNoAudio
+	}
+	// The source-change hook runs after patchMu is released (deferred calls run
+	// last-in first-out, so it is registered before the unlock).
+	written := false
+	defer func() {
+		if written {
+			briefSourceChanged()
+		}
+	}()
 	s.patchMu.Lock()
 	defer s.patchMu.Unlock()
 	if retry, _ := ctx.Value(mobileBriefAudioRetryContextKey{}).(bool); retry {
@@ -330,8 +347,7 @@ func (s *mobileBriefService) prepareMobileBriefAudioLocked(ctx context.Context, 
 		}
 	}
 	stored, found := s.store.load(briefID)
-	projected := s.app.mobileBriefForDelivery(stored)
-	if !found || mobileBriefAudioVersion(projected) != version || projected.Audio == nil || projected.Audio.SHA256 != brief.Audio.SHA256 {
+	if !found || stored.AsOf != pre.AsOf || s.app.briefPrivacyPrint() != preEpoch || stored.Audio == nil || stored.Audio.SHA256 != pre.Audio.SHA256 {
 		return errMobileBriefNoAudio
 	}
 	shaped := *stored.Audio
@@ -342,7 +358,11 @@ func (s *mobileBriefService) prepareMobileBriefAudioLocked(ctx context.Context, 
 		return err
 	}
 	// Updating a historical recording must not move the latest brief pointer.
-	s.store.mu.Lock()
-	defer s.store.mu.Unlock()
-	return writeMobileBriefFileAtomic(s.store.dir, briefID+".json", document)
+	err = func() error {
+		s.store.mu.Lock()
+		defer s.store.mu.Unlock()
+		return writeMobileBriefFileAtomic(s.store.dir, briefID+".json", document)
+	}()
+	written = err == nil
+	return err
 }

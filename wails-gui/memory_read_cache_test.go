@@ -101,6 +101,9 @@ func TestBriefReadsDoNotRedactMemoryAgainWhileItIsUnchanged(t *testing.T) {
 	r := newMemoryReadCountRig(t)
 	// Start cold, as at launch: the first read does the work once.
 	r.app.invalidateMemoryExternalReads()
+	// Intended cost change (brief-rebuild PR 1): sealed briefs read plainly, so the
+	// memory work happens when a brief is sealed. A source change seals them now.
+	briefSourceChanged()
 	r.read(t, 1)
 	t.Logf("first read: memory reads=%d memory redactions=%d exclusion scans=%d", r.loads["entries"], r.loads["redact"], r.loads["exclusions"])
 	if r.loads["entries"] != 1 || r.loads["redact"] == 0 || r.loads["exclusions"] == 0 {

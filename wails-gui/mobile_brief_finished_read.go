@@ -2,40 +2,166 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
+
+	"wails-gui/internal/handoff"
 )
 
-// today-review v1.1.15 D13: a brief is saved as finished text, plus its
-// audio, the moment it is made, and opening it reads that. The finished read
-// is the brief as Today shows it (delivery gates and cards applied), saved
-// beside the brief with the key of everything those gates read: the stored
-// brief, the files and privacy state the brief's sources live in, the read
-// policy, Closed Eyes, the language, the day and the run record. A read whose
-// key still matches returns the saved text without working anything out
-// again; any change makes the next read work it out once and save it.
-const mobileBriefFinishedReadExt = ".read"
+func init() {
+	// Any handoff removal is a privacy-change event for the briefs that cite it;
+	// any handoff save is a source change for them. The removal advances the
+	// privacy epoch durably; the amendment of the sealed copies runs after it.
+	handoff.RemovalHook = func(string) {
+		briefPrivacyChanged()
+		briefPrivacyAmendSoon()
+	}
+	handoff.ChangedHook = func(string) { briefSourceChanged() }
+}
+
+// A brief is sealed once: when it is made (or changed), the read every surface
+// shows is worked out with the current privacy gates and saved beside the brief
+// as a finished, display-ready copy (docs/brief-rebuild.md, PR 1). Reading it
+// is a plain read of that copy. It calls no store, so a store that is still
+// opening, or a read at launch, can never hide a brief that was checked when it
+// was sealed.
+//
+// The copy stays valid while the privacy epoch it was sealed under is current.
+// Privacy changes (a forgotten source, a private app or window, Closed Eyes,
+// mail) advance the epoch; the next read of each affected brief seals it again
+// (the amend). The epoch is persisted, so a restart does not seal everything
+// again. A copy is also worked out again once its local day has changed, because
+// its day words ("today", "yesterday") are relative to the day it was sealed on.
+const (
+	mobileBriefFinishedReadExt = ".read"
+	// mobileBriefSealedSchema is the sealed copy's format. Schema 1 copies
+	// carry a read key that is no longer used; they are sealed again on first read.
+	mobileBriefSealedSchema = 2
+	// mobileBriefLatestShownName is the one latest-brief record (PR 1, item 3).
+	mobileBriefLatestShownName  = "latest-shown.json"
+	mobileBriefPrivacyEpochFile = "privacy-epoch"
+)
 
 var errMobileBriefFinishedReadUnreadable = errors.New("the saved brief could not be read")
 
-// mobileBriefReadEpoch counts changes to what a brief read depends on that no
-// file stamp shows (privacy withdrawals, mail, calendar, goals). A finished
-// read from another process never matches (mobileBriefProcessToken).
 var (
-	mobileBriefReadEpoch    atomic.Uint64
-	mobileBriefProcessToken = strconv.FormatInt(time.Now().UnixNano(), 36)
+	// mobileBriefReadEpoch counts every change that a cached reader depends on
+	// (privacy changes and freshness changes), for caches outside this file.
+	mobileBriefReadEpoch atomic.Uint64
+	// mobileBriefPrivacyEpoch counts privacy changes only; a sealed read is
+	// valid while the epoch it was sealed under is still current.
+	mobileBriefPrivacyEpoch atomic.Uint64
+	// mobileBriefPrivacyEpochMu orders the in-memory epoch with its saved copy.
+	mobileBriefPrivacyEpochMu       sync.Mutex
+	mobileBriefPrivacyEpochSavedDir string
+	// mobileBriefFinishedReadKeys counts sealings (the work of making a read),
+	// for tests: a read that needs no change must not add to it.
+	mobileBriefFinishedReadKeys atomic.Uint64
+	// mobileBriefGateRuns counts gate passes over a brief, for tests: a plain
+	// read of a sealed brief must add none.
+	mobileBriefGateRuns atomic.Uint64
 )
 
-func noteMobileBriefReadInputsChanged() { mobileBriefReadEpoch.Add(1) }
+// briefPrivacyChanged records a privacy change: every sealed brief
+// is sealed again the next time it is read. It is called for withdrawals and
+// for the privacy-class app events (app.go). The epoch is saved first, so a
+// change is not lost if the app stops before the affected briefs are sealed again.
+func briefPrivacyChanged() {
+	mobileBriefReadEpoch.Add(1)
+	mobileBriefPrivacyEpochMu.Lock()
+	defer mobileBriefPrivacyEpochMu.Unlock()
+	value := mobileBriefPrivacyEpoch.Add(1)
+	if mobileBriefPrivacyEpochSavedDir != "" {
+		_ = writeMobileBriefFileAtomic(mobileBriefPrivacyEpochSavedDir, mobileBriefPrivacyEpochFile, []byte(strconv.FormatUint(value, 10)))
+	}
+}
 
-// mobileBriefReadInputEvents are the app events after which a saved read is
-// worked out again. brief:stored is not one: the stored brief is in the key.
+// briefPrivacyAmendSoon starts the amendment of the sealed briefs after a
+// privacy change. It runs in its own goroutine, so the caller holds no lock
+// the amendment needs, and an idle surface does not wait for a read. A read
+// that sees the newer epoch amends its brief before it shows it, so the
+// amendment never has to finish first.
+func briefPrivacyAmendSoon() {
+	if s := mobileBriefLive.Load(); s != nil {
+		s.requestAmendment()
+	}
+}
+
+// briefAmendState coalesces amendments: one pass at a time per service.
+type briefAmendState struct {
+	mu      sync.Mutex
+	running bool
+	dirty   bool
+}
+
+// requestAmendment starts the amendment pass in its own goroutine, or marks the
+// running pass dirty so it goes again. The goroutine is tracked by the service's
+// work group, so Stop waits for it and a test cleanup drains it.
+func (s *mobileBriefService) requestAmendment() {
+	s.amend.mu.Lock()
+	if s.amend.running {
+		s.amend.dirty = true
+		s.amend.mu.Unlock()
+		return
+	}
+	s.amend.mu.Unlock()
+	if !s.beginWork() {
+		return
+	}
+	s.amend.mu.Lock()
+	s.amend.running = true
+	s.amend.mu.Unlock()
+	go func() {
+		defer s.wg.Done()
+		for {
+			s.sealSources()
+			s.amend.mu.Lock()
+			if !s.amend.dirty {
+				s.amend.running = false
+				s.amend.mu.Unlock()
+				return
+			}
+			s.amend.dirty = false
+			s.amend.mu.Unlock()
+		}
+	}()
+}
+
+// memorySourcesChangedOnDisk is a privacy change: a memory or knowledge file
+// changed outside the app (the memory watcher found it). Its entries may now be
+// unreadable or protected, so the sealed briefs are amended.
+func memorySourcesChangedOnDisk() {
+	briefPrivacyChanged()
+	briefPrivacyAmendSoon()
+}
+
+// noteMobileBriefReadCachesChanged records a freshness change (a new
+// calendar, mail or memory read, a finished run): caches outside the sealed
+// briefs are read again, but no sealed brief is sealed again for it. The
+// next brief made or refreshed carries the change.
+func noteMobileBriefReadCachesChanged() { mobileBriefReadEpoch.Add(1) }
+
+// mobileBriefPrivacyInputEvents are the app events that change what a sealed
+// brief may show. Every other event in mobileBriefReadInputEvents is a freshness
+// change (noteMobileBriefReadCachesChanged).
+var mobileBriefPrivacyInputEvents = map[string]bool{
+	"sensitive-apps:updated": true, closedEyesModeChangedEvent: true,
+	"background-listening:changed": true, "topics:withdrawn": true, "mail:synced": true,
+}
+
+// mobileBriefReadInputEvents are the app events after which caches outside the
+// brief are read again. brief:stored is not one: the stored brief is in its seal.
 var mobileBriefReadInputEvents = map[string]bool{
 	"cron:state": true, "handoff:created": true, "handoff:updated": true, "insight:saved": true,
 	"memory:updated": true, "activity:summary-ready": true, "deliverables:updated": true, "agency:updated": true,
@@ -43,10 +169,64 @@ var mobileBriefReadInputEvents = map[string]bool{
 	"topics:withdrawn": true, "topics:updated": true, "calendar:synced": true, "mail:synced": true, "people:updated": true,
 }
 
+// adoptMobileBriefPrivacyEpoch loads the saved epoch from a briefs directory
+// the first time it is opened. The in-memory epoch never goes backwards.
+func adoptMobileBriefPrivacyEpoch(dir string) {
+	if dir == "" {
+		return
+	}
+	mobileBriefPrivacyEpochMu.Lock()
+	defer mobileBriefPrivacyEpochMu.Unlock()
+	if mobileBriefPrivacyEpochSavedDir == dir {
+		return
+	}
+	mobileBriefPrivacyEpochSavedDir = dir
+	data, err := os.ReadFile(filepath.Join(dir, mobileBriefPrivacyEpochFile))
+	if err != nil {
+		return
+	}
+	saved, err := strconv.ParseUint(strings.TrimSpace(string(data)), 10, 64)
+	if err != nil {
+		return
+	}
+	for {
+		current := mobileBriefPrivacyEpoch.Load()
+		if saved <= current || mobileBriefPrivacyEpoch.CompareAndSwap(current, saved) {
+			return
+		}
+	}
+}
+
+// mobileBriefFinishedRead is the sealed copy of a brief as stored beside it.
 type mobileBriefFinishedRead struct {
-	Schema int             `json:"schema"`
-	Key    string          `json:"key"`
-	Brief  json.RawMessage `json:"brief"`
+	Schema int    `json:"schema"`
+	Key    string `json:"key,omitempty"`
+	// Epoch is the privacy epoch the copy was read under. A write never replaces
+	// a copy sealed under a newer epoch (saveFinishedReadIfCurrent).
+	Epoch uint64 `json:"epoch,omitempty"`
+	// Print is the privacy state the copy was sealed under (briefPrivacyPrint).
+	Print string `json:"print"`
+	// Source is the digest of the stored brief the copy was made from.
+	Source string `json:"source"`
+	// Day is the local date the copy was sealed on.
+	Day string `json:"day,omitempty"`
+	// Cites are the source keys the brief's words were checked against, sorted;
+	// nil when the brief has no binding record (every source then counts).
+	Cites []string `json:"cites,omitempty"`
+	// Withheld is the non-transient withholding the copy was sealed with (a
+	// source the person protected, for example). Reads report it, so the reason
+	// is logged on read as it was before sealing. Older copies have none.
+	WithheldReason string          `json:"withheld_reason,omitempty"`
+	WithheldKind   string          `json:"withheld_kind,omitempty"`
+	Brief          json.RawMessage `json:"brief"`
+}
+
+// mobileBriefLatestShown is the one record of the brief every surface shows.
+type mobileBriefLatestShown struct {
+	Version int    `json:"version"`
+	BriefID string `json:"briefId"`
+	Slot    string `json:"slot,omitempty"`
+	At      string `json:"at,omitempty"`
 }
 
 func (s *mobileBriefStore) finishedReadPath(briefID string) (string, bool) {
@@ -72,9 +252,51 @@ func (s *mobileBriefStore) saveFinishedRead(briefID string, read mobileBriefFini
 	return writeMobileBriefFileAtomic(s.dir, briefID+mobileBriefFinishedReadExt, data)
 }
 
-// loadFinishedRead returns the saved read, found=false when there is none,
+// errMobileBriefStaleSeal is a seal made under an older privacy epoch than the
+// copy already saved: the newer seal stands, and this one is dropped.
+var errMobileBriefStaleSeal = errors.New("a newer privacy epoch already sealed this brief")
+
+// saveFinishedReadIfCurrent is the compare-and-swap of a seal: the write happens
+// only if no copy sealed under a newer epoch is saved. The check and the write
+// hold the store lock, so two seals of one brief cannot interleave.
+func (s *mobileBriefStore) saveFinishedReadIfCurrent(briefID string, read mobileBriefFinishedRead) error {
+	if _, ok := s.finishedReadPath(briefID); !ok {
+		return errMobileBriefStateUnavailable
+	}
+	data, err := json.Marshal(read)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if current, err := os.ReadFile(filepath.Join(s.dir, briefID+mobileBriefFinishedReadExt)); err == nil {
+		var saved struct {
+			Schema int    `json:"schema"`
+			Epoch  uint64 `json:"epoch"`
+		}
+		if json.Unmarshal(current, &saved) == nil && saved.Schema == mobileBriefSealedSchema && saved.Epoch > read.Epoch {
+			log.Printf("[mobile-brief] dropped a seal from privacy epoch %d: the saved copy is from epoch %d", read.Epoch, saved.Epoch)
+			return errMobileBriefStaleSeal
+		}
+	}
+	// The seal was computed from one stored version of the brief. A seal from an
+	// older version (a copy made before a save, such as the cards a save added)
+	// must not replace the copy of the newer one, even in the same epoch.
+	if stored, err := os.ReadFile(filepath.Join(s.dir, briefID+".json")); err == nil {
+		if brief, ok := s.storedBriefFromData(stored); ok && mobileBriefSourceDigest(brief) != read.Source {
+			log.Printf("[mobile-brief] dropped a seal of an older version of brief %s", briefID)
+			return errMobileBriefStaleSeal
+		}
+	}
+	if err := os.MkdirAll(s.dir, 0700); err != nil {
+		return err
+	}
+	return writeMobileBriefFileAtomic(s.dir, briefID+mobileBriefFinishedReadExt, data)
+}
+
+// loadFinishedRead returns the saved copy, found=false when there is none,
 // and an error when one is there but cannot be read; that one is removed so
-// the next try works the read out again.
+// the next read seals the brief again.
 func (s *mobileBriefStore) loadFinishedRead(briefID string) (mobileBriefFinishedRead, bool, error) {
 	path, ok := s.finishedReadPath(briefID)
 	if !ok {
@@ -85,112 +307,449 @@ func (s *mobileBriefStore) loadFinishedRead(briefID string) (mobileBriefFinished
 		return mobileBriefFinishedRead{}, false, nil
 	}
 	var read mobileBriefFinishedRead
-	if err == nil && json.Unmarshal(data, &read) == nil && read.Schema == 1 {
+	if err == nil && json.Unmarshal(data, &read) == nil && (read.Schema == 1 || read.Schema == mobileBriefSealedSchema) {
 		return read, true, nil
 	}
 	_ = os.Remove(path)
 	return mobileBriefFinishedRead{}, false, errMobileBriefFinishedReadUnreadable
 }
 
-// finishedReadKey names everything a read of source depends on, or "" when
-// any of it cannot be read (then nothing is saved).
-// mobileBriefFinishedReadKeys counts finishedReadKey computations, for tests.
-var mobileBriefFinishedReadKeys atomic.Uint64
+// readSealedBrief returns the sealed copy of a stored brief when it is valid
+// now: the same privacy print and local day. It calls no store and
+// runs no gate, so any reader may use it.
+func readSealedBrief(store *mobileBriefStore, briefID, print, day string) (MobileBriefV1, bool) {
+	if store == nil {
+		return MobileBriefV1{}, false
+	}
+	saved, found, err := store.loadFinishedRead(briefID)
+	if err != nil || !found || saved.Schema != mobileBriefSealedSchema {
+		return MobileBriefV1{}, false
+	}
+	if saved.Print != print || saved.Day != day {
+		return MobileBriefV1{}, false
+	}
+	var brief MobileBriefV1
+	if unmarshalStoredMobileBrief(saved.Brief, &brief) != nil || brief.BriefID != briefID {
+		return MobileBriefV1{}, false
+	}
+	return brief, true
+}
 
-func (s *mobileBriefService) finishedReadKey(ctx context.Context, source MobileBriefV1) string {
-	mobileBriefFinishedReadKeys.Add(1)
-	if s == nil || s.app == nil || s.app.store == nil {
-		return ""
-	}
-	raw, err := marshalStoredMobileBrief(source)
-	if err != nil {
-		return ""
-	}
-	files, err := s.app.readMobileBriefGatherFiles(ctx)
-	if err != nil {
-		return ""
-	}
-	stamps := make([]string, 0, len(files))
-	for path, info := range files {
-		stamps = append(stamps, path+"|"+strconv.FormatInt(info.Size(), 10)+"|"+strconv.FormatInt(info.ModTime().UnixNano(), 10))
-	}
-	sort.Strings(stamps)
-	activity, err := s.app.mobileBriefActivityPrivacyStamp(ctx, time.Now().UnixMilli())
-	if err != nil {
-		return ""
-	}
-	pauses, err := s.app.observationPauses()
-	if err != nil {
-		return ""
-	}
-	// The mail holdback: a store that cannot be read saves nothing.
-	subjects, err := mobileBriefMailSubjects(s.app)
-	if err != nil {
-		return ""
-	}
+// readDay is the local date a seal and its day words are kept to.
+func (s *mobileBriefService) readDay() string {
 	loc := s.location
 	if loc == nil {
 		loc = time.Local
 	}
-	var run BriefScheduleRun
-	if recorded := todayBriefRecordedRun(s, source.BriefID); recorded != nil {
-		run = *recorded
+	now := time.Now()
+	if s.now != nil {
+		now = s.now()
 	}
-	return mobileBriefModelDigest(struct {
-		Source, Process, Policy, Language, Day string
-		Epoch                                  uint64
-		Files, Mail                            []string
-		Activity                               [2]int64
-		ClosedEyes                             bool
-		Run                                    BriefScheduleRun
-		Pauses                                 []observationPause
-	}{mobileBriefPackageVersion(raw), mobileBriefProcessToken, s.app.mobileBriefGatherPolicy(ctx), s.app.modelDisplayLanguage(), s.now().In(loc).Format("2006-01-02"),
-		mobileBriefReadEpoch.Load(), stamps, subjects, [2]int64{activity.sessions, activity.protected}, s.app.IsClosedEyesModeEnabled(), run, pauses})
+	return now.In(loc).Format("2006-01-02")
 }
 
-// finishedRead is source as Today opens it: the saved finished read when its
-// key still matches, or else worked out once and saved.
-func (s *mobileBriefService) finishedRead(source MobileBriefV1) (MobileBriefV1, error) {
-	if !s.beginWork() {
-		return MobileBriefV1{}, errMobileBriefUnavailable
+// mobileBriefSourceDigest names the stored brief a sealed copy is made from. A
+// stored brief rewritten by any writer then no longer matches its copy.
+func mobileBriefSourceDigest(source MobileBriefV1) string {
+	raw, err := marshalStoredMobileBrief(source)
+	if err != nil {
+		return ""
 	}
-	defer s.wg.Done()
-	ctx := context.Background()
-	key := s.finishedReadKey(ctx, source)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+
+// sealCites are the source keys a brief's words were checked against.
+func sealCites(source MobileBriefV1) []string {
+	inputs := mobileBriefModelInputs(source)
+	if inputs == nil {
+		return nil
+	}
+	cites := make([]string, 0, len(inputs))
+	for key := range inputs {
+		cites = append(cites, key)
+	}
+	sort.Strings(cites)
+	return cites
+}
+
+// seal works the brief out with the current gates and saves it as the sealed
+// copy. It returns the brief as readers show it and whether the copy was saved.
+// A transient withholding (a store still opening, Closed Eyes, mail that
+// cannot be read) is shown but not saved: the copy on disk is kept, so the
+// words come back once the gates can say. Any other outcome is saved, with its
+// withholding, because it is the answer for the sources as they are now.
+func (s *mobileBriefService) seal(ctx context.Context, source MobileBriefV1) (MobileBriefV1, mobileBriefWithholding, bool) {
+	if briefPolicyPending.Load() {
+		return MobileBriefV1{}, mobileBriefWithholding{Reason: mobileBriefWithheldNotReady}, false
+	}
+	mobileBriefFinishedReadKeys.Add(1)
+	epoch := mobileBriefPrivacyEpoch.Load()
+	print := s.app.briefPrivacyPrint()
+	day := s.readDay()
+	projected, withheld := s.app.mobileBriefForProjectionWithholding(ctx, source, true)
+	brief := s.app.mobileBriefWithCards(projected)
+	brief.Audio = s.finishedReadAudio(ctx, source, brief)
+	if withheld.Transient() || print != s.app.briefPrivacyPrint() || day != s.readDay() {
+		return brief, withheld, false
+	}
+	raw, err := marshalStoredMobileBrief(brief)
+	if err != nil {
+		return brief, withheld, false
+	}
+	read := mobileBriefFinishedRead{Schema: mobileBriefSealedSchema, Epoch: epoch, Print: print, Source: mobileBriefSourceDigest(source), Day: day, Cites: sealCites(source), WithheldReason: withheld.Reason, WithheldKind: withheld.SourceKind, Brief: raw}
+	if err := s.store.saveFinishedReadIfCurrent(source.BriefID, read); err != nil {
+		return brief, withheld, false
+	}
+	return brief, withheld, true
+}
+
+// finishedReadWithholding is source as the readers show it. A display read
+// touches no store and never seals: it returns the sealed copy. When the copy
+// no longer matches what it was sealed under (the privacy print, the source, or
+// the local day), the brief is sealed again in the background, and the copy is
+// shown meanwhile, without words and audio when Closed Eyes is on. A brief with
+// no copy yet is sealed in the background and is not shown until then.
+func (s *mobileBriefService) finishedReadWithholding(source MobileBriefV1) (MobileBriefV1, mobileBriefWithholding, error) {
+	mobileBriefLive.Store(s)
+	brief, withheld, pending, err := s.sealedReadOrPending(source)
+	if err != nil {
+		return MobileBriefV1{}, mobileBriefWithholding{}, err
+	}
+	if !pending && s.app != nil && s.copyPrivacyChanged(source) {
+		// The amend: the privacy state changed since the copy was sealed, so the
+		// next read seals the brief again with the current gates and shows that.
+		// Only when the gates cannot decide yet are the words withheld, and the
+		// brief is sealed again in the background.
+		if !s.isStopped() {
+			if sealed, amended, wrote := s.seal(context.Background(), source); wrote {
+				s.noteLatestShownIfNewer(sealed)
+				return sealed, amended, nil
+			}
+		}
+		s.scheduleSealRetry(source)
+		return mobileBriefPaused(brief), mobileBriefWithholding{Reason: mobileBriefWithheldPrivacyCheck}, nil
+	}
+	if pending {
+		// Storage is still opening: the brief's identity, time and slot show with
+		// the opening line, and no content (brief-rules rule 4).
+		return mobileBriefPaused(source), mobileBriefWithholding{Reason: mobileBriefWithheldNotReady}, nil
+	}
+	return brief, withheld, nil
+}
+
+// sealedReadOrPending is the sealed copy, or pending when there is none yet and
+// the copy cannot be made now. A brief with no copy while the observation policy
+// is loaded is sealed here once (legacy migration; the only read that seals).
+func (s *mobileBriefService) sealedReadOrPending(source MobileBriefV1) (MobileBriefV1, mobileBriefWithholding, bool, error) {
+	saved, found, err := s.store.loadFinishedRead(source.BriefID)
+	if err != nil {
+		return MobileBriefV1{}, mobileBriefWithholding{}, false, err
+	}
+	if !found || saved.Schema != mobileBriefSealedSchema {
+		if briefPolicyPending.Load() {
+			s.scheduleSealRetry(source)
+			return MobileBriefV1{}, mobileBriefWithholding{}, true, nil
+		}
+		if s.isStopped() {
+			return MobileBriefV1{}, mobileBriefWithholding{}, false, errMobileBriefUnavailable
+		}
+		sealed, withheld, wrote := s.seal(context.Background(), source)
+		if !wrote {
+			return MobileBriefV1{}, mobileBriefWithholding{}, true, nil
+		}
+		s.noteLatestShownIfNewer(sealed)
+		return sealed, withheld, false, nil
+	}
+	brief, err := s.sealedRead(source)
+	return brief, mobileBriefWithholding{Reason: saved.WithheldReason, SourceKind: saved.WithheldKind}, false, err
+}
+
+// mobileBriefWithheldPrivacyCheck is the withholding of a copy whose privacy
+// state no longer matches the state it was sealed under (see finishedReadWithholding).
+const mobileBriefWithheldPrivacyCheck = "privacy_check"
+
+// mobileBriefLive is the service whose sealed briefs a source change re-seals.
+var mobileBriefLive atomic.Pointer[mobileBriefService]
+
+func (s *mobileBriefService) sealedRead(source MobileBriefV1) (MobileBriefV1, error) {
 	saved, found, err := s.store.loadFinishedRead(source.BriefID)
 	if err != nil {
 		return MobileBriefV1{}, err
 	}
-	if found && key != "" && saved.Key == key {
-		var brief MobileBriefV1
-		if unmarshalStoredMobileBrief(saved.Brief, &brief) == nil && brief.BriefID == source.BriefID {
-			return brief, nil
-		}
+	var brief MobileBriefV1
+	if !found || saved.Schema != mobileBriefSealedSchema || unmarshalStoredMobileBrief(saved.Brief, &brief) != nil || brief.BriefID != source.BriefID {
+		s.scheduleSealRetry(source)
+		return MobileBriefV1{}, nil
 	}
-	return s.writeFinishedRead(ctx, source, key), nil
+	if s.app == nil || saved.Print != s.app.briefPrivacyPrint() || saved.Source != mobileBriefSourceDigest(source) || saved.Day != s.readDay() {
+		s.scheduleSealRetry(source)
+	}
+	if s.app != nil && s.app.IsClosedEyesModeEnabled() {
+		// Closed Eyes is known in memory: nothing the brief says stays readable.
+		return mobileBriefPaused(brief), nil
+	}
+	if s.app != nil && (s.app.store == nil || s.app.store.Closing()) {
+		// The policy store is closed, so a web source's hold cannot be confirmed:
+		// every web-source item is left out and the rest of the brief shows.
+		brief = mobileBriefWithoutWebSources(brief)
+	}
+	return brief, nil
 }
 
-// saveFinishedRead saves the finished read of a brief the moment it is made
-// or changed (generation, its audio, a patch, Today's refresh).
+// mobileBriefWithoutWebSources leaves out every item that comes from a web source,
+// with the paragraphs, cards and recording that speak of it, and counts them in the
+// brief's excluded-items limit.
+func mobileBriefWithoutWebSources(brief MobileBriefV1) MobileBriefV1 {
+	web := map[string]bool{}
+	for _, ref := range brief.Evidence {
+		if ref.WebSource != nil {
+			web[ref.Ref] = true
+		}
+	}
+	touches := func(refs []string) bool {
+		for _, id := range refs {
+			if web[id] {
+				return true
+			}
+		}
+		return false
+	}
+	removed := len(brief.Sections.Watching)
+	brief.Sections.Watching = nil
+	var narrative []MobileBriefPara
+	for _, para := range brief.Narrative {
+		if touches(para.Refs) {
+			removed++
+			continue
+		}
+		narrative = append(narrative, para)
+	}
+	var cards []MobileBriefCard
+	for _, card := range brief.Cards {
+		if touches(card.Refs) {
+			removed++
+			continue
+		}
+		cards = append(cards, card)
+	}
+	var evidence []MobileBriefRef
+	for _, ref := range brief.Evidence {
+		if ref.WebSource != nil {
+			continue
+		}
+		evidence = append(evidence, ref)
+	}
+	if removed > 0 {
+		brief.Narrative, brief.Cards, brief.Evidence = narrative, cards, evidence
+		brief.Audio = nil
+		brief.Limits.ExcludedSensitiveItems += removed
+	}
+	return brief
+}
+
+// copyPrivacyChanged reports a stored copy sealed under other privacy state.
+func (s *mobileBriefService) copyPrivacyChanged(source MobileBriefV1) bool {
+	saved, found, err := s.store.loadFinishedRead(source.BriefID)
+	return err == nil && found && saved.Schema == mobileBriefSealedSchema && saved.Print != s.app.briefPrivacyPrint()
+}
+
+// mobileBriefPaused is a brief with everything it says removed, while its
+// identity, time and slot stay (the pause is shown, not the content).
+func mobileBriefPaused(brief MobileBriefV1) MobileBriefV1 {
+	brief.Narrative, brief.WeeklyRecap, brief.Audio, brief.Cards = nil, nil, nil, nil
+	brief.Sections = MobileBriefV1{}.Sections
+	brief.Offers, brief.Evidence, brief.Upcoming = nil, nil, nil
+	brief.YourWeek, brief.WeekQuestion, brief.DayShape = nil, nil, nil
+	brief.WeekLead, brief.WeekLeadFacts = "", ""
+	brief.NarrativeStatus = "unavailable"
+	return brief
+}
+
+// briefPolicyPending is true from the start of launch until the observation
+// policy is restored. Nothing is sealed before then: a brief stored meanwhile
+// stays unsealed and shows nothing private (brief-rules rule 4, "storage still
+// opening") until briefObservationPolicyLoaded seals it.
+var briefPolicyPending atomic.Bool
+
+// briefObservationPolicyLoaded ends the pending state once per launch: it seals
+// every stored brief that waited for the policy. Each launch starts pending again.
+func briefObservationPolicyLoaded() {
+	briefPolicyPending.Store(false)
+	briefSourceChanged()
+}
+
+// briefSaved seals a stored brief at the moment it is stored, so its copy
+// appears together with it (a store is a write path, not a display read).
+func briefSaved(briefID string) {
+	if s := mobileBriefLive.Load(); s != nil {
+		s.sealStored(briefID)
+	}
+}
+
+// briefSourceChanged says a source a sealed brief was made from has changed (a
+// handoff, a belief, the audio, a week answer). Every stored brief is sealed
+// again before the action that fired it returns. Hooks run after their locks
+// are released (see briefSaved), so a re-seal may read the stores.
+func briefSourceChanged() {
+	if s := mobileBriefLive.Load(); s != nil {
+		s.resealAll()
+	}
+}
+
+// sealStored seals one stored brief now.
+func (s *mobileBriefService) sealStored(briefID string) {
+	if !s.beginWork() {
+		return
+	}
+	defer s.wg.Done()
+	source, ok := s.store.load(briefID)
+	if !ok || source.NarrativeStatus == "quiet" {
+		return
+	}
+	// The saver announces the brief (brief:stored) itself; sealing it here
+	// only saves the copy, so one stored brief is not announced twice.
+	sealed, withheld, wrote := s.seal(context.Background(), source)
+	if !wrote {
+		if withheld.Transient() {
+			s.scheduleSealRetry(source)
+		}
+		return
+	}
+	s.noteLatestShownIfNewer(sealed)
+}
+
+// resealAll seals every stored brief now.
+func (s *mobileBriefService) resealAll() {
+	if !s.beginWork() {
+		return
+	}
+	defer s.wg.Done()
+	s.sealSources()
+}
+
+// sealSources seals each stored brief (and the Today-only document) again. The
+// caller holds a work slot.
+func (s *mobileBriefService) sealSources() {
+	seen := map[string]bool{}
+	sources := s.store.briefs()
+	for _, source := range sources {
+		seen[source.BriefID] = true
+	}
+	// The Today-only document is stored apart from the dated briefs, but a
+	// privacy change must seal it again like any other brief it may show.
+	if today, ok := s.store.currentToday(); ok && !seen[today.BriefID] {
+		sources = append(sources, today)
+	}
+	for _, source := range sources {
+		if source.NarrativeStatus == "quiet" {
+			continue
+		}
+		s.sealAndAnnounce(source)
+	}
+}
+
+// sealAndAnnounce seals a brief, makes it the latest when it has words, and
+// announces a saved copy (brief:stored). A brief whose gates cannot decide yet
+// is sealed again in the background.
+func (s *mobileBriefService) sealAndAnnounce(source MobileBriefV1) {
+	sealed, withheld, wrote := s.seal(context.Background(), source)
+	if !wrote {
+		if withheld.Transient() {
+			s.scheduleSealRetry(source)
+		}
+		return
+	}
+	s.noteLatestShownIfNewer(sealed)
+	if s.app != nil {
+		s.app.emitBrowserEvent("brief:stored", source.BriefID)
+	}
+}
+
+// sealRetryDelays are the waits before a brief whose gates could not decide yet
+// (a store still opening) is sealed again. Its surfaces refresh when it is saved.
+var sealRetryDelays = []time.Duration{time.Second, 3 * time.Second, 10 * time.Second, 30 * time.Second}
+
+// sealRetrying names the briefs with a retry in flight, so each has one.
+var sealRetrying sync.Map
+
+// scheduleSealRetry seals a brief again in the background while its gates cannot
+// decide, then announces it (brief:stored) so Today and the other surfaces read
+// it. The waits poll the service's stop flag, so shutdown never waits on one.
+func (s *mobileBriefService) scheduleSealRetry(source MobileBriefV1) {
+	if _, busy := sealRetrying.LoadOrStore(source.BriefID, true); busy {
+		return
+	}
+	if !s.beginWork() {
+		sealRetrying.Delete(source.BriefID)
+		return
+	}
+	go func() {
+		defer s.wg.Done()
+		defer sealRetrying.Delete(source.BriefID)
+		for _, wait := range sealRetryDelays {
+			if !s.sleepUnlessStopped(wait) {
+				return
+			}
+			current, ok := s.storedSource(source.BriefID)
+			if !ok {
+				return
+			}
+			sealed, _, wrote := s.seal(context.Background(), current)
+			if wrote {
+				s.noteLatestShownIfNewer(sealed)
+				if s.app != nil {
+					s.app.emitBrowserEvent("brief:stored", source.BriefID)
+				}
+				return
+			}
+		}
+		log.Printf("[mobile-brief] the brief %s could not be sealed yet; it is read again on its next open", source.BriefID)
+	}()
+}
+
+// sleepUnlessStopped waits for d in short steps; false when the service stopped.
+func (s *mobileBriefService) sleepUnlessStopped(d time.Duration) bool {
+	deadline := time.Now().Add(d)
+	for {
+		s.mu.Lock()
+		stopped := s.stopped
+		s.mu.Unlock()
+		if stopped {
+			return false
+		}
+		left := time.Until(deadline)
+		if left <= 0 {
+			return true
+		}
+		time.Sleep(min(200*time.Millisecond, left))
+	}
+}
+
+// finishedRead is source as the readers show it (see finishedReadWithholding).
+func (s *mobileBriefService) finishedRead(source MobileBriefV1) (MobileBriefV1, error) {
+	brief, _, err := s.finishedReadWithholding(source)
+	return brief, err
+}
+
+// isStopped reports whether Stop has been called. A stopped service still reads
+// its saved copies, but it seals nothing: sealing writes the copy.
+func (s *mobileBriefService) isStopped() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.stopped
+}
+
+// saveFinishedRead seals a brief the moment it is made or changed (generation,
+// its audio, a patch, Today's refresh).
 func (s *mobileBriefService) saveFinishedRead(source MobileBriefV1) {
 	if s == nil || s.app == nil || source.BriefID == "" {
 		return
 	}
-	ctx := context.Background()
-	s.writeFinishedRead(ctx, source, s.finishedReadKey(ctx, source))
-}
-
-func (s *mobileBriefService) writeFinishedRead(ctx context.Context, source MobileBriefV1, key string) MobileBriefV1 {
-	brief := s.app.mobileBriefWithCards(s.app.mobileBriefForDelivery(source))
-	brief.Audio = s.finishedReadAudio(ctx, source, brief)
-	// A change while the read was worked out leaves it unsaved.
-	if key == "" || key != s.finishedReadKey(ctx, source) {
-		return brief
+	sealed, _, ok := s.seal(context.Background(), source)
+	if ok {
+		s.noteLatestShownIfNewer(sealed)
 	}
-	if raw, err := marshalStoredMobileBrief(brief); err == nil {
-		_ = s.store.saveFinishedRead(source.BriefID, mobileBriefFinishedRead{Schema: 1, Key: key, Brief: raw})
-	}
-	return brief
 }
 
 // storedSource is the stored brief Today shows under briefID: a stored brief,
@@ -200,14 +759,10 @@ func (s *mobileBriefService) storedSource(briefID string) (MobileBriefV1, bool) 
 		return brief, true
 	}
 	brief, ok := s.store.currentToday()
-	loc := s.location
-	if loc == nil {
-		loc = time.Local
-	}
-	return brief, ok && brief.BriefID == briefID && brief.LocalDate == s.now().In(loc).Format("2006-01-02")
+	return brief, ok && brief.BriefID == briefID && brief.LocalDate == s.readDay()
 }
 
-// finishedBrief is GetMobileBrief from the finished read.
+// finishedBrief is GetMobileBrief from the sealed read.
 func (s *mobileBriefService) finishedBrief(briefID string) (MobileBriefV1, bool, error) {
 	source, ok := s.storedSource(briefID)
 	if !ok {
@@ -249,10 +804,11 @@ func mobileBriefParagraphsSay(left, right []MobileBriefPara) bool {
 	return true
 }
 
-// deliveredWithAudio is a stored brief as every reader opens it: Today, the
-// menu bar's player and the phone keep the same recording.
-func (s *mobileBriefService) deliveredWithAudio(source MobileBriefV1) MobileBriefV1 {
-	brief := s.app.mobileBriefWithCards(s.app.mobileBriefForDelivery(source))
-	brief.Audio = s.finishedReadAudio(context.Background(), source, brief)
-	return brief
+// storedBriefFromData parses a stored brief document. The caller holds s.mu.
+func (s *mobileBriefStore) storedBriefFromData(data []byte) (MobileBriefV1, bool) {
+	var brief MobileBriefV1
+	if err := unmarshalStoredMobileBrief(data, &brief); err != nil || !mobileBriefIDPattern.MatchString(brief.BriefID) {
+		return MobileBriefV1{}, false
+	}
+	return brief, true
 }

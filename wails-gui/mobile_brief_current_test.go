@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"wails-gui/internal/pii"
 )
 
 // mobileBriefCurrentWritten is a stored brief whose written words are there.
@@ -165,7 +164,7 @@ func TestMenuBarPlaysTheCurrentBriefOnlyWithItsWords(t *testing.T) {
 }
 
 func TestMobileBriefCurrentSkipsABriefWhoseWordsAreNowWithheld(t *testing.T) {
-	_, svc, withdrawn := newStoredMobileBriefPrivacyFixture(t)
+	app, svc, withdrawn := newStoredMobileBriefPrivacyFixture(t)
 	now := svc.now()
 	older := buildMobileBriefV1(mobileBriefInput{
 		AsOf: now.Add(-12 * time.Hour), WindowStart: now.Add(-13 * time.Hour), Slot: mobileBriefSlotEvening, Location: time.UTC,
@@ -179,7 +178,10 @@ func TestMobileBriefCurrentSkipsABriefWhoseWordsAreNowWithheld(t *testing.T) {
 	if got, ok := svc.CurrentMobileBrief(); !ok || got.BriefID != withdrawn.BriefID {
 		t.Fatalf("before the withdrawal current = %s (ok=%v), want %s", got.BriefID, ok, withdrawn.BriefID)
 	}
-	pii.SetUserSensitiveApps(map[string]string{"com.example.test": "TestApp"})
+	// The app's own path: its privacy hook re-seals the briefs before it returns.
+	if err := app.AddSensitiveApp("com.example.test", "TestApp"); err != nil {
+		t.Fatal(err)
+	}
 	got, ok := svc.CurrentMobileBrief()
 	if !ok || got.BriefID != older.BriefID || !mobileBriefHasWrittenText(got) {
 		t.Fatalf("a brief whose words are withheld stayed current: %s (ok=%v, status %q), want %s", got.BriefID, ok, got.NarrativeStatus, older.BriefID)

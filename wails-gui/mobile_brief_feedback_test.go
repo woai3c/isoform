@@ -1250,6 +1250,7 @@ func TestMobileOfferAdmissionFencesLateActivityProtection(t *testing.T) {
 			t.Cleanup(func() { mobileGoalMailRows = originalMail })
 			finalReaderCalls := 0
 			reachedBoundary := false
+			var withdrawDone chan error
 			mobileGoalMailRows = func(reader *App) ([]storage.MailMessageRow, error) {
 				rows, err := originalMail(reader)
 				if err != nil || reader == bridge.app {
@@ -1269,14 +1270,28 @@ func TestMobileOfferAdmissionFencesLateActivityProtection(t *testing.T) {
 				if withdraw {
 					// This production storage method writes the activity DB only.
 					// It takes neither readPrivacyMu nor the main Store writer lock.
-					if err := bridge.app.activity.store.UpdateTriageStatus("idea-source-2", "protected"); err != nil {
-						t.Fatal(err)
-					}
+					// Its privacy hook then waits for the publication fence this
+					// admission holds, so it runs on its own goroutine: the boundary
+					// sees the committed row, and the hook completes after release.
+					withdrawDone = make(chan error, 1)
+					go func() {
+						withdrawDone <- bridge.app.activity.store.UpdateTriageStatus("idea-source-2", "protected")
+					}()
+					mobileTestWaitFor(t, "activity protection committed at the boundary", func() bool {
+						var status string
+						err := bridge.app.activity.store.db.QueryRowContext(t.Context(), `SELECT COALESCE(triage_status, '') FROM activity_sessions WHERE id = ?`, "idea-source-2").Scan(&status)
+						return err == nil && status == "protected"
+					})
 				}
 				return rows, nil
 			}
 			response := mobileTestOfferSend(t, bridge, mobileTestDevice(mobileScopeChatWrite, mobileScopeOffersRead), "late-activity-protection", offer.Prompt, refs)
 			mobileGoalMailRows = originalMail
+			if withdrawDone != nil {
+				if err := <-withdrawDone; err != nil {
+					t.Fatal(err)
+				}
+			}
 			if !reachedBoundary {
 				t.Fatalf("final admission boundary not exercised: reader calls=%d", finalReaderCalls)
 			}

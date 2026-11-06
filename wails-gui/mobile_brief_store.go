@@ -72,6 +72,7 @@ func newMobileBriefStore(stateDir string) *mobileBriefStore {
 	store := &mobileBriefStore{}
 	if stateDir != "" {
 		store.dir = filepath.Join(stateDir, mobileBriefDirName)
+		adoptMobileBriefPrivacyEpoch(store.dir)
 	}
 	return store
 }
@@ -124,8 +125,17 @@ func unmarshalStoredMobileBrief(data []byte, brief *MobileBriefV1) error {
 }
 
 // save writes the brief, points latest.json at it, and removes briefs past the
-// retention window measured from now.
+// retention window measured from now. The source hook runs after the store's
+// lock is released, so a re-seal may read the store.
 func (s *mobileBriefStore) save(brief MobileBriefV1, now time.Time) error {
+	if err := s.saveDocument(brief, now); err != nil {
+		return err
+	}
+	briefSaved(brief.BriefID)
+	return nil
+}
+
+func (s *mobileBriefStore) saveDocument(brief MobileBriefV1, now time.Time) error {
 	if s.dir == "" {
 		return errMobileBriefStateUnavailable
 	}

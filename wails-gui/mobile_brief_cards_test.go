@@ -327,6 +327,7 @@ func TestTodayBriefCardsRewriteAfterAChangeAndLeaveWithTheirSource(t *testing.T)
 	if err := svc.store.save(stored, svc.now()); err != nil {
 		t.Fatal(err)
 	}
+	svc.wg.Wait()
 	view, _ = rig.app.GetLatestBrief()
 	if got := cardFor(t, *view.Brief, "Release memo"); got.Message != written.Message || got.Writer != mobileBriefCardWriterModel {
 		t.Fatalf("the model's words were not kept while the facts held: %+v", got)

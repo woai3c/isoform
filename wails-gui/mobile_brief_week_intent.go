@@ -49,7 +49,7 @@ func (a *App) postMorningBriefWeekAnswer(briefID, previous, answer string, fromC
 	if svc == nil {
 		return errMobileBriefUnavailable
 	}
-	brief, ok := svc.GetMobileBrief(briefID)
+	brief, ok := a.storedBriefForWrite(svc, briefID)
 	now := time.Now()
 	if service, isService := svc.(*mobileBriefService); isService {
 		now = service.now()
@@ -269,13 +269,25 @@ func (a *App) SaveMorningBriefWeekIntent(briefID, answer string) error {
 	if svc == nil {
 		return errMobileBriefUnavailable
 	}
-	brief, ok := svc.GetMobileBrief(briefID)
-	if !ok || brief.WeekQuestion == nil {
+	brief, ok := a.storedBriefForWrite(svc, briefID)
+	now := time.Now()
+	if service, isService := svc.(*mobileBriefService); isService {
+		now = service.now()
+	}
+	// The question is worked out now from the stored brief and the stored answer,
+	// never from a display copy made before the answer was given.
+	question := a.morningBriefWeekQuestion(brief, now)
+	if !ok || question == nil {
 		return errors.New("week question unavailable")
 	}
-	if err := a.store.SetUIState(context.Background(), "morning_brief_week_intent:"+brief.WeekQuestion.WeekStart, answer); err != nil {
+	at, loc := mobileBriefAsOfTime(brief), mobileBriefNarrativeLocation(brief)
+	if current, err := a.morningBriefWeekIntent(context.Background(), at, loc); err == nil && current != "" {
+		return errors.New("week question unavailable")
+	}
+	if err := a.store.SetUIState(context.Background(), "morning_brief_week_intent:"+question.WeekStart, answer); err != nil {
 		return err
 	}
+	briefSourceChanged()
 	a.emitBrowserEvent("mobile:updated")
 	a.emitBrowserEvent("brief:stored", briefID)
 	return nil
@@ -298,7 +310,7 @@ func (a *App) ChangeMorningBriefWeekIntent(briefID, previous, answer string) err
 	if svc == nil {
 		return errMobileBriefUnavailable
 	}
-	brief, ok := svc.GetMobileBrief(briefID)
+	brief, ok := a.storedBriefForWrite(svc, briefID)
 	now := time.Now()
 	if service, isService := svc.(*mobileBriefService); isService {
 		now = service.now()
@@ -314,6 +326,7 @@ func (a *App) ChangeMorningBriefWeekIntent(briefID, previous, answer string) err
 	if err := a.store.SetUIState(context.Background(), "morning_brief_week_intent:"+morningBriefWeekStart(at, loc), answer); err != nil {
 		return err
 	}
+	briefSourceChanged()
 	a.emitBrowserEvent("mobile:updated")
 	a.emitBrowserEvent("brief:stored", briefID)
 	return nil
@@ -355,4 +368,13 @@ func morningBriefRecommendationUsable(item MobileBriefItem) bool {
 	}
 	title := strings.TrimSpace(item.Title)
 	return utf8.RuneCountInString(title) <= 48 && len(strings.Fields(title)) <= 8
+}
+
+// storedBriefForWrite is the stored brief a write path checks. Writes read the
+// stored brief, not the display copy, which can be older than a choice just made.
+func (a *App) storedBriefForWrite(svc mobileBriefSource, briefID string) (MobileBriefV1, bool) {
+	if service, ok := svc.(*mobileBriefService); ok && service != nil {
+		return service.storedSource(briefID)
+	}
+	return svc.GetMobileBrief(briefID)
 }

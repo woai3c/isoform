@@ -22,7 +22,15 @@ func (s *mobileBriefService) latestWithToday() (MobileBriefV1, bool) {
 		return s.store.current()
 	}
 	defer s.wg.Done()
-	brief, ok, _ := s.refreshToday()
+	brief, ok, changed := s.refreshToday()
+	if changed && ok && s.app != nil {
+		// A dated brief the refresh saved is sealed by that save. Only the
+		// Today-only document (not in the dated store) needs the seal here, so the
+		// read-path seal never writes a second copy of a stored brief.
+		if _, stored := s.store.load(brief.BriefID); !stored {
+			s.saveFinishedRead(brief)
+		}
+	}
 	return brief, ok
 }
 
@@ -360,6 +368,8 @@ func projectMobileBriefToday(base MobileBriefV1, in mobileBriefInput) MobileBrie
 			// source cannot be read the gate cannot be run again, so a stored row is
 			// never restored for the phone: preserving a row is not authorizing it.
 			if in.Today.Unavailable[ref.SourceKind] && (ref.SourceKind == "memory" || ref.SourceKind == "knowledge") {
+				// Left out, and counted as left out (the brief's excluded items).
+				in.ExcludedSensitiveItems++
 				continue
 			}
 			key := mobileBriefSourceKey(ref.SourceKind, ref.SourceID)

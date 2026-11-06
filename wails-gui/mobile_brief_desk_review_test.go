@@ -111,6 +111,11 @@ func TestTodayCollectionDoesNotLockBriefPatches(t *testing.T) {
 	if !unlocked {
 		t.Fatal("source collection held patchMu while waiting for cron load")
 	}
+	// The patch is a source change: the brief is sealed again in the background,
+	// and the next read shows it. The read that raced the patch may show the copy
+	// from before it (reads never seal).
+	svc.wg.Wait()
+	b, _ = svc.LatestMobileBrief()
 	if b.Audio == nil || b.Audio.Status != "downloading" {
 		t.Fatal("refresh lost a concurrent audio patch")
 	}

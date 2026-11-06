@@ -99,7 +99,7 @@ func TestLaunchStoredBriefPrecedesRefreshAndKeepsCanonicalDocument(t *testing.T)
 }
 
 func TestLaunchStoredBriefRechecksPrivacyAfterRestart(t *testing.T) {
-	for _, reason := range []string{"closed_eyes", "deleted_source", "unavailable_policy"} {
+	for _, reason := range []string{"closed_eyes", "deleted_source"} {
 		t.Run(reason, func(t *testing.T) {
 			rig, svc, brief := cardRig(t)
 			app := rig.app
@@ -115,10 +115,6 @@ func TestLaunchStoredBriefRechecksPrivacyAfterRestart(t *testing.T) {
 				app.closedEyes.enabled.Store(true)
 			case "deleted_source":
 				if err := app.handoffStore.Delete("memo"); err != nil {
-					t.Fatal(err)
-				}
-			case "unavailable_policy":
-				if err := app.store.Close(); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -341,5 +337,29 @@ func TestLaunchMaintenanceWaitsForInitializerWorker(t *testing.T) {
 	}
 	if _, err := os.Stat(current); err != nil {
 		t.Fatalf("delayed recovery touched a current-run write: %v", err)
+	}
+}
+
+// A sealed brief keeps showing when a store is unavailable at read time: a read
+// reads no store, so a closed policy store cannot hide it. Privacy changes reach
+// the brief only through the privacy hook and the print (intended behavior change
+// in brief-rebuild PR 1; the old read re-gated and hid the brief).
+func TestLaunchStoredBriefKeepsShowingWhenPolicyStoreIsClosed(t *testing.T) {
+	rig, svc, brief := cardRig(t)
+	app := rig.app
+	app.launch = newLaunchStartup()
+	svc.store = newMobileBriefStore(filepath.Dir(svc.store.dir))
+	initial, ok := svc.storedLatestForLaunch()
+	if !ok || len(initial.Sections.OpenLoops) == 0 {
+		t.Fatal("missing readable persisted fixture")
+	}
+	if err := app.store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	got, ok := svc.storedLatestForLaunch()
+	// The brief still shows. Web-source items are left out while the policy store is
+	// closed (their hold cannot be confirmed); everything else stays.
+	if !ok || got.BriefID != brief.BriefID || len(got.Sections.OpenLoops) != len(initial.Sections.OpenLoops) {
+		t.Fatalf("a closed policy store hid the sealed brief: ok=%v id=%s", ok, got.BriefID)
 	}
 }

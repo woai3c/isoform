@@ -53,7 +53,9 @@ func (a *App) startStorageStartup(ctx context.Context, open func() (*storage.Sto
 	}, func(store *storage.Store) {
 		a.store = store
 		recordLaunchStage("observation_policy_start")
+		briefPolicyPending.Store(true)
 		a.restoreObservationPolicy()
+		briefObservationPolicyLoaded()
 		recordLaunchStage("observation_policy_ready")
 		// These policies and local ledgers are required to authorize persisted
 		// first-screen records. Models, capture and source refresh are not.

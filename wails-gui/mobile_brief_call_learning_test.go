@@ -47,7 +47,8 @@ func TestBriefLearnedListShowsWhatACallTaught(t *testing.T) {
 	if got := learned(); !slices.Contains(got, "Pricing") || !slices.Contains(got, "Pricing call") {
 		t.Fatalf("what the call taught is missing from Learned: %v", got)
 	}
-	if _, err := app.activity.store.db.Exec(`UPDATE activity_sessions SET triage_status='protected' WHERE id=?`, session.ID); err != nil {
+	// The real protection path: it publishes the privacy change that seals the brief again.
+	if err := app.activity.store.UpdateTriageStatus(session.ID, "protected"); err != nil {
 		t.Fatal(err)
 	}
 	if got := learned(); slices.Contains(got, "Pricing") || slices.Contains(got, "Pricing call") {

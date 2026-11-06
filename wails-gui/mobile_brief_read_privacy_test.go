@@ -59,6 +59,9 @@ func seedMobileBriefSubject(t *testing.T, app *App, subject string) {
 	if _, err := app.store.UpsertMailMessages(context.Background(), []storage.MailMessageRow{{ID: "inbox:brief-mail", Mailbox: storage.MailboxInbox, SenderEmail: "sender@example.com", Subject: subject, ThreadKey: "brief-mail-thread", At: now.Add(-time.Hour).UnixMilli()}}, now.UnixMilli()); err != nil {
 		t.Fatal(err)
 	}
+	// Mail sync announces the new subjects (afterMailSync). The echo hold reads
+	// them, so the event is what seals the stored briefs again.
+	app.emitBrowserEvent("mail:synced")
 }
 
 func assertMobileBriefNoSubject(t *testing.T, value any) {
@@ -262,6 +265,9 @@ func TestMobileBriefStoredPurposeReadFilterAndPhoneJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	seedMobileBriefSubject(t, app, "Re: "+mobileBriefPrivateSubject)
+	// The mail event starts the amendment in the background. It reads the app's
+	// brief source, so it must finish before the test replaces that source.
+	svc.wg.Wait()
 
 	// Use the transport boundary as well as the real service: an alternate
 	// source or an old stored brief cannot skip the delivery filter.
@@ -638,7 +644,9 @@ func TestMobileBriefDeliveryKeepsRetainedSources(t *testing.T) {
 	if !ok || len(before.Sections.Learned) != 3 || len(before.Sections.Meetings) != 1 || len(before.Narrative) != 1 {
 		t.Fatal("raw retention hid a brief with readable source receipts")
 	}
-	pii.SetUserSensitiveApps(map[string]string{"com.example.test": "TestApp"})
+	if err := app.AddSensitiveApp("com.example.test", "TestApp"); err != nil {
+		t.Fatal(err)
+	}
 	after, _ := svc.GetMobileBrief(before.BriefID)
 	assertMobileBriefDeliveryFiltered(t, after, false)
 }
@@ -778,7 +786,12 @@ func TestMobileBriefTodayFallbackKeepsDeliveryPrivacy(t *testing.T) {
 			if err := app.store.SaveCronJob(context.Background(), job); err != nil {
 				t.Fatal(err)
 			}
-			pii.SetUserSensitiveApps(map[string]string{"com.example.test": "TestApp"})
+			// The scheduler announces a job it saved (cron:state); that event is
+			// what lets the next read carry the job into the Today-only document.
+			app.emitBrowserEvent("cron:state")
+			if err := app.AddSensitiveApp("com.example.test", "TestApp"); err != nil {
+				t.Fatal(err)
+			}
 			var got MobileBriefV1
 			if route == "latest" {
 				got, ok = svc.LatestMobileBrief()

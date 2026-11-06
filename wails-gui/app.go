@@ -364,8 +364,13 @@ type AgentStatus struct {
 // and any connected browser WebSocket clients. Use this instead of
 // runtime.EventsEmit when dual-mode delivery is needed.
 func (a *App) emitBrowserEvent(eventName string, data ...interface{}) {
-	if mobileBriefReadInputEvents[eventName] {
-		noteMobileBriefReadInputsChanged()
+	if mobileBriefPrivacyInputEvents[eventName] {
+		// A privacy change advances the epoch durably; the sealed briefs are
+		// amended after it, and any read before that amends its brief first.
+		briefPrivacyChanged()
+		briefPrivacyAmendSoon()
+	} else if mobileBriefReadInputEvents[eventName] {
+		noteMobileBriefReadCachesChanged()
 	}
 	switch eventName {
 	case "memory:updated", "sensitive-apps:updated", closedEyesModeChangedEvent, "background-listening:changed", "topics:withdrawn":

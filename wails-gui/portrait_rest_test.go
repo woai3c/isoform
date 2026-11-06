@@ -119,20 +119,26 @@ func TestMenuBarTickSkipsTheBriefStampWhenNothingChanged(t *testing.T) {
 	if stamps != 0 {
 		t.Fatalf("%d brief stamps with nothing changed, want 0", stamps)
 	}
-	noteMobileBriefReadInputsChanged()
+	// A privacy change re-seals the stored briefs before it returns (the same pair
+	// the app's privacy events run); the next tick then reads a sealed copy.
+	briefPrivacyChanged()
 	before = mobileBriefFinishedReadKeys.Load()
+	briefSourceChanged()
+	if mobileBriefFinishedReadKeys.Load() == before {
+		t.Fatal("a privacy change did not re-seal the brief before it returned")
+	}
 	if _, err := app.menuBarView("en", false); err != nil {
 		t.Fatal(err)
 	}
-	if mobileBriefFinishedReadKeys.Load() == before {
-		t.Fatal("a privacy change did not make the next tick read the brief again")
-	}
+	// Intended change (brief-rebuild PR 1): a memory write is a freshness change,
+	// not a privacy change, so it no longer seals the brief again. The next brief
+	// made or refreshed carries it.
 	app.invalidateMemoryExternalReads()
 	before = mobileBriefFinishedReadKeys.Load()
 	if _, err := app.menuBarView("en", false); err != nil {
 		t.Fatal(err)
 	}
-	if mobileBriefFinishedReadKeys.Load() == before {
-		t.Fatal("a memory write did not make the next tick read the brief again")
+	if mobileBriefFinishedReadKeys.Load() != before {
+		t.Fatal("a memory write sealed the brief again; freshness changes must not")
 	}
 }

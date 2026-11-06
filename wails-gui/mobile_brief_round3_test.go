@@ -108,7 +108,9 @@ func TestDailySummaryStaysOnMacAcrossPhoneReadsAndPush(t *testing.T) {
 	}
 }
 
-func TestTodayWithholdsHandoffsWhenSourceReadFails(t *testing.T) {
+// Intended behavior change (brief-rebuild PR 1, signed off): a sealed brief keeps
+// showing its handoffs when a source read fails. Reads touch no store.
+func TestTodaySealedBriefKeepsHandoffsWhenSourceReadFails(t *testing.T) {
 	for _, generated := range []bool{false, true} {
 		t.Run(map[bool]string{false: "local", true: "generated"}[generated], func(t *testing.T) {
 			rig := newHandoffTestRig(t)
@@ -122,6 +124,8 @@ func TestTodayWithholdsHandoffsWhenSourceReadFails(t *testing.T) {
 			if _, err := rig.handoffs.Save(handoff.Entry{ID: "open-work", Title: "Review release", Body: "Check the draft", Status: handoff.StatusBlocked, BlockedReason: "interrupted", UpdatedAt: now.UnixMilli()}); err != nil {
 				t.Fatal(err)
 			}
+			// The save is a source change: the brief is sealed again in the background.
+			svc.wg.Wait()
 			original, ok := svc.LatestMobileBrief()
 			if !ok || len(original.Sections.OpenLoops) != 1 {
 				t.Fatal("open handoff missing before failure")
@@ -139,12 +143,12 @@ func TestTodayWithholdsHandoffsWhenSourceReadFails(t *testing.T) {
 			}
 			for range 2 {
 				current, ok := svc.LatestMobileBrief()
-				if ok && len(current.Sections.OpenLoops) != 0 {
-					t.Errorf("unreadable source retained a handoff: %+v", current.Sections.OpenLoops)
+				if !ok || len(current.Sections.OpenLoops) != 1 {
+					t.Errorf("a sealed brief lost its handoff when the source read failed: %+v", current.Sections.OpenLoops)
 				}
 				persisted, ok := svc.GetMobileBrief(original.BriefID)
-				if ok && len(persisted.Sections.OpenLoops) != 0 {
-					t.Error("unreadable persisted work was delivered")
+				if !ok || len(persisted.Sections.OpenLoops) != 1 {
+					t.Error("the sealed brief stopped showing its handoff")
 				}
 			}
 			if err := os.Remove(dir); err != nil {
@@ -257,11 +261,18 @@ func TestTodayRetainsInsightsWhenSourceFileReadFails(t *testing.T) {
 				t.Fatal("fixture did not fail the file read")
 			}
 			checkMemoryFolderNow(rig.app)
+			// The memory watcher reports the changed folder (the same call its
+			// poll makes); the sealed briefs are amended before a read shows them.
+			memorySourcesChangedOnDisk()
 			// The source session's privacy gate cannot be run for an unreadable file, so
 			// the insight is not shown to the phone until the file reads again.
 			current, ok := svc.LatestMobileBrief()
 			if ok && len(current.Sections.Learned) != 0 {
 				t.Errorf("an insight whose source cannot be read was still served: %s", mustJSON(t, current))
+			}
+			// The rest of the brief shows, and the count says one item was left out.
+			if ok && current.Limits.ExcludedSensitiveItems == 0 {
+				t.Errorf("the left-out insight is not counted in the excluded items: %+v", current.Limits)
 			}
 			if err := os.Remove(path); err != nil {
 				t.Fatal(err)
