@@ -181,7 +181,8 @@ func mobileBriefSpeech(brief MobileBriefV1, lang string) (string, bool) {
 	for attempt := 0; attempt < 2; attempt++ {
 		var parts []string
 		for i := range paragraphs {
-			paragraphs[i].Text = mobileBriefParagraphSpeech(brief, paragraphs[i], lang)
+			// The screen keeps its clocks as written ("9:00"); the voice says them (R68).
+			paragraphs[i].Text = mobileBriefSpokenClocks(mobileBriefParagraphSpeech(brief, paragraphs[i], lang), lang)
 		}
 		paragraphs = trimMobileBriefNarrative(brief, paragraphs)
 		if mobileBriefNarrativeWords(paragraphs) > mobileBriefMaxWords {
