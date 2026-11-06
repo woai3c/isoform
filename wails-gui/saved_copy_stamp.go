@@ -24,6 +24,13 @@ import (
 //
 // Returns "" when any part cannot be read, which means no copy is served.
 func (a *App) savedCopyStamp(ctx context.Context) string {
+	// Callers that arrive during one computation share the next one. A stamp
+	// read before a privacy change is never handed to a caller after it.
+	return a.savedStamps.Do(func() string { return a.savedCopyStampNow(context.Background()) })
+}
+
+// savedCopyStampNow computes the stamp from the current state.
+func (a *App) savedCopyStampNow(ctx context.Context) string {
 	dir, err := mobileBriefStateDir()
 	if err != nil || dir == "" {
 		return ""

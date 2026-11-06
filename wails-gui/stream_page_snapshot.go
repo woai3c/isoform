@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -15,15 +16,17 @@ import (
 // The first page of a chat stream (LoadStreamItemsPage at the latest cursor)
 // paints from a saved copy: the last projected page, saved beside the other
 // private data. A copy is served only while two things hold:
-//   - the privacy stamp it was made under (a forget, a private app, Closed Eyes
-//     deletes it at once), and
+//   - the privacy stamp it was made under (savedCopyStamp, which names the
+//     durable brief privacy epoch, so a restart keeps the copy and any
+//     withdrawal drops it at once), and
 //   - the stream's item version it was read at (storage.StreamItemVersion, bumped
 //     by triggers on every insert, edit, withdrawal and removal). A version that
 //     differs is recomputed under a short deadline; on timeout the copy is served
 //     and the event that changed the stream adds what is missing.
 //
-// Older pages always read live. The copy is written only after the page was
-// computed, and only if the privacy stamp held across the computation.
+// Reads of one page share the next run (trailingCall), so a burst of reads costs
+// two runs, not one per caller, and no caller gets a page computed before it
+// asked. Older pages always read live.
 const (
 	streamPageDirName         = "stream-pages"
 	streamPageVersionDeadline = 200 * time.Millisecond
@@ -32,7 +35,7 @@ const (
 	streamPageLaunchDelay     = 30 * time.Second
 	streamPageEventDelay      = time.Second
 	streamPageDefaultLimit    = 50
-	streamPageSnapshotVersion = 1
+	streamPageSnapshotFormat  = 1
 )
 
 // streamPageWakeEvents are the events that say a stream changed. They wake a
@@ -54,16 +57,25 @@ type streamPageSnapshot struct {
 	Page    StreamItemPageData `json:"page"`
 }
 
+type streamPageReadResult struct {
+	page StreamItemPageData
+	err  error
+}
+
 // streamPageState is the saved-page bookkeeping kept on the app.
 type streamPageState struct {
 	mu                         sync.Mutex
 	launchAt                   time.Time
 	keys                       map[streamPageKey]bool
+	reads                      map[streamPageKey]*trailingCall[streamPageReadResult]
 	lastRun                    time.Time
 	dueAt                      time.Time
 	running                    bool
 	versionWait, recomputeWait time.Duration
 	launchDelay, eventDelay    time.Duration
+	// computeGate, when set, runs inside each computation; tests use it to hold a
+	// run open while more reads arrive.
+	computeGate func()
 	// computes and retries count background work, so tests can prove reads
 	// within the window do no work.
 	computes atomic.Int64
@@ -82,6 +94,19 @@ func (st *streamPageState) settings() {
 	}
 }
 
+// readCall returns the coalescer for key. Callers hold mu.
+func (st *streamPageState) readCall(key streamPageKey) *trailingCall[streamPageReadResult] {
+	if st.reads == nil {
+		st.reads = map[streamPageKey]*trailingCall[streamPageReadResult]{}
+	}
+	call := st.reads[key]
+	if call == nil {
+		call = &trailingCall[streamPageReadResult]{}
+		st.reads[key] = call
+	}
+	return call
+}
+
 func streamPageFile(key streamPageKey) (string, error) {
 	root, err := flavorDataDir()
 	if err != nil {
@@ -91,23 +116,28 @@ func streamPageFile(key streamPageKey) (string, error) {
 	return filepath.Join(root, streamPageDirName, hex.EncodeToString(sum[:16])+".json"), nil
 }
 
-// readStreamPageSnapshot returns the saved page when it was made under stamp.
-// Any other copy, or an unreadable one, is deleted rather than served.
-func readStreamPageSnapshot(key streamPageKey, stamp string) (streamPageSnapshot, bool) {
+// readStreamPageSnapshot returns the saved page when it was made under stamp,
+// and "" as the reason. Otherwise it returns why not: "no-copy", "stamp-changed"
+// or "unreadable". A copy that does not match is deleted, never served.
+func readStreamPageSnapshot(key streamPageKey, stamp string) (streamPageSnapshot, string) {
 	path, err := streamPageFile(key)
 	if err != nil {
-		return streamPageSnapshot{}, false
+		return streamPageSnapshot{}, "unreadable"
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return streamPageSnapshot{}, false
+		return streamPageSnapshot{}, "no-copy"
 	}
 	var snap streamPageSnapshot
-	if json.Unmarshal(raw, &snap) != nil || snap.Format != streamPageSnapshotVersion || stamp == "" || snap.Stamp != stamp {
+	if json.Unmarshal(raw, &snap) != nil || snap.Format != streamPageSnapshotFormat {
 		_ = os.Remove(path)
-		return streamPageSnapshot{}, false
+		return streamPageSnapshot{}, "unreadable"
 	}
-	return snap, true
+	if stamp == "" || snap.Stamp != stamp {
+		_ = os.Remove(path)
+		return streamPageSnapshot{}, "stamp-changed"
+	}
+	return snap, ""
 }
 
 func writeStreamPageSnapshot(key streamPageKey, snap streamPageSnapshot) error {
@@ -129,15 +159,9 @@ func writeStreamPageSnapshot(key streamPageKey, snap streamPageSnapshot) error {
 	return os.Rename(tmp, path)
 }
 
-// streamPageStamp is the privacy stamp a saved first page is made under: the
-// durable one (savedCopyStamp), so a copy survives a restart and any privacy
-// change, withdrawal included, drops it before the next read.
-func (a *App) streamPageStamp(ctx context.Context) string {
-	return a.savedCopyStamp(ctx)
-}
-
-// loadLatestStreamPage is the latest-cursor read: the saved first page when it
-// holds, otherwise a computed one. Background work is scheduled, not done here.
+// loadLatestStreamPage is the latest-cursor read. It is coalesced per page: a
+// caller that arrives during a run gets the next run, which starts after it
+// arrived.
 func (a *App) loadLatestStreamPage(session string, limit int) (StreamItemPageData, error) {
 	if limit <= 0 {
 		limit = streamPageDefaultLimit
@@ -147,30 +171,54 @@ func (a *App) loadLatestStreamPage(session string, limit int) (StreamItemPageDat
 	st.mu.Lock()
 	st.settings()
 	st.keys[key] = true
+	call := st.readCall(key)
+	st.mu.Unlock()
+	res := call.Do(func() streamPageReadResult {
+		page, err := a.loadLatestStreamPageNow(key)
+		return streamPageReadResult{page: page, err: err}
+	})
+	return res.page, res.err
+}
+
+// loadLatestStreamPageNow is one run of the latest-cursor read: the saved first
+// page when it holds, otherwise a computed one. It logs whether the copy was
+// served and, if not, why.
+func (a *App) loadLatestStreamPageNow(key streamPageKey) (StreamItemPageData, error) {
+	st := &a.streamPages
+	st.mu.Lock()
 	versionWait, recomputeWait := st.versionWait, st.recomputeWait
 	st.mu.Unlock()
 	now := time.Now()
+	stampStart := time.Now()
 	stamp := a.streamPageStamp(context.Background())
+	stampMs := time.Since(stampStart).Milliseconds()
 	if stamp == "" {
-		page, _, err := a.computeLatestStreamPage(key)
+		page, _, err := a.computeLatestStreamPage(key, "")
+		logStreamPage("recompute", "no-stamp", stampMs, 0, time.Since(now).Milliseconds())
 		return page, err
 	}
+	versionStart := time.Now()
 	verCtx, cancel := context.WithTimeout(context.Background(), versionWait)
-	version, verErr := a.persistenceService().StreamItemVersion(verCtx, session)
+	version, verErr := a.persistenceService().StreamItemVersion(verCtx, key.session)
 	cancel()
-	saved, ok := readStreamPageSnapshot(key, stamp)
+	versionMs := time.Since(versionStart).Milliseconds()
+	saved, reason := readStreamPageSnapshot(key, stamp)
 	switch {
-	case ok && verErr == nil && saved.Version == version:
+	case reason == "" && verErr == nil && saved.Version == version:
 		a.scheduleStreamPageRefresh(a.streamPageDueFor(now, saved.SavedAt))
+		logStreamPage("copy", "version-held", stampMs, versionMs, 0)
 		return saved.Page, nil
-	case ok && verErr != nil:
+	case reason == "" && verErr != nil:
 		// The version could not be read in time: serve the copy and refresh.
 		a.scheduleStreamPageRefresh(now)
+		logStreamPage("copy", "version-timeout", stampMs, versionMs, 0)
 		return saved.Page, nil
-	case !ok:
+	case reason != "":
 		// No usable copy: compute before the first paint, then refresh later.
-		page, _, err := a.computeLatestStreamPage(key)
+		computeStart := time.Now()
+		page, _, err := a.computeLatestStreamPage(key, stamp)
 		a.scheduleStreamPageRefresh(a.streamPageDueFor(now, time.Time{}))
+		logStreamPage("recompute", reason, stampMs, versionMs, time.Since(computeStart).Milliseconds())
 		return page, err
 	}
 	// The copy is from an older version: recompute under a short deadline. On
@@ -180,21 +228,38 @@ func (a *App) loadLatestStreamPage(session string, limit int) (StreamItemPageDat
 		err  error
 	}
 	done := make(chan result, 1)
+	computeStart := time.Now()
 	go func() {
-		page, _, err := a.computeLatestStreamPage(key)
+		page, _, err := a.computeLatestStreamPage(key, stamp)
 		done <- result{page, err}
 	}()
 	select {
 	case r := <-done:
 		if r.err == nil {
+			logStreamPage("recompute", "version-changed", stampMs, versionMs, time.Since(computeStart).Milliseconds())
 			return r.page, nil
 		}
 		a.scheduleStreamPageRefresh(now)
+		logStreamPage("copy", "recompute-error", stampMs, versionMs, time.Since(computeStart).Milliseconds())
 		return saved.Page, nil
 	case <-time.After(recomputeWait):
 		a.scheduleStreamPageRefresh(now)
+		logStreamPage("copy", "recompute-timeout", stampMs, versionMs, time.Since(computeStart).Milliseconds())
 		return saved.Page, nil
 	}
+}
+
+// logStreamPage is the one line per read that says whether the saved copy was
+// served, and why not. The timings show where a slow read spent its time.
+func logStreamPage(served, reason string, stampMs, versionMs, computeMs int64) {
+	log.Printf("[stream-page] served=%s reason=%s stamp_ms=%d version_ms=%d compute_ms=%d", served, reason, stampMs, versionMs, computeMs)
+}
+
+// streamPageStamp is the privacy stamp a saved first page is made under: the
+// durable one (savedCopyStamp), so a copy survives a restart and any privacy
+// change, withdrawal included, drops it before the next read.
+func (a *App) streamPageStamp(ctx context.Context) string {
+	return a.savedCopyStamp(ctx)
 }
 
 // streamPageDueFor is when the next background refresh may run for a copy
@@ -220,13 +285,19 @@ func (a *App) streamPageDueFor(now, savedAt time.Time) time.Time {
 }
 
 // computeLatestStreamPage reads the latest page, projects it, and saves it when
-// the privacy stamp held across the computation. The item version is read before
-// the items, so a write during the read leaves the saved version behind.
-func (a *App) computeLatestStreamPage(key streamPageKey) (StreamItemPageData, bool, error) {
+// the privacy stamp it was read under still holds. The item version is read
+// before the items, so a write during the read leaves the saved version behind.
+// stamp is the stamp the caller read; "" means no copy is saved.
+func (a *App) computeLatestStreamPage(key streamPageKey, stamp string) (StreamItemPageData, bool, error) {
 	st := &a.streamPages
 	st.computes.Add(1)
+	st.mu.Lock()
+	gate := st.computeGate
+	st.mu.Unlock()
+	if gate != nil {
+		gate()
+	}
 	ctx := context.Background()
-	stamp := a.streamPageStamp(ctx)
 	version, verr := a.persistenceService().StreamItemVersion(ctx, key.session)
 	page, err := a.persistenceService().LoadStreamItemsPage(ctx, key.session, -1, key.limit)
 	if err != nil {
@@ -241,12 +312,12 @@ func (a *App) computeLatestStreamPage(key streamPageKey) (StreamItemPageData, bo
 	if verr != nil || stamp == "" || a.streamPageStamp(ctx) != stamp {
 		return page, false, nil
 	}
-	_ = writeStreamPageSnapshot(key, streamPageSnapshot{Format: streamPageSnapshotVersion, Version: version, Stamp: stamp, SavedAt: time.Now(), Page: page})
+	_ = writeStreamPageSnapshot(key, streamPageSnapshot{Format: streamPageSnapshotFormat, Version: version, Stamp: stamp, SavedAt: time.Now(), Page: page})
 	return page, true, nil
 }
 
 // scheduleStreamPageRefresh queues background work no earlier than at (zero:
-// nothing to do). One goroutine runs the queue on a lowered-priority thread.
+// nothing to do). One goroutine runs the queue; it holds no OS thread.
 func (a *App) scheduleStreamPageRefresh(at time.Time) {
 	if at.IsZero() {
 		return
@@ -302,7 +373,7 @@ func (a *App) refreshStreamPages() {
 	}
 	st.mu.Unlock()
 	for _, key := range keys {
-		_, _, _ = a.computeLatestStreamPage(key)
+		_, _, _ = a.computeLatestStreamPage(key, a.streamPageStamp(context.Background()))
 	}
 	st.mu.Lock()
 	st.lastRun = time.Now()

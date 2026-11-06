@@ -398,6 +398,9 @@ func (s *mobileBriefService) seal(ctx context.Context, source MobileBriefV1) (Mo
 		return brief, withheld, false
 	}
 	read := mobileBriefFinishedRead{Schema: mobileBriefSealedSchema, Epoch: epoch, Print: print, Source: mobileBriefSourceDigest(source), Day: day, Cites: sealCites(source), WithheldReason: withheld.Reason, WithheldKind: withheld.SourceKind, Brief: raw}
+	if mobileBriefBeforeSealSave != nil {
+		mobileBriefBeforeSealSave(source.BriefID)
+	}
 	if err := s.store.saveFinishedReadIfCurrent(source.BriefID, read); err != nil {
 		return brief, withheld, false
 	}
@@ -416,19 +419,18 @@ func (s *mobileBriefService) finishedReadWithholding(source MobileBriefV1) (Mobi
 	if err != nil {
 		return MobileBriefV1{}, mobileBriefWithholding{}, err
 	}
-	if !pending && s.app != nil && s.copyPrivacyChanged(source) {
-		// The amend: the privacy state changed since the copy was sealed, so the
-		// next read seals the brief again with the current gates and shows that.
-		// Only when the gates cannot decide yet are the words withheld, and the
-		// brief is sealed again in the background.
-		if !s.isStopped() {
-			if sealed, amended, wrote := s.seal(context.Background(), source); wrote {
-				s.noteLatestShownIfNewer(sealed)
+	if !pending && s.app != nil {
+		if kind, changed := s.copyPrivacyChange(source); changed {
+			// The amend: the privacy state changed since the copy was sealed, so the
+			// next read seals the brief again with the current gates and shows that.
+			// Only when the gates cannot decide yet are the words withheld, and the
+			// brief is sealed again in the background.
+			if sealed, amended, wrote := s.amendSealedCopy(source); wrote {
 				return sealed, amended, nil
 			}
+			s.scheduleSealRetry(source)
+			return mobileBriefPaused(brief), mobileBriefWithholding{Reason: mobileBriefWithheldPrivacyCheck, SourceKind: kind}, nil
 		}
-		s.scheduleSealRetry(source)
-		return mobileBriefPaused(brief), mobileBriefWithholding{Reason: mobileBriefWithheldPrivacyCheck}, nil
 	}
 	if pending {
 		// Storage is still opening: the brief's identity, time and slot show with
@@ -554,10 +556,89 @@ func mobileBriefWithoutWebSources(brief MobileBriefV1) MobileBriefV1 {
 	return brief
 }
 
-// copyPrivacyChanged reports a stored copy sealed under other privacy state.
-func (s *mobileBriefService) copyPrivacyChanged(source MobileBriefV1) bool {
+// copyPrivacyChange reports a stored copy sealed under other privacy state, and
+// which privacy input moved (see briefPrivacyChangeKind).
+func (s *mobileBriefService) copyPrivacyChange(source MobileBriefV1) (string, bool) {
 	saved, found, err := s.store.loadFinishedRead(source.BriefID)
-	return err == nil && found && saved.Schema == mobileBriefSealedSchema && saved.Print != s.app.briefPrivacyPrint()
+	if err != nil || !found || saved.Schema != mobileBriefSealedSchema {
+		return "", false
+	}
+	current := s.app.briefPrivacyPrint()
+	if saved.Print == current {
+		return "", false
+	}
+	return briefPrivacyChangeKind(saved.Print, current), true
+}
+
+// mobileBriefBeforeSealSave, when set by a test, runs after a seal is worked out
+// and before it is saved, where a newer stored version can arrive. Nil in the app.
+var mobileBriefBeforeSealSave func(briefID string)
+
+// briefAmendAttempts bounds how often one read seals a brief whose copy has a
+// stale privacy print. A seal can lose a race (a newer stored version or a newer
+// privacy epoch arrived while it worked); the next attempt works from the newest
+// stored version under the current print, instead of withholding the words.
+const briefAmendAttempts = 3
+
+// briefSealLocks serializes the amend of one brief, so concurrent reads share
+// one seal: the reads that wait find the copy the first one saved.
+var briefSealLocks sync.Map
+
+func briefSealLock(briefID string) *sync.Mutex {
+	lock, _ := briefSealLocks.LoadOrStore(briefID, &sync.Mutex{})
+	return lock.(*sync.Mutex)
+}
+
+// amendSealedCopy seals source again under the current privacy print. It reports
+// whether a copy was saved; when none was, the caller withholds the words.
+func (s *mobileBriefService) amendSealedCopy(source MobileBriefV1) (MobileBriefV1, mobileBriefWithholding, bool) {
+	lock := briefSealLock(source.BriefID)
+	lock.Lock()
+	defer lock.Unlock()
+	for attempt := 0; attempt < briefAmendAttempts && !s.isStopped(); attempt++ {
+		if _, changed := s.copyPrivacyChange(source); !changed {
+			// Another read saved the copy while this one waited.
+			brief, withheld, pending, err := s.sealedReadOrPending(source)
+			return brief, withheld, err == nil && !pending
+		}
+		sealed, withheld, wrote := s.seal(context.Background(), source)
+		if wrote {
+			s.noteLatestShownIfNewer(sealed)
+			return sealed, withheld, true
+		}
+		newer, ok := s.storedSource(source.BriefID)
+		if !ok {
+			break
+		}
+		source = newer
+	}
+	return MobileBriefV1{}, mobileBriefWithholding{}, false
+}
+
+// briefPrivacyChangeKind names the privacy input that moved between the print a
+// copy was sealed under and the current one. The print is epoch|enabled|paused|apps
+// (briefPrivacyPrint): the epoch moves on every privacy event and on memory or
+// handoff file changes, the pause on Closed Eyes or a timed pause, and the apps on
+// the sensitive-app list.
+func briefPrivacyChangeKind(saved, current string) string {
+	was, now := strings.Split(saved, "|"), strings.Split(current, "|")
+	if len(was) != 4 || len(now) != 4 {
+		return "print"
+	}
+	var kinds []string
+	if was[0] != now[0] {
+		kinds = append(kinds, "epoch")
+	}
+	if was[1] != now[1] || was[2] != now[2] {
+		kinds = append(kinds, "pause")
+	}
+	if was[3] != now[3] {
+		kinds = append(kinds, "sensitive_apps")
+	}
+	if len(kinds) == 0 {
+		return "print"
+	}
+	return strings.Join(kinds, ",")
 }
 
 // mobileBriefPaused is a brief with everything it says removed, while its

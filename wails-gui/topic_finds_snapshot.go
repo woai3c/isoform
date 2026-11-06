@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -123,8 +124,11 @@ func (s *topicsService) writeFindsSnapshotAt(stamp string, view TopicFindsView, 
 func (a *App) topicFindsSaved() TopicFindsView {
 	svc := a.topicsSvc()
 	now := time.Now()
+	stampStart := time.Now()
 	stamp := a.savedCopyStamp(context.Background())
+	stampMs := time.Since(stampStart).Milliseconds()
 	if stamp == "" {
+		logFindsRead("placeholder", "no-stamp", stampMs)
 		return a.topicFindsPlaceholder(svc)
 	}
 	view, savedAt, read := svc.readFindsSnapshot(stamp)
@@ -133,13 +137,22 @@ func (a *App) topicFindsSaved() TopicFindsView {
 		if now.Sub(savedAt) > topicFindsRefreshAge {
 			svc.scheduleFindsRefresh(a, svc.afterLaunch(now))
 		}
+		logFindsRead("copy", "stamp-held", stampMs)
 		return view
 	case topicFindsStale:
 		svc.scheduleFindsRefresh(a, now)
+		logFindsRead("placeholder", "stamp-changed", stampMs)
 	default:
 		svc.scheduleFindsRefresh(a, svc.afterLaunch(now))
+		logFindsRead("placeholder", "no-copy", stampMs)
 	}
 	return a.topicFindsPlaceholder(svc)
+}
+
+// logFindsRead is the one line per finds read that says whether the saved view
+// was served, and why not.
+func logFindsRead(served, reason string, stampMs int64) {
+	log.Printf("[finds] served=%s reason=%s stamp_ms=%d", served, reason, stampMs)
 }
 
 func (a *App) topicFindsPlaceholder(svc *topicsService) TopicFindsView {

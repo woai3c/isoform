@@ -193,3 +193,66 @@ func TestLegacyBriefGetsItsCopyAtPolicyLoad(t *testing.T) {
 		t.Fatalf("the legacy brief was not sealed at policy load: found=%v err=%v", found, err)
 	}
 }
+
+// A privacy change whose seal loses a race to a newer stored version is sealed
+// again from that version, not withheld: the brief was hidden for a minute when
+// a privacy epoch bump and a Today refresh landed during one seal.
+func TestPrivacyAmendSealsTheNewerStoredVersionAfterARace(t *testing.T) {
+	_, svc, brief := cardRig(t)
+	svc.todayRefreshWG.Wait()
+	svc.wg.Wait()
+	if _, _, err := svc.finishedLatest(); err != nil {
+		t.Fatal(err)
+	}
+	briefPrivacyChanged()
+	newer := brief
+	newer.WeekLead = "An invented week lead for the race test."
+	raced := false
+	mobileBriefBeforeSealSave = func(id string) {
+		if raced || id != brief.BriefID {
+			return
+		}
+		raced = true
+		if err := svc.store.save(newer, mobileBriefAsOfTime(newer)); err != nil {
+			t.Errorf("the racing save failed: %v", err)
+		}
+	}
+	t.Cleanup(func() { mobileBriefBeforeSealSave = nil })
+
+	if _, _, err := svc.finishedLatest(); err != nil {
+		t.Fatal(err)
+	}
+	if !raced {
+		t.Fatal("the race did not happen")
+	}
+	saved, found, err := svc.store.loadFinishedRead(brief.BriefID)
+	if err != nil || !found {
+		t.Fatalf("no amended copy: found=%v err=%v", found, err)
+	}
+	if saved.WithheldReason != "" {
+		t.Fatalf("the amended copy is withheld (%s) after a race a retry could win", saved.WithheldReason)
+	}
+	stored, ok := svc.store.load(brief.BriefID)
+	if !ok || saved.Source != mobileBriefSourceDigest(stored) {
+		t.Fatal("the amended copy was not sealed from the newer stored version")
+	}
+	if saved.Print != svc.app.briefPrivacyPrint() {
+		t.Fatal("the amended copy was not sealed under the current privacy print")
+	}
+}
+
+// The withholding names the privacy input that moved, so the log explains itself.
+func TestBriefPrivacyChangeKindNamesTheInput(t *testing.T) {
+	cases := []struct{ saved, current, want string }{
+		{"s|false|false|aa", "t|false|false|aa", "epoch"},
+		{"t|false|false|aa", "t|true|false|aa", "pause"},
+		{"t|false|false|aa", "t|false|false|bb", "sensitive_apps"},
+		{"t|false|false|aa", "u|false|false|bb", "epoch,sensitive_apps"},
+		{"t|false|false|aa", "t|false|false|aa", "print"},
+	}
+	for _, c := range cases {
+		if got := briefPrivacyChangeKind(c.saved, c.current); got != c.want {
+			t.Fatalf("briefPrivacyChangeKind(%q, %q) = %q, want %q", c.saved, c.current, got, c.want)
+		}
+	}
+}

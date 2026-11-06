@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -211,9 +212,9 @@ func TestAWithdrawalDropsASavedCopyThatHoldsABriefLead(t *testing.T) {
 			latestPage(t, a, session)
 			key := streamPageKey{session: session, limit: 50}
 			stamp := a.streamPageStamp(t.Context())
-			snap, ok := readStreamPageSnapshot(key, stamp)
-			if !ok {
-				t.Fatal("the first read did not save a copy")
+			snap, reason := readStreamPageSnapshot(key, stamp)
+			if reason != "" {
+				t.Fatalf("the first read did not save a copy: %s", reason)
 			}
 			snap.Page.Items[0].Content = lead
 			if err := writeStreamPageSnapshot(key, snap); err != nil {
@@ -273,4 +274,75 @@ func adoptTestBriefPrivacyEpoch(a *App) {
 		panic(err)
 	}
 	_ = a.savedCopyStamp(context.Background())
+}
+
+// holdFirstStreamRun makes the first computation after this call wait until
+// release. started closes once the run is inside the computation.
+func holdFirstStreamRun(a *App) (started <-chan struct{}, release func()) {
+	s := make(chan struct{})
+	r := make(chan struct{})
+	var once sync.Once
+	a.streamPages.mu.Lock()
+	a.streamPages.computeGate = func() { once.Do(func() { close(s); <-r }) }
+	a.streamPages.mu.Unlock()
+	return s, func() { close(r) }
+}
+
+// A read that arrives while a run is in progress is served by the next run, so
+// an item written before it arrived is never missing from its page.
+func TestAReadArrivingDuringARunSeesANewerItem(t *testing.T) {
+	a, session := streamPageTestApp(t)
+	started, release := holdFirstStreamRun(a)
+	firstDone := make(chan struct{})
+	go func() {
+		defer close(firstDone)
+		_, _ = a.LoadStreamItemsPage(session, -1, 50)
+	}()
+	<-started
+	appendStreamPageItem(t, a, session, "late", "written during the run")
+	second := make(chan StreamItemPageData, 1)
+	go func() {
+		page, _ := a.LoadStreamItemsPage(session, -1, 50)
+		second <- page
+	}()
+	time.Sleep(50 * time.Millisecond) // let the second read join the queue
+	release()
+	<-firstDone
+	select {
+	case page := <-second:
+		if !pageHas(page, "late") {
+			t.Fatal("a read that arrived after an item was written did not see it")
+		}
+	case <-time.After(30 * time.Second):
+		t.Fatal("the queued read did not finish")
+	}
+}
+
+// A burst of reads while one run is open costs at most two runs: the open one
+// and one shared run for everyone who arrived during it.
+func TestABurstOfReadsSharesOneFollowingRun(t *testing.T) {
+	a, session := streamPageTestApp(t)
+	started, release := holdFirstStreamRun(a)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = a.LoadStreamItemsPage(session, -1, 50)
+	}()
+	<-started
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if page, err := a.LoadStreamItemsPage(session, -1, 50); err != nil || !pageHas(page, "one") {
+				t.Error("a read in the burst did not return the stored item")
+			}
+		}()
+	}
+	time.Sleep(100 * time.Millisecond)
+	release()
+	wg.Wait()
+	if n := a.streamPages.computes.Load(); n > 2 {
+		t.Fatalf("a burst of 11 reads made %d computations, want at most 2", n)
+	}
 }
