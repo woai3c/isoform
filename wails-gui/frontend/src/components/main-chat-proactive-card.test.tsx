@@ -44,6 +44,9 @@ const nativeCopyDraft = vi.hoisted(() => vi.fn());
 const openAnswerMocks = vi.hoisted(() => ({ list: vi.fn(), change: vi.fn(), cancel: vi.fn(), notForMe: vi.fn(), undo: vi.fn() }));
 const briefByID = vi.hoisted(() => vi.fn());
 const taskDetail = vi.hoisted(() => vi.fn());
+const emitRuntimeEvent = (event: string, payload: unknown) => {
+    for (const listener of runtimeListeners.get(event) ?? []) listener(payload);
+};
 const taskAction = vi.hoisted(() => vi.fn());
 const draftTaskID = vi.hoisted(() => vi.fn());
 vi.mock('../../wailsjs/go/main/App', () => ({
@@ -600,19 +603,23 @@ describe('main chat proactive messages', () => {
         expect(screen.getByRole('heading', { name: 'Evening brief · 6:00 PM' })).toBeInTheDocument();
     });
 
-    it('keeps a source-less morning brief readable at its recorded time after a failed read', async () => {
-        briefByID.mockRejectedValue(new Error('unavailable'));
+    it('keeps a source-less morning brief readable at its recorded time after a failed read, and recovers when the store opens', async () => {
+        briefByID.mockReset();
+        briefByID.mockRejectedValueOnce(new Error('unavailable'));
+        briefByID.mockResolvedValue({ brief: { ...(readyBrief('2026-11-02-morning') as object), evidence: [] }, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
         const item = proactive({ briefId: '2026-11-02-morning', evidence: [] });
         item.createdAt = new Date(2026, 10, 2, 9, 23).getTime();
-        const open = vi.fn();
-        render(<MainChatProactiveCard item={item} onOpenTarget={open} />);
+        render(<MainChatProactiveCard item={item} onOpenTarget={vi.fn()} />);
         expect(screen.getByRole('heading', { name: 'Morning brief · 9:23 AM' })).toBeInTheDocument();
-        expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument();
-        expect(screen.getByRole('alert')).toHaveTextContent("Couldn't open this brief. Try again");
+        await waitFor(() => expect(briefByID).toHaveBeenCalledTimes(1));
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
         expect(screen.getByText('From your brief')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Read it' })).toBeNull();
+        act(() => emitRuntimeEvent('app:ready', {}));
+        expect(await screen.findByRole('button', { name: 'Read it' })).toBeInTheDocument();
+        expect(briefByID).toHaveBeenCalledTimes(2);
     });
-
     it('uses the recorded source recovery and has no stale Resume action', () => {
         const open = vi.fn();
         const end = new Date(2026, 10, 1, 22, 5).getTime();
@@ -646,21 +653,21 @@ describe('main chat proactive messages', () => {
     });
 
     // The week's card is a brief card too: Play only with the brief's words.
-    it('offers Play on the weekly recap card only when its brief has words', async () => {
+    it('offers Play and Read it on the weekly recap card only when its brief has words', async () => {
         const week = { ...(readyBrief('week-1') as object), slot: 'evening', yourWeek: { days: [] } };
-        briefByID.mockResolvedValue({ brief: { ...week, narrativeStatus: 'unavailable', narrative: [] }, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
+        briefByID.mockReset();
+        briefByID.mockResolvedValueOnce({ brief: { ...week, narrativeStatus: 'unavailable', narrative: [] }, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
+        briefByID.mockResolvedValue({ brief: week, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
         const onOpen = vi.fn();
-        const { unmount } = render(<MainChatProactiveCard item={proactive({ kind: 'weekly_recap', briefId: 'week-1' })} onOpenTarget={onOpen} />);
+        render(<MainChatProactiveCard item={proactive({ kind: 'weekly_recap', briefId: 'week-1' })} onOpenTarget={onOpen} />);
         expect(await screen.findByRole('heading', { name: 'Evening brief · 1:50 PM' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: en.mainChat.card.button.hearIt })).toBeNull();
+        expect(screen.queryByRole('button', { name: en.mainChat.card.button.readIt })).toBeNull();
+        act(() => emitRuntimeEvent('brief:stored', {}));
+        expect(await screen.findByRole('button', { name: en.mainChat.card.button.hearIt })).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: en.mainChat.card.button.readIt }));
         expect(onOpen).toHaveBeenCalledWith({ kind: 'today', id: 'week-1' });
-        unmount();
-        briefByID.mockResolvedValue({ brief: week, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
-        render(<MainChatProactiveCard item={proactive({ kind: 'weekly_recap', briefId: 'week-1' })} onOpenTarget={onOpen} />);
-        expect(await screen.findByRole('button', { name: en.mainChat.card.button.hearIt })).toBeInTheDocument();
     });
-
     it('opens the source brief from the weekly recap card in Chat', () => {
         const onOpen = vi.fn();
         render(<MainChatProactiveCard item={weekDoorbell()} onOpenTarget={onOpen} />);

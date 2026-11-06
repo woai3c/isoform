@@ -7,7 +7,7 @@ import { MainChatBriefCard } from "./main-chat-brief-card";
 
 const getByID = vi.hoisted(() => vi.fn());
 const handlers = vi.hoisted(() => ({} as Record<string, Array<() => void>>));
-vi.mock("@/lib/wails-shim-runtime", () => ({
+vi.mock("../../wailsjs/runtime/runtime", () => ({
     EventsOn: (name: string, callback: () => void) => { (handlers[name] ??= []).push(callback); return () => {}; },
 }));
 vi.mock("@/lib/wails-shim-app", () => ({

@@ -3,7 +3,7 @@ import type React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { GetTodayBriefByID, type MobileBriefDocument } from '@/lib/wails-shim-app';
-import { EventsOn } from '@/lib/wails-shim-runtime';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { toggleBriefPlayback, useBriefPlayback } from '@/lib/brief-audio';
 import { briefHasWords, briefKind, briefTitle } from '@/lib/brief-title';
 import { mainChatBriefRelativeText } from '@/lib/main-chat-brief-relative';
