@@ -367,6 +367,9 @@ func (a *App) emitBrowserEvent(eventName string, data ...interface{}) {
 	if mobileBriefReadInputEvents[eventName] {
 		noteMobileBriefReadInputsChanged()
 	}
+	if topicFindsSourceEvents[eventName] {
+		a.noteTopicFindsSourceChanged(eventName)
+	}
 	switch eventName {
 	case "memory:updated", "sensitive-apps:updated", closedEyesModeChangedEvent, "background-listening:changed", "topics:withdrawn":
 		if bridge := a.mobileBridgeForUse(); bridge != nil {

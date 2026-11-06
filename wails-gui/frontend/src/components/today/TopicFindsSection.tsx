@@ -45,6 +45,10 @@ export function TopicFindsSection({
                 {tr("finds.loadFailed")}
             </Notice>
         );
+    } else if (view?.status === "loading") {
+        // The saved view is not served under a changed privacy stamp: the
+        // section shows its skeleton until the refresh lands.
+        body = <FindsSkeleton />;
     } else if (!view || view.status === "off") {
         body = (
             <Notice
@@ -59,7 +63,7 @@ export function TopicFindsSection({
         );
     } else if (items.length > 0) {
         body = (
-            <ul className="flex gap-3 rounded-2xl border border-border bg-background p-3" data-testid="topic-finds-row">
+            <ul className="flex min-h-[62px] gap-3 rounded-2xl border border-border bg-background p-3" data-testid="topic-finds-row">
                 {items.map((find) => (
                     <li key={find.id} className="min-w-0 flex-1" data-testid="topic-find">
                         <FindLink find={find} onAnswer={finds.feedback} />
@@ -203,8 +207,9 @@ function FindLink({
 }
 
 function FindsSkeleton() {
+    // The same height as a saved row, so the section does not move when the finds arrive.
     return (
-        <div className="flex gap-3 rounded-2xl border border-border bg-background p-3">
+        <div className="flex min-h-[62px] gap-3 rounded-2xl border border-border bg-background p-3" data-testid="topic-finds-skeleton">
             {[0, 1, 2].map((i) => (
                 <div key={i} className="min-w-0 flex-1">
                     <div className="h-3 w-4/5 animate-pulse rounded bg-ink/[0.06]" />

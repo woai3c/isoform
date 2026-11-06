@@ -1176,7 +1176,7 @@ func (a *App) recordTopicFindFeedbackOn(input TopicFindFeedbackInput, channel en
 // GetTopicFinds returns Today's "New on your topics".
 func (a *App) GetTopicFinds() (perfValue TopicFindsView, perfErr error) {
 	defer logPageBinding("GetTopicFinds", time.Now(), &perfValue)
-	return a.topicFindsView(), nil
+	return a.topicFindsSaved(), nil
 }
 
 // FindNewOnTopics starts a search now ("Find new" on Today).
