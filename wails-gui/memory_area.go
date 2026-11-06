@@ -35,13 +35,16 @@ func classifyMemoryArea(words, kind string) string {
 	if contains("health|medical|medicine|medication|medications|doctor|hospital|diagnosis|diagnosed|therapy|therapist|depression|anxiety|adhd|autism|bipolar|cancer|diabetes|pregnant|pregnancy|disability|illness|pain|insulin|mental|allergy|allergies|blood|symptom|symptoms|treatment|exercise|diet|sleep|religion|religious|church|muslim|christian|politics|political|democrat|republican|sexual|sexuality|gay|lesbian|race|ethnicity|salary|debt|bank|password|secret|健康|医疗|疾病|心理|医院|药|宗教|政治|性取向|财务") {
 		return "other"
 	}
+	// How you communicate holds only what is learned from messages sent to
+	// people (mail, chat, texts). Building, shipping, running agents and
+	// commit messages are Work (design decision, 2026-11-06).
 	rules := []struct{ area, words string }{
 		{"communication", "email|emails|message|messages|reply|replies|concise|tone|communication|communicate|writing|沟通|邮件|回复"},
-		{"tools", "tool|tools|editor|terminal|software|keyboard|browser|bun|npm|pnpm|git|vscode|package|packages|automation|automations|automatic|automatically|automate|automated|replay|replays|replayed|repo|repos|repository|backup|hub|script|scripts|commit|commits|工具|编辑器|终端|自动化|仓库"},
+		{"tools", "tool|tools|editor|terminal|software|keyboard|browser|bun|npm|pnpm|git|vscode|package|packages|automation|automations|automatic|automatically|automate|automated|replay|replays|replayed|repo|repos|repository|backup|hub|script|scripts|工具|编辑器|终端|自动化|仓库"},
 		{"people", "colleague|colleagues|coworker|coworkers|manager|family|friend|friends|partner|teammate|teammates|同事|家人|朋友"},
 		{"routines", "routine|routines|daily|weekly|morning|evening|habit|habits|每天|每周|早上|习惯"},
 		{"interests", "hobby|hobbies|enjoy|enjoys|music|reading|photography|cooking|hiking|兴趣|音乐|摄影"},
-		{"work", "work|project|projects|deadline|deadlines|meeting|meetings|customer|customers|release|工作|项目|会议"},
+		{"work", "work|project|projects|deadline|deadlines|meeting|meetings|customer|customers|release|build|builds|building|ship|ships|shipping|agent|agents|code|docs|commit|commits|ci|deploy|deploys|工作|项目|会议"},
 	}
 	// A belief sits in the group its title is about: the first area word in
 	// the title wins, so "Uses an automation to check for replies" is tools.
@@ -76,16 +79,23 @@ func classifyMemoryArea(words, kind string) string {
 	if best != "" {
 		return best
 	}
-	for _, rule := range rules {
-		if contains(rule.words) {
-			return rule.area
-		}
-	}
+	// The title decides. Body words never place a belief: a belief whose title
+	// names no area is "other", whatever its detail says (Y28 rule).
 	// An execution memory explicitly describing a workflow belongs to routines.
-	if kind == "agentic_memory" && contains("workflow|process|steps") {
+	if kind == "agentic_memory" && containsIn(titleTokens, "workflow|process|steps") {
 		return "routines"
 	}
 	return "other"
+}
+
+// containsIn reports whether any |-separated word is a token of tokens.
+func containsIn(tokens, keywords string) bool {
+	for _, word := range strings.Split(keywords, "|") {
+		if strings.Contains(tokens, " "+word+" ") {
+			return true
+		}
+	}
+	return false
 }
 
 func memoryAreaWords(content string) string {
