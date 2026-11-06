@@ -29,8 +29,6 @@ import {
 import { GetAboutYou, GetAboutYouPortrait, GetMemoryEntries, GetMemoryStatus, usePagePrivacyWithdrawal, usePageQueryRefresh } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { markPageContent } from '@/lib/page-switch-timing';
-import { forgetSavedAboutYou, readSavedAboutYou, saveAboutYou } from '@/lib/about-saved-view';
-import { peopleReadStamp } from '@/lib/people-saved-view';
 import type { main } from '../../wailsjs/go/models';
 import { AIMemoryImportDialog } from '@/components/ai-memory-import-dialog';
 import { MemoryDreamDialog } from '@/components/memory-dream-dialog';
@@ -156,13 +154,6 @@ export function MemoryPage({
     // Reads apply in order, so a slow early response never replaces a newer one.
     const entriesRead = useRef(0);
     const aboutRead = useRef(0);
-    // Every page-level read round gets a number; its stamp is taken before any
-    // read of that round starts, and the beliefs are saved only as a pair.
-    const loadRound = useRef(0);
-    const pendingSave = useRef<{ stamp: string; entries?: main.MemoryEntry[]; about?: AboutYouView } | null>(null);
-    // Counts reads that finished or a withdrawal: a saved copy paints only if
-    // neither happened since the page opened.
-    const readsSettled = useRef(0);
     const [status, setStatus] = useState<main.MemoryStoreStatus | null>(() => pageQueryCache.peek<main.MemoryStoreStatus>('GetMemoryStatus') ?? null);
     // True when the first paint came from the cache.
     const seeded = useRef(pageQueryCache.peek('GetMemoryEntries') !== undefined);
@@ -242,8 +233,6 @@ export function MemoryPage({
                 if (read !== entriesRead.current) return;
                 setEntries(visibleMemoryEntries(result ?? []));
                 setEntriesState('ready');
-                readsSettled.current++;
-                noteSavable({ entries: result ?? [] });
             })
             .catch(() => {
                 if (read === entriesRead.current) setEntriesState((state) => (state === 'ready' ? state : 'failed'));
@@ -258,8 +247,6 @@ export function MemoryPage({
                 if (read !== aboutRead.current) return;
                 setAbout(result);
                 setAboutFailed(false);
-                readsSettled.current++;
-                noteSavable({ about: result });
             })
             .catch(() => {
                 if (read === aboutRead.current) setAboutFailed(true);
@@ -271,27 +258,10 @@ export function MemoryPage({
         (GetMemoryStatus() as Promise<main.MemoryStoreStatus>).then(setStatus).catch(() => {});
     }, []);
 
-    // Saves the beliefs once both halves of one round have arrived, under the
-    // stamp the round took before its reads. Go refuses it if the stamp moved.
-    const noteSavable = useCallback((part: { entries?: main.MemoryEntry[]; about?: AboutYouView }) => {
-        const pending = pendingSave.current;
-        if (!pending) return;
-        Object.assign(pending, part);
-        if (pending.entries && pending.about && pending.stamp) {
-            void saveAboutYou(pending.stamp, pending.about, pending.entries);
-            pendingSave.current = null;
-        }
-    }, []);
-
     const loadAll = useCallback(() => {
-        const round = ++loadRound.current;
-        void peopleReadStamp().then((stamp) => {
-            if (round !== loadRound.current) return;
-            pendingSave.current = { stamp };
-            loadEntries();
-            loadAbout();
-            loadStatus();
-        });
+        loadEntries();
+        loadAbout();
+        loadStatus();
     }, [loadEntries, loadAbout, loadStatus]);
 
     // An invalidation (a privacy sweep, memory:updated) or a published
@@ -306,9 +276,6 @@ export function MemoryPage({
     const withdraw = useCallback(() => {
         entriesRead.current++;
         aboutRead.current++;
-        readsSettled.current++;
-        pendingSave.current = null;
-        forgetSavedAboutYou();
         setEntries([]);
         setEntriesState('loading');
         setAbout(null);
@@ -324,25 +291,6 @@ export function MemoryPage({
         setHistoryFor(null);
     }, []);
     usePagePrivacyWithdrawal(withdraw);
-
-    // First open after launch: paint the saved beliefs while the reads run. It
-    // lands only if no read finished and no withdrawal happened since the page
-    // opened; Go checks the stamp before it serves the copy.
-    useEffect(() => {
-        if (seeded.current) return;
-        const settledAtOpen = readsSettled.current;
-        let live = true;
-        void readSavedAboutYou().then((saved) => {
-            if (!saved || !live || readsSettled.current !== settledAtOpen) return;
-            readsSettled.current++;
-            setEntries(saved.entries as main.MemoryEntry[]);
-            setEntriesState('ready');
-            setAbout(saved.about);
-        });
-        return () => { live = false; };
-        // Opening the page is the only trigger; later reads come from loadAll.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     useEffect(() => {
         loadAll();

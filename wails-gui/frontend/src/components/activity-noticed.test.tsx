@@ -101,8 +101,10 @@ describe('Isoform noticed', () => {
         act(() => document.dispatchEvent(new Event('visibilitychange')));
         await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(1));
         act(() => { for (const fn of fixture.listeners.get('system:state') ?? []) fn('locked'); });
-        act(() => { for (const fn of fixture.listeners.get('activity:summary-ready') ?? []) fn(undefined); });
-        await act(async () => { await Promise.resolve(); });
+        // The real change event for this strip: a suggestion set that changed
+        // while the Mac was locked must be read again once it is unlocked.
+        act(() => { for (const fn of fixture.listeners.get('noticed:updated') ?? []) fn({ date: DAY }); });
+        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
         expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(1);
         act(() => { for (const fn of fixture.listeners.get('system:state') ?? []) fn('unlocked'); });
         await waitFor(() => expect(binding('GetDayNoticed')).toHaveBeenCalledTimes(2));

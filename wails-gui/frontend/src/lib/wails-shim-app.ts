@@ -5164,15 +5164,6 @@ export const GetSavedCopyStamp = appBinding<[], string>("GetSavedCopyStamp");
 export const GetSavedPeopleView = appBinding<[], PeopleSavedView | null>("GetSavedPeopleView");
 export const SavePeopleSavedView = appBinding<[string, PeopleOverview, PrincipalWithStatsDTO[]], void>("SavePeopleSavedView");
 export const ForgetSavedPeopleView = appBinding<[], void>("ForgetSavedPeopleView");
-/** About you's saved beliefs, served only under the privacy stamp they were made under. */
-export type AboutYouSavedView = {
-  about: AboutYouView;
-  entries: unknown[];
-  savedAt: string;
-};
-export const GetSavedAboutYou = appBinding<[], AboutYouSavedView | null>("GetSavedAboutYou");
-export const SaveAboutYouSavedView = appBinding<[string, AboutYouView, unknown[]], void>("SaveAboutYouSavedView");
-export const ForgetSavedAboutYou = appBinding<[], void>("ForgetSavedAboutYou");
 
 // Phase 1.5 — telemetry tier controls (Privacy settings). Explicit
 // exports because the auto-generated wailsjs/go/main/App may lag
