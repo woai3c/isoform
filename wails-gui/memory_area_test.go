@@ -48,7 +48,12 @@ func TestMemoryAreaTopicRoundTripAndAboutYou(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	app := &App{}
 	for _, area := range []string{"work", "people", "tools", "routines", "interests", "communication", "other"} {
-		content := renderOKFDocument(map[string]any{"type": "Isoform Memory", "title": "Belief", "area": area, "topic_ids": []string{"topic-1", "topic:two"}, "dimension": "user_insight"}, "I prefer a quiet space.")
+		// A communication belief keeps its area only when its title says so (launch walk Y33).
+		title := "Belief"
+		if area == "communication" {
+			title = "Writes short replies to colleagues"
+		}
+		content := renderOKFDocument(map[string]any{"type": "Isoform Memory", "title": title, "area": area, "topic_ids": []string{"topic-1", "topic:two"}, "dimension": "user_insight"}, "I prefer a quiet space.")
 		saved, err := app.SaveMemoryEntry(area, content)
 		if err != nil {
 			t.Fatal(err)
@@ -208,5 +213,19 @@ func TestMemoryAreaDreamCreation(t *testing.T) {
 	entry, err := s.app.GetMemoryEntry(id)
 	if err != nil || parseMemoryFrontmatter(entry.Content).Area != "tools" {
 		t.Fatalf("dream did not persist area: %+v %v", entry, err)
+	}
+}
+
+// Launch walk Y33: a stored "communication" area is kept only when the title
+// says so; a body that mentions messages does not put a build belief there.
+func TestStoredCommunicationAreaNeedsTitleWords(t *testing.T) {
+	fm := memoryFrontmatter{Area: "communication"}
+	body := "Building Isoform desktop app and iPhone companion with Claude and Codex\n- Sends messages to the hub"
+	if got := memoryAreaOnReadWithWords("", fm, func() string { return body }); got == "communication" {
+		t.Fatalf("build belief stayed in communication")
+	}
+	titled := "Writes short replies to colleagues\n- Keeps messages brief"
+	if got := memoryAreaOnReadWithWords("", fm, func() string { return titled }); got != "communication" {
+		t.Fatalf("titled communication belief = %q", got)
 	}
 }

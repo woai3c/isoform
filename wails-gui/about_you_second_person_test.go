@@ -54,3 +54,18 @@ func TestMobileGoalTitleShortensACommitment(t *testing.T) {
 		t.Fatalf("goal title = %q", got)
 	}
 }
+
+// Launch walk Y28: a belief without a subject still reads "You …".
+func TestBeliefInSecondPersonWritesSubjectlessBeliefsAsYou(t *testing.T) {
+	cases := map[string]string{
+		"Approves disk cleanup only after reviewing a size audit of candidates":   "You approve disk cleanup only after reviewing a size audit of candidates",
+		"Requires the focused tests to pass before pushing":                       "You need the focused tests to pass before pushing",
+		"Building Isoform desktop app and iPhone companion with Claude and Codex": "You're building Isoform desktop app and iPhone companion with Claude and Codex",
+		"Meeting notes stay in the hub":                                           "Meeting notes stay in the hub",
+	}
+	for in, want := range cases {
+		if got := beliefInSecondPerson(in); got != want {
+			t.Errorf("beliefInSecondPerson(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

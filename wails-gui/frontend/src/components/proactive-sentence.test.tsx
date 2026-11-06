@@ -7,6 +7,7 @@ import type { StreamItem } from '@/types';
 
 const getGoal = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     GetGoal: getGoal, RecordMainChatProactiveReceipt: vi.fn(), ResolveMainChatProactiveAction: vi.fn(),
 }));
 vi.mock('@/lib/wails-shim-runtime', () => ({ EventsOn: () => () => {}, ClipboardSetText: vi.fn() }));

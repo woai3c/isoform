@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
     toast: vi.fn(),
 }));
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     AcceptPlaybookSuggestion: vi.fn(),
     DeclinePlaybookSuggestion: vi.fn(),
     DeleteSOP: vi.fn(),

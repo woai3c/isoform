@@ -11,6 +11,7 @@ import { MainChatViewContext } from '@/components/main-chat/main-chat-view-conte
 
 const fixture = vi.hoisted(() => ({ chips: {} as Record<string, string[]>, items: [] as StreamItem[], waiting: false, stopped: false, lastUserItemId: '', pending: null as null | { text: string; state: 'failed'; context: { sourceKind: string; sourceId: string }; ask?: boolean }, send: vi.fn(async () => 'sent') }));
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     ResolveMainChatProactiveAction: vi.fn(),
     ResolveUpcomingConfirm: vi.fn(),
 }));

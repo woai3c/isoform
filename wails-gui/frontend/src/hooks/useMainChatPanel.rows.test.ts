@@ -4,6 +4,7 @@ import type { StreamItem } from '@/types';
 import { panelRows } from './useMainChatPanel';
 
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     SendMainChat: vi.fn(),
     SendMainChatWithContext: vi.fn(),
 }));

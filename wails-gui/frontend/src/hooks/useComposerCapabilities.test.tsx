@@ -7,6 +7,7 @@ import { useComposerCapabilities } from './useComposerCapabilities';
 const fixture = vi.hoisted(() => ({ snapshot: vi.fn() }));
 
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     GetComputerUseAppAccessSnapshot: fixture.snapshot,
 }));
 vi.mock('../../wailsjs/runtime/runtime', () => ({

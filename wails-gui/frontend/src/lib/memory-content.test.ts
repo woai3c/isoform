@@ -166,3 +166,14 @@ describe('beliefInSecondPerson (about-you v1.0.1 Y28)', () => {
         expect(memoryLabel(entry, i18n.getFixedT('en', 'memory'))).toBe('You keep the backup hub read-only');
     });
 });
+
+describe('beliefInSecondPerson subjectless beliefs (launch walk Y28)', () => {
+    it.each([
+        ['Approves disk cleanup only after reviewing a size audit of candidates', 'You approve disk cleanup only after reviewing a size audit of candidates'],
+        ['Requires the focused tests to pass before pushing', 'You need the focused tests to pass before pushing'],
+        ['Building Isoform desktop app and iPhone companion with Claude and Codex', "You're building Isoform desktop app and iPhone companion with Claude and Codex"],
+        ['Meeting notes stay in the hub', 'Meeting notes stay in the hub'],
+    ])('%s', (input, want) => {
+        expect(beliefInSecondPerson(input)).toBe(want);
+    });
+});

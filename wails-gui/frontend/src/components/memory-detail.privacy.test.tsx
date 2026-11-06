@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
     events: new Map<string, Set<(value: unknown) => void>>(),
 }));
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     SaveMemoryEntry: vi.fn(),
     GetMemoryEvidenceReadable: async () => [],
     GetEntryUses: async () => ({ total: 0, lastAt: 0, surfaces: [] }),

@@ -71,6 +71,7 @@ import {
     type TimeGroupKey,
 } from '@/lib/know-how';
 import { groupIdeas, ideaHead, uniqueBy, type IdeaGroup } from '@/lib/idea-copies';
+import { useIdeaMeanings } from '@/lib/idea-meanings';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import {
     DismissKnowHowMatch,
@@ -430,7 +431,8 @@ export function KnowledgePage({
 
     // One card per idea (W40): copies whose titles match share a card, and the
     // groups cover every copy, so an action reaches all of them.
-    const ideaGroups = useMemo(() => groupIdeas(cards, (card) => card.title, (card) => card.savedAt), [cards]);
+    const meanings = useIdeaMeanings(cards, cardTitle, cardSavedAt);
+    const ideaGroups = useMemo(() => groupIdeas(cards, cardTitle, cardSavedAt, meanings), [cards, meanings]);
     const ideaGroupOfId = useMemo(() => {
         const byId = new Map<string, IdeaGroup<main.KnowHowCard>>();
         for (const group of ideaGroups) {
@@ -1648,6 +1650,14 @@ function PageMoreMenu({
             </DropdownMenuContent>
         </DropdownMenu>
     );
+}
+
+function cardTitle(card: main.KnowHowCard): string {
+    return card.title;
+}
+
+function cardSavedAt(card: main.KnowHowCard): number {
+    return card.savedAt;
 }
 
 function CardGrid({

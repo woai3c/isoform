@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const listeners = vi.hoisted(() => new Map<string, (tier: string) => void>());
 
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     GetWebBaseURL: () => Promise.resolve('https://app.example.com'),
     GetVersion: () => Promise.resolve('1.2.3'),
     GetTelemetryTier: () => Promise.resolve('detailed'),

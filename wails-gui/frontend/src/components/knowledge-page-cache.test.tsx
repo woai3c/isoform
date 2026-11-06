@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     ListKnowHow: mocks.listKnowHow,
     GetKnowHowMatch: mocks.getMatch,
     DismissKnowHowMatch: mocks.dismiss,

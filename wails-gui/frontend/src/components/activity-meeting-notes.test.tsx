@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     GetMeetingNotesForSessions: mocks.getNotes,
     GetMeetingCallTurns: mocks.getTranscript,
     RenameMeetingSpeaker: vi.fn(),

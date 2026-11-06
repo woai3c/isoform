@@ -105,6 +105,12 @@ func memoryAreaOnReadDocument(doc parsedMemoryEntryDocument) string {
 
 func memoryAreaOnReadWithWords(content string, fm memoryFrontmatter, words func() string) string {
 	if fm.Area != "" {
+		if fm.Area == "communication" {
+			// Launch walk Y33: a belief is in How you communicate only when its
+			// title says so. A stored area that came from the body is read again.
+			title, _, _ := strings.Cut(words(), "\n")
+			return classifyMemoryArea(title, fm.Dimension)
+		}
 		if validMemoryArea(fm.Area) {
 			return fm.Area
 		}

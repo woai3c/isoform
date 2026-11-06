@@ -82,8 +82,10 @@ export function memoryPoints(content: string): MemoryPoint[] {
 // Mirrors beliefInSecondPerson in about_you_second_person.go: a belief reads
 // in second person (about-you v1.0.1 Y28), so "Uses design reviews…" and
 // "I use design reviews…" both read "You use design reviews…".
-const SELF_VERBS = new Set(('accept block decline get give guard make protect put say set take think try wake answer ask attend avoid batch build call care check choose code commit compare debug delegate deploy design dictate draft drink edit email enjoy exercise expect favor favour find fix follow gather group hand handle coordinate keep lead learn like let listen live log love manage meet merge monitor need open organize plan prefer prioritize push queue read record refactor rely reply report review run schedule send share ship sign skip sleep speak split start study talk teach tend test track travel treat trust type use value walk want watch work write verify turn').split(' '));
-const IRREGULAR_VERBS: Record<string, string> = { is: 'are', was: 'were', has: 'have', does: 'do', goes: 'go' };
+const SELF_VERBS = new Set('accept answer approve archive ask attend avoid batch block build call care check choose clean code commit compare configure confirm coordinate create debug decline delegate delete deploy describe design dictate disable draft drink edit email enable enjoy ensure exercise expect explain favor favour file find fix follow gather get give group guard hand handle hold install keep label lead learn let like listen live log love make manage meet merge monitor need open organize pass pause pick pin plan prefer prioritize protect provide publish push put queue read rebuild record refactor reject release rely remove rename replace reply report require reset restart restore resume reuse review run say scan schedule send set share ship sign skip sleep speak split start stash stop study summarize tag take talk teach tend test think track travel treat trust try turn type update upload use validate value verify wait wake walk want watch work write'.split(' '));
+const IRREGULAR_VERBS: Record<string, string> = { is: 'are', was: 'were', has: 'have', does: 'do', goes: 'go', requires: 'need' };
+// Launch walk Y28: these -ing words are nouns, so they never become "You're …".
+const GERUND_NOUNS = new Set('meeting setting morning evening reading greeting feeling thing string spring painting clothing listing heading ring writing coding styling planning testing branding marketing training shopping cooking drawing tracking'.split(' '));
 
 function baseVerb(word: string, capitalized = true): string | null {
     if (capitalized && !/^\p{Lu}/u.test(word)) return null;
@@ -136,6 +138,12 @@ function firstPersonToYou(text: string): string {
         const [verb, ...after] = rest.split(' ');
         const base = baseVerb(verb, false);
         if (base) return ['You', first.toLowerCase(), base, ...after].join(' ');
+    }
+    // Launch walk Y28: "Building the desktop app…" is an action in progress.
+    const gerund = first.toLowerCase();
+    if (/^\p{Lu}/u.test(first) && gerund.endsWith('ing') && !GERUND_NOUNS.has(gerund)) {
+        const stem = gerund.slice(0, -3);
+        if (SELF_VERBS.has(stem) || SELF_VERBS.has(`${stem}e`)) return `You're ${gerund} ${rest}`;
     }
     const base = baseVerb(first);
     return base ? `You ${base} ${rest}` : trimmed;

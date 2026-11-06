@@ -79,6 +79,26 @@ describe('groupIdeas', () => {
     });
 });
 
+describe('groupIdeas by meaning', () => {
+    it('groups titles with one meaning group even when their words differ', () => {
+        const rows: Row[] = [
+            { id: 'scope', title: 'You give explicit scope and exclusions when approving destructive actions', savedAt: 3 },
+            { id: 'audit', title: 'Approves disk cleanup only after reviewing a size audit of candidates', savedAt: 2 },
+            { id: 'dark', title: 'You prefer dark mode in the evening', savedAt: 1 },
+        ];
+        const groups = groupIdeas(rows, titleOf, savedAtOf, [0, 0, 1]);
+        expect(groups.map(ids)).toEqual([['scope', 'audit'], ['dark']]);
+    });
+
+    it('keeps a negated title apart from its positive within one meaning group', () => {
+        const rows: Row[] = [
+            { id: 'pos', title: 'Merges the staging branch after checks', savedAt: 2 },
+            { id: 'neg', title: 'Never merges the staging branch after checks', savedAt: 1 },
+        ];
+        expect(groupIdeas(rows, titleOf, savedAtOf, [0, 0])).toHaveLength(2);
+    });
+});
+
 describe('uniqueBy', () => {
     it('keeps the first item for each key', () => {
         expect(uniqueBy([{ k: 1, v: 'a' }, { k: 1, v: 'b' }, { k: 2, v: 'c' }], (item) => String(item.k)).map((item) => item.v)).toEqual(['a', 'c']);

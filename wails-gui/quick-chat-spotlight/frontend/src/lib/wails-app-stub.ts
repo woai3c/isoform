@@ -931,6 +931,7 @@ export const GetPortraitTodayCard = makeNoop("GetPortraitTodayCard");
 export const DismissPortraitTodayCard = makeNoop("DismissPortraitTodayCard");
 export const ListKnowHow = makeNoop("ListKnowHow");
 export const GetKnowHowMatch = makeNoop("GetKnowHowMatch");
+export const IdeaMeaningGroups = makeNoop("IdeaMeaningGroups");
 export const DismissKnowHowMatch = makeNoop("DismissKnowHowMatch");
 export const GetKnowHowCandidate = makeNoop("GetKnowHowCandidate");
 export const ConfirmKnowHowCandidate = makeNoop("ConfirmKnowHowCandidate");

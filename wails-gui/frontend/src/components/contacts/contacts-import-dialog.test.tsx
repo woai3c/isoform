@@ -5,6 +5,7 @@ import { ContactsImportDialog } from './contacts-import-dialog';
 
 const mocks = vi.hoisted(() => ({ get: vi.fn(), accept: vi.fn(), request: vi.fn(), remove: vi.fn(), pick: vi.fn(), file: vi.fn() }));
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     GetContactsAccessStatus: mocks.get, AcceptContactsConsent: mocks.accept,
     RequestContactsAccess: mocks.request, RemoveImportedContacts: mocks.remove,
     OpenPermissionSettings: vi.fn(), PickVCardFile: mocks.pick, ImportContactsFromVCard: mocks.file,

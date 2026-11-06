@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
     events: new Map<string, (payload?: unknown) => void>(),
 }));
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     SendMainChatWithContext: mocks.send, AskMainChatWithContext: mocks.ask, LoadStreamItemsPage: mocks.page, GetMainChat: mocks.main,
 }));
 vi.mock('../../../wailsjs/runtime/runtime', () => ({

@@ -72,6 +72,7 @@ vi.mock('@/lib/wails-shim-app', () => ({
     GenerateSOPFromDescription: mocks.generate,
     GenerateSOPFromRange: mocks.generateRange,
     RunPlaybookNow: mocks.runNow,
+    IdeaMeaningGroups: () => Promise.resolve(null),
 }));
 const events = vi.hoisted(() => new Map<string, Set<(...args: any[]) => unknown>>());
 vi.mock('../../wailsjs/runtime/runtime', () => ({

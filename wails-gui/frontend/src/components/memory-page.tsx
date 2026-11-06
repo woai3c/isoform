@@ -48,6 +48,7 @@ import { beliefSummary } from '@/lib/about-you';
 import { historyFound, historyName, useFirstDay } from '@/hooks/useFirstDay';
 import { MEMORY_AREAS, memoryArea, sentMessageEvidence, type MemoryArea } from '@/lib/communication';
 import { groupIdeas, ideaCopyIds, ideaHead, type IdeaGroup } from '@/lib/idea-copies';
+import { useIdeaMeanings } from '@/lib/idea-meanings';
 
 interface MemoryPageProps {
     onOpenActivitySession?: (sessionId: string) => void;
@@ -360,7 +361,8 @@ export function MemoryPage({
     const ideaTitle = useCallback((entry: main.MemoryEntry) => (
         beliefInSecondPerson(humanMemoryText(memoryPoints(entry.content)[0]?.text ?? '')) || memoryLabel(entry, t)
     ), [t]);
-    const ideaGroups = useMemo(() => groupIdeas(entries, ideaTitle, bestTime), [entries, ideaTitle]);
+    const meanings = useIdeaMeanings(entries, ideaTitle, bestTime);
+    const ideaGroups = useMemo(() => groupIdeas(entries, ideaTitle, bestTime, meanings), [entries, ideaTitle, meanings]);
     const ideaGroupOf = useMemo(() => {
         const byId = new Map<string, IdeaGroup<main.MemoryEntry>>();
         for (const group of ideaGroups) for (const copy of group.copies) byId.set(copy.id, group);
@@ -548,12 +550,17 @@ export function MemoryPage({
             }
         }
         // One card per idea: the newest shown copy heads it, and it stands for every copy.
-        return groupIdeas(items, (item) => item.text, (item) => savedAt.get(item.id) ?? 0).map((group) => {
-            const head = group.copies[0];
+        const newest = new Map<string, ReviewItem>();
+        for (const item of items) {
+            const key = ideaGroupOf.get(item.id)?.key ?? `item:${item.id}`;
+            const held = newest.get(key);
+            if (!held || (savedAt.get(item.id) ?? 0) > (savedAt.get(held.id) ?? 0)) newest.set(key, item);
+        }
+        return [...newest.values()].map((head) => {
             const copyIds = copyIdsOf(head.id);
             return { ...head, copyIds, copies: copyIds.length };
         });
-    }, [about, beliefsById, copyIdsOf, entries, i18n.language, review.results, reviewOrder, t, checkFirstItems]);
+    }, [about, beliefsById, copyIdsOf, entries, i18n.language, ideaGroupOf, review.results, reviewOrder, t, checkFirstItems]);
 
     const handleForgot = useCallback(
         (preview: MemoryForgetPreview) => {

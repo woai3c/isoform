@@ -98,9 +98,18 @@ export function groupIdeas<T>(
     items: readonly T[],
     titleOf: (item: T) => string,
     savedAtOf: (item: T) => number,
+    /**
+     * The meaning group of each item (from the app's embedder), aligned with
+     * items. When given, items group by meaning and words only split off
+     * negated titles; when absent, the word matcher decides.
+     */
+    meanings?: readonly number[] | null,
 ): IdeaGroup<T>[] {
     const order = items.map((_, index) => index).sort((a, b) => savedAtOf(items[b]) - savedAtOf(items[a]) || a - b);
     const sets = items.map((item) => ideaWords(titleOf(item)));
+    if (meanings && meanings.length === items.length) {
+        return groupByMeaning(items, sets, order, meanings);
+    }
     // Document frequency and smoothed inverse document frequency across the list.
     const df = new Map<string, number>();
     for (const words of sets) {
@@ -149,6 +158,21 @@ export function groupIdeas<T>(
             key: [...prepared[head.index].words].sort().join(' '),
             copies: head.members.map((index) => items[index]),
         }))
+        .sort((a, b) => a.firstSeen - b.firstSeen)
+        .map(({ key, copies }) => ({ key, copies }));
+}
+
+function groupByMeaning<T>(items: readonly T[], sets: Set<string>[], order: number[], meanings: readonly number[]): IdeaGroup<T>[] {
+    const groups = new Map<string, { firstSeen: number; members: number[] }>();
+    for (const index of order) {
+        const negations = [...sets[index]].filter((word) => word.startsWith('!')).sort().join(' ');
+        const key = `${meanings[index]}|${negations}`;
+        const group = groups.get(key);
+        if (group) group.members.push(index);
+        else groups.set(key, { firstSeen: index, members: [index] });
+    }
+    return [...groups.entries()]
+        .map(([key, group]) => ({ key, firstSeen: Math.min(...group.members), copies: group.members.map((index) => items[index]) }))
         .sort((a, b) => a.firstSeen - b.firstSeen)
         .map(({ key, copies }) => ({ key, copies }));
 }

@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     GetAboutYouPortrait: mocks.getPortrait,
     RetryAboutYouPortrait: mocks.retry,
     ConfirmAboutYouPortrait: mocks.confirmPortrait,

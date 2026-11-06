@@ -9,6 +9,7 @@ import { resetPageQueries } from '@/lib/page-queries';
 
 const mocks = vi.hoisted(() => ({ save: vi.fn() }));
 vi.mock('@/lib/wails-shim-app', () => ({
+    IdeaMeaningGroups: () => Promise.resolve(null),
     SaveMemoryEntry: mocks.save,
     GetMemoryEvidenceReadable: async () => [],
     GetEntryUses: async () => ({ total: 0, lastAt: 0, surfaces: [] }),

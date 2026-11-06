@@ -71,6 +71,7 @@ vi.mock('@/lib/wails-shim-app', () => ({
     GetGoal: (...args: unknown[]) => mocks.getGoal(...args),
     MoveGoal: (...args: unknown[]) => mocks.moveGoal(...args),
     CreateGoal: (...args: unknown[]) => mocks.createGoal(...args),
+    IdeaMeaningGroups: () => Promise.resolve(null),
 }));
 vi.mock('../../wailsjs/runtime/runtime', () => ({
     EventsOn: (name: string, callback: (value: unknown) => void) => {

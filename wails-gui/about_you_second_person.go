@@ -26,9 +26,27 @@ var beliefSelfVerbs = map[string]bool{
 	"tend": true, "test": true, "track": true, "travel": true, "treat": true, "trust": true,
 	"type": true, "use": true, "value": true, "walk": true, "want": true, "watch": true,
 	"work": true, "write": true, "verify": true, "turn": true,
+	// Launch walk Y28: verbs that start subjectless beliefs on the About you page.
+	"approve": true, "require": true, "ensure": true, "confirm": true, "reject": true, "update": true,
+	"enable": true, "disable": true, "pause": true, "resume": true, "delete": true, "publish": true,
+	"release": true, "install": true, "clean": true, "explain": true, "describe": true, "configure": true,
+	"create": true, "remove": true, "restart": true, "restore": true, "rename": true, "reset": true,
+	"rebuild": true, "replace": true, "scan": true, "stop": true, "validate": true, "wait": true,
+	"provide": true, "reuse": true, "summarize": true, "archive": true, "pin": true, "pick": true,
+	"stash": true, "tag": true, "upload": true, "label": true, "file": true, "pass": true, "hold": true,
 }
 
-var beliefIrregularVerbs = map[string]string{"is": "are", "was": "were", "has": "have", "does": "do", "goes": "go"}
+// beliefGerundNouns are words ending in "ing" that are usually nouns, so
+// "Meeting notes…" never reads "You're meeting notes…".
+var beliefGerundNouns = map[string]bool{
+	"meeting": true, "setting": true, "morning": true, "evening": true, "reading": true, "greeting": true,
+	"feeling": true, "thing": true, "string": true, "spring": true, "painting": true, "clothing": true,
+	"listing": true, "heading": true, "ring": true,
+	"writing": true, "coding": true, "styling": true, "planning": true, "testing": true, "branding": true,
+	"marketing": true, "training": true, "shopping": true, "cooking": true, "drawing": true, "tracking": true,
+}
+
+var beliefIrregularVerbs = map[string]string{"is": "are", "was": "were", "has": "have", "does": "do", "goes": "go", "requires": "need"}
 
 // beliefInSecondPerson writes a belief the way Isoform talks everywhere else
 // (§26, Activity AR01): "Uses design reviews…" and "I use design reviews…"
@@ -107,6 +125,10 @@ func beliefFirstPersonToYou(text string) string {
 	if base, ok := beliefBaseVerb(first); ok {
 		return "You " + base + " " + rest
 	}
+	// Launch walk Y28: "Building the desktop app…" is an action in progress.
+	if gerund, ok := beliefGerundOf(first); ok {
+		return "You're " + gerund + " " + rest
+	}
 	return beliefKeepOrTrim(text, trimmed)
 }
 
@@ -157,4 +179,21 @@ func beliefBaseCandidates(verb string) []string {
 		out = append(out, strings.TrimSuffix(verb, "s"))
 	}
 	return out
+}
+
+// beliefGerundOf turns a capitalised "-ing" verb ("Building") into its lower
+// case form ("building") when it is one of the self verbs, not a noun.
+func beliefGerundOf(word string) (string, bool) {
+	r, _ := utf8.DecodeRuneInString(word)
+	lower := strings.ToLower(word)
+	if !unicode.IsUpper(r) || !strings.HasSuffix(lower, "ing") || beliefGerundNouns[lower] {
+		return "", false
+	}
+	stem := strings.TrimSuffix(lower, "ing")
+	for _, base := range []string{stem, stem + "e"} {
+		if beliefSelfVerbs[base] {
+			return lower, true
+		}
+	}
+	return "", false
 }
