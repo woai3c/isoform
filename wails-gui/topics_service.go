@@ -86,6 +86,8 @@ type topicsService struct {
 	mu      sync.Mutex
 	cacheAt time.Time
 	cache   []topics.Topic
+	// rebuilding is set while a background rebuild of the ranking runs.
+	rebuilding bool
 	// lastStart is when Find new last started a search, for its cooldown.
 	lastStart time.Time
 	// startMu makes starting a search one step at a time.
@@ -210,6 +212,10 @@ func interestTopics(list []interests.Interest) []topics.Topic {
 
 // rankedPhrases returns the phrase ranking, recomputing it at most every
 // ten minutes, and records the browser journal on the way.
+// rankedPhrases answers from the cached ranking. A stale ranking is served at once
+// and rebuilt in the background, one rebuild at a time: a rebuild collects the
+// sources and redacts every signal, which took seconds on the request path (R24b,
+// 2026-11-05). Only a cold start, with nothing cached, builds on the request.
 func (s *topicsService) rankedPhrases(force bool) ([]topics.Topic, topicsStateFile) {
 	state := s.store.load()
 	if !state.enabled() {
@@ -217,13 +223,28 @@ func (s *topicsService) rankedPhrases(force bool) ([]topics.Topic, topicsStateFi
 	}
 	now := s.now()
 	s.mu.Lock()
-	if !force && s.cache != nil && now.Sub(s.cacheAt) < topicRefreshInterval {
+	if !force && s.cache != nil {
 		cached := s.cache
+		if now.Sub(s.cacheAt) >= topicRefreshInterval && !s.rebuilding {
+			s.rebuilding = true
+			go func() {
+				s.rebuildRankedPhrases(now)
+				s.mu.Lock()
+				s.rebuilding = false
+				s.mu.Unlock()
+			}()
+		}
 		s.mu.Unlock()
 		return cached, state
 	}
 	s.mu.Unlock()
+	return s.rebuildRankedPhrases(now)
+}
 
+// rebuildRankedPhrases collects the sources, records the journal and ranks the topics,
+// then publishes the ranking as the cache.
+func (s *topicsService) rebuildRankedPhrases(now time.Time) ([]topics.Topic, topicsStateFile) {
+	state := s.store.load()
 	in := s.collect(now)
 	if updated, err := s.store.update(func(st *topicsStateFile) {
 		// The switch may have gone off while the sources were read.
