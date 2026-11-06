@@ -4,7 +4,6 @@ import i18n from "@/i18n";
 import { pageQueryCache } from "@/lib/query-cache";
 import { resetPageQueries } from "@/lib/page-queries";
 import type { ContactsAccessStatus, PeopleOverview, PersonDetail, PrincipalDTO, PrincipalWithStatsDTO } from "@/lib/wails-shim-app";
-import { readSavedPeopleView, savePeopleView } from "@/lib/people-saved-view";
 
 const fixture = vi.hoisted(() => ({ bindings: new Map<string, ReturnType<typeof vi.fn>>(), events: new Map<string, Set<(payload?: unknown) => void>>() }));
 vi.mock("@/lib/wails-shim-app", () => new Proxy({}, {
@@ -48,6 +47,16 @@ function mockReads(overview: PeopleOverview = OVERVIEW) {
     fixture.bindings.set("GetPersonResearch", vi.fn().mockResolvedValue(null));
     fixture.bindings.set("GetVoiceEnrollmentStatus", vi.fn().mockResolvedValue(null));
     fixture.bindings.set("ListVoiceSamples", vi.fn().mockResolvedValue([]));
+    // The Go side of the saved directory: no copy unless a test seeds one.
+    fixture.bindings.set("GetSavedCopyStamp", vi.fn().mockResolvedValue("stamp-1"));
+    fixture.bindings.set("GetSavedPeopleView", vi.fn().mockResolvedValue(null));
+    fixture.bindings.set("SavePeopleSavedView", vi.fn().mockResolvedValue(undefined));
+    fixture.bindings.set("ForgetSavedPeopleView", vi.fn().mockResolvedValue(undefined));
+}
+
+/** A saved directory the Go side would serve (its stamp still holds). */
+function seedSaved(overview: PeopleOverview = OVERVIEW, entries: PrincipalWithStatsDTO[] = []) {
+    fixture.bindings.set("GetSavedPeopleView", vi.fn().mockResolvedValue({ overview, entries, savedAt: "2026-11-06T13:00:00Z" }));
 }
 
 function seedCache(overview: PeopleOverview = OVERVIEW) {
@@ -124,12 +133,12 @@ describe("Who you know first open (N40)", () => {
     } as unknown as PrincipalWithStatsDTO;
 
     it("paints the saved view at once while a slow first read runs", async () => {
-        savePeopleView(OVERVIEW, []);
+        seedSaved(OVERVIEW);
         binding("ListPeopleOverview").mockImplementation(never);
         binding("ListPrincipalsWithStats").mockImplementation(never);
         const { container } = render(<PeoplePage />);
         const main = mainOf(container);
-        expect(within(main).getByText("Fixture person")).toBeInTheDocument();
+        expect(await within(main).findByText("Fixture person")).toBeInTheDocument();
         expect(main.querySelector('div[aria-busy="true"]')).toBeNull();
         await act(async () => {});
         expect(binding("ListPeopleOverview")).toHaveBeenCalled();
@@ -141,7 +150,8 @@ describe("Who you know first open (N40)", () => {
         const { container } = render(<PeoplePage />);
         const main = mainOf(container);
         expect(await within(main).findByText("Fixture person")).toBeInTheDocument();
-        expect(readSavedPeopleView()?.overview.everyone[0].name).toBe("Fixture person");
+        await waitFor(() => expect(binding("SavePeopleSavedView")).toHaveBeenCalled());
+        expect(binding("SavePeopleSavedView").mock.calls[0][1].everyone[0].name).toBe("Fixture person");
         expect(main.querySelector('div[aria-busy="true"]')).toBeNull();
     });
 
@@ -175,7 +185,7 @@ describe("Who you know first open (N40)", () => {
     });
 
     it("keeps the saved view and says nothing when the read behind it fails", async () => {
-        savePeopleView(OVERVIEW, []);
+        seedSaved(OVERVIEW);
         binding("ListPeopleOverview").mockRejectedValue(new Error("busy"));
         const { container } = render(<PeoplePage />);
         const main = mainOf(container);
@@ -209,22 +219,20 @@ describe("Who you know first open (N40)", () => {
         expect(within(failure).getByRole("button", { name: "重试" })).toBeInTheDocument();
     });
 
-    it("saves what it read without message text, and a privacy change drops it", async () => {
+    it("saves what it read under the stamp taken before the reads, and a privacy change forgets it", async () => {
+        binding("GetSavedCopyStamp").mockResolvedValue("stamp-before");
         binding("ListPrincipalsWithStats").mockResolvedValue([ENTRY]);
         const { container } = render(<PeoplePage />);
         expect(await within(mainOf(container)).findByText("Fixture person")).toBeInTheDocument();
-        const saved = readSavedPeopleView();
-        expect(saved?.overview.everyone[0].name).toBe("Fixture person");
-        expect(saved?.entries[0].stats.recentMessages).toEqual([]);
-        expect(JSON.stringify(localStorage)).not.toContain("the private message text");
-        // The withdrawal drops it at once; only the sweep's own re-read may
-        // save again.
-        let afterWithdrawal: unknown = "unset";
+        await waitFor(() => expect(binding("SavePeopleSavedView")).toHaveBeenCalled());
+        const [stamp, overview] = binding("SavePeopleSavedView").mock.calls[0];
+        expect(stamp).toBe("stamp-before");
+        expect(overview.everyone[0].name).toBe("Fixture person");
+        // The withdrawal forgets the saved copy at once.
         act(() => {
             for (const handler of fixture.events.get("closed-eyes:changed") ?? []) handler(true);
-            afterWithdrawal = readSavedPeopleView();
         });
-        expect(afterWithdrawal).toBeNull();
+        expect(binding("ForgetSavedPeopleView")).toHaveBeenCalled();
     });
 });
 
@@ -310,7 +318,7 @@ describe("Who you know self read (N52)", () => {
     });
 
     it("holds the You row if the overview fails even when the directory is empty", async () => {
-        savePeopleView(empty, []);
+        seedSaved(empty);
         binding("ListPeopleOverview").mockRejectedValue(new Error("busy"));
         binding("ListPrincipalsWithStats").mockResolvedValue([]);
         const { container } = render(<PeoplePage />);

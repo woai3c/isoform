@@ -5154,6 +5154,17 @@ export const ListPrincipalsWithStats = appBinding<[], PrincipalWithStatsDTO[]>(
     "ListPrincipalsWithStats",
 );
 
+/** Who you know's saved directory, served only under the privacy stamp it was made under. */
+export type PeopleSavedView = {
+  overview: PeopleOverview;
+  entries: PrincipalWithStatsDTO[];
+  savedAt: string;
+};
+export const GetSavedCopyStamp = appBinding<[], string>("GetSavedCopyStamp");
+export const GetSavedPeopleView = appBinding<[], PeopleSavedView | null>("GetSavedPeopleView");
+export const SavePeopleSavedView = appBinding<[string, PeopleOverview, PrincipalWithStatsDTO[]], void>("SavePeopleSavedView");
+export const ForgetSavedPeopleView = appBinding<[], void>("ForgetSavedPeopleView");
+
 // Phase 1.5 — telemetry tier controls (Privacy settings). Explicit
 // exports because the auto-generated wailsjs/go/main/App may lag
 // behind the Go side until `wails generate` runs, and static ESM

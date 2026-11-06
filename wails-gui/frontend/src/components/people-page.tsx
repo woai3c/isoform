@@ -52,7 +52,7 @@ import {
 import { cn } from '../lib/utils';
 import { PeopleDevToolsContext, PeopleFailureLine } from './people/people-failure';
 import { ContactsStatusLine } from './people/contacts-status-line';
-import { clearSavedPeopleView, readSavedPeopleView, savePeopleView } from '../lib/people-saved-view';
+import { clearSavedPeopleView, peopleReadStamp, readSavedPeopleView, savePeopleView } from '../lib/people-saved-view';
 import { SelfSenderGuesses } from './people/self-sender-guesses';
 
 interface PeoplePageProps {
@@ -121,13 +121,13 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
     const tr = useCallback<Translate>((key, options) => t(`people:${key}` as never, options as never) as unknown as string, [t]);
     const paused = useObservationPaused() === true;
 
-    // A reopen paints the last reads from the page query cache, and a first
-    // open after launch paints the saved view, while the reads run behind
-    // them; the skeleton is for a person's very first load only.
+    // A reopen paints the last reads from the page query cache. A first open
+    // after launch paints the saved view once it arrives (below), while the
+    // reads run behind it; the skeleton is for a person's very first load only.
     const [initial] = useState(() => {
         const cachedOverview = pageQueryCache.peek<PeopleOverview>('ListPeopleOverview');
         if (cachedOverview !== undefined) return { overview: cachedOverview, entries: pageQueryCache.peek<PrincipalWithStatsDTO[]>('ListPrincipalsWithStats') ?? [] };
-        return readSavedPeopleView();
+        return null;
     });
     const [overview, setOverview] = useState<PeopleOverview | null>(initial?.overview ?? null);
     const [entries, setEntries] = useState<PrincipalWithStatsDTO[]>(initial?.entries ?? []);
@@ -187,10 +187,15 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
     // Reads overlap (Refresh, a Contacts sync, an edit); only the latest
     // one started may change the page.
     const readSeq = useRef(0);
+    // Counts privacy withdrawals only, so a saved copy that arrives after one is dropped.
+    const withdrawals = useRef(0);
     const reload = useCallback(async () => {
         const seq = ++readSeq.current;
         setRefreshing(true);
         setSelfReadReady(false);
+        // The stamp is taken before any read starts; a save made under a
+        // stamp that has since moved is refused.
+        const stamp = await peopleReadStamp();
         const overviewRead = readWithRetry(async () => {
             const value = await settledPeopleRead("ListPeopleOverview", ListPeopleOverview);
             if (!value || !Array.isArray(value.open) || !Array.isArray(value.everyone)) throw new Error('Invalid people overview');
@@ -201,7 +206,8 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
             setOverview(nextOverview);
             setLoad('ready');
             hasData.current = true;
-            savePeopleView(nextOverview, entriesRef.current);
+            // Saved as soon as the overview is in, with the directory rows known so far.
+            void savePeopleView(stamp, nextOverview, entriesRef.current);
             setRevision((n) => n + 1);
             return true;
         }).catch(() => {
@@ -216,7 +222,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
             if (seq !== readSeq.current) return;
             entriesRef.current = rows;
             setEntries(entriesRef.current);
-            if (overviewRef.current) savePeopleView(overviewRef.current, entriesRef.current);
+            if (overviewRef.current) void savePeopleView(stamp, overviewRef.current, entriesRef.current);
             return true;
         }).catch(() => false);
         const [overviewOK, entriesOK] = await Promise.all([overviewRead, entriesRead]);
@@ -231,6 +237,26 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
     usePageQueryRefresh(['ListPeopleOverview', 'ListPrincipalsWithStats'], reload);
     usePageQueryRefresh(['GetContactsAccessStatus'], refreshContacts);
 
+    // First open after launch: paint the saved directory while the reads run.
+    // It lands only if no read has finished and no privacy withdrawal has
+    // happened since the page opened; Go checks its stamp before serving it.
+    useEffect(() => {
+        if (initial) return;
+        const withdrawalsAtOpen = withdrawals.current;
+        let live = true;
+        void readSavedPeopleView().then((saved) => {
+            if (!saved || !live || hasData.current || withdrawals.current !== withdrawalsAtOpen) return;
+            overviewRef.current = saved.overview;
+            entriesRef.current = saved.entries;
+            // A saved-seeded page counts as data: a failed read keeps it.
+            hasData.current = true;
+            setOverview(saved.overview);
+            setEntries(saved.entries);
+            setLoad('ready');
+        });
+        return () => { live = false; };
+    }, []);
+
     // A privacy transition (Forget, a protection change, Closed Eyes,
     // background listening, a permission change, sign-out) withdraws the
     // pre-transition directory synchronously — rendered, remembered (search,
@@ -238,6 +264,7 @@ export function PeoplePage({ escapeRef, initialSelection, devToolsUnlocked = fal
     // re-read restores what is still permitted.
     const withdraw = useCallback(() => {
         readSeq.current++;
+        withdrawals.current++;
         hasData.current = false;
         overviewRef.current = null;
         entriesRef.current = [];
