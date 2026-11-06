@@ -118,21 +118,29 @@ export function useReplyNavigation(
     }, [viewport, clear, enabled]);
 
     // A pane opens on its newest item when its page is opened or shown again
-    // (RetainedPage goes from inactive to active). Window focus, the screen
-    // unlocking or the display waking leave the reader's place alone.
+    // (RetainedPage goes from inactive to active), including the first time it
+    // is shown. The request waits for rows: a first mount has none yet, and the
+    // list is not scrolled until they arrive. Window focus, the screen unlocking
+    // or the display waking leave the reader's place alone.
     const pageActive = useContext(RetainedPageActiveContext);
-    const wasPageActive = useRef(pageActive);
+    const wasPageActive = useRef<boolean | null>(null);
+    const openPending = useRef(false);
     useEffect(() => {
         const was = wasPageActive.current;
         wasPageActive.current = pageActive;
-        if (!enabled || pageActive !== true || was !== false) return;
+        if (!enabled || pageActive !== true || was === true) return;
+        openPending.current = true;
+    }, [pageActive, enabled]);
+    useEffect(() => {
+        if (!enabled || pageActive !== true || !openPending.current || !items?.length) return;
         const list = viewport();
         if (!list) return;
+        openPending.current = false;
         userScrolledRef.current = false;
         clear();
         if (bottom?.current) bottom.current.scrollIntoView({ block: 'end', behavior: 'instant' as ScrollBehavior });
         else list.scrollTop = list.scrollHeight;
-    }, [pageActive, enabled, viewport, clear, bottom]);
+    }, [items, pageActive, enabled, viewport, clear, bottom]);
 
     return { count, visible: enabled && (count > 0 || farUp), jumpToLatest, userScrolledRef };
 }

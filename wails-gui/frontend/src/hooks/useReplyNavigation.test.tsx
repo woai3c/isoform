@@ -120,6 +120,22 @@ describe('useReplyNavigation: when the pane opens on its newest item', () => {
         expect(viewport.scrollTop).toBe(viewport.scrollHeight);
     });
 
+    it('a page first shown with no rows opens on its newest item once they arrive', () => {
+        const { root, viewport } = makeViewport();
+        document.body.appendChild(root);
+        const rootRef = { current: root } as React.RefObject<HTMLDivElement>;
+        function Inner({ items }: { items: { id: string; kind: string }[] }) {
+            useReplyNavigation(items, rootRef, { viewportSelector: '[data-radix-scroll-area-viewport]' });
+            return null;
+        }
+        const view = render(<RetainedPageActiveContext.Provider value={true}><Inner items={[]} /></RetainedPageActiveContext.Provider>);
+        expect(viewport.scrollTop).toBe(0);
+        act(() => {
+            view.rerender(<RetainedPageActiveContext.Provider value={true}><Inner items={[{ id: 'a', kind: 'user' }, { id: 'b', kind: 'assistant' }]} /></RetainedPageActiveContext.Provider>);
+        });
+        expect(viewport.scrollTop).toBe(viewport.scrollHeight);
+    });
+
     it('window focus, the screen unlocking and the display waking keep the reader in place', () => {
         const { viewport, navRef, scrollAway } = mounted();
         scrollAway();
