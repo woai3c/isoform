@@ -31,12 +31,15 @@ func (a *App) interestsReadFilter() func(interests.Interest) bool {
 	}
 	checked := map[interests.Ref]bool{}
 	allowed := map[interests.Ref]bool{}
+	// Remembered decisions are shared by every filter built while the key
+	// holds (the request path and the background topic rebuild), so they
+	// are guarded by the shared lock, not one local to this filter.
+	decisionsMu := &sync.Mutex{}
 	if a != nil {
 		if remembered := a.interestsReads.decisions(a.interestsReadKey(), time.Now()); remembered != nil {
-			checked, allowed = remembered.checked, remembered.allowed
+			checked, allowed, decisionsMu = remembered.checked, remembered.allowed, &remembered.mu
 		}
 	}
-	var decisionsMu sync.Mutex
 	var purposes map[string]PurposeOpenLoopDetail
 	var hashes map[string]bool
 	// collectible rebuilds the search/named hashes the evidence pass would
@@ -174,6 +177,7 @@ type interestsReadCache struct {
 }
 
 type interestsReadDecisions struct {
+	mu               sync.Mutex // guards checked and allowed
 	key              string
 	at               time.Time
 	checked, allowed map[interests.Ref]bool
