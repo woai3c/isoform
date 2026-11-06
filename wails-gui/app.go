@@ -82,9 +82,11 @@ type App struct {
 
 	// Fixture observers measure source collection and evidence reads; nil in production.
 	todayChatCollectionObserver func()
-	memoryEvidenceReadObserver  func()
-	topicPageBeforePublish      func()
-	topicPageAfterValidate      func()
+	// todayChatSourcesMemo shares Today source collections across callers.
+	todayChatSourcesMemo       todayChatSourcesCoalescer
+	memoryEvidenceReadObserver func()
+	topicPageBeforePublish     func()
+	topicPageAfterValidate     func()
 
 	// Main-chat topic publication and bounded startup backfill.
 	mainChatTopicBackfillRunning       atomic.Bool

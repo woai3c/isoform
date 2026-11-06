@@ -298,7 +298,7 @@ func (a *App) buildLoadedTodayChatContext(ctx context.Context, item todayChatIte
 // same edit/archive/forget boundary as memory_inject.go. No transcripts or mail
 // payloads are read: their derivatives have no field-level subject provenance.
 func (a *App) collectTodayChatSources(ctx context.Context, now time.Time) todayChatSources {
-	sources := a.collectTodayChatSourcesWithActivities(ctx, now, nil)
+	sources := a.collectTodayChatSourcesCoalesced(ctx, now)
 	// Request-local caches must not enter the registry's revision-keyed cache,
 	// which calls collectTodayChatSourcesWithActivities directly.
 	sources.briefTopics = &mobileBriefParagraphTopicLinks{}
