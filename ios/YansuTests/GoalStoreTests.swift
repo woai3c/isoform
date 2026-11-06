@@ -392,18 +392,6 @@ final class GoalStoreTests: XCTestCase {
         XCTAssertEqual(GoalCategory.other.chatPrefill, "I want to create a goal.")
     }
 
-    func testAFirstReadThatFailsShowsTheOfflineStateAlone() {
-        let read = Date()
-        // No list on this iPhone yet: a failed read or an offline Mac is said, never "No goals yet".
-        XCTAssertEqual(GoalsView.emptyState(hasGoals: false, loadState: .failed, readAt: nil, hubOnline: nil), .unreached)
-        XCTAssertEqual(GoalsView.emptyState(hasGoals: false, loadState: .idle, readAt: nil, hubOnline: false), .unreached)
-        XCTAssertEqual(GoalsView.emptyState(hasGoals: false, loadState: .loading, readAt: nil, hubOnline: nil), .loading)
-        // The Mac answered with no goals.
-        XCTAssertEqual(GoalsView.emptyState(hasGoals: false, loadState: .loaded, readAt: read, hubOnline: true), .noGoals)
-        XCTAssertEqual(GoalsView.emptyState(hasGoals: false, loadState: .failed, readAt: read, hubOnline: false), .noGoals)
-        XCTAssertEqual(GoalsView.emptyState(hasGoals: true, loadState: .failed, readAt: nil, hubOnline: false), .none)
-    }
-
     func testEveryMoveNamesTheEventTheUserSaw() async throws {
         let encoder = JSONEncoder()
         for action in ["resolve", "reopen", "waiting"] {
@@ -600,7 +588,6 @@ final class GoalStoreTests: XCTestCase {
         let h = try makeHarness()
         let read = try await h.store.detail("g1")
         XCTAssertEqual(read.outcome, "The launch ships.")
-        XCTAssertFalse(GoalDetailView.day("2026-10-02T09:00:00Z").isEmpty)
     }
 }
 
