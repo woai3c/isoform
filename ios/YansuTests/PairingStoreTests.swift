@@ -1383,3 +1383,61 @@ final class PairingStoreTests: XCTestCase {
         return "isoform://pair#" + RelayCrypto.base64URLEncode(json)
     }
 }
+
+// The seeded chat UI tests and a first pairing both call store() on a vault with no saved record.
+// A Keychain read that fails while looking for the iroh cleanup record must not make that look unreadable.
+final class PairingVaultFreshStoreTests: XCTestCase {
+    // Fails only the cleanup-record read, as a Keychain that is not yet readable would.
+    private final class CleanupReadFailsSecrets: SecretStore, @unchecked Sendable {
+        let base = InMemorySecretStore()
+
+        func accountNames() throws -> [String] { try base.accountNames() }
+
+        func read(_ account: String) throws -> String? {
+            if account == PairingSecretAccount.irohTicketTransaction {
+                throw YansuError.message("Unlock your phone to use the saved pairing.")
+            }
+            return try base.read(account)
+        }
+
+        func save(_ value: String, account: String) throws { try base.save(value, account: account) }
+        func delete(_ account: String) throws { try base.delete(account) }
+    }
+
+    func testFirstStoreOnAFreshVaultIgnoresAFailedCleanupRead() throws {
+        let directory = try makeTemporaryDirectory()
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let secrets = CleanupReadFailsSecrets()
+        let vault = PairingVault(directory: directory, secrets: secrets, remoteOrigin: { _ in nil },
+                                 startRemote: { _ in })
+        let paired = RelayCryptoTests.sampleRecord()
+        let keyPair = RelayCrypto.makeDeviceKeyPair()
+
+        try vault.store(paired, devicePrivateKey: RelayCrypto.base64URLEncode(keyPair.privateKey),
+                        bearer: "first-bearer")
+
+        XCTAssertNil(vault.loadError)
+        XCTAssertEqual(vault.current()?.deviceID, paired.deviceID)
+        XCTAssertNotNil(try? vault.session())
+    }
+
+    func testRelaunchWithASavedRecordLoadsItAndStoresAgain() throws {
+        let directory = try makeTemporaryDirectory()
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let secrets = InMemorySecretStore()
+        let paired = RelayCryptoTests.sampleRecord()
+        let keyPair = RelayCrypto.makeDeviceKeyPair()
+        let privateKey = RelayCrypto.base64URLEncode(keyPair.privateKey)
+        try PairingVault(directory: directory, secrets: secrets, remoteOrigin: { _ in nil },
+                         startRemote: { _ in })
+            .store(paired, devicePrivateKey: privateKey, bearer: "first-bearer")
+
+        // A new process sees the record on disk and must not treat it as absent or unreadable.
+        let relaunched = PairingVault(directory: directory, secrets: secrets, remoteOrigin: { _ in nil },
+                                      startRemote: { _ in })
+        XCTAssertNil(relaunched.loadError)
+        XCTAssertEqual(relaunched.current()?.deviceID, paired.deviceID)
+        try relaunched.store(paired, devicePrivateKey: privateKey, bearer: "second-bearer")
+        XCTAssertNil(relaunched.loadError)
+    }
+}

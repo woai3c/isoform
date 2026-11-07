@@ -477,12 +477,10 @@ final class PairingVault: @unchecked Sendable {
             record = nil
             cachedSession = nil
             if recordIsDefinitelyAbsent(after: error) {
-                do {
-                    try reconcileIrohTicketTransactionLocked(with: nil)
-                } catch {
-                    recordLoadError = .unreadableRecord
-                    return
-                }
+                // No saved record means no pairing to protect. A cleanup record that cannot be read now is not
+                // a broken pairing: it stays in the Keychain until the next launch reconciles it, and the next
+                // store replaces it. Reporting it as unreadable would block a first pairing on a fresh install.
+                try? reconcileIrohTicketTransactionLocked(with: nil)
                 recordLoadError = nil
                 sweepUnusedPairingSecretsLocked()
                 SharedNoticeStore.clear(secrets: secrets)
