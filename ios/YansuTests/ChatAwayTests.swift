@@ -99,12 +99,17 @@ final class ComputerSleepReasonTests: XCTestCase {
         XCTAssertNil(ComputerSleepReason(rawValue: "unknown"), "unknown keeps today's text")
         XCTAssertEqual(ComputerSleepReason.batteryFloor.status(since: "7:42 AM"),
                        "Asleep since 7:42 AM · It went to sleep to save its battery (below 20%).")
-        XCTAssertEqual(ComputerSleepReason.batteryFloor.steps, ["Plug it in, then open its lid or press any key.",
-                                                                "Isoform picks up where it left off, and what you sent goes out."])
+        // The Computer sheet and Today's away line share these words (design, P147).
+        XCTAssertEqual(ComputerSleepReason.batteryFloor.steps, ["Plug it in, then press any key.",
+                                                                "Isoform picks up where it left off."])
         XCTAssertEqual(ComputerSleepReason.lowPower.status(since: "7:42 AM"), "Asleep since 7:42 AM · Low Power Mode is on.")
         XCTAssertEqual(ComputerSleepReason.lowPower.steps, ["Plug it in, or turn off Low Power Mode."])
         XCTAssertEqual(ComputerSleepReason.lidClosed.status(since: "7:42 AM"), "Asleep since 7:42 AM · Its lid is closed.")
-        XCTAssertEqual(ComputerSleepReason.lidClosed.steps, ["Open its lid."])
+        XCTAssertEqual(ComputerSleepReason.lidClosed.steps, ["Open the lid.", "Isoform picks up where it left off."])
+        XCTAssertEqual(ComputerSleepReason.directions(for: .sleeping, reason: .lidClosed, sentWaiting: true),
+                       "Open the lid. Isoform picks up where it left off, and what you sent goes out.")
+        XCTAssertEqual(ComputerSleepReason.directions(for: .sleeping, reason: nil),
+                       "Press any key on your computer. Isoform picks up where it left off.")
         XCTAssertEqual(ComputerSleepReason.lidClosed.status(since: nil), "Computer asleep · Its lid is closed.")
     }
 }

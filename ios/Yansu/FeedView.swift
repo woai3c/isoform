@@ -297,12 +297,11 @@ struct FeedView: View {
                                 Text("connection.copyAtThatTime").font(.footnote).foregroundStyle(YansuTheme.secondary)
                             }.frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(16).background(YansuTheme.surface, in: RoundedRectangle(cornerRadius: YansuTheme.cornerRadius))
-                            if cause == .sleeping, let reason = sleepReason {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ForEach(reason.steps, id: \.self) { step in
-                                        Text(step).font(.body).foregroundStyle(YansuTheme.secondary)
-                                    }
-                                }.accessibilityElement(children: .combine).accessibilityIdentifier("today.connection.steps")
+                            if cause == .sleeping {
+                                // The same words Today's away line shows (P147), with the waiting clause when something waits.
+                                Text(ComputerSleepReason.directions(for: cause, reason: sleepReason, sentWaiting: environment.chat.hasUnsentMessages))
+                                    .font(.body).foregroundStyle(YansuTheme.secondary)
+                                    .accessibilityIdentifier("today.connection.steps")
                             } else {
                                 Text(cause.directions).font(.body).foregroundStyle(YansuTheme.secondary)
                             }

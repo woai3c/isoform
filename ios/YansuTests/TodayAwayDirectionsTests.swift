@@ -1,7 +1,7 @@
 import XCTest
 @testable import Yansu
 
-/// P147: Today's away line follows the computer's reason, the way Chat's does.
+/// P147: Today's away line follows the computer's reason, the way Chat's does, and matches the Computer sheet's words.
 final class TodayAwayDirectionsTests: XCTestCase {
     func testAClosedLidGetsItsOwnStep() {
         let text = ComputerSleepReason.directions(for: .sleeping, reason: .lidClosed)
@@ -38,5 +38,12 @@ extension TodayAwayDirectionsTests {
         XCTAssertNotEqual(plain, waiting)
         XCTAssertTrue(waiting.hasSuffix(String(localized: "connection.sentWaiting").replacingOccurrences(of: "，", with: ",")) || waiting.contains(String(localized: "connection.sentWaiting")))
         XCTAssertEqual(ComputerSleepReason.directions(for: .sleeping, reason: nil, sentWaiting: false), plain)
+    }
+}
+
+extension TodayAwayDirectionsTests {
+    /// Today's away line keeps the design's "Open the lid." (the Computer sheet shows the same words).
+    func testTodayLidLineSaysOpenTheLid() {
+        XCTAssertTrue(ComputerSleepReason.directions(for: .sleeping, reason: .lidClosed).hasPrefix("Open the lid."))
     }
 }
