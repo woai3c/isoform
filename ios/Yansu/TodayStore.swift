@@ -187,6 +187,17 @@ final class TodayStore: ObservableObject {
             case .cantConnect: return String(localized: "connection.cantConnect.directions")
             }
         }
+
+        /// The Computer sheet's first line, and Today's away line under the date (P133). A sleep with a known reason
+        /// reads "since" when the goodbye time is known and "as of" otherwise; other causes read "{title} · as of {time}".
+        static func firstLine(_ cause: ConnectionCause, reason: ComputerSleepReason?, sleptAt: String?, asOf: String?) -> String {
+            if cause == .sleeping, let reason { return reason.status(sleptAt: sleptAt, asOf: asOf) }
+            if cause == .sleeping, let sleptAt {
+                return String.localizedStringWithFormat(String(localized: "connection.sleepingSince"), sleptAt)
+            }
+            if let asOf { return String.localizedStringWithFormat(String(localized: "connection.causeAsOf"), cause.title, asOf) }
+            return cause.title
+        }
     }
     @Published private(set) var snapshot: MobileTodaySnapshot?
     @Published private(set) var hubUnreachable = false

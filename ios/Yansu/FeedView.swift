@@ -284,19 +284,9 @@ struct FeedView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 18) {
                             VStack(alignment: .leading, spacing: 8) {
-                                if cause == .sleeping, let reason = sleepReason {
-                                    Text(reason.status(sleptAt: sleptAt.map(todayTime), asOf: todayStore.asOf.map(todayTime)))
-                                        .font(.headline).foregroundStyle(YansuTheme.ink)
-                                        .accessibilityIdentifier("today.connection.status")
-                                } else if cause == .sleeping, let sleptAt {
-                                    Text(String.localizedStringWithFormat(String(localized: "connection.sleepingSince"), todayTime(sleptAt)))
-                                        .font(.headline).foregroundStyle(YansuTheme.ink)
-                                } else if let asOf = todayStore.asOf {
-                                    Text("\(cause.title) · as of \(todayTime(asOf))")
-                                        .font(.headline).foregroundStyle(YansuTheme.ink)
-                                } else {
-                                    Text(cause.title).font(.headline).foregroundStyle(YansuTheme.ink)
-                                }
+                                Text(awayFirstLine(cause))
+                                    .font(.headline).foregroundStyle(YansuTheme.ink)
+                                    .accessibilityIdentifier("today.connection.status")
                                 Text("connection.copyAtThatTime").font(.footnote).foregroundStyle(YansuTheme.secondary)
                             }.frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(16).background(YansuTheme.surface, in: RoundedRectangle(cornerRadius: YansuTheme.cornerRadius))
@@ -559,6 +549,11 @@ struct FeedView: View {
         BriefClock.text(date, locale: locale)
     }
 
+    /// The Computer sheet's first line, also Today's away line (P133). One function, so the two can't drift.
+    private func awayFirstLine(_ cause: TodayStore.ConnectionCause) -> String {
+        TodayStore.ConnectionCause.firstLine(cause, reason: sleepReason, sleptAt: sleptAt.map(todayTime), asOf: todayStore.asOf.map(todayTime))
+    }
+
     private var connectionCause: TodayStore.ConnectionCause? {
         #if DEBUG && targetEnvironment(simulator)
         if let seed = ProcessInfo.processInfo.environment["YANSU_UITEST_CONNECTION_CAUSE"],
@@ -597,25 +592,25 @@ struct FeedView: View {
         let count = tasks.waitingCount
         let cause = connectionCause
         return VStack(alignment: .leading, spacing: 8) {
-            if let cause, let asOf = todayStore.asOf {
+            // The date line always stays (P133). The away line sits under it, in the sheet's own words, and opens the sheet.
+            HStack(spacing: 4) {
+                if count == 0 {
+                    Text("\(date) · nothing needs you")
+                } else {
+                    Text("\(date) · \(count) need you")
+                }
+            }
+            .font(.subheadline)
+            .foregroundStyle(YansuTheme.secondary)
+            .accessibilityIdentifier("feed.summary")
+            if let cause {
                 Button { showingComputer = true } label: {
                     HStack(spacing: 5) {
                         Circle().fill(YansuTheme.tertiary).frame(width: 5, height: 5)
-                        Text("\(cause.title) · as of \(todayTime(asOf))")
+                        Text(awayFirstLine(cause))
                         Image(systemName: "chevron.right").font(.caption2)
                     }.font(.subheadline).foregroundStyle(YansuTheme.secondary)
                 }.buttonStyle(.plain).accessibilityIdentifier("today.connection.line")
-            } else {
-                HStack(spacing: 4) {
-                    if count == 0 {
-                        Text("\(date) · nothing needs you")
-                    } else {
-                        Text("\(date) · \(count) need you")
-                    }
-                }
-                .font(.subheadline)
-                .foregroundStyle(YansuTheme.secondary)
-                .accessibilityIdentifier("feed.summary")
             }
             if let cause, showingOfflineNote, todayStore.asOf != nil {
                 Text(ComputerSleepReason.directions(for: cause, reason: sleepReason, sentWaiting: environment.chat.hasUnsentMessages))

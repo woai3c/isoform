@@ -58,3 +58,31 @@ extension TodayAwayDirectionsTests {
         XCTAssertEqual(ComputerSleepReason.lidClosed.status(sleptAt: nil, asOf: "6:40 PM"), "Asleep as of 6:40 PM · Its lid is closed.")
     }
 }
+
+/// P133: Today's away line sits under the date and uses the Computer sheet's first line, word for word.
+final class TodayAwayLineTests: XCTestCase {
+    func testASleepWithAGoodbyeTimeSaysSinceInTheSheetWords() {
+        XCTAssertEqual(TodayStore.ConnectionCause.firstLine(.sleeping, reason: .lidClosed, sleptAt: "6:46 PM", asOf: "6:50 PM"),
+                       "Asleep since 6:46 PM · Its lid is closed.")
+    }
+
+    func testASleepWithoutAGoodbyeTimeSaysAsOf() {
+        XCTAssertEqual(TodayStore.ConnectionCause.firstLine(.sleeping, reason: .lidClosed, sleptAt: nil, asOf: "6:40 PM"),
+                       "Asleep as of 6:40 PM · Its lid is closed.")
+    }
+
+    func testAPlainSleepWithAGoodbyeTimeUsesTheSleepingSinceLine() {
+        XCTAssertEqual(TodayStore.ConnectionCause.firstLine(.sleeping, reason: nil, sleptAt: "6:46 PM", asOf: "6:50 PM"),
+                       String.localizedStringWithFormat(String(localized: "connection.sleepingSince"), "6:46 PM"))
+    }
+
+    func testAnotherCauseReadsAsOfTheLastHeardTime() {
+        XCTAssertEqual(TodayStore.ConnectionCause.firstLine(.cantConnect, reason: nil, sleptAt: nil, asOf: "6:40 PM"),
+                       "\(String(localized: "connection.cantConnect")) · as of 6:40 PM")
+    }
+
+    func testWithNoTimeTheLineIsTheCauseTitle() {
+        XCTAssertEqual(TodayStore.ConnectionCause.firstLine(.cantConnect, reason: nil, sleptAt: nil, asOf: nil),
+                       TodayStore.ConnectionCause.cantConnect.title)
+    }
+}
