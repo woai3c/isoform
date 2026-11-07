@@ -1,4 +1,5 @@
 {
+    "fromPhone": "来自你的 iPhone",
     "todayContext": {
         "status": "上下文：{{memories}}，{{activities}}，{{people}}",
         "memories_one": "{{count}} 条记忆",

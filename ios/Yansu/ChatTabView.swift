@@ -41,7 +41,10 @@ struct ChatTabView: View {
                         IsoformPresenceLine(presence: chat.activity)
                     }
             } else {
-                statusPage { findingMainChat }
+                // Paired with no main chat listed yet: the composer is still here, and a send goes to the computer's
+                // main chat (PROTOCOL.md 15.5a).
+                ChatView(chatID: ChatStore.mainChatAlias, usesTabTitle: true)
+                    .id(ChatStore.mainChatAlias)
                     .refreshable {
                         await chat.refreshList()
                     }
@@ -113,22 +116,6 @@ struct ChatTabView: View {
                 .buttonStyle(YansuPrimaryButtonStyle())
                 .accessibilityIdentifier("chat.pair")
             }
-        }
-    }
-
-    /// Paired, with no chat known yet: the Mac is being asked, could not be asked, or has none.
-    @ViewBuilder
-    private var findingMainChat: some View {
-        if case .failed(let message) = chat.listState {
-            NoticeBanner(message: message, systemImage: "exclamationmark.circle")
-            EmptyStateCard(title: ChatCopy.unavailableTitle, detail: ChatCopy.unavailableDetail)
-            Button(String(localized: "Try again")) { Task { await chat.refreshList() } }
-                .buttonStyle(YansuPrimaryButtonStyle())
-                .accessibilityIdentifier("chat.list.retry")
-        } else if chat.listState == .loaded {
-            EmptyStateCard(title: ChatCopy.noMainChatTitle, detail: ChatCopy.noMainChatDetail)
-        } else {
-            ChatLoadingSkeleton()
         }
     }
 }

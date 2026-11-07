@@ -38,8 +38,10 @@ type mobileStatusView struct {
 	Sees bool `json:"sees,omitempty"`
 	// TaskThreads is true when this Mac serves task threads (20.7b): thread
 	// fields on tasks, task replies and actions, and an origin on new work.
-	TaskThreads            bool                `json:"taskThreads,omitempty"`
-	TodayMeetingPrep       bool                `json:"todayMeetingPrep,omitempty"`
+	TaskThreads      bool `json:"taskThreads,omitempty"`
+	TodayMeetingPrep bool `json:"todayMeetingPrep,omitempty"`
+	// ChatMainSend is true when POST /chats/main/messages sends to the main chat even before the phone lists one (15.5a).
+	ChatMainSend           bool                `json:"chatMainSend,omitempty"`
 	BriefRelevanceFeedback bool                `json:"briefRelevanceFeedback,omitempty"`
 	BriefAsk               bool                `json:"briefAsk,omitempty"`
 	BriefWeekDecline       bool                `json:"briefWeekDecline,omitempty"`
@@ -540,7 +542,7 @@ func mobileRequireScope(w http.ResponseWriter, device mobileDeviceRecord, scope 
 
 func (bridge *mobileBridge) serveStatus(w http.ResponseWriter) {
 	view := mobileStatusView{
-		HubName: mobileHubName(), AppVersion: Version, ProtocolVersion: 1, Topics: true, TaskThreads: true, BrainDump: true, Sees: true, FirstRead: true, TodayMeetingPrep: true, NotificationTest: true, BriefRelevanceFeedback: true, BriefAsk: true, BriefWeekDecline: true,
+		HubName: mobileHubName(), AppVersion: Version, ProtocolVersion: 1, Topics: true, TaskThreads: true, BrainDump: true, Sees: true, FirstRead: true, TodayMeetingPrep: true, ChatMainSend: true, NotificationTest: true, BriefRelevanceFeedback: true, BriefAsk: true, BriefWeekDecline: true,
 		KeepAwake: bridge.keepAwakeSetting(), InstantPush: mobileInstantPushConfigured(),
 		BriefSchedule: []mobileBriefSlotTime{},
 	}

@@ -51,6 +51,8 @@ final class ChatStore: ObservableObject {
     @Published private(set) var selectedProactive: ChatProactiveView?
     @Published private(set) var selectedProactiveChatID: String?
     @Published private(set) var transcriptState: ChatLoadState = .idle
+    /// The chat ID the phone sends to before the computer lists a main chat: the message route's main-chat alias (PROTOCOL.md 15.5a).
+    static let mainChatAlias = "main"
     @Published private(set) var transcriptRefreshFailed = false
     @Published private(set) var hubOnline: Bool?
     /// The relay no longer accepts this iPhone's pairing, for example after it was removed on the Mac. Chat shows
@@ -563,6 +565,13 @@ final class ChatStore: ObservableObject {
 
     func open(chatID: String) async {
         guard isPaired(), Identifiers.isSafePathID(chatID) else { return }
+        if chatID == Self.mainChatAlias {
+            // The main chat is not listed yet: there is nothing to read, and the composer is ready (PROTOCOL.md 15.5a).
+            select(chatID: chatID)
+            transcript = nil
+            transcriptState = .loaded
+            return
+        }
         select(chatID: chatID)
         let presenceUpdate = checkPresence()
         await refreshOpen()
@@ -739,6 +748,11 @@ final class ChatStore: ObservableObject {
                       queueOffline: Bool = false,
                       onEnqueued: () -> Void = {}) async -> Bool {
         guard isPaired(), let chatID = openChatID else { return false }
+        if chatID == Self.mainChatAlias, !(await hub.supportsMainChatSend()) {
+            // An older computer cannot take the message; the text stays in the composer (PROTOCOL.md 15.5a).
+            notice = ChatCopy.updateToSendFromPhone
+            return false
+        }
         let offlineAsk = queueOffline && directBriefReference?.ask == true
         // A message typed while the phone knows the computer is away joins the away period at once. It is still
         // tried, since presence can be stale, and waits in the queue if the computer does not answer.
@@ -1814,7 +1828,9 @@ final class ChatStore: ObservableObject {
     }
 
     private static func message(for error: Error) -> String {
-        (error as? LocalizedError)?.errorDescription ?? ChatCopy.generic
+        // A paired phone whose computer does not answer is never told to pair (P132 rule, on Chat too).
+        if case HubRequestError.notPaired = error { return String(localized: "Couldn't reach your computer.") }
+        return (error as? LocalizedError)?.errorDescription ?? ChatCopy.generic
     }
 }
 
@@ -1830,6 +1846,8 @@ enum ChatCopy {
     static let unavailableTitle = "Chat is not available yet."
     static let unavailableDetail = "Pull down to check with your computer again."
     static let noMainChatTitle = "Your computer has no chat yet."
+    static var askAnything: String { String(localized: "Ask Isoform anything. It answers from your computer.") }
+    static var updateToSendFromPhone: String { String(localized: "Update Isoform on your computer to send from here.") }
     static let noMainChatDetail = "Open Isoform on your computer, then pull down to check again."
     static let generic = "Isoform could not finish that. Try again."
     static let saveFailed = "Isoform could not save this on this phone, so nothing was sent to your computer. Try again."

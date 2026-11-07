@@ -131,6 +131,8 @@ enum LaunchDemoUITestSeed {
 /// The demo's computer: the main chat, the topics and Priya's card. A question asked in a topic is answered a moment
 /// later, and the turn event tells the open screen to read again.
 actor LaunchDemoHub: ChatHubAPI, TopicHubAPI {
+    /// A test or seed computer takes a send to its main chat (PROTOCOL.md 15.5a).
+    func supportsMainChatSend() async -> Bool { true }
     private var priyaState = "pending"
     private var sent: [[String: Any]] = []
     private var turns: [MobileChatTurnEvent] = []

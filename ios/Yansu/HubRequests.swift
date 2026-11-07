@@ -274,6 +274,8 @@ struct HubStatus: Decodable, Equatable, Sendable {
     var topics: Bool? = nil
     var firstRead: Bool? = nil
     var todayMeetingPrep: Bool? = nil
+    /// The computer sends to its main chat when the phone lists none (PROTOCOL.md 15.5a). Older computers omit it.
+    var chatMainSend: Bool? = nil
     var holds: Bool? = nil
     var briefRelevanceFeedback: Bool? = nil
     var briefAsk: Bool? = nil

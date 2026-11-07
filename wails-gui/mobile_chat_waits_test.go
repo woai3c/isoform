@@ -225,3 +225,59 @@ func TestMobileChatQueuedAtAndWaitMinutes(t *testing.T) {
 		t.Fatalf("wait minutes = %d, %v", mobileChatWaitMinutes(at, now), ok)
 	}
 }
+
+// A phone that lists no main chat sends to the main-chat alias: the computer makes sure its main chat exists and
+// takes the message (PROTOCOL.md 15.5a).
+func TestMobileChatMainAliasCreatesTheMainChatAndSends(t *testing.T) {
+	bridge, store := mobileTestChatBridge(t)
+	turns := &mobileTestTurns{}
+	mobileChatRunnerOverride = mobileTestMessageOverride(turns)
+	t.Cleanup(func() { mobileTestResetChatRunner(t, bridge) })
+	device := mobileTestDevice(mobileTestChatScopes()...)
+	if _, err := store.LoadMainSession(t.Context()); err == nil {
+		t.Fatal("the fixture should start without a main chat")
+	}
+	reply := mobileTestChatCall(bridge, device, http.MethodPost, "/chats/main/messages", `{"idempotencyKey":"main-1","text":"hi"}`)
+	if reply.Code != http.StatusAccepted {
+		t.Fatalf("a send to the main alias was refused: %d %s", reply.Code, reply.Body.String())
+	}
+	main, err := store.LoadMainSession(t.Context())
+	if err != nil {
+		t.Fatalf("the main chat was not created: %v", err)
+	}
+	mobileTestWaitFor(t, "the turn to finish", func() bool { return !bridge.chatRunning(main.LocalID) })
+}
+
+// A message from the phone is stored with its origin, and its answer lands in the same chat (#635).
+func TestMobileChatPhoneMessageCarriesOriginAndAnswersInTheSameChat(t *testing.T) {
+	bridge, store := mobileTestChatBridge(t)
+	turns := &mobileTestTurns{}
+	mobileChatRunnerOverride = mobileTestMessageOverride(turns)
+	t.Cleanup(func() { mobileTestResetChatRunner(t, bridge) })
+	device := mobileTestDevice(mobileTestChatScopes()...)
+	reply := mobileTestChatCall(bridge, device, http.MethodPost, "/chats/"+mobileTestChatID+"/messages",
+		`{"idempotencyKey":"origin-1","text":"Hello from my phone"}`)
+	if reply.Code != http.StatusAccepted {
+		t.Fatalf("the phone message was refused: %d %s", reply.Code, reply.Body.String())
+	}
+	mobileTestWaitFor(t, "the turn to finish", func() bool { return !bridge.chatRunning(mobileTestChatID) })
+	items, err := store.LoadStreamItems(t.Context(), mobileTestChatID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sent, answer *storage.StreamItemRow
+	for i := range items {
+		switch {
+		case items[i].Kind == "user" && items[i].Content == "Hello from my phone":
+			sent = &items[i]
+		case items[i].Kind == "assistant" && items[i].Content == "Canned reply.":
+			answer = &items[i]
+		}
+	}
+	if sent == nil || sent.ToolInput != `{"origin":"phone"}` {
+		t.Fatalf("the phone message is not marked as from the phone: %+v", sent)
+	}
+	if answer == nil || answer.SessionLocalID != mobileTestChatID {
+		t.Fatalf("the answer did not land in the same chat: %+v", answer)
+	}
+}

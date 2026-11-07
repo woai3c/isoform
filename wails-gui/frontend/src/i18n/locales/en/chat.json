@@ -1,4 +1,5 @@
 {
+    "fromPhone": "From your iPhone",
     "todayContext": {
         "status": "Context: {{memories}}, {{activities}}, {{people}}",
         "memories_one": "{{count}} memory",

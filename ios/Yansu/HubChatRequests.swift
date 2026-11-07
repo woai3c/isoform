@@ -3,6 +3,8 @@ import Foundation
 /// The chat routes on the Mac. Every write carries an idempotency key from `PendingWriteJournal`, so a retry
 /// after a lost answer is applied once.
 protocol ChatHubAPI: Sendable {
+    /// Whether the computer takes a send to its main chat before the phone lists one (PROTOCOL.md 15.5a).
+    func supportsMainChatSend() async -> Bool
     /// The newest "what Isoform is doing" line the computer published (PROTOCOL.md 20.7e), if any.
     func latestPresence() async -> MobilePresence?
     func chats(limit: Int) async throws -> [ChatSummaryView]
@@ -34,6 +36,9 @@ protocol ChatHubAPI: Sendable {
 }
 
 extension ChatHubAPI {
+    /// Older computers and test doubles do not take a send before a main chat is listed.
+    func supportsMainChatSend() async -> Bool { false }
+
     func sendMessage(chatID: String, text: String, offerReferences: [ChatOfferReference],
                      waiting: ChatWaitingFields?, idempotencyKey: String) async throws -> ChatMessageAccepted {
         try await sendMessage(chatID: chatID, text: text, offerReferences: offerReferences, idempotencyKey: idempotencyKey)
@@ -194,6 +199,10 @@ enum ChatHubError: LocalizedError, Equatable {
 }
 
 extension HubChannel: ChatHubAPI {
+    func supportsMainChatSend() async -> Bool {
+        (try? await status().chatMainSend) == true
+    }
+
     func savedBriefAsk(reference: ChatBriefReference) async throws -> SavedBriefAsk? {
         guard try await status().briefAsk == true else { return nil }
         let route: HubRoute

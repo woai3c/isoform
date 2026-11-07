@@ -7,6 +7,8 @@ private struct BriefConversationGuard: DecisionGuarding {
 }
 
 private actor BriefConversationHub: ChatHubAPI {
+    /// A test or seed computer takes a send to its main chat (PROTOCOL.md 15.5a).
+    func supportsMainChatSend() async -> Bool { true }
     struct Sent: Equatable {
         let chatID: String
         let text: String

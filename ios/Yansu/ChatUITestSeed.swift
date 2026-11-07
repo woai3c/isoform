@@ -250,6 +250,8 @@ enum ChatUITestSeed {
 /// and one other, each chat's newest page, and an event long-poll that waits like the relay's. Each answer takes a
 /// few hundred milliseconds, like a relay round trip. Presentation states supply their one cached row as `main`.
 actor ChatUITestHub: ChatHubAPI, FirstReadHubAPI {
+    /// A test or seed computer takes a send to its main chat (PROTOCOL.md 15.5a).
+    func supportsMainChatSend() async -> Bool { true }
     static let otherChatID = "ui-other-chat"
 
     private let now: Date

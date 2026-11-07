@@ -16,6 +16,7 @@ import { parseTranscript, TranscriptContent } from './transcript-content';
 import { ClaudeIcon } from './icons/executor-icons';
 import { Copy, Check, RotateCcw, Pencil, X, Send, FileText, ChevronDown, Volume2, Loader2, FolderOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { FromPhoneLabel, isFromPhone } from './from-phone-label';
 import { toast } from 'sonner';
 import { getFileManagerName } from '@/lib/platform';
 import { toggleSpeak, useTtsStatus, prewarmTtsForText } from '@/lib/tts-player';
@@ -722,6 +723,7 @@ export const StreamCard = memo(function StreamCard({
                 {item.automationResultOutput && (
                     <AutomationResultQuote output={item.automationResultOutput} jobId={item.automationJobId} />
                 )}
+            {isFromPhone(item) && <div className="flex justify-end px-1 pb-1"><FromPhoneLabel /></div>}
             <div className="group/row flex justify-end animate-rise-in">
                 <div className={cn('max-w-[80%]', editing ? 'w-full' : 'flex flex-col items-end')}>
                     <div

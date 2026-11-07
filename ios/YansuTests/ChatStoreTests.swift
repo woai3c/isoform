@@ -4016,3 +4016,22 @@ final class ChatAwayStoreTests: XCTestCase {
                        "Your computer is asleep. Isoform answers when it wakes.")
     }
 }
+
+@MainActor
+final class ChatMainAliasTests: XCTestCase {
+    /// P128: with no main chat listed, a send goes to the computer's main-chat alias only when it says it can take
+    /// one. An older computer refuses plainly, and the text stays in the composer (PROTOCOL.md 15.5a).
+    func testMainAliasOnAnOlderComputerKeepsTheTextAndAsksForAnUpdate() async throws {
+        let h = try makeHarness()
+        await h.store.open(chatID: ChatStore.mainChatAlias)
+        XCTAssertEqual(h.store.transcriptState, .loaded, "the composer opens without reading a chat that is not listed")
+        h.store.setDraft("Hello there", in: ChatStore.mainChatAlias)
+
+        let accepted = await h.store.send(h.store.draft(in: ChatStore.mainChatAlias))
+
+        XCTAssertFalse(accepted)
+        XCTAssertEqual(h.store.notice, ChatCopy.updateToSendFromPhone)
+        XCTAssertEqual(h.store.draft(in: ChatStore.mainChatAlias), "Hello there")
+        XCTAssertEqual(h.hub.sentTexts, [], "nothing is sent to an older computer")
+    }
+}

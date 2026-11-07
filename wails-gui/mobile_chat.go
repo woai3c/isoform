@@ -597,7 +597,7 @@ func (bridge *mobileBridge) startChatTurnWaited(row storage.MobileChatRow, promp
 		}
 	}
 	userItemID := uuid.NewString()
-	userItem := storage.StreamItemRow{ID: userItemID, Kind: "user", Content: prompt, AutomationContext: provenance}
+	userItem := storage.StreamItemRow{ID: userItemID, Kind: "user", Content: prompt, AutomationContext: provenance, ToolInput: mobileChatPhoneOriginToolInput}
 	var userOrder int
 	if len(refs) == 0 {
 		userOrder, err = store.AppendStreamItem(ctx, row.ID, userItem)
@@ -1410,6 +1410,15 @@ type mobileChatMessageInput struct {
 	Undone int `json:"undone,omitempty"`
 }
 
+// mobileChatPhoneOriginToolInput marks a user row sent from the phone, so the computer's Chat can say "From your
+// iPhone" (design, #635). It lives in ToolInput, not AutomationContext: AutomationContext marks automation and
+// keeps a user row out of the proactive voice sources.
+const mobileChatPhoneOriginToolInput = `{"origin":"phone"}`
+
+// mobileMainChatAlias names the computer's main chat in the message route when the phone does not list it yet
+// (PROTOCOL.md 15.5a). Chat IDs are never this value: they are generated UUIDs.
+const mobileMainChatAlias = "main"
+
 func (bridge *mobileBridge) serveChatMessage(w http.ResponseWriter, r *http.Request, device mobileDeviceRecord, chatID string) {
 	if !mobileValidID(chatID) {
 		mobileJSON(w, http.StatusBadRequest, nil, "the chat id is not valid")
@@ -1451,7 +1460,22 @@ func (bridge *mobileBridge) serveChatMessage(w http.ResponseWriter, r *http.Requ
 			mobileJSON(w, http.StatusServiceUnavailable, nil, errMobileChatNotReady.Error())
 			return
 		}
-		row, found, err := store.MobileChat(bridge.ctx, chatID)
+		var row storage.MobileChatRow
+		var found bool
+		var err error
+		if chatID == mobileMainChatAlias {
+			// A phone that has no main chat listed sends here; the computer makes sure the main chat
+			// exists and takes the message (PROTOCOL.md 15.5a). The same scope and idempotency key apply.
+			main, ensureErr := bridge.app.ensureMainChat(bridge.ctx)
+			if ensureErr != nil {
+				log.Printf("[mobile-chat] main chat unavailable: %v", ensureErr)
+				mobileJSON(w, http.StatusServiceUnavailable, nil, "the main chat could not be prepared")
+				return
+			}
+			row, found, err = store.MobileChat(bridge.ctx, main.LocalID)
+		} else {
+			row, found, err = store.MobileChat(bridge.ctx, chatID)
+		}
 		if err != nil {
 			mobileJSON(w, http.StatusInternalServerError, nil, "the chat could not be read")
 			return

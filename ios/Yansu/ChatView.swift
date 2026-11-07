@@ -230,6 +230,8 @@ struct ChatView: View {
     }
 
     private func follow(_ action: ChatScrollPolicy.Action, _ proxy: ScrollViewProxy) {
+        // The empty chat has no transcript to follow: it opens at its top (#635).
+        guard chatID != ChatStore.mainChatAlias else { return }
         showLatestControl()
         guard case .scrollToBottom(let animated) = action else { return }
         if animated {
@@ -339,6 +341,26 @@ struct ChatView: View {
                     permissionCard(pending, permission: permission)
                 }
             }
+        } else if chatID == ChatStore.mainChatAlias {
+            // No main chat listed yet: the composer is the whole screen, with its prompt (PROTOCOL.md 15.5a). The
+            // top inset keeps the banner and its retry below the title bar.
+            VStack(alignment: .leading, spacing: 12) {
+                if case .failed(let message) = chat.listState {
+                    NoticeBanner(message: message, systemImage: "exclamationmark.circle")
+                    // Try again is a text link under its line, in the accent color (never a full-width button).
+                    Button(String(localized: "Try again")) { Task { await chat.refreshList() } }
+                        .buttonStyle(.plain)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(YansuTheme.accent)
+                        .accessibilityIdentifier("chat.list.retry")
+                }
+                // The card takes its natural height, so its copy wraps whole and never truncates (#635).
+                EmptyStateCard(title: ChatCopy.askAnything, detail: "")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            // The transcript opens at its top: the banner sits just under the title bar, and the scroll area runs to the
+            // composer with nothing extra below (#635).
+            .padding(.top, 16)
         } else if case .failed(let message) = chat.transcriptState {
             NoticeBanner(message: message, systemImage: "exclamationmark.circle")
             EmptyStateCard(title: "This chat is not available yet.",
