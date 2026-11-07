@@ -603,7 +603,7 @@ describe('main chat proactive messages', () => {
         expect(screen.getByRole('heading', { name: 'Evening brief · 6:00 PM' })).toBeInTheDocument();
     });
 
-    it('keeps a source-less morning brief readable at its recorded time after a failed read, and recovers when the store opens', async () => {
+    it('keeps a source-less morning brief readable at its recorded time after a failed read, and Try again reads it (design v1.0.1)', async () => {
         briefByID.mockReset();
         briefByID.mockRejectedValueOnce(new Error('unavailable'));
         briefByID.mockResolvedValue({ brief: { ...(readyBrief('2026-11-02-morning') as object), evidence: [] }, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
@@ -611,12 +611,11 @@ describe('main chat proactive messages', () => {
         item.createdAt = new Date(2026, 10, 2, 9, 23).getTime();
         render(<MainChatProactiveCard item={item} onOpenTarget={vi.fn()} />);
         expect(screen.getByRole('heading', { name: 'Morning brief · 9:23 AM' })).toBeInTheDocument();
-        await waitFor(() => expect(briefByID).toHaveBeenCalledTimes(1));
-        expect(screen.queryByRole('alert')).toBeNull();
-        expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+        const alert = await screen.findByRole('alert');
+        expect(alert).toHaveTextContent("Couldn't read this brief. Try again");
         expect(screen.getByText('From your brief')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Read it' })).toBeNull();
-        act(() => emitRuntimeEvent('app:ready', {}));
+        fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
         expect(await screen.findByRole('button', { name: 'Read it' })).toBeInTheDocument();
         expect(briefByID).toHaveBeenCalledTimes(2);
     });
@@ -653,20 +652,27 @@ describe('main chat proactive messages', () => {
     });
 
     // The week's card is a brief card too: Play only with the brief's words.
-    it('offers Play and Read it on the weekly recap card only when its brief has words', async () => {
-        const week = { ...(readyBrief('week-1') as object), slot: 'evening', yourWeek: { days: [] } };
+    it('offers Play and Read it on the weekly recap card only when its brief has words or recap rows (design v1.0.1)', async () => {
         briefByID.mockReset();
-        briefByID.mockResolvedValueOnce({ brief: { ...week, narrativeStatus: 'unavailable', narrative: [] }, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
+        const week = { ...(readyBrief('week-1') as object), slot: 'evening', yourWeek: { days: [] } };
+        const noRows = { ...(readyBrief('week-1') as object), narrativeStatus: 'unavailable', narrative: [], audio: undefined, yourWeek: { start: '2026-10-26', end: '2026-11-01', lead: 'Your week' } };
+        const withRows = { ...noRows, yourWeek: { ...noRows.yourWeek, time: [{ name: 'Brief work', hours: 2 }] } };
+        briefByID.mockResolvedValueOnce({ brief: noRows, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
+        briefByID.mockResolvedValueOnce({ brief: withRows, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
         briefByID.mockResolvedValue({ brief: week, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
         const onOpen = vi.fn();
-        render(<MainChatProactiveCard item={proactive({ kind: 'weekly_recap', briefId: 'week-1' })} onOpenTarget={onOpen} />);
+        const { unmount } = render(<MainChatProactiveCard item={proactive({ kind: 'weekly_recap', briefId: 'week-1' })} onOpenTarget={onOpen} />);
         expect(await screen.findByRole('heading', { name: 'Evening brief · 1:50 PM' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: en.mainChat.card.button.hearIt })).toBeNull();
         expect(screen.queryByRole('button', { name: en.mainChat.card.button.readIt })).toBeNull();
-        act(() => emitRuntimeEvent('brief:stored', {}));
-        expect(await screen.findByRole('button', { name: en.mainChat.card.button.hearIt })).toBeInTheDocument();
+        unmount();
+        render(<MainChatProactiveCard item={proactive({ kind: 'weekly_recap', briefId: 'week-1' })} onOpenTarget={onOpen} />);
+        expect(await screen.findByRole('button', { name: en.mainChat.card.button.readIt })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: en.mainChat.card.button.hearIt })).toBeNull();
         fireEvent.click(screen.getByRole('button', { name: en.mainChat.card.button.readIt }));
         expect(onOpen).toHaveBeenCalledWith({ kind: 'today', id: 'week-1' });
+        act(() => emitRuntimeEvent('brief:stored', {}));
+        expect(await screen.findByRole('button', { name: en.mainChat.card.button.hearIt })).toBeInTheDocument();
     });
     it('opens the source brief from the weekly recap card in Chat', () => {
         const onOpen = vi.fn();

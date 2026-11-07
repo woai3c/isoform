@@ -8,6 +8,11 @@ import { cn } from '@/lib/utils';
 import { activeInterval } from '@/lib/app-activity';
 
 export type HoldPreview = 'proposed' | 'held' | 'dismissed';
+
+// R70: a held hold is a solid violet outline with a violet tint, never a solid fill.
+// A proposed hold stays dashed with a lighter tint. Isoform's colour, the meetings' outline.
+const HELD_HOLD = 'text-[10px] border-[1.5px] border-accent bg-accent-light text-accent';
+const PROPOSED_HOLD = 'border-[1.5px] border-dashed border-accent bg-accent-light/50 text-accent';
 interface Span { start: number; end: number }
 
 let chipMeasureContext: CanvasRenderingContext2D | null | undefined;
@@ -217,10 +222,17 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
     firstHour.setMinutes(0, 0, 0);
     for (let at = firstHour.getTime(); at <= end; at += 3_600_000) if (at >= start) hours.push(at);
     // R69: hour labels never touch. Every 2 hours when they fit, else every 4, else every 6; each stays inside the strip.
+    // R69: labels sit on the hours that are multiples of the step, so noon always has one (design, 2026-11-06).
+    const hourOfDay = (at: number) => {
+        try {
+            return Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone }).formatToParts(at).find((part) => part.type === 'hour')?.value) % 24;
+        } catch {
+            return new Date(at).getHours();
+        }
+    };
     const hourLabels = (() => {
-        const anchor = hours[0] ?? start;
         const fitsStep = (step: number) => {
-            const shown = hours.filter((at) => Math.round((at - anchor) / 3_600_000) % step === 0);
+            const shown = hours.filter((at) => hourOfDay(at) % step === 0);
             if (width <= 0) return { shown, ok: step === 2 };
             let edge = -Infinity;
             for (const at of shown) {
@@ -321,14 +333,14 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
                             // Hover and the accessible name carry the word or the full name, even where the block is too narrow to show it.
                             const title = [eventTitle(block), ...(block.hidden.length ? [t('dayStrip.more', { count: block.hidden.length }), ...block.hidden.map(eventTitle)] : [])].join('\n');
                             // Every calendar block is an ink outline with a light tint, never a solid fill; an ended one dims its tint (R30).
-                            const className = cn('pointer-events-auto absolute flex items-center justify-center overflow-hidden whitespace-nowrap rounded-md text-[11.5px] font-medium', event ? event.holdId ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : cn('border-[1.5px] border-ink', entry.originalEnd <= now ? 'bg-panel-warm/50' : 'bg-panel-warm') : holdPreview === 'held' ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : 'border-[1.5px] border-dashed border-accent bg-accent-light text-accent');
+                            const className = cn('pointer-events-auto absolute flex items-center justify-center overflow-hidden whitespace-nowrap rounded-md text-[11.5px] font-medium', event ? event.holdId ? HELD_HOLD : cn('border-[1.5px] border-ink', entry.originalEnd <= now ? 'bg-panel-warm/50' : 'bg-panel-warm') : holdPreview === 'held' ? HELD_HOLD : PROPOSED_HOLD);
                             const style = { ...placement(block, block.end === Math.min(end, block.originalEnd) ? 2 : 0), zIndex: 1, top: block.inset ? 10 : 6, height: block.inset ? 20 : 28 };
                             return event?.kind === 'meeting' && !event.holdId && !event.private && onOpenMeeting
                                 ? <button key={block.start} type="button" data-testid="today-day-event" data-inset={block.inset} data-kind={event.kind} title={title} aria-label={t('dayStrip.openPrep', { event: eventTitle(block) })} tabIndex={pieceIndex === 0 ? 0 : -1} className={cn(className, 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent')} style={style} onClick={() => onOpenMeeting(event.id)} />
                                 : <span key={block.start} data-testid={event ? 'today-day-event' : 'today-day-hold'} data-inset={block.inset} data-kind={event?.kind} data-state={event ? undefined : holdPreview} title={title} aria-label={title} className={className} style={style} />;
                         })}
                         {labelSpan && <BlockLabel eventId={event?.id} label={label}
-                            className={event ? event.holdId ? 'text-solid-btn-fg' : entry.originalEnd <= now ? 'text-muted' : 'text-ink' : holdPreview === 'held' ? 'text-solid-btn-fg' : 'text-accent'}
+                            className={event ? event.holdId ? 'text-accent' : entry.originalEnd <= now ? 'text-muted' : 'text-ink' : 'text-accent'}
                             style={{ ...placement(labelSpan), top: 6, height: 28, zIndex: 2 }} />}
                         {!event && labelSpan && holdPreview === 'held' && onRemoveHold && <button type="button"
                             aria-label={t('holds.heldFor', { title: holdTitle ?? shape.hold?.label })}

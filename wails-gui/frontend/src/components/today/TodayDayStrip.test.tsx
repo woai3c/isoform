@@ -237,8 +237,12 @@ it.each([
     ['2026-10-23', '2026-10-23T08:00:00-07:00', '0px'],
     ['2026-10-23', '2026-10-23T18:30:00-07:00', `clamp(0px, ${(10.5 / 11) * 100}%, calc(100% - 2px))`],
 ])('keeps the same-day marker inside the strip at %s / %s', (requestedDate, now, left) => {
-    render(<TodayDayStrip requestedDate={requestedDate} shape={{ ...dayShapeFixture, now }} timeZone="America/Los_Angeles" />);
-    expect(screen.getByTestId('today-day-now')).toHaveStyle({ left });
+    // Pin the wall clock to the shape's time: a few milliseconds past 08:00 would clamp instead of reading 0px.
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.parse(now));
+    try {
+        render(<TodayDayStrip requestedDate={requestedDate} shape={{ ...dayShapeFixture, now }} timeZone="America/Los_Angeles" />);
+        expect(screen.getByTestId('today-day-now')).toHaveStyle({ left });
+    } finally { clock.mockRestore(); }
 });
 it.each([
     '2026-10-23T00:10:00-07:00',
@@ -558,5 +562,37 @@ it('keeps every hour label at a wide width (R69)', () => {
     try {
         render(<TodayDayStrip requestedDate="2026-10-23" timeZone="America/Los_Angeles" shape={{ ...dayShapeFixture, hold: null, events: [event('a', '09:00', '10:00')] }} />);
         expect(screen.getByTestId('today-day-hours').querySelectorAll('.today-day-hour')).toHaveLength(6);
+    } finally { vi.restoreAllMocks(); }
+});
+
+// R70: a held hold is a solid violet outline with a violet tint; a proposed hold is dashed with a lighter tint.
+it('draws a held hold as a solid violet outline with a violet tint, never a fill (R70)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1100 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" holdPreview="held" shape={{ ...dayShapeFixture, events: [], hold: { start: '2026-10-23T10:00:00-07:00', end: '2026-10-23T11:00:00-07:00', label: 'Focus' } }} />);
+        const hold = screen.getByTestId('today-day-hold');
+        expect(hold).toHaveClass('border-accent', 'bg-accent-light');
+        expect(hold).not.toHaveClass('border-dashed', 'bg-solid-btn-bg');
+    } finally { vi.restoreAllMocks(); }
+});
+
+it('draws a proposed hold dashed with a lighter tint than a held one (R70)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1100 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" holdPreview="proposed" shape={{ ...dayShapeFixture, events: [], hold: { start: '2026-10-23T10:00:00-07:00', end: '2026-10-23T11:00:00-07:00', label: 'Focus' } }} />);
+        const hold = screen.getByTestId('today-day-hold');
+        expect(hold).toHaveClass('border-dashed', 'border-accent', 'bg-accent-light/50');
+        expect(hold).not.toHaveClass('bg-solid-btn-bg');
+    } finally { vi.restoreAllMocks(); }
+});
+
+// R69: labels sit on multiples of the step in the strip's clock, so a day that starts at 7 AM still reads 8, 12, 4 at 360.
+it('counts hour labels from the clock, not the strip start: 7 AM at 360 px reads 8, 12, 4 (R69)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 360 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" timeZone="America/Los_Angeles" shape={{ ...dayShapeFixture, hold: null,
+            rangeStart: '2026-10-23T07:00:00-07:00', rangeEnd: '2026-10-23T19:00:00-07:00', events: [event('a', '09:00', '10:00')] }} />);
+        const labels = [...screen.getByTestId('today-day-hours').querySelectorAll<HTMLElement>('.today-day-hour')];
+        expect(labels.map((label) => label.textContent)).toEqual(['8:00 AM', '12:00 PM', '4:00 PM']);
     } finally { vi.restoreAllMocks(); }
 });
