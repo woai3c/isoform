@@ -14,6 +14,10 @@ final class ChatDeliveryTests: XCTestCase {
         ChatItemView(seq: seq, role: role, kind: kind, text: text, toolName: "", at: "", permission: nil)
     }
 
+    func testAWaitingRowSaysItWaitsForTheComputer() {
+        XCTAssertEqual(ChatDeliveryStatus.waitingForComputer.label, "Waits for your computer")
+    }
+
     func testStatesOnlyMoveForward() {
         XCTAssertEqual(ChatDeliveryState.sending.advanced(to: .sent), .sent)
         XCTAssertEqual(ChatDeliveryState.seen.advanced(to: .sent), .seen)
@@ -40,7 +44,7 @@ final class ChatDeliveryTests: XCTestCase {
         XCTAssertEqual(outgoing.deliveryStatus(computerOnline: false), .sent)
         outgoing.state = .seen
         XCTAssertEqual(outgoing.deliveryStatus(computerOnline: false), .seen)
-        XCTAssertEqual(ChatDeliveryStatus.waitingForComputer.label, "Will send when your computer is back")
+        XCTAssertEqual(ChatDeliveryStatus.waitingForComputer.label, "Waits for your computer")
         XCTAssertEqual(ChatDeliveryStatus.waitingForComputer.explanation,
                        "This phone keeps trying automatically. You do not need to send this message again.")
     }

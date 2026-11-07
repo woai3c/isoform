@@ -311,8 +311,10 @@ actor PendingWriteJournal {
         return write
     }
 
+    /// `dispatchedAt` is set only by the UI-test seed for a send the relay already took; the app never passes it.
     func reserveTodayDraft(taskID: String, revision: String, text: String?, deviceID: String,
-                           makeKey: @Sendable () -> String, createdAt: Date) throws -> PendingWrite {
+                           makeKey: @Sendable () -> String, createdAt: Date,
+                           dispatchedAt: Date? = nil) throws -> PendingWrite {
         loadIfNeeded()
         guard let hub = hubID() else { throw HubRequestError.notPaired }
         try removeStaleToday(for: hub, deviceID: deviceID)
@@ -323,7 +325,7 @@ actor PendingWriteJournal {
         }
         var write = PendingWrite(key: makeKey(), operation: .todayDraftSend, target: taskID, choice: "send",
                                  fingerprint: fingerprint, createdAt: createdAt, hubID: hub)
-        write.todayDraftSend = PendingWrite.TodayDraftSend(taskID: taskID, revision: revision, text: text)
+        write.todayDraftSend = PendingWrite.TodayDraftSend(taskID: taskID, revision: revision, text: text, dispatchedAt: dispatchedAt)
         write.todayDeviceID = deviceID
         try insert(write)
         return write

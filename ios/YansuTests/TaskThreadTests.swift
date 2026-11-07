@@ -265,3 +265,70 @@ private actor ThreadTestHub: TasksHubAPI {
         return detail
     }
 }
+
+/// PROTOCOL.md section 23: a send queued while the computer is away carries its queue time, and a late one
+/// is held by the computer until the person says yes again.
+final class TaskSendWaitTests: XCTestCase {
+    func testAQueuedSendEncodesItsQueueTimeAndALiveSendDoesNot() throws {
+        let queued = MobileTaskActionRequest(idempotencyKey: "k1", action: "send", text: "Yes",
+                                             queuedAt: TaskSendWait.queuedAt(Date(timeIntervalSince1970: 1_800_000_000)))
+        let json = try String(decoding: JSONEncoder().encode(queued), as: UTF8.self)
+        XCTAssertTrue(json.contains("\"queuedAt\":\"2027-01-15T08:00:00Z\""), json)
+
+        let live = MobileTaskActionRequest(idempotencyKey: "k2", action: "send", text: "Yes")
+        let liveJSON = try String(decoding: JSONEncoder().encode(live), as: UTF8.self)
+        XCTAssertFalse(liveJSON.contains("queuedAt"), "a live send must not carry a queue time: \(liveJSON)")
+    }
+
+    func testTheComputerHoldIsItsOwnRejectionAndIsNotDropped() {
+        XCTAssertEqual(HubRequestError.rejection(status: 409, message: "confirm_send"), .confirmSend(person: nil))
+        let named = HubResponse(status: 409, body: #"{"ok":false,"data":{"code":"confirm_send","person":"Sam"},"error":"confirm_send"}"#)
+        XCTAssertThrowsError(try named.payload(EmptyPayload.self)) { error in
+            XCTAssertEqual(error as? HubRequestError, .confirmSend(person: "Sam"))
+        }
+        let anonymous = HubResponse(status: 409, body: #"{"ok":false,"data":{"code":"confirm_send"},"error":"confirm_send"}"#)
+        XCTAssertThrowsError(try anonymous.payload(EmptyPayload.self)) { error in
+            XCTAssertEqual(error as? HubRequestError, .confirmSend(person: nil), "a send with no name says the reply")
+        }
+        XCTAssertEqual(HubRequestError.rejection(status: 409, message: "changed"), .conflict(message: "changed"))
+        XCTAssertEqual(JournaledWriter.disposition(for: HubRequestError.confirmSend(person: "Sam")), .changed,
+                       "a held send keeps its draft; it is not dropped")
+    }
+
+    func testTheAskWindowIsAnHourAndTheRelayKeepsADay() {
+        XCTAssertEqual(TaskSendWait.askAfter, 3600)
+        XCTAssertEqual(TaskSendWait.relayRetention, 24 * 3600)
+        XCTAssertNil(TaskSendWait.queuedAt(nil))
+    }
+}
+
+private struct EmptyPayload: Decodable {}
+
+/// A drafted reply the relay is still holding stays on the phone while it is paired: the loader must not clear it.
+@MainActor
+final class PairedHeldDraftTests: XCTestCase {
+    func testAPairedHeldDraftSurvivesTheLoaderAndIsExpiredAfterADay() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let journal = PendingWriteJournal(fileURL: url, hubID: { "hub" })
+        let store = TasksStore(hub: SilentTasksHub(), isPaired: { true }, hubID: { "hub" },
+                               journal: journal, deviceID: { "device" }, fileURL: url.appendingPathComponent("tasks.json"))
+        _ = try await journal.reserveTodayDraft(taskID: "t", revision: "r", text: "Yes", deviceID: "device",
+                                                makeKey: { "held-1" },
+                                                createdAt: Date().addingTimeInterval(-25 * 3600))
+        await store.loadPendingDraftSends()
+        XCTAssertEqual(store.pendingDraftSends.map(\.key), ["held-1"], "a paired phone dropped its held draft")
+        XCTAssertEqual(store.expiredDraftSends.map(\.key), ["held-1"], "a draft held a day is not expired")
+    }
+}
+
+/// A hub that never answers: the loader test only reads the journal.
+private actor SilentTasksHub: TasksHubAPI {
+    func brainDumpAvailable() async throws -> Bool { throw HubRequestError.noAnswer }
+    func parseBrainDump(text: String, idempotencyKey: String) async throws -> [BrainDumpItem] { throw HubRequestError.noAnswer }
+    func addBrainDump(items: [BrainDumpItem], idempotencyKey: String) async throws { throw HubRequestError.noAnswer }
+    func tasks() async throws -> MobileTasksPage { throw HubRequestError.noAnswer }
+    func task(id: String) async throws -> MobileTaskDetail { throw HubRequestError.noAnswer }
+    func stopTask(id: String, request: MobileTaskStopRequest) async throws -> MobileTask { throw HubRequestError.noAnswer }
+    func replyToTask(id: String, request: MobileTaskReplyRequest) async throws -> MobileTaskDetail { throw HubRequestError.noAnswer }
+    func actOnTask(id: String, request: MobileTaskActionRequest) async throws -> MobileTaskDetail { throw HubRequestError.noAnswer }
+}

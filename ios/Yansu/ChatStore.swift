@@ -957,9 +957,10 @@ final class ChatStore: ObservableObject {
         }
     }
 
-    /// Whether the computer can be reached for "Talk about this brief": the existing presence check, bounded. No
-    /// answer within the bound, or an answer still unknown, counts as unreachable, so Talk never hangs.
-    func talkReachable(timeout: Duration = .seconds(3)) async -> Bool {
+    /// Whether the relay answered the presence check for "Talk about this brief", bounded. An answer that says the
+    /// computer is asleep counts: the relay keeps the question for it (PROTOCOL.md section 23). No answer within the
+    /// bound, a failed check, or a status still unknown counts as unreachable, so Talk never hangs.
+    func talkAnswered(timeout: Duration = .seconds(3)) async -> Bool {
         let presence = checkPresence()
         let answered = await withTaskGroup(of: Bool.self) { group -> Bool in
             group.addTask { await presence.value; return true }
@@ -968,7 +969,7 @@ final class ChatStore: ObservableObject {
             group.cancelAll()
             return first
         }
-        return answered && hubOnline == true
+        return answered && hubOnline != nil
     }
 
     /// The reference "Talk about this brief" opens with. A brief that already has a reference keeps it and makes
@@ -976,7 +977,9 @@ final class ChatStore: ObservableObject {
     func resolveTalkReference(for brief: MobileBriefV1,
                               timeout: Duration = .seconds(3)) async -> (reference: ChatBriefReference?, notice: String?) {
         guard let reference = brief.chatReference else { return await briefConversationReference(for: brief) }
-        guard await talkReachable(timeout: timeout) else { return (nil, BriefConversationCopy.unavailable) }
+        // A computer known to be asleep takes the question later (PROTOCOL.md section 23): no wait here.
+        if hubOnline == false { return (reference, nil) }
+        guard await talkAnswered(timeout: timeout) else { return (nil, BriefConversationCopy.unavailable) }
         return (reference, nil)
     }
 

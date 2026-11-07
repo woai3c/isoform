@@ -980,10 +980,29 @@ extension AppEnvironment {
                     ChatCache(directory: directory.appendingPathComponent("chat", isDirectory: true)),
                     items: presentationItems, now: Date())
             }
+            #if DEBUG && targetEnvironment(simulator)
+            // A paired Today with a drafted reply the relay held a day (the 24-hour line).
+            if isFirstLaunch && state == "feed-review", ProcessInfo.processInfo.environment["YANSU_UITEST_HELD_SEND"] == "expired" {
+                Task { await environment.tasks.seedExpiredDraftForUITest() }
+            }
+            // A proactive card queued while the computer sleeps (the Needs-you "Waits for your computer" section).
+            if isFirstLaunch && state == "feed-review", ProcessInfo.processInfo.environment["YANSU_UITEST_TODAY_WAITS"] == "1",
+               let item = try ChatUITestSeed.proactiveCards(now: Date()).compactMap(\.proactive).first,
+               let actionID = item.actionIDs.first {
+                Task { await environment.actions.seedWaitingTodayForUITest(chatID: ChatUITestSeed.mainChatID, item: item, actionID: actionID) }
+            }
+            #endif
             if isFirstLaunch && ["feed", "feed-empty", "feed-no-history", "feed-audio", "feed-audio-rendering", "feed-catchup", "feed-offline", "feed-review", "feed-fetch-failed"].contains(state) {
                 if state != "feed-no-history" {
                     // The fetch-failed state keeps yesterday cached: today's brief is named but its text never arrived.
                     var seeded = FeedUITestSeed.briefs(today: state != "feed-empty" && state != "feed-fetch-failed", now: Date())
+                    #if DEBUG && targetEnvironment(simulator)
+                    // A brief from a computer that has answered before carries its conversation key, so Talk opens
+                    // while the computer sleeps instead of asking it (PROTOCOL.md section 23).
+                    if ProcessInfo.processInfo.environment["YANSU_UITEST_BRIEF_TALK"] == "offline" {
+                        for index in seeded.indices { seeded[index].conversationKey = "ui-conversation-key" }
+                    }
+                    #endif
                     if state.hasPrefix("feed-audio"), let index = seeded.indices.last {
                         seeded[index].audio = BriefAudio(mime: "audio/wav", bytes: BriefAudioUITestSeed.wav().count,
                                                          durationSeconds: BriefAudioUITestSeed.duration)
@@ -1092,6 +1111,12 @@ extension AppEnvironment {
                 )
                 environment.chat.prepareMainChat()
                 environment.notifications.seedForUITest()
+                #if DEBUG && targetEnvironment(simulator)
+                switch ProcessInfo.processInfo.environment["YANSU_UITEST_HELD_SEND"] {
+                case "confirm": environment.tasks.seedSendConfirmationForUITest(person: "Sam")
+                default: break
+                }
+                #endif
             }
             if isFirstLaunch && state == "day-one" {
                 environment.tasks.seedForUITest(TaskUITestSeed.page)

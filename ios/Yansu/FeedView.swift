@@ -261,8 +261,7 @@ struct FeedView: View {
             PastBriefsView()
         }
         .navigationDestination(for: HistoryEntry.self) { entry in
-            BriefDetailView(entry: entry, player: environment.audioPlayer,
-                            fallbackLead: todayStore.snapshot?.briefs.first { $0.id == entry.id }?.lead)
+            historyDetail(entry)
         }
         .taskThreads(environment.tasks, from: .today)
         .navigationDestination(for: TopicRoute.self) { route in
@@ -295,6 +294,9 @@ struct FeedView: View {
                                 Text(ComputerSleepReason.directions(for: cause, reason: sleepReason, sentWaiting: environment.chat.hasUnsentMessages))
                                     .font(.body).foregroundStyle(YansuTheme.secondary)
                                     .accessibilityIdentifier("today.connection.steps")
+                                Text("You can still ask and act. Isoform does it when your computer wakes.")
+                                    .font(.body).foregroundStyle(YansuTheme.secondary)
+                                    .accessibilityIdentifier("today.connection.canStillAct")
                             } else {
                                 Text(cause.directions).font(.body).foregroundStyle(YansuTheme.secondary)
                             }
@@ -557,6 +559,12 @@ struct FeedView: View {
     }
 
     /// The Computer sheet's first line, also Today's away line (P133). One function, so the two can't drift.
+    // The past-brief destination, kept out of the body so the type checker can still read it.
+    private func historyDetail(_ entry: HistoryEntry) -> some View {
+        BriefDetailView(entry: entry, player: environment.audioPlayer,
+                        fallbackLead: todayStore.snapshot?.briefs.first { $0.id == entry.id }?.lead)
+    }
+
     private func awayFirstLine(_ cause: TodayStore.ConnectionCause) -> String {
         TodayStore.ConnectionCause.firstLine(cause, reason: sleepReason, sleptAt: sleptAt.map(todayTime), asOf: todayStore.asOf.map(todayTime))
     }
@@ -624,6 +632,13 @@ struct FeedView: View {
                     .font(.footnote)
                     .foregroundStyle(YansuTheme.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if cause == .sleeping {
+                    Text("You can still ask and act. Isoform does it when your computer wakes.")
+                        .font(.footnote)
+                        .foregroundStyle(YansuTheme.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("today.connection.canStillAct")
+                }
                 if cause == .sleeping && keepAwake.on == false && !keepAwakeOfferDismissed {
                     Text("To reach it while it's plugged in, keep it awake for your phone.")
                         .font(.footnote)
@@ -814,7 +829,7 @@ struct FeedView: View {
         if !cards.isEmpty || !corrections.isEmpty || !feed.pendingToday.isEmpty ||
             !notifications.pendingToday.isEmpty || todayStore.pendingFresh != nil {
             VStack(alignment: .leading, spacing: 12) {
-                sectionLabel("Sending when your computer is back")
+                sectionLabel("Waits for your computer")
                 ForEach(cards, id: \.key) { write in
                     if let replay = write.todayReplay, let item = live.first(where: { $0.momentID == replay.momentID }) {
                         VStack(alignment: .leading, spacing: 8) {

@@ -120,7 +120,7 @@ struct BriefAskSheet: View {
                                 }
                             } else if outgoing?.isQueued == true && (chat.hubOnline == false || outgoing?.deliveryIssue == .waitingForComputer) {
                                 HStack {
-                                    Text("Sending when your computer is back")
+                                    Text("Waits for your computer")
                                         .accessibilityIdentifier("brief.ask.waiting")
                                     if outgoing?.askUndispatched == true, let chatID, let messageID {
                                         Button("Undo") {

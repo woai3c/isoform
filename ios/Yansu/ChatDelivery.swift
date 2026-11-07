@@ -43,7 +43,7 @@ enum ChatDeliveryStatus: Equatable {
     var label: String {
         switch self {
         case .sending: return ChatDeliveryState.sending.label
-        case .waitingForComputer: return String(localized: "Will send when your computer is back")
+        case .waitingForComputer: return String(localized: "Waits for your computer")
         case .waitingForTurn: return String(localized: "Waiting for your computer to finish")
         case .sent: return ChatDeliveryState.sent.label
         case .seen: return ChatDeliveryState.seen.label

@@ -99,7 +99,7 @@ final class ActionStore: ObservableObject {
             _ = try await journal.reserveToday(chatID: chatID, item: item, actionID: actionID, deviceID: device,
                                                makeKey: writer.makeKey, createdAt: now())
             await loadPendingToday()
-            return .pending(message: String(localized: "Sending when your computer is back"))
+            return .pending(message: String(localized: "Waits for your computer"))
         } catch {
             return .refused(message: error is HubRequestError ? unavailable : Self.message(for: error))
         }
@@ -451,3 +451,16 @@ private enum Copy {
     static let workFolderNotAbsolute = "Use the full folder path on your computer, starting with /, or leave the folder empty."
     static let workStarted = "Saved on your computer as one-time work. It starts when you start it from One-time work on your computer."
 }
+
+#if DEBUG && targetEnvironment(simulator)
+extension ActionStore {
+    /// A proactive action queued while the computer sleeps, written through the journal as the app writes one. Today's
+    /// Needs-you section then shows "Waits for your computer" for it (PROTOCOL.md section 23).
+    func seedWaitingTodayForUITest(chatID: String, item: ChatProactiveView, actionID: String) async {
+        guard isPaired(), let device = deviceID() else { return }
+        _ = try? await journal.reserveToday(chatID: chatID, item: item, actionID: actionID, deviceID: device,
+                                            makeKey: writer.makeKey, createdAt: now())
+        await loadPendingToday()
+    }
+}
+#endif

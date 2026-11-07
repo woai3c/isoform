@@ -140,7 +140,7 @@ final class ChatAwayUITests: XCTestCase {
     /// offer shows because the seeded setting is off.
     func testTheComputerSheetSaysWhyItSlept() throws {
         let statuses = [
-            "battery_floor": ("It went to sleep to save its battery (below 20%).", "为了省电（电量低于20%）进入了睡眠。"),
+            "battery_floor": ("It went to sleep to save its battery (below 20%).", "为了省电（电量低于 20%）进入了睡眠。"),
             "low_power": ("Low Power Mode is on.", "低电量模式已开启。"),
             "lid_closed": ("Its lid is closed.", "盖子合上了。"),
         ]
@@ -152,11 +152,14 @@ final class ChatAwayUITests: XCTestCase {
                 app.launchEnvironment["YANSU_UITEST_SETTINGS_STATE"] = "feed-review"
                 app.launchEnvironment["YANSU_UITEST_CONNECTION_CAUSE"] = "sleeping"
                 app.launchEnvironment["YANSU_UITEST_GOODBYE_REASON"] = reason
+                // The sheet says "Asleep since" only when the sleep time is known (TodayStore.ConnectionCause.firstLine).
+                if statuses[reason] != nil { app.launchEnvironment["YANSU_UITEST_GOODBYE_AT"] = "2026-11-07T10:46:00Z" }
                 app.launchEnvironment["YANSU_UITEST_KEEP_AWAKE"] = "off"
                 app.launchEnvironment["YANSU_UITEST_APPEARANCE"] = appearance
                 app.launch()
                 let line = app.buttons["today.connection.line"]
                 XCTAssertTrue(line.waitForExistence(timeout: 15), reason)
+                let todayLine = line.label
                 line.tap()
                 XCTAssertTrue(app.descendants(matching: .any)["today.connection.sheet"].firstMatch.waitForExistence(timeout: 5))
                 let status = app.staticTexts["today.connection.status"]
@@ -165,7 +168,9 @@ final class ChatAwayUITests: XCTestCase {
                     XCTAssertTrue(status.label.hasSuffix(language == "zh" ? chinese : english), status.label)
                     XCTAssertTrue(status.label.hasPrefix(language == "zh" ? "从" : "Asleep since "), status.label)
                 } else {
-                    XCTAssertFalse(status.exists, "\(reason) keeps today's text")
+                    // No reason copy: the sheet keeps Today's own line, the cause and the time it was last heard.
+                    XCTAssertTrue(status.waitForExistence(timeout: 5), reason)
+                    XCTAssertEqual(status.label, todayLine, reason)
                 }
                 XCTAssertTrue(app.descendants(matching: .any)["today.connection.keepAwakeOffer"].firstMatch.exists)
                 try capture(app, named: "sheet-\(reason)-\(language)-\(appearance)")

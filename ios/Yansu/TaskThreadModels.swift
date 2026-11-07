@@ -57,6 +57,41 @@ struct MobileTaskActionRequest: Encodable, Equatable, Sendable {
     /// Send with your own words when you edited the draft.
     var text: String? = nil
     var draftRevision: String? = nil
+    /// When a send was queued while the computer was away (PROTOCOL.md section 23). Absent for a live send.
+    var queuedAt: String? = nil
+}
+
+/// A send that waited for the computer past its hour and needs the person's yes (PROTOCOL.md section 23).
+struct TaskSendConfirmation: Equatable, Identifiable, Sendable {
+    /// The journal key of a draft send, or empty for a send made from the thread.
+    let key: String
+    let taskID: String
+    let text: String?
+    let draftRevision: String?
+    /// The person the reply is for, when the computer knows them.
+    var person: String? = nil
+    var id: String { key.isEmpty ? taskID : key }
+
+    /// The prompt, naming the person when there is one: "the reply" otherwise.
+    static func title(person: String?) -> Text {
+        if let person, !person.isEmpty {
+            return Text("Your computer is awake. Send the reply to \(person) now?")
+        }
+        return Text("Your computer is awake. Send the reply now?")
+    }
+}
+
+enum TaskSendWait {
+    /// A send queued longer ago than this asks again (PROTOCOL.md section 23).
+    static let askAfter: TimeInterval = 60 * 60
+    /// The relay keeps a waiting request this long; past it the send did not happen.
+    static let relayRetention: TimeInterval = 24 * 60 * 60
+
+    /// The queue time a send carries: when the person pressed Send, if it was queued (nil for a live send).
+    static func queuedAt(_ date: Date?) -> String? {
+        guard let date else { return nil }
+        return ISO8601DateFormatter().string(from: date)
+    }
 }
 
 /// Where a thread was opened from; its back button names it.
@@ -366,6 +401,28 @@ struct TaskThreadDestination: ViewModifier {
             .environment(\.openTaskThread) { task = $0 }
             .navigationDestination(item: $task) { task in
                 TaskThreadView(task: task, tasks: tasks, source: source)
+            }
+            .alert(TaskSendConfirmation.title(person: tasks.sendConfirmation?.person),
+                   isPresented: Binding(get: { tasks.sendConfirmation != nil },
+                                        set: { if !$0 { tasks.sendConfirmation = nil } }),
+                   presenting: tasks.sendConfirmation) { held in
+                Button(String(localized: "Send")) { Task { await tasks.confirmHeldSend(held) } }
+                Button(String(localized: "Not now"), role: .cancel) { Task { await tasks.setHeldSendAside(held) } }
+            }
+            .safeAreaInset(edge: .top) {
+                if let expired = tasks.expiredDraftSends.first {
+                    HStack(spacing: 10) {
+                        Text("Your computer didn't wake, so this wasn't sent.")
+                            .font(.footnote).foregroundStyle(YansuTheme.secondary)
+                        Spacer(minLength: 8)
+                        Button("Send again") { Task { await tasks.sendExpiredAgain(expired) } }
+                            .font(.footnote.weight(.semibold)).foregroundStyle(YansuTheme.accent)
+                            .accessibilityIdentifier("tasks.sendAgain")
+                    }
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+                    .background(YansuTheme.surface)
+                    .accessibilityIdentifier("tasks.expiredSend")
+                }
             }
     }
 }

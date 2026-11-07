@@ -355,15 +355,15 @@ final class BriefConversationTests: XCTestCase {
         XCTAssertNotEqual(BriefConversationCopy.computerTooOld, BriefConversationCopy.unavailable)
     }
 
-    /// A brief with a reference and an unreachable computer: Talk gives the one line and opens no sheet, and makes
-    /// no route call.
-    func testTalkWithAReferenceAndOfflineGivesTheLineAndOpensNoSheet() async throws {
+    /// A brief with a reference and a computer that is asleep: the relay answers "offline", and Talk still opens with the
+    /// reference, so the question waits for the computer (PROTOCOL.md section 23). No route call is made.
+    func testTalkWithAReferenceWhileAsleepOpensAndWaits() async throws {
         let hub = BriefConversationHub()
         let (cache, journal) = try resources()
         let chat = store(hub: hub, cache: cache, journal: journal, presence: { false })
         let resolved = await chat.resolveTalkReference(for: brief())
-        XCTAssertNil(resolved.reference)
-        XCTAssertEqual(resolved.notice, BriefConversationCopy.unavailable)
+        XCTAssertEqual(resolved.reference, brief().chatReference)
+        XCTAssertNil(resolved.notice)
         let asked = await hub.conversationAsked
         XCTAssertTrue(asked.isEmpty)
         let opened = await hub.opened
@@ -412,7 +412,7 @@ final class BriefConversationTests: XCTestCase {
     /// Talk gives way to its line when the phone already knows the computer is away, or a tap found it unreachable.
     /// A refusal or an older computer keeps the button, so those lines never replace it.
     func testTheUnreachableLineReplacesTalkOnlyWhenTheComputerIsAway() {
-        XCTAssertTrue(BriefCardsView.talkReplacedByLine(knownAway: true, tapLine: nil))
+        XCTAssertFalse(BriefCardsView.talkReplacedByLine(knownAway: true, tapLine: nil), "a sleeping computer keeps Talk; the question waits")
         XCTAssertTrue(BriefCardsView.talkReplacedByLine(knownAway: false, tapLine: BriefConversationCopy.unavailable))
         XCTAssertFalse(BriefCardsView.talkReplacedByLine(knownAway: false, tapLine: nil))
         XCTAssertFalse(BriefCardsView.talkReplacedByLine(knownAway: false, tapLine: BriefConversationCopy.gateRefused))

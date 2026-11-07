@@ -406,7 +406,7 @@ private struct WeekAskSection: View {
                             .accessibilityIdentifier("brief.yourWeek.holdReadOnly")
                     }
                     if store.isPending(week) {
-                        Text("Sending when your computer is back").font(.footnote).foregroundStyle(YansuTheme.secondary)
+                        Text("Waits for your computer").font(.footnote).foregroundStyle(YansuTheme.secondary)
                             .accessibilityIdentifier("brief.yourWeek.pending")
                     } else {
                         HStack(spacing: 8) {

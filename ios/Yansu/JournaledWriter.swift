@@ -60,7 +60,7 @@ struct JournaledWriter: Sendable {
     static func disposition(for error: Error) -> WriteDisposition {
         if let hubError = error as? HubRequestError {
             switch hubError {
-            case .conflict:
+            case .conflict, .confirmSend:
                 return .changed
             case .forbidden, .notPaired, .rejectedEnvelope, .invalidIdentifier:
                 return .drop

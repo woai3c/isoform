@@ -26,10 +26,10 @@ struct BriefItemActions: View {
                     if holds.undo(hold.id) { held.remove(hold.id) }
                 }
             } else if let pending = feed.pendingToday.first(where: { $0.todayFeedback?.cardKey == card.key }) {
-                statusLine(String(localized: "Sending when your computer is back"),
+                statusLine(String(localized: "Waits for your computer"),
                            undo: pending.todayFeedback?.dispatchedAt == nil ? { Task { await feed.undoToday(pending.key) } } : nil)
             } else if let choice = feed.choices[card.key], choice.action == .notRelevant {
-                statusLine(choice.delivery == .pending ? String(localized: "Sending when your computer is back") : String(localized: "Fewer like this"))
+                statusLine(choice.delivery == .pending ? String(localized: "Waits for your computer") : String(localized: "Fewer like this"))
             } else if !Self.actions(for: card, canGiveFeedback: canGiveFeedback).isEmpty {
                 HStack(spacing: 8) {
                     Button(String(localized: "Useful")) { Task { await hold(.like) } }

@@ -438,8 +438,10 @@ struct BriefCardsView: View {
         Self.talkReplacedByLine(knownAway: chat.awayCause != nil, tapLine: talkLine)
     }
 
+    // A sleeping computer does not replace Talk: the question waits for it (PROTOCOL.md section 23). Only a
+    // computer that cannot be reached at all keeps the line.
     static func talkReplacedByLine(knownAway: Bool, tapLine: String?) -> Bool {
-        knownAway || tapLine == BriefConversationCopy.unavailable
+        tapLine == BriefConversationCopy.unavailable
     }
 
     /// Talk needs the computer's opener (the sheet opens on it). Until the computer can start a conversation from any

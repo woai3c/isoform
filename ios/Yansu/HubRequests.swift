@@ -201,6 +201,10 @@ struct HubResponse: Equatable, Sendable {
     func payload<T: Decodable>(_ type: T.Type) throws -> T {
         let envelope = try? JSONDecoder().decode(HubEnvelope<T>.self, from: Data(body.utf8))
         guard (200..<300).contains(status) else {
+            if status == 409, let held = try? JSONDecoder().decode(ConfirmSendBody.self, from: Data(body.utf8)),
+               held.error == "confirm_send" {
+                throw HubRequestError.confirmSend(person: held.data?.person)
+            }
             throw HubRequestError.rejection(status: status, message: envelope?.error)
         }
         guard let envelope else {
@@ -245,6 +249,15 @@ protocol BriefBodyAPI: Sendable {
 }
 
 extension HubChannel: BriefBodyAPI {}
+
+/// The computer's 409 for a send it held: the error names it, and data names the person it is for.
+struct ConfirmSendBody: Decodable {
+    struct Details: Decodable {
+        let person: String?
+    }
+    let error: String?
+    let data: Details?
+}
 
 struct HubEnvelope<Payload: Decodable>: Decodable {
     let ok: Bool
@@ -318,6 +331,8 @@ enum HubRequestError: LocalizedError, Equatable {
     case rejectedEnvelope
     case rejected(status: Int, message: String)
     case conflict(message: String)
+    /// The computer held a send that waited over an hour; the person must say yes again (PROTOCOL.md section 23).
+    case confirmSend(person: String?)
     case forbidden
     case malformedResponse
     case invalidIdentifier
@@ -329,6 +344,7 @@ enum HubRequestError: LocalizedError, Equatable {
         case 403:
             return .forbidden
         case 409:
+            if message == "confirm_send" { return .confirmSend(person: nil) }
             return .conflict(message: message ?? "Your computer could not apply that because it changed.")
         default:
             return .rejected(status: status, message: message ?? "Your computer could not finish that request.")
@@ -337,6 +353,8 @@ enum HubRequestError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
+        case .confirmSend:
+            return "Your computer was away for over an hour. Confirm before sending."
         case .notPaired:
             return "This phone is not paired with a computer yet."
         case .noAnswer:

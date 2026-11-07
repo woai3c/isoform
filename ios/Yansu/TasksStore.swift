@@ -23,6 +23,8 @@ final class TasksStore: ObservableObject {
     @Published private(set) var detailResetGeneration = 0
     /// Why the last reply or ··· action in a thread did not go through.
     @Published var threadNotice: String?
+    /// A send the computer held for the person's yes (PROTOCOL.md section 23).
+    @Published var sendConfirmation: TaskSendConfirmation?
     @Published private(set) var stopFailureID: String?
     @Published private(set) var pendingDraftSends: [PendingWrite] = []
     private var badgeUpdate: Task<Void, Never>?
@@ -164,6 +166,35 @@ final class TasksStore: ObservableObject {
         await loadPendingDraftSends()
     }
 
+    /// Yes to the ask: the held reply goes now as a live send. The journal entry goes only once it is sent.
+    func confirmHeldSend(_ held: TaskSendConfirmation) async {
+        sendConfirmation = nil
+        let sent = await act(id: held.taskID, action: "send", text: held.text, draftRevision: held.draftRevision)
+        if sent, !held.key.isEmpty, let journal {
+            await journal.remove(keys: [held.key])
+            await loadPendingDraftSends()
+        }
+    }
+
+    /// Not now: the held reply stays as a draft.
+    func setHeldSendAside(_ held: TaskSendConfirmation) async {
+        sendConfirmation = nil
+        if !held.key.isEmpty { await undoDraftSend(held.key) }
+    }
+
+    /// Drafted sends the relay has held a day with no answer: they did not happen (PROTOCOL.md section 23).
+    var expiredDraftSends: [PendingWrite] {
+        let cutoff = Date().addingTimeInterval(-TaskSendWait.relayRetention)
+        return pendingDraftSends.filter { $0.createdAt < cutoff && $0.todayDraftSend?.failed != true }
+    }
+
+    /// Send again: the draft's words go out as a new send. Until then they stay on the draft.
+    func sendExpiredAgain(_ pending: PendingWrite) async {
+        guard let draft = pending.todayDraftSend else { return }
+        await undoDraftSend(pending.key)
+        _ = await queueDraftSend(taskID: draft.taskID, revision: draft.revision, text: draft.text)
+    }
+
     private func scheduleDraftReplay(after delay: TimeInterval) {
         draftTimer?.cancel()
         draftTimer = Task { @MainActor [weak self] in
@@ -189,7 +220,8 @@ final class TasksStore: ObservableObject {
                 guard let saved = try await journal.markTodayDraft(key: pending.key, dispatchedAt: Date()) else { continue }
                 await loadPendingDraftSends()
                 let request = MobileTaskActionRequest(idempotencyKey: saved.key, action: "send", text: draft.text,
-                                                      draftRevision: draft.revision)
+                                                      draftRevision: draft.revision,
+                                                      queuedAt: TaskSendWait.queuedAt(pending.createdAt))
                 let result = try await HubRequestScope.$hubID.withValue(saved.hubID) {
                     try await HubRequestScope.$deviceID.withValue(saved.todayDeviceID) {
                         try await hub.actOnTask(id: draft.taskID, request: request)
@@ -201,6 +233,13 @@ final class TasksStore: ObservableObject {
                 await loadPendingDraftSends()
                 await refresh()
             } catch {
+                if case .confirmSend(let person)? = error as? HubRequestError {
+                    // Held: the reply waits as a set-aside draft until the person says yes or not now.
+                    sendConfirmation = TaskSendConfirmation(key: pending.key, taskID: draft.taskID, text: draft.text,
+                                                            draftRevision: draft.revision, person: person)
+                    _ = try? await journal.markTodayDraft(key: pending.key, failed: true)
+                    continue
+                }
                 if JournaledWriter.disposition(for: error) != .keep {
                     _ = try? await journal.markTodayDraft(key: pending.key, failed: true)
                 } else { break }
@@ -403,7 +442,7 @@ final class TasksStore: ObservableObject {
     /// Runs one ··· item or a tapped choice and shows the task as the computer now has it.
     @discardableResult
     func act(id: String, action: String, title: String? = nil, eventID: String? = nil, choiceID: String? = nil,
-             text: String? = nil) async -> Bool {
+             text: String? = nil, draftRevision: String? = nil) async -> Bool {
         guard Identifiers.isSafePathID(id), isPaired(), canRead(), let hubID = hubID() else { return false }
         threadWrites += 1
         defer { finishThreadWrite() }
@@ -418,8 +457,11 @@ final class TasksStore: ObservableObject {
             detailLoadState = .loaded(detail)
         }
         do {
+            // A send made while the computer is away carries its queue time, so the computer asks again if it is late.
+            let queuedAt = action == "send" && !computerOnline() ? TaskSendWait.queuedAt(Date()) : nil
             let request = MobileTaskActionRequest(idempotencyKey: UUID().uuidString.lowercased(), action: action,
-                                                  title: title, eventId: eventID, choiceId: choiceID, text: text)
+                                                  title: title, eventId: eventID, choiceId: choiceID, text: text,
+                                                  draftRevision: draftRevision, queuedAt: queuedAt)
             let updated = try await HubRequestScope.$hubID.withValue(hubID) { try await hub.actOnTask(id: id, request: request) }
             guard self.hubID() == hubID else { return false }
             accept(updated)
@@ -427,6 +469,11 @@ final class TasksStore: ObservableObject {
             if ["mark_done", "not_now", "send"].contains(action) { await refresh() }
             return true
         } catch {
+            if case .confirmSend(let person)? = error as? HubRequestError {
+                sendConfirmation = TaskSendConfirmation(key: "", taskID: id, text: text, draftRevision: draftRevision,
+                                                        person: person)
+                return false
+            }
             if action != "opened" {
                 threadNotice = Self.threadFailure(error)
                 _ = await loadDetail(id: id)
@@ -516,6 +563,22 @@ final class TasksStore: ObservableObject {
     func seedForUITest(_ page: MobileTasksPage) {
         self.page = page
         loadState = .loaded
+    }
+    /// A held reply waiting for the person's yes, named for \(person) when there is one (PROTOCOL.md section 23).
+    func seedSendConfirmationForUITest(person: String?) {
+        sendConfirmation = TaskSendConfirmation(key: "", taskID: "ui-held-thread", text: "Yes, Thursday works.",
+                                                draftRevision: nil, person: person)
+    }
+    /// A drafted reply the relay held a day with no answer, written through the journal as the app writes one.
+    func seedExpiredDraftForUITest() async {
+        guard let journal, let device = deviceID() else { return }
+        let made = Date().addingTimeInterval(-(TaskSendWait.relayRetention + 3600))
+        // The relay took this send a day ago and never answered. Written with its dispatch time in one insert, so the
+        // launch replay never sees it undispatched and sends it again: the same state a real held send is in.
+        _ = try? await journal.reserveTodayDraft(taskID: "ui-task", revision: "r1", text: "Yes, Thursday works.",
+                                                 deviceID: device, makeKey: { "ui-expired-draft" }, createdAt: made,
+                                                 dispatchedAt: made)
+        await loadPendingDraftSends()
     }
     #endif
 
