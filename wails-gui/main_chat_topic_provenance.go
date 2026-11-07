@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -206,6 +207,7 @@ func (a *App) topicChatProofResults(ctx context.Context, proofs map[string]bool)
 		return denied
 	}
 	cache.stamp, cache.valid = after, true
+	logTopicHistoryProofs(cache.proofs)
 	return cloneTopicChatProofResults(cache.proofs)
 }
 
@@ -475,4 +477,16 @@ func turnHasFrozenTopicHistory(ctx context.Context) bool {
 	binding.history.mu.Lock()
 	defer binding.history.mu.Unlock()
 	return len(binding.history.frozen) > 0
+}
+
+// logTopicHistoryProofs writes one line each time the history's proofs are
+// checked again. It carries counts only: no note text, title or topic name.
+func logTopicHistoryProofs(proofs map[string]bool) {
+	allowed := 0
+	for _, ok := range proofs {
+		if ok {
+			allowed++
+		}
+	}
+	log.Printf("[topic-history] checked proofs=%d kept=%d withheld=%d", len(proofs), allowed, len(proofs)-allowed)
 }
