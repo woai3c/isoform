@@ -132,10 +132,20 @@ final class NotificationSettingsStore: ObservableObject {
         return await enqueue(PendingNotificationChange(idempotencyKey: makeKey(), quietStart: start, quietEnd: end))
     }
 
+    /// Which failure a refused change shows (P132). Only a phone that is really unpaired is told to pair; a paired
+    /// phone with an unreadable queue gets the neutral change message, and a storage block keeps its own message.
+    static func pairingFailureKey(isPaired: Bool, storageBlocked: Bool) -> String? {
+        if !isPaired { return "notifications.error.notPaired" }
+        if storageBlocked { return nil }
+        return "notifications.error.change"
+    }
+
     @discardableResult
     private func enqueue(_ change: PendingNotificationChange, deferSending: Bool = false) async -> Bool {
         guard preparePairing() else {
-            if !storageBlocked { failure = String(localized: "notifications.error.notPaired") }
+            if let key = Self.pairingFailureKey(isPaired: isPaired(), storageBlocked: storageBlocked) {
+                failure = String(localized: String.LocalizationValue(key))
+            }
             return false
         }
         guard pending.count < 100 else {
@@ -335,7 +345,8 @@ final class NotificationSettingsStore: ObservableObject {
         }
         switch error as? HubRequestError {
         case .forbidden: return String(localized: "notifications.error.forbidden")
-        case .notPaired: return String(localized: "notifications.error.notPaired")
+        // A paired phone whose computer does not answer is told that, never to pair again (P132).
+        case .notPaired: return String(localized: "notifications.couldNotReach")
         case .noAnswer: return String(localized: "notifications.error.offline")
         default: return String(localized: "notifications.error.change")
         }

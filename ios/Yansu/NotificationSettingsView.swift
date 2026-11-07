@@ -5,13 +5,16 @@ struct NotificationSettingsView: View {
     @EnvironmentObject private var app: AppEnvironment
     @EnvironmentObject private var push: PushRegistration
     @Environment(\.locale) private var locale
-    @State private var testMessage: String?
     @State private var deliveryMessage: String?
     @State private var testingDelivery = false
     @AppStorage("phone.tasks.iconBadge") private var iconBadge = false
 
+    /// The page shows its choices only once the computer has answered; until then it shows one line and Try again (P132).
+    static func showsChoices(_ state: NotificationSettingsLoadState) -> Bool { state == .loaded }
+
     var body: some View {
         ScrollView {
+            if Self.showsChoices(notifications.loadState) {
             VStack(alignment: .leading, spacing: 20) {
                 YansuCard {
                     VStack(alignment: .leading, spacing: 12) {
@@ -34,14 +37,7 @@ struct NotificationSettingsView: View {
                                 .foregroundStyle(YansuTheme.secondary)
                                 .accessibilityIdentifier("settings.notifications.status")
                         }
-                        Button("notifications.localTest") {
-                            Task { testMessage = await push.sendTestNotification() }
-                        }
-                        .buttonStyle(YansuSecondaryButtonStyle())
-                        .accessibilityIdentifier("settings.testNotification")
-                        if let testMessage {
-                            Text(testMessage).font(.footnote).foregroundStyle(YansuTheme.secondary)
-                        }
+                        // One test: it goes through the computer and says where it stopped if it fails (P132).
                         Button("notifications.deliveryTest") {
                             Task { await testDelivery() }
                         }
@@ -113,7 +109,7 @@ struct NotificationSettingsView: View {
                 } else if notifications.loadState == .loading {
                     ProgressView(String(localized: "notifications.loading"))
                 } else {
-                    Text("notifications.unavailable")
+                    Text("notifications.couldNotReach")
                         .font(.body)
                         .foregroundStyle(YansuTheme.secondary)
                 }
@@ -126,6 +122,24 @@ struct NotificationSettingsView: View {
             }
             .padding(YansuTheme.gutter)
             .fixedSize(horizontal: false, vertical: true)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    if notifications.loadState == .loading {
+                        ProgressView(String(localized: "notifications.loading"))
+                    } else {
+                        Text("notifications.couldNotReach")
+                            .font(.body)
+                            .foregroundStyle(YansuTheme.secondary)
+                        Button(String(localized: "Try again")) { Task { await notifications.refresh() } }
+                            .buttonStyle(.plain)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(YansuTheme.accent)
+                            .accessibilityIdentifier("notifications.refresh")
+                    }
+                }
+                .padding(YansuTheme.gutter)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .yansuScreen()
         .navigationTitle(String(localized: "notifications.title"))
@@ -138,10 +152,15 @@ struct NotificationSettingsView: View {
     }
 
     @MainActor private func testDelivery() async {
-        guard !testingDelivery, let paired = app.vault.current(), push.isOptedIn else {
+        guard let paired = app.vault.current() else {
             deliveryMessage = String(localized: "notifications.deliveryUnavailable")
             return
         }
+        guard push.isOptedIn else {
+            deliveryMessage = String(localized: "notifications.alertsOff")
+            return
+        }
+        guard !testingDelivery else { return }
         testingDelivery = true
         defer { testingDelivery = false }
         do {
@@ -180,14 +199,16 @@ struct NotificationQuietHoursDestination: View {
                 NotificationQuietHoursView(notifications: notifications, settings: settings)
             } else if case .failed(let message) = notifications.loadState {
                 VStack(spacing: 12) {
-                    Text(message).foregroundStyle(YansuTheme.secondary)
+                    Text(message).foregroundStyle(YansuTheme.secondary).multilineTextAlignment(.center)
                     Button(String(localized: "Try again")) { Task { await notifications.refresh() } }
                 }
+                .frame(maxWidth: .infinity)
             } else if notifications.loadState == .loaded {
                 VStack(spacing: 12) {
-                    Text("notifications.unavailable").foregroundStyle(YansuTheme.secondary)
+                    Text("notifications.couldNotReach").foregroundStyle(YansuTheme.secondary).multilineTextAlignment(.center)
                     Button(String(localized: "Try again")) { Task { await notifications.refresh() } }
                 }
+                .frame(maxWidth: .infinity)
             } else {
                 ProgressView()
             }
