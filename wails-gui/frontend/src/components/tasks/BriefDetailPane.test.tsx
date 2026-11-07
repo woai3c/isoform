@@ -37,6 +37,21 @@ afterEach(async () => { await i18n.changeLanguage("en"); });
 
 describe("BriefDetailPane (K3)", () => {
     // R64: a brief that came on time shows the time it was ready, not its slot.
+    it("names a brief made before its slot by the time it was made, not its slot (P157)", async () => {
+        const madeAt = new Date(2026, 9, 15, 23, 20);
+        const slotTime = new Date(2026, 9, 16, 6, 50).toISOString();
+        mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "2026-10-16-morning", status: "ok", early: true, scheduledAt: slotTime, at: madeAt.toISOString() }] }));
+        render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
+        const row = await waitFor(() => {
+            const found = document.querySelector("[data-brief-run]");
+            expect(found).not.toBeNull();
+            return found as HTMLElement;
+        });
+        // The English words are joined with non-breaking spaces so "at 11:20 PM" never splits (v1.0.2).
+        expect(row.textContent?.replace(/\u00A0/g, " ")).toContain("made last night at 11:20 PM");
+        expect(row.textContent).not.toContain("6:50");
+    });
+
     it("shows a brief's ready time, not its slot, when it came on time", async () => {
         const ready = at(0, 6, 52).toISOString();
         mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "b-ready", status: "ok", scheduledAt: at(0, 7, 0).toISOString(), at: ready }] }));

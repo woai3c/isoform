@@ -84,7 +84,7 @@ var menuBarCopy = map[string]map[string]string{
 		"tried": "Tried {n} times without finishing. Isoform tries again at {time}.", "triedOnce": "Tried once without finishing. Isoform tries again at {time}.",
 		"triedSignedOut": "Tried {n} times. {ai} is signed out. Isoform tries again at {time}.", "triedSignedOutOnce": "Tried 1 time. {ai} is signed out. Isoform tries again at {time}.",
 		"signIn": "Sign in", "signedOut": "Tried {n} times. {ai} is signed out.", "signedOutOnce": "Tried 1 time. {ai} is signed out.", "yourAI": "Your AI",
-		"retry": "Isoform tries again at {time}.", "none": "No brief yet today", "next": "Next brief tomorrow at {time}", "nextToday": "Next brief today at {time}",
+		"retry": "Isoform tries again at {time}.", "none": "No brief yet today", "madeLastNight": "Made last night at {time}", "madeYesterday": "Made yesterday at {time}", "madeAt": "Made at {time}", "madeOnDate": "Made {date} at {time}", "next": "Next brief tomorrow at {time}", "nextToday": "Next brief today at {time}",
 		"making": "Making your brief now.", "makingMorning": "Making your morning brief now.", "makingEvening": "Making your evening brief now.", "triedTimeout": "Tried {n} times. It timed out. Isoform tries again at {time}.", "triedTimeoutOnce": "Tried once. It timed out. Isoform tries again at {time}.", "playing": "{elapsed} of {length}",
 		"waiting": "Waiting on you", "seeAll": "See all {n} in Chat", "empty": "Nothing is waiting on you.",
 		"failed": "Could not load what is waiting on you. Your chat still has everything.",
@@ -107,7 +107,7 @@ var menuBarCopy = map[string]map[string]string{
 		"tried": "试了 {n} 次都没完成。Isoform 会在{time}再试。", "triedOnce": "试了 1 次都没完成。Isoform 会在{time}再试。",
 		"triedSignedOut": "已尝试 {n} 次。{ai} 已退出登录。Isoform 会在 {time} 再试一次。", "triedSignedOutOnce": "已尝试 1 次。{ai} 已退出登录。Isoform 会在 {time} 再试一次。",
 		"signIn": "登录", "signedOut": "已尝试 {n} 次。{ai} 已退出登录。", "signedOutOnce": "已尝试 1 次。{ai} 已退出登录。", "yourAI": "你的 AI",
-		"retry": "Isoform 会在{time}再试。", "none": "今天还没有简报", "next": "下一份在明天 {time}", "nextToday": "下一份在今天 {time}",
+		"retry": "Isoform 会在{time}再试。", "none": "今天还没有简报", "madeLastNight": "昨晚 {time} 生成", "madeYesterday": "昨天 {time} 生成", "madeAt": "{time} 生成", "madeOnDate": "{date} {time} 生成", "next": "下一份在明天 {time}", "nextToday": "下一份在今天 {time}",
 		"making": "正在生成简报。", "makingMorning": "正在生成你的早间简报。", "makingEvening": "正在生成你的晚间简报。", "triedTimeout": "试了 {n} 次。超时了。Isoform 会在{time}再试。", "triedTimeoutOnce": "试了 1 次。超时了。Isoform 会在{time}再试。", "playing": "{elapsed} / {length}",
 		"waiting": "等你处理", "seeAll": "在聊天中查看全部 {n} 项", "empty": "没有等你处理的事。",
 		"failed": "没能读取等你处理的事。聊天里的内容都还在。",
@@ -453,6 +453,10 @@ func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, has
 		kind := mobileBriefPackageKind(latest)
 		asOf := mobileBriefAsOfTime(latest).Local()
 		at := menuBarFill(w["dayTime"], "day", menuBarDay(w, lang, asOf, now.Local()), "time", observationMenuClock(asOf, lang))
+		if mobileBriefIsAhead(latest) {
+			// An early brief names the time it was made, never its slot (R64); the same line as the Today title.
+			at = menuBarMadeAheadMeta(w, lang, latest)
+		}
 		// Play only where the words are too: a recording never plays alone.
 		if latest.Audio != nil && latest.Audio.Bytes > 0 && latest.Audio.Status == mobileBriefAudioStatusOK && len(latest.Narrative) > 0 {
 			title := w["brief"]
@@ -712,6 +716,44 @@ func (a *App) menuBarBriefKey(service *mobileBriefService) string {
 	}
 	return fmt.Sprintf("%p|%d|%d|%d|%p|%t|%s", service, info.ModTime().UnixNano(), mobileBriefReadEpoch.Load(),
 		a.memoryExternalReads.revision.Load(), snapshot, a.IsClosedEyesModeEnabled(), service.now().In(loc).Format("2006-01-02"))
+}
+
+// menuBarMadeAheadMeta is the made-at phrase of an early brief in the menu bar's
+// words, where it starts the line (so it is capitalized in English; v1.0.2):
+// "Made at 1:20 AM" on the brief's own day, "Made last night at 11:20 PM" for the day
+// before at 6 PM or later, "Made yesterday at 3:10 PM" for the day before earlier,
+// and "Made Nov 6 at 3:10 PM" (zh-CN "11月6日 15:10 生成") for an older day. A brief with
+// no time gives no phrase, so the row shows its title alone. zh-CN uses the same
+// 24-hour clock as every zh-CN time.
+func menuBarMadeAheadMeta(w map[string]string, lang string, brief MobileBriefV1) string {
+	made := mobileBriefAsOfTime(brief)
+	if made.IsZero() {
+		return ""
+	}
+	loc := time.Local
+	if zone, err := time.LoadLocation(brief.Timezone); err == nil && brief.Timezone != "" {
+		loc = zone
+	}
+	made = made.In(loc)
+	clock := observationMenuClock(made, lang)
+	day, err := time.ParseInLocation("2006-01-02", brief.LocalDate, loc)
+	if err != nil {
+		return menuBarFill(w["madeAt"], "time", clock)
+	}
+	switch made.Format("2006-01-02") {
+	case brief.LocalDate:
+		return menuBarFill(w["madeAt"], "time", clock)
+	case day.AddDate(0, 0, -1).Format("2006-01-02"):
+		if made.Hour() >= 18 {
+			return menuBarFill(w["madeLastNight"], "time", clock)
+		}
+		return menuBarFill(w["madeYesterday"], "time", clock)
+	}
+	date := made.Format("Jan 2")
+	if normalizeUILanguage(lang) == "zh-CN" {
+		date = fmt.Sprintf("%d月%d日", int(made.Month()), made.Day())
+	}
+	return menuBarFill(w["madeOnDate"], "date", date, "time", clock)
 }
 
 // menuBarSignOut is the popover's first row when the chosen assistant is

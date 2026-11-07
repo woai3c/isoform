@@ -63,7 +63,7 @@ func TestBriefSignedOutWaitsAndResumesOnce(t *testing.T) {
 
 func TestBriefSignedOutMenuRow(t *testing.T) {
 	h := MobileBriefHealth{PendingSlot: "morning", PendingCause: "signed_out", PendingAssistant: "codex", PendingAttempts: 3}
-	for _, tc := range []struct{ lang, title string }{{"en", "Tried 3 times. Your AI is signed out."}, {"zh-CN", "已尝试 3 次。你的 AI 已退出登录。"}} {
+	for _, tc := range []struct{ lang, title string }{{"en", "Tried 3 times. Codex is signed out."}, {"zh-CN", "已尝试 3 次。Codex 已退出登录。"}} {
 		row := menuBarBriefRow(menuBarWords(tc.lang), tc.lang, MobileBriefV1{}, false, false, h, time.Now())
 		if row.Kind != "sign_in" || row.ID != "codex" || row.Title != tc.title {
 			t.Fatalf("%s: %+v", tc.lang, row)

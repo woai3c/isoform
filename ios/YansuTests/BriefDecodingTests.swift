@@ -4,6 +4,13 @@ import XCTest
 @testable import Yansu
 
 final class BriefDecodingTests: XCTestCase {
+    /// The generation record of a brief made before its slot is read (P157).
+    func testMadeAheadGenerationIsDecoded() throws {
+        let json = #"{"briefId":"2026-11-08-morning","generation":{"reason":"made_ahead","scheduledAt":"2026-11-08T14:50:00Z","generatedAt":"2026-11-07T07:20:00Z","message":""}}"#
+        let brief = try JSONDecoder().decode(MobileBriefV1.self, from: Data(json.utf8))
+        XCTAssertEqual(brief.generation?.reason, "made_ahead")
+    }
+
     func testCommitmentFindTimeCardOpensTheAnswer() {
         let card = MobileBriefCard(id: "item:commitments:q4", kind: "item", mode: "send", label: "Find time for Q4",
                                    message: "Where do I stand on Q4?", itemKey: "commitments:q4")

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { clockTime } from "@/lib/brief-time";
+import { briefMadeAheadRunLine } from "@/lib/brief-title";
 import { BriefSignIn } from "@/components/today/BriefSignIn";
 import { describeBriefTime } from "@/components/today/TodayStatus";
 import { briefEvery, briefNext } from "./brief-schedule-text";
@@ -150,7 +151,8 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
     clock: (date: Date) => string;
     onOpenToday?: (briefId?: string) => void;
 }) {
-    const { t } = useTranslation("app");
+    const { t, i18n } = useTranslation("app");
+    const { t: tToday } = useTranslation("today");
     const scheduled = new Date(run.scheduledAt);
     if (Number.isNaN(scheduled.getTime())) return null;
     const time = clock(scheduled);
@@ -161,6 +163,10 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
         const readyAt = Number.isNaN(made.getTime()) ? null : made;
         const came = (run.late || run.madeNow) && readyAt ? readyAt : null;
         const shown = readyAt ?? scheduled;
+        // A brief made before its slot names the time it was made, not its slot (R64, P157).
+        const madeAhead = run.early && readyAt
+            ? briefMadeAheadRunLine(run, (isoDay) => dayName(new Date(`${isoDay}T12:00:00`)), i18n.language, tToday)
+            : null;
         const why = run.reason === "asleep" || run.reason === "closed" ? t(`briefDetail.lateReason.${run.reason}`) : "";
         const line = !came ? ""
             : run.madeNow ? t("briefDetail.madeNow", { at: clock(came) })
@@ -170,7 +176,7 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
             <div data-brief-run={run.briefId} data-brief-run-kind={run.madeNow ? "made-now" : run.late ? "late" : "ok"} className="flex items-start gap-3 px-4 py-3">
                 <CheckCircle2 aria-hidden="true" className="mt-0.5 size-[18px] shrink-0 text-accent" />
                 <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] font-medium text-ink">{t("briefDetail.ran", { day: dayName(shown), time: clock(shown) })}</span>
+                    <span className="block text-[14px] font-medium text-ink">{madeAhead ?? t("briefDetail.ran", { day: dayName(shown), time: clock(shown) })}</span>
                     {line && <span data-brief-run-line className="mt-0.5 block text-[13px] text-muted">{line}</span>}
                 </span>
                 <Button variant="quiet" size="sm" onClick={() => onOpenToday?.(run.briefId)}>{t("briefDetail.openOnToday")}</Button>

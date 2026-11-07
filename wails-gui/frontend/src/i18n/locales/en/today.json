@@ -227,6 +227,14 @@
         "askParagraphPlaceholder": "Ask anything about this paragraph",
         "askParagraphButton": "Ask",
         "asOf": "{{slot}} · {{time}}",
+        "madeAhead": {
+            "at": "made at {{time}}",
+            "lastNight": "made last night at {{time}}",
+            "yesterday": "made yesterday at {{time}}",
+            "onDate": "made {{date}} at {{time}}",
+            "dayToday": "Today",
+            "dayYesterday": "Yesterday"
+        },
         "shape": "The shape of today",
         "sections": {
             "needsYou": "What needs your attention",

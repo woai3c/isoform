@@ -32,13 +32,15 @@ type BriefScheduleDetail struct {
 // says why. MadeNow is a brief made on request (Make it now) after the slot's
 // time, listed beside the scheduled run it stood in for. Times are RFC 3339.
 type BriefScheduleRun struct {
-	BriefID          string `json:"briefId"`
-	Status           string `json:"status"`
-	ScheduledAt      string `json:"scheduledAt"`
-	At               string `json:"at"`
-	Reason           string `json:"reason,omitempty"`
-	Late             bool   `json:"late,omitempty"`
-	MadeNow          bool   `json:"madeNow,omitempty"`
+	BriefID     string `json:"briefId"`
+	Status      string `json:"status"`
+	ScheduledAt string `json:"scheduledAt"`
+	At          string `json:"at"`
+	Reason      string `json:"reason,omitempty"`
+	Late        bool   `json:"late,omitempty"`
+	MadeNow     bool   `json:"madeNow,omitempty"`
+	// Early marks a brief made before its slot (P157); At is when it was made.
+	Early            bool   `json:"early,omitempty"`
 	Attempts         int    `json:"attempts,omitempty"`
 	FailureCause     string `json:"failureCause,omitempty"`
 	FailureAssistant string `json:"failureAssistant,omitempty"`
@@ -106,7 +108,7 @@ func briefScheduleDetailFrom(now time.Time, loc *time.Location, state upcomingBr
 			}
 		}
 		recorded[run.BriefID] = true
-		out := BriefScheduleRun{BriefID: run.BriefID, Status: run.Status, ScheduledAt: projectedSchedule, At: run.At, Reason: briefScheduleRecordedReason(run.Reason)}
+		out := BriefScheduleRun{BriefID: run.BriefID, Status: run.Status, ScheduledAt: projectedSchedule, At: run.At, Reason: briefScheduleRecordedReason(run.Reason), Early: run.Early != nil && !run.Early.Replaced}
 		if run.Status == mobileBriefRunOK {
 			at, err := time.Parse(time.RFC3339Nano, run.At)
 			out.Late = err == nil && at.Sub(scheduled) > mobileBriefLateAfter

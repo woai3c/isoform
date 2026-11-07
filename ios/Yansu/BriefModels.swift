@@ -28,6 +28,8 @@ struct MobileBriefV1: Codable, Equatable, Sendable {
     var cards: [MobileBriefCard] = []
     /// No longer shown: the Desk it counted is gone, and the Mac sends 0. Decoded so older briefs still read the same.
     var needsYouCount: Int? = nil
+    /// Present when the brief was made other than on time: "mac_asleep", "late", or "made_ahead" (a brief made before its slot, P157).
+    var generation: BriefGeneration? = nil
     var sections: BriefSections = BriefSections()
     var dayShape: BriefDayShape? = nil
     var counts: BriefCounts? = nil
@@ -65,6 +67,10 @@ extension MobileBriefV1 {
         offers = (try? container.decodeIfPresent([MobileBriefOffer].self, forKey: .offers)) ?? []
         cards = (try? container.decodeIfPresent([MobileBriefCard].self, forKey: .cards)) ?? []
         needsYouCount = try container.decodeIfPresent(Int.self, forKey: .needsYouCount)
+        // Read under its own key, so the existing keys stay as they were.
+        if let generated = try? decoder.container(keyedBy: BriefGenerationKey.self) {
+            generation = try? generated.decodeIfPresent(BriefGeneration.self, forKey: .generation)
+        }
         sections = try container.decodeIfPresent(BriefSections.self, forKey: .sections) ?? BriefSections()
         dayShape = try container.decodeIfPresent(BriefDayShape.self, forKey: .dayShape)
         counts = try container.decodeIfPresent(BriefCounts.self, forKey: .counts)
@@ -984,4 +990,16 @@ extension MobileBriefV1 {
 // Brief keys use section.hash; older records can use section:id or section-id.
 func isCommitmentBriefItemKey(_ key: String) -> Bool {
     ["commitments.", "commitments:", "commitments-"].contains { key.hasPrefix($0) }
+}
+
+/// The brief's generation record (PROTOCOL.md 8.1). Only the reason and the times are read here.
+struct BriefGeneration: Codable, Equatable, Sendable {
+    var reason: String? = nil
+    var scheduledAt: String? = nil
+    var generatedAt: String? = nil
+    var message: String? = nil
+}
+
+private enum BriefGenerationKey: String, CodingKey {
+    case generation
 }

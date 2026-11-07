@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import i18n from "@/i18n";
 import type { MobileBriefDocument } from "@/lib/wails-shim-app";
-import { briefHasWords, briefKind, briefLateLine, briefTitle } from "./brief-title";
+import { briefHasWords, briefKind, briefLateLine, briefMadeAheadRunLine, briefTitle } from "./brief-title";
 
 const brief = (over: Partial<MobileBriefDocument>) => ({
     briefId: "2026-10-28-morning", slot: "morning", asOf: "2026-10-28T13:50:00Z", timezone: "UTC",
@@ -21,6 +21,30 @@ describe.each(["en", "zh-CN"])("brief titles in %s", (language) => {
             .toBe(en ? "Evening brief · 3:41 PM" : "晚间简报 · 15:41");
         expect(briefTitle(brief({ slot: "evening", asOf: "2026-10-28T18:00:00Z", yourWeek: {} as never }), language, tr))
             .toBe(en ? "Your week · 6:00 PM" : "你的一周 · 18:00");
+    });
+
+    it("names a made-ahead brief by when it was made, with its made-at time (P157 R64, v1.0.1)", () => {
+        const night = brief({ slot: "morning", localDate: "2026-11-08", timezone: "America/Los_Angeles", asOf: "2026-11-08T07:20:00Z", generation: { reason: "made_ahead", scheduledAt: "2026-11-08T14:50:00Z", generatedAt: "2026-11-08T07:20:00Z", message: "" } } as never);
+        expect(briefTitle(night, language, tr)).toBe(en ? "Morning brief · made last night at 11:20 PM" : "早间简报 · 昨晚 23:20 生成");
+        const sameDay = brief({ slot: "morning", localDate: "2026-11-08", timezone: "America/Los_Angeles", asOf: "2026-11-08T09:20:00Z", generation: { reason: "made_ahead", scheduledAt: "2026-11-08T14:50:00Z", generatedAt: "2026-11-08T09:20:00Z", message: "" } } as never);
+        expect(briefTitle(sameDay, language, tr)).toBe(en ? "Morning brief · made at 1:20 AM" : "早间简报 · 1:20 生成");
+        const yesterday = brief({ slot: "morning", localDate: "2026-11-08", timezone: "America/Los_Angeles", asOf: "2026-11-08T01:00:00Z", generation: { reason: "made_ahead", scheduledAt: "2026-11-08T14:50:00Z", generatedAt: "2026-11-08T01:00:00Z", message: "" } } as never);
+        expect(briefTitle(yesterday, language, tr)).toBe(en ? "Morning brief · made yesterday at 5:00 PM" : "早间简报 · 昨天 17:00 生成");
+    });
+
+    it("names a made-ahead brief from an older day by its date, and never shows an empty time (v1.0.2)", () => {
+        const older = brief({ slot: "morning", localDate: "2026-11-08", timezone: "America/Los_Angeles", asOf: "2026-11-06T23:10:00Z", generation: { reason: "made_ahead", scheduledAt: "2026-11-08T14:50:00Z", generatedAt: "2026-11-06T23:10:00Z", message: "" } } as never);
+        expect(briefTitle(older, language, tr)).toBe(en ? "Morning brief · made Nov 6 at 3:10 PM" : "早间简报 · 11月6日 15:10 生成");
+        const noTime = brief({ slot: "morning", localDate: "2026-11-08", timezone: "America/Los_Angeles", asOf: undefined, generation: { reason: "made_ahead", scheduledAt: "2026-11-08T14:50:00Z", generatedAt: "", message: "" } } as never);
+        const title = briefTitle(noTime, language, tr);
+        expect(title).not.toMatch(/made|生成|·/);
+        expect(title.length).toBeGreaterThan(0);
+    });
+
+    it.runIf(en)("keeps 'at 11:20 PM' together on the Brief page run row in English, with non-breaking spaces (v1.0.2)", () => {
+        const line = briefMadeAheadRunLine({ briefId: "2026-11-08-morning", at: "2026-11-08T07:20:00Z", timezone: "America/Los_Angeles" }, (day) => day, "en", tr, new Date("2026-11-08T14:10:00Z"));
+        expect(line).toBe("Today · made last night\u00A0at\u00A011:20\u00A0PM");
+        expect(line).toContain("\u00A0at\u00A011:20\u00A0PM");
     });
 
     it("names a brief asked for by its time: before noon morning, from noon evening (today-review v1.1.16 D14)", () => {

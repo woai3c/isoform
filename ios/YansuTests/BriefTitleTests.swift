@@ -20,6 +20,57 @@ final class BriefTitleTests: XCTestCase {
         XCTAssertNil(BriefTitle.lateLine(input))
     }
 
+    /// A brief made before its slot names the time it was made, never its slot's time (R64, P157).
+    func testMadeAheadBriefNamesItsMadeAtTimeNotItsSlot() throws {
+        let slot = try date("2026-11-08T14:50:00Z")
+        let made = try date("2026-11-08T07:20:00Z")
+        let input = BriefTitleInput(kind: "morning", slot: "morning", displaySlot: nil, madeAt: made, dueAt: slot,
+                                    timezone: "America/Los_Angeles", madeAhead: true)
+        let title = BriefTitle.title(input)
+        XCTAssertTrue(title.hasPrefix(String(localized: "Morning brief")))
+        XCTAssertFalse(title.contains(BriefView.timeText(slot)))
+        XCTAssertTrue(title.contains(BriefView.timeText(made)) || title.contains("11:20"))
+    }
+
+    func testMadeAheadDaytimeBriefSaysMadeAt() throws {
+        let slot = try date("2026-11-08T14:50:00Z")
+        let made = try date("2026-11-08T15:00:00Z")
+        let input = BriefTitleInput(kind: "morning", slot: "morning", displaySlot: nil, madeAt: made, dueAt: slot,
+                                    timezone: "America/Los_Angeles", madeAhead: true)
+        XCTAssertFalse(BriefTitle.title(input).contains("last night"))
+    }
+
+    /// The day before the slot, before 6 PM, reads "yesterday" (early-brief v1.0.1).
+    func testMadeAheadBriefFromTheDayBeforeBefore6PMSaysYesterday() throws {
+        let slot = try date("2026-11-08T14:50:00Z")
+        let made = try date("2026-11-08T01:00:00Z")
+        let input = BriefTitleInput(kind: "morning", slot: "morning", displaySlot: nil, madeAt: made, dueAt: slot,
+                                    timezone: "America/Los_Angeles", madeAhead: true)
+        let title = BriefTitle.title(input)
+        XCTAssertTrue(title.contains("made yesterday at"), title)
+        XCTAssertFalse(title.contains("last night"), title)
+    }
+
+    /// An older day gives its date, not a bare time (v1.0.2).
+    func testMadeAheadFromAnOlderDayNamesTheDate() throws {
+        let slot = try date("2026-11-08T14:50:00Z")
+        let made = try date("2026-11-06T23:10:00Z")
+        let input = BriefTitleInput(kind: "morning", slot: "morning", displaySlot: nil, madeAt: made, dueAt: slot,
+                                    timezone: "America/Los_Angeles", madeAhead: true)
+        let title = BriefTitle.title(input)
+        XCTAssertTrue(title.hasPrefix(String(localized: "Morning brief") + " · made "), title)
+        XCTAssertFalse(title.contains("last night"), title)
+        XCTAssertFalse(title.contains("yesterday"), title)
+    }
+
+    /// With no time, a made-ahead brief shows its slot's name alone (v1.0.2).
+    func testMadeAheadWithNoTimeShowsTheSlotNameAlone() throws {
+        let slot = try date("2026-11-08T14:50:00Z")
+        let input = BriefTitleInput(kind: "morning", slot: "morning", displaySlot: nil, madeAt: nil, dueAt: slot,
+                                    timezone: "America/Los_Angeles", madeAhead: true)
+        XCTAssertEqual(BriefTitle.title(input), String(localized: "Morning brief"))
+    }
+
     func testScheduledEveningAndTheWeekUseTheirKindAndDueTime() throws {
         let due = try date("2026-10-28T18:00:00Z")
         let made = try date("2026-10-28T18:02:00Z")

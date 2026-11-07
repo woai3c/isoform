@@ -1423,6 +1423,8 @@ export const GetUpcoming = appBinding<[], UpcomingItem[]>("GetUpcoming");
 // slot's time. Times are RFC 3339; nextRunAt is Unix milliseconds.
 export interface BriefScheduleRun {
     briefId: string;
+    /** A brief made before its slot (P157); `at` is when it was made. */
+    early?: boolean;
     /** failed: today's slot whose tries failed while its window is open. */
     status: "ok" | "missed" | "failed";
     scheduledAt: string;

@@ -227,6 +227,14 @@
         "askParagraphPlaceholder": "关于这段，想问什么都行",
         "askParagraphButton": "提问",
         "asOf": "{{slot}} · {{time}}",
+        "madeAhead": {
+            "at": "{{time}} 生成",
+            "lastNight": "昨晚 {{time}} 生成",
+            "yesterday": "昨天 {{time}} 生成",
+            "onDate": "{{date}} {{time}} 生成",
+            "dayToday": "今天",
+            "dayYesterday": "昨天"
+        },
         "shape": "今天的节奏",
         "sections": {
             "needsYou": "需要你关注的事",

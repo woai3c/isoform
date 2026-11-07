@@ -11,12 +11,14 @@ struct BriefTitleInput: Equatable, Sendable {
     /// When a scheduled brief was due. Nil for a brief asked for by the person.
     var dueAt: Date?
     var timezone: String?
+    /// A brief made before its slot (P157): it names the time it was made, never the slot's time (R64).
+    var madeAhead: Bool = false
 }
 
 extension BriefTitleInput {
     init(brief: MobileBriefV1) {
         self.init(kind: brief.kind, slot: brief.slot, displaySlot: brief.displaySlot, madeAt: brief.asOfDate,
-                  dueAt: brief.dueDate, timezone: brief.timezone)
+                  dueAt: brief.dueDate, timezone: brief.timezone, madeAhead: brief.generation?.reason == "made_ahead")
     }
 
     /// A Past briefs row, from the Mac's Today index. A catch-up brief's scheduled time is its due time.
@@ -35,6 +37,11 @@ enum BriefTitle {
     /// kind, so its name comes from the slot as it always did.
     static func title(_ input: BriefTitleInput) -> String {
         let name = kindName(input)
+        if input.madeAhead {
+            // With no time, the slot's name alone: never "made at" with nothing after it (v1.0.2).
+            guard let madeAt = input.madeAt else { return name }
+            return madeAheadTitle(name: name, madeAt: madeAt, dueAt: input.dueAt, timezone: input.timezone)
+        }
         guard let time = timeText(input) else { return name }
         return String(format: String(localized: "%@ · %@"), name, time)
     }
@@ -62,6 +69,38 @@ enum BriefTitle {
 
     /// The time the title shows: when a brief was asked for or made late, the time it was made; otherwise the
     /// scheduled time, falling back to the time it was made.
+    /// "Morning brief · made last night at 11:20 PM", "made yesterday at 3:10 PM", or "made at 1:20 AM" on the
+    /// brief's own day (early-brief v1.0.1). The day is the slot's (dueAt); from 6 PM the day before is "last night".
+    static func madeAheadTitle(name: String, madeAt: Date, dueAt: Date?, timezone: String?) -> String {
+        String(format: String(localized: "%@ · %@"), name, madeAheadPhrase(madeAt: madeAt, dueAt: dueAt, timezone: timezone))
+    }
+
+    /// The made-at phrase alone, with the same clock as every time in the app (BriefClock).
+    static func madeAheadPhrase(madeAt: Date, dueAt: Date?, timezone: String?) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        if let timezone, let zone = TimeZone(identifier: timezone) { calendar.timeZone = zone }
+        let hour = calendar.component(.hour, from: madeAt)
+        let clock = BriefView.timeText(madeAt)
+        guard let dueAt else { return String(format: String(localized: "made at %@"), clock) }
+        let madeDay = calendar.startOfDay(for: madeAt)
+        let slotDay = calendar.startOfDay(for: dueAt)
+        let dayBefore = calendar.date(byAdding: .day, value: -1, to: slotDay) ?? slotDay
+        if madeDay == slotDay {
+            return String(format: String(localized: "made at %@"), clock)
+        }
+        if madeDay == dayBefore {
+            return hour >= 18
+                ? String(format: String(localized: "made last night at %@"), clock)
+                : String(format: String(localized: "made yesterday at %@"), clock)
+        }
+        // An older day: the date, "made Nov 6 at 3:10 PM" (zh-CN "11月6日 15:10 生成").
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.timeZone = calendar.timeZone
+        formatter.setLocalizedDateFormatFromTemplate("MMMd")
+        return String(format: String(localized: "made %@ at %@"), formatter.string(from: madeAt), clock)
+    }
+
     static func timeText(_ input: BriefTitleInput) -> String? {
         let shown: Date?
         if input.kind == "on_request" || isLate(input) {
