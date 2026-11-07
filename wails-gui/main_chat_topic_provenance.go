@@ -15,6 +15,11 @@ import (
 	"wails-gui/storage"
 )
 
+// topicChatProofVersion is the current proof form (the note's words, whitespace
+// normalized, no file time). Version 1 proofs hold the file time; they are still
+// accepted while the file matches them, and upgraded to the current form then.
+const topicChatProofVersion = 2
+
 type topicChatProof struct {
 	Version     int                   `json:"version"`
 	Refs        []TodayChatContextRef `json:"refs"`
@@ -52,7 +57,7 @@ func (a *App) topicChatAdmissionMetadataFromSources(ctx context.Context, refs []
 	}
 	raw, err := json.Marshal(struct {
 		TopicContext topicChatProof `json:"topicContext"`
-	}{topicChatProof{Version: 1, Refs: unique, Fingerprint: fingerprint, PausedAt: pausedAt}})
+	}{topicChatProof{Version: topicChatProofVersion, Refs: unique, Fingerprint: fingerprint, PausedAt: pausedAt}})
 	return string(raw), err
 }
 
@@ -188,16 +193,36 @@ func (a *App) topicChatProofResults(ctx context.Context, proofs map[string]bool)
 	sources := a.collectTodayChatSources(ctx, time.Now())
 	cache.collections++
 	resolved := map[string]topicChatFingerprintInput{}
+	// Old-form proofs that still match are rewritten to the current form once
+	// the stamp has held; the gates above (Closed Eyes, pauses, the stamp) have
+	// already run, and a proof is only ever accepted against today's sources.
+	upgrades := map[string]string{}
 	for raw := range proofs {
 		if _, ok := cache.proofs[raw]; ok {
 			continue
 		}
 		cache.checks++
 		var proof topicChatProof
-		allowed := json.Unmarshal([]byte(raw), &proof) == nil && proof.Version == 1 && len(proof.Fingerprint) == 64 && (!paused || proof.PausedAt == pausedAt)
+		allowed := json.Unmarshal([]byte(raw), &proof) == nil && (proof.Version == 1 || proof.Version == topicChatProofVersion) && len(proof.Fingerprint) == 64 && (!paused || proof.PausedAt == pausedAt)
 		if allowed {
-			current, err := a.chatTopicFingerprintFromSources(ctx, proof.Refs, sources, resolved)
-			allowed = err == nil && current == proof.Fingerprint
+			inputs, err := a.chatTopicFingerprintInputsFromSources(ctx, proof.Refs, sources, resolved)
+			allowed = err == nil
+			if allowed && proof.Version == 1 {
+				current, err := chatTopicFingerprintHash(inputs)
+				allowed = err == nil && current == proof.Fingerprint
+				if allowed {
+					next, err := chatTopicFingerprintHash(topicChatNormalizedInputs(inputs))
+					proof.Version, proof.Fingerprint = topicChatProofVersion, next
+					if err == nil {
+						if upgraded, err := json.Marshal(proof); err == nil {
+							upgrades[raw] = string(upgraded)
+						}
+					}
+				}
+			} else if allowed {
+				current, err := chatTopicFingerprintHash(topicChatNormalizedInputs(inputs))
+				allowed = err == nil && current == proof.Fingerprint
+			}
 		}
 		cache.proofs[raw] = allowed
 	}
@@ -207,6 +232,9 @@ func (a *App) topicChatProofResults(ctx context.Context, proofs map[string]bool)
 		return denied
 	}
 	cache.stamp, cache.valid = after, true
+	if len(upgrades) > 0 {
+		a.upgradeTopicHistoryProofs(ctx, upgrades)
+	}
 	logTopicHistoryProofs(cache.proofs)
 	return cloneTopicChatProofResults(cache.proofs)
 }
@@ -489,4 +517,19 @@ func logTopicHistoryProofs(proofs map[string]bool) {
 		}
 	}
 	log.Printf("[topic-history] checked proofs=%d kept=%d withheld=%d", len(proofs), allowed, len(proofs)-allowed)
+}
+
+// upgradeTopicHistoryProofs rewrites the stored proofs that matched their old
+// form to the current form. A row that changed meanwhile keeps its old proof.
+func (a *App) upgradeTopicHistoryProofs(ctx context.Context, upgrades map[string]string) {
+	if a == nil || a.store == nil || len(upgrades) == 0 {
+		return
+	}
+	rows, err := a.store.UpgradeTopicProofs(ctx, upgrades)
+	if err != nil {
+		return
+	}
+	if rows > 0 {
+		log.Printf("[topic-history] upgraded rows=%d", rows)
+	}
 }

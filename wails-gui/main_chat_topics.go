@@ -270,19 +270,19 @@ func (a *App) chatTopicSourceFingerprint(ctx context.Context, refs []TodayChatCo
 	sources := a.collectTodayChatSources(ctx, time.Now())
 	return a.chatTopicFingerprintFromSources(ctx, refs, sources, map[string]topicChatFingerprintInput{})
 }
-func (a *App) chatTopicFingerprintFromSources(ctx context.Context, refs []TodayChatContextRef, sources todayChatSources, resolved map[string]topicChatFingerprintInput) (string, error) {
+func (a *App) chatTopicFingerprintInputsFromSources(ctx context.Context, refs []TodayChatContextRef, sources todayChatSources, resolved map[string]topicChatFingerprintInput) ([]topicChatFingerprintInput, error) {
 	if len(refs) == 0 || len(refs) > 256 {
-		return "", errTodayChatItemUnavailable
+		return nil, errTodayChatItemUnavailable
 	}
 	inputs := []topicChatFingerprintInput{}
 	for _, ref := range refs {
 		if !todayChatRefWithinBounds(ref) {
-			return "", errTodayChatItemUnavailable
+			return nil, errTodayChatItemUnavailable
 		}
 		switch ref.SourceKind {
 		case "memory", "knowledge", "activity", "principal", "purpose", "find", "calendar", "interest":
 		default:
-			return "", errTodayChatItemUnavailable
+			return nil, errTodayChatItemUnavailable
 		}
 		key := ref.SourceKind + ":" + ref.SourceID
 		input, ok := resolved[key]
@@ -290,13 +290,13 @@ func (a *App) chatTopicFingerprintFromSources(ctx context.Context, refs []TodayC
 			a.addTodayChatActivityByID(ctx, &sources, ref)
 			item, err := a.resolveTodayChatItem(ctx, ref, sources, sources.Now)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			input = topicChatFingerprintInput{Item: item, Facts: item.Record.Facts}
 			if ref.SourceKind == "activity" && !strings.HasPrefix(ref.SourceID, threadOutcomeMomentPrefix) && a.activity != nil && a.activity.store != nil {
 				row, err := a.activity.store.GetActivityByID(ref.SourceID)
 				if err != nil || row == nil {
-					return "", errTodayChatItemUnavailable
+					return nil, errTodayChatItemUnavailable
 				}
 				input.SourceIdentity = proactiveVoiceHash(*row)
 			}
@@ -324,12 +324,54 @@ func (a *App) chatTopicFingerprintFromSources(ctx context.Context, refs []TodayC
 		}
 		inputs = append(inputs, input)
 	}
+	return inputs, ctx.Err()
+}
+
+// chatTopicFingerprintFromSources is the current form: a note's words with
+// whitespace normalized and no file time, so a blank line or a restore of the
+// same words keeps or returns a proof (see topicChatProofForm).
+func (a *App) chatTopicFingerprintFromSources(ctx context.Context, refs []TodayChatContextRef, sources todayChatSources, resolved map[string]topicChatFingerprintInput) (string, error) {
+	inputs, err := a.chatTopicFingerprintInputsFromSources(ctx, refs, sources, resolved)
+	if err != nil {
+		return "", err
+	}
+	return chatTopicFingerprintHash(topicChatNormalizedInputs(inputs))
+}
+
+// chatTopicLegacyFingerprintFromSources is the form proofs stored before the
+// change: the memory record's file time is part of it, so it matches only the
+// exact file the proof was made from.
+func (a *App) chatTopicLegacyFingerprintFromSources(ctx context.Context, refs []TodayChatContextRef, sources todayChatSources, resolved map[string]topicChatFingerprintInput) (string, error) {
+	inputs, err := a.chatTopicFingerprintInputsFromSources(ctx, refs, sources, resolved)
+	if err != nil {
+		return "", err
+	}
+	return chatTopicFingerprintHash(inputs)
+}
+
+func chatTopicFingerprintHash(inputs []topicChatFingerprintInput) (string, error) {
 	data, err := json.Marshal(inputs)
 	if err != nil {
 		return "", err
 	}
 	hash := sha256.Sum256(data)
-	return hex.EncodeToString(hash[:]), ctx.Err()
+	return hex.EncodeToString(hash[:]), nil
+}
+
+// topicChatNormalizedInputs keeps what a memory note says and drops how the
+// file was saved: the file time goes, and whitespace runs collapse to one space.
+func topicChatNormalizedInputs(inputs []topicChatFingerprintInput) []topicChatFingerprintInput {
+	out := make([]topicChatFingerprintInput, len(inputs))
+	for i, input := range inputs {
+		if input.Item.Record.Kind == "memory" {
+			input.Item.Record.At = 0
+			input.Item.Record.Text = strings.Join(strings.Fields(input.Item.Record.Text), " ")
+			// The prefill's occurrence time is the note's file time.
+			input.Item.Prefill.OccurredAt = 0
+		}
+		out[i] = input
+	}
+	return out
 }
 
 type topicItemCursor struct {

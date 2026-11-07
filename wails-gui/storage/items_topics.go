@@ -228,3 +228,31 @@ func (s *Store) insertStreamItemTopicBatch(ctx context.Context, batch []StreamIt
 	}
 	return tx.Commit()
 }
+
+// UpgradeTopicProofs rewrites each stored topic proof to its current form. A
+// pair applies only to rows still holding the exact old proof, so a row changed
+// meanwhile is left alone. It returns how many rows changed.
+func (s *Store) UpgradeTopicProofs(ctx context.Context, pairs map[string]string) (int64, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	var changed int64
+	for oldProof, newProof := range pairs {
+		res, err := tx.ExecContext(ctx, `UPDATE stream_items SET automation_context=json_set(
+            CASE WHEN json_valid(automation_context) THEN CASE WHEN json_type(automation_context)='object' THEN automation_context ELSE '{}' END ELSE '{}' END,
+            '$.topicContext', json(?))
+            WHERE json_valid(automation_context) AND json_type(automation_context,'$.topicContext')='object'
+              AND json(json_extract(automation_context,'$.topicContext'))=json(?)`, newProof, oldProof)
+		if err != nil {
+			return 0, err
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return 0, err
+		}
+		changed += n
+	}
+	return changed, tx.Commit()
+}
