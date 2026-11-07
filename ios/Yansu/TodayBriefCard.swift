@@ -193,7 +193,9 @@ struct TodayBriefCardView: View {
                         Button("Make my brief now") { Task { await todayStore.requestFresh() } }
                             .disabled(!canMakeBrief)
                     } label: {
+                        // P134: the 44 pt tap target stays, but its height no longer adds a band under the title row.
                         Image(systemName: "ellipsis").frame(width: 44, height: 44)
+                            .padding(.vertical, -12)
                     }
                     .accessibilityLabel("More options")
                 }
