@@ -1299,10 +1299,13 @@ struct ChatProactiveCard: View {
             } else {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(chrome.text(en: "From \(first.sourceLabel(language: language))",
-                                     zhCN: "来自\(first.sourceLabel(language: language))"))
+                    // P142: the foot reads "From Isoform · 10:48 AM", the time only, the way Today's times read.
                     if let at = first.at.flatMap(RelayTime.parse) {
-                        Text(at, format: .dateTime.month(.abbreviated).day().hour().minute())
+                        Text(chrome.text(en: "From \(first.sourceLabel(language: language))",
+                                         zhCN: "来自\(first.sourceLabel(language: language))") + " · " + BriefClock.text(at, locale: locale))
+                    } else {
+                        Text(chrome.text(en: "From \(first.sourceLabel(language: language))",
+                                         zhCN: "来自\(first.sourceLabel(language: language))"))
                     }
                     Spacer(minLength: 0)
                     Button(showsEvidence ? chrome.text(en: "Hide", zhCN: "收起")
