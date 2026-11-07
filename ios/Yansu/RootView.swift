@@ -245,6 +245,7 @@ struct RootView: View {
                 NavigationStack {
                     TasksView(navigation: duoNavigation, tasks: environment.tasks)
                         .onAppear { router.openThreads.removeAll() }
+                        .hardTitleEdge()
                 }
                 .tabItem { Label(Self.tabTitle(.tasks, locale: locale), systemImage: "checklist") }
                 .tag(NotificationRouter.Tab.tasks)

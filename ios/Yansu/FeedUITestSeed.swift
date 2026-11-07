@@ -115,7 +115,7 @@ enum FeedUITestSeed {
     /// The four paragraphs of the words test (handoff 2026-10-28, section 2): the greeting joined into the first, so
     /// the card opens on substance. Each paragraph starts at its own time in the test's audio (wordsAudioParagraphs).
     static let wordsParagraphs = [
-        "Good morning. Three meetings today, and Priya is waiting on you.",
+        "Good morning. 3 meetings today, and Priya is waiting on you.",
         "The launch review starts at 3 PM, and the deck still needs one more pass.",
         "Two replies from the design team are waiting in your inbox.",
         "Tomorrow is quiet until the afternoon, so the day is yours to shape.",

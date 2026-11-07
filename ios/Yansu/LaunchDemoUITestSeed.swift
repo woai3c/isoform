@@ -25,7 +25,7 @@ enum LaunchDemoUITestSeed {
     }
 
     static let paragraphs = [
-        "Good morning, Bo. Three meetings today, and the one to prepare for is your 2:00 with Lena. Last time she asked whether the Halcyon import can take the full customer file.",
+        "Good morning, Bo. 3 meetings today, and the one to prepare for is your 2:00 with Lena. Last time she asked whether the Halcyon import can take the full customer file.",
         "Halcyon is close. Yesterday’s session left two tests failing in the date parser, and the fix you sketched is still on the branch.",
         "Priya asked to move Thursday’s review to the afternoon. A short reply in your voice is ready for you to send.",
     ]

@@ -84,6 +84,7 @@ struct BriefDetailView: View {
         .accessibilityIdentifier("brief.view")
         .navigationTitle(String(localized: "Brief"))
         .navigationBarTitleDisplayMode(.inline)
+        .hardTitleEdge()
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
             if presentedAsSheet {

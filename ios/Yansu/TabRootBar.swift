@@ -34,11 +34,34 @@ extension View {
     func tabBarScrollVisibility() -> some View {
         modifier(TabBarScrollVisibility())
     }
+
+    /// P137: nothing under the title bar reads at any scroll position. The bar is solid in the page's color up to its
+    /// edge, on every system; iOS 26 also gets the hard scroll-edge style.
+    func hardTitleEdge() -> some View {
+        modifier(HardTitleEdge())
+    }
+}
+
+private struct HardTitleEdge: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .scrollEdgeEffectStyle(.hard, for: .top)
+                .toolbarBackground(YansuTheme.background, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+        } else {
+            content
+                .toolbarBackground(YansuTheme.background, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+        }
+    }
 }
 
 private struct TabRootBar: ViewModifier {
     func body(content: Content) -> some View {
         content
+            .hardTitleEdge()
             .toolbar {
                 if #available(iOS 26.0, *) {
                     ToolbarItemGroup(placement: .topBarTrailing) {
