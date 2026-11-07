@@ -181,6 +181,9 @@ func (a *App) topicChatProofResults(ctx context.Context, proofs map[string]bool)
 		}
 		ctx = context.WithValue(ctx, pausedBriefReadKey{}, true)
 	}
+	// The stamp above read the folder from disk; the sources must read it too,
+	// not from a snapshot checked a moment ago (an outside edit would go unseen).
+	a.recheckMemoryFolder()
 	sources := a.collectTodayChatSources(ctx, time.Now())
 	cache.collections++
 	resolved := map[string]topicChatFingerprintInput{}

@@ -89,6 +89,19 @@ type memoryExternalEntry struct {
 // unseen. App writes do not wait for it: they bump the revision.
 const memoryFolderCheckEvery = 5 * time.Second
 
+// recheckMemoryFolder makes the next memory read stat the folder instead of
+// trusting the snapshot's check window. A topic history recompute needs it: its
+// stamp reads the folder from disk, so a note edited outside the app can change
+// that stamp while the memory snapshot still says "checked a moment ago".
+func (a *App) recheckMemoryFolder() {
+	c := &a.memoryExternalReads
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if s := c.snapshot; s != nil {
+		s.checked = time.Time{}
+	}
+}
+
 // memoryReadNow and memoryFiles are the clock and file access of the memory
 // read path, so tests can move time and count file opens and stats.
 var (
