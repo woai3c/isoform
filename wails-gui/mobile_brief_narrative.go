@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -102,6 +103,7 @@ func writeMobileBriefNarrativeWithWeek(ctx context.Context, brief MobileBriefV1,
 		}
 		raw, err := call(ask)
 		if err != nil {
+			log.Printf("[mobile-brief] %s writer failed: %s", brief.Slot, mobileBriefWriterErrorClass(err))
 			return nil, nil, "", "", "model_call"
 		}
 		paragraphs, words, weekLead, weekLeadFacts, err := mobileBriefNarrativeFromReplyWithWeek(brief, picks, raw, languageName, week)
