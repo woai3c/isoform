@@ -94,7 +94,7 @@ enum FeedUITestSeed {
             ("meetings", item("Design review with Sam", "11:00 to 11:30. Last week's notes are in Drafts.", "calendar", "ev-2",
                               url: "https://example.com/meet/design-review")),
             ("people", item("Dana is waiting on a reply", "Since Tuesday, about the Q3 deck", "principal", "p-dana")),
-            ("deliverables", item("The Q3 outline is ready", "Drafted from your notes. Open it on your Mac.", "deliverable", "d-9")),
+            ("deliverables", item("The Q3 outline is ready", "Drafted from your notes. Open it on your computer.", "deliverable", "d-9")),
             ("watching", item("Wails 2.12.1 changes drag regions",
                               "You spent time on Wails drag regions yesterday; the release changes how drag areas are read",
                               "find", "find-1", url: "https://example.com/wails/releases")),
@@ -130,7 +130,7 @@ enum FeedUITestSeed {
         var brief = brief(on: now, slot: "morning", hour: 7, items: [
             ("meetings", item("Design review with Sam", "11:00 to 11:30. Last week's notes are in Drafts.", "calendar", "ev-2")),
             ("people", item("Dana is waiting on a reply", "Since Tuesday, about the Q3 deck", "principal", "p-dana")),
-            ("deliverables", item("The Q3 outline is ready", "Drafted from your notes. Open it on your Mac.", "deliverable", "d-9")),
+            ("deliverables", item("The Q3 outline is ready", "Drafted from your notes. Open it on your computer.", "deliverable", "d-9")),
         ])
         brief.narrative = wordsParagraphs.map { BriefParagraph(text: $0) }
         return brief

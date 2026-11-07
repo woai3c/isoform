@@ -123,23 +123,23 @@ struct BriefContentView: View {
                         .foregroundStyle(YansuTheme.secondary)
                 }
                 Spacer(minLength: 0)
-                if item.evidenceUnavailable != true, canCorrectMemory, let memory = singleMemory(for: item) {
-                    Button("Not quite") {
-                        correctionDraft = ""
-                        correctionFailed = false
-                        memoryCorrection = MemoryCorrection(id: memory.id, label: memory.label)
-                    }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(YansuTheme.secondary)
-                    .buttonStyle(.plain)
-                    .frame(minHeight: 32)
-                    .accessibilityIdentifier("brief.notRight")
-                }
                 let sources = brief.purposeSources(for: item).isEmpty ? (card?.sources ?? []) : brief.purposeSources(for: item)
                 if !sources.isEmpty {
                     EvidenceChip(title: sourceCountText(sources.count)) {
                         evidence = EvidenceRequest(title: item.title ?? "Sources", sources: sources)
                     }
+                }
+            }
+            // A remembered item's one action is Not quite, on the action row like the other items' capsules (P151).
+            if item.evidenceUnavailable != true, canCorrectMemory, let memory = singleMemory(for: item) {
+                HStack(spacing: 8) {
+                    Button("Not quite") {
+                        correctionDraft = ""
+                        correctionFailed = false
+                        memoryCorrection = MemoryCorrection(id: memory.id, label: memory.label)
+                    }
+                    .buttonStyle(YansuChipButtonStyle())
+                    .accessibilityIdentifier("brief.notRight")
                 }
             }
             if let card, !readOnly {
@@ -195,12 +195,14 @@ struct BriefContentView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
-                ForEach(Array(openLoopGroups.enumerated()), id: \.offset) { _, group in
+                ForEach(Array(Self.openLoopGroups(for: brief.remainingOpenLoops).enumerated()), id: \.offset) { _, group in
                     YansuCard {
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("\(group.label) (\(group.count))")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(YansuTheme.ink)
+                            if let heading = group.heading {
+                                Text(heading)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(YansuTheme.ink)
+                            }
                             ForEach(Array(group.items.enumerated()), id: \.offset) { index, item in
                                 if index > 0 {
                                     Divider().overlay(YansuTheme.border)
@@ -214,10 +216,10 @@ struct BriefContentView: View {
         }
     }
 
-    private var openLoopGroups: [OpenLoopGroup] {
+    static func openLoopGroups(for loops: [BriefItem]) -> [OpenLoopGroup] {
         var order: [String] = []
         var buckets: [String: [BriefItem]] = [:]
-        for item in brief.remainingOpenLoops {
+        for item in loops {
             let key = item.kind ?? ""
             if buckets[key] == nil {
                 order.append(key)
@@ -225,12 +227,14 @@ struct BriefContentView: View {
             }
             buckets[key]?.append(item)
         }
+        // A heading shows only when two or more kinds have a name. Otherwise the open loops are one list with no
+        // heading; an item without a kind is never "Other" and never counted in parentheses.
+        let named = order.filter { !$0.isEmpty }.count
+        guard named >= 2 else {
+            return [OpenLoopGroup(heading: nil, items: loops)]
+        }
         return order.map { key in
-            let items = buckets[key] ?? []
-            let originalCount = brief.sections.openLoops.filter { ($0.kind ?? "") == key }.count
-            let hiddenCount = originalCount - items.count
-            let count = max(items.count, (brief.counts?.openLoopsByKind[key] ?? originalCount) - hiddenCount)
-            return OpenLoopGroup(label: BriefItem.kindLabel(key.isEmpty ? nil : key), count: count, items: items)
+            OpenLoopGroup(heading: key.isEmpty ? nil : BriefItem.kindLabel(key), items: buckets[key] ?? [])
         }
     }
 
@@ -339,9 +343,9 @@ struct BriefContentView: View {
     }
 }
 
-private struct OpenLoopGroup {
-    let label: String
-    let count: Int
+struct OpenLoopGroup {
+    /// Shown only when the open loops have two or more named kinds; nil for an unnamed item or a single list.
+    let heading: String?
     let items: [BriefItem]
 }
 
