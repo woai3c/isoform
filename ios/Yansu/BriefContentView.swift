@@ -36,26 +36,19 @@ struct BriefContentView: View {
                     evidence = request
                 }
             }
-            itemSection("What Isoform moved", items: brief.sections.moved,
-                        empty: "Nothing new has moved since the last brief.")
-            itemSection("Worked on today", items: brief.sections.doing,
-                        empty: "No documents worked on today.")
-            itemSection("Watching", items: brief.sections.watching,
-                        empty: "Nothing is being watched right now.")
-            itemSection("Meetings", items: brief.sections.meetings,
-                        empty: "No meetings in this brief.")
-            itemSection("Who you know", items: brief.sections.people,
-                        empty: "No people to follow up with.")
-            if brief.showsOpenLoopsSection {
+            itemSection("What Isoform moved", items: brief.sections.moved)
+            itemSection("Worked on today", items: brief.sections.doing)
+            itemSection("Watching", items: brief.sections.watching)
+            itemSection("Meetings", items: brief.sections.meetings)
+            itemSection("Who you know", items: brief.sections.people)
+            if brief.showsOpenLoopsSection && !brief.remainingOpenLoops.isEmpty {
                 openLoopsSection
             }
-            itemSection("New learning", items: brief.sections.learned,
-                        empty: "Nothing new learned yet.")
-            itemSection("Scheduled work", items: brief.sections.schedules,
-                        empty: "No scheduled work in this brief.")
-            itemSection("Deliverables", items: brief.sections.deliverables,
-                        empty: "No deliverables in this brief.")
-            dayShapeSection
+            itemSection("New learning", items: brief.sections.learned)
+            itemSection("Scheduled work", items: brief.sections.schedules)
+            itemSection("Deliverables", items: brief.sections.deliverables)
+            // The Day shape section shows only when there is a shape to show (#649).
+            if Self.hasDayShape(brief.dayShape) { dayShapeSection }
             conversationActions
         }
         .sheet(item: $evidence) { request in
@@ -78,22 +71,25 @@ struct BriefContentView: View {
     // MARK: Item sections
 
     /// A section as a plain list: for checking, not listening, so no card around it.
-    private func itemSection(_ title: String, items: [BriefItem], empty: String) -> some View {
+    /// A section with nothing in it is left out (P131): no heading and no "nothing here" line.
+    @ViewBuilder
+    private func itemSection(_ title: String, items: [BriefItem]) -> some View {
+        if Self.showsSection(items) {
+            itemSectionContent(title, items: items)
+        }
+    }
+
+    static func showsSection(_ items: [BriefItem]) -> Bool { !items.isEmpty }
+
+    private func itemSectionContent(_ title: String, items: [BriefItem]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel(title: title)
-            if items.isEmpty {
-                Text(empty)
-                    .font(.subheadline)
-                    .foregroundStyle(YansuTheme.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                        if index > 0 {
-                            Divider().overlay(YansuTheme.border)
-                        }
-                        itemRow(item)
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                    if index > 0 {
+                        Divider().overlay(YansuTheme.border)
                     }
+                    itemRow(item)
                 }
             }
         }
@@ -230,6 +226,12 @@ struct BriefContentView: View {
     }
 
     // MARK: Day shape
+
+    /// Whether the brief has a day shape to show: active time or hours. An empty shape shows no section.
+    static func hasDayShape(_ shape: BriefDayShape?) -> Bool {
+        guard let shape else { return false }
+        return (shape.activeMinutes ?? 0) > 0 || !shape.hours.isEmpty
+    }
 
     private var dayShapeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
