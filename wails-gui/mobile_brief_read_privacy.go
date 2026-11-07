@@ -521,7 +521,7 @@ func (a *App) mobileBriefDeliveryOnce(ctx context.Context, brief MobileBriefV1) 
 	case mailErr != nil:
 		withhold(mobileBriefWithheldMail, "")
 	}
-	noticed := newMobileBriefNoticedLookup(a)
+	noticed := mobileBriefNoticedFor(ctx, a)
 	for _, ref := range brief.Evidence {
 		calendarRefs[ref.Ref] = ref.SourceKind == mobileBriefCalendarSource
 		checked := ref

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -349,10 +350,14 @@ func (bridge *mobileBridge) briefSettings() mobileBriefSettings {
 // It changes only when current policy withdraws something from the brief or
 // the display language changes.
 func (a *App) mobileBriefPackageGateKey(source MobileBriefV1) string {
+	return a.mobileBriefPackageGateKeyContext(context.Background(), source)
+}
+
+func (a *App) mobileBriefPackageGateKeyContext(ctx context.Context, source MobileBriefV1) string {
 	if a == nil {
 		return ""
 	}
-	encoded, err := json.Marshal(a.mobileBriefForDelivery(source))
+	encoded, err := json.Marshal(a.mobileBriefForDeliveryContext(ctx, source))
 	if err != nil {
 		return ""
 	}
@@ -376,6 +381,12 @@ func (a *App) buildMobileBriefPackage(source MobileBriefV1, settings mobileBrief
 // rows saved into the brief later (finds) never change a package by
 // themselves. Quiet slots have no package.
 func (s *mobileBriefService) BriefPackage(briefID string) (mobileBriefPackage, bool) {
+	return s.BriefPackageContext(context.Background(), briefID)
+}
+
+// BriefPackageContext is BriefPackage with a context: a pass context carries
+// one noticed lookup across every brief of the pass.
+func (s *mobileBriefService) BriefPackageContext(ctx context.Context, briefID string) (mobileBriefPackage, bool) {
 	if !s.beginWork() {
 		return mobileBriefPackage{}, false
 	}
@@ -388,7 +399,7 @@ func (s *mobileBriefService) BriefPackage(briefID string) (mobileBriefPackage, b
 	}
 	pkg, meta, snapshot, ok := s.store.loadPackage(briefID)
 	if ok && snapshot.AsOf == stored.AsOf && meta.AudioKey == mobileBriefAudioKey(stored) {
-		if meta.GateKey == s.app.mobileBriefPackageGateKey(snapshot) {
+		if meta.GateKey == s.app.mobileBriefPackageGateKeyContext(ctx, snapshot) {
 			return pkg, true
 		}
 		// A source the package was made from was withdrawn: the package is
@@ -453,11 +464,24 @@ type mobileBriefPackager interface {
 
 // briefPackage returns the package every phone route serves for a brief.
 func (bridge *mobileBridge) briefPackage(briefID string) (mobileBriefPackage, bool) {
+	return bridge.briefPackageContext(context.Background(), briefID)
+}
+
+// mobileBriefPackagerContext is the package read that takes a pass context.
+type mobileBriefPackagerContext interface {
+	BriefPackageContext(ctx context.Context, briefID string) (mobileBriefPackage, bool)
+}
+
+func (bridge *mobileBridge) briefPackageContext(ctx context.Context, briefID string) (mobileBriefPackage, bool) {
 	svc := bridge.briefSource()
 	if svc == nil {
 		return mobileBriefPackage{}, false
 	}
-	if packager, ok := svc.(mobileBriefPackager); ok {
+	if packager, ok := svc.(mobileBriefPackagerContext); ok {
+		if pkg, ok := packager.BriefPackageContext(ctx, briefID); ok {
+			return pkg, true
+		}
+	} else if packager, ok := svc.(mobileBriefPackager); ok {
 		if pkg, ok := packager.BriefPackage(briefID); ok {
 			return pkg, true
 		}

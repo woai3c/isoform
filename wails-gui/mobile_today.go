@@ -517,6 +517,9 @@ func (bridge *mobileBridge) buildToday() (MobileTodayV1, error) {
 // todayBriefs lists the readable briefs of the last 14 days, newest first, each
 // named by its package version. The first is the current brief.
 func (bridge *mobileBridge) todayBriefs(svc mobileBriefSource, now time.Time, schedule MobileBriefSchedule) []mobileTodayBrief {
+	// One noticed lookup for the whole pass: every stored brief reads the same
+	// days of Noticed, so the pass reads each day once, not once per brief.
+	pass := withMobileBriefNoticedPass(context.Background(), bridge.app)
 	briefs := []mobileTodayBrief{}
 	scheduled := map[string]string{}
 	if source, ok := svc.(*mobileBriefService); ok && source.runs != nil {
@@ -535,7 +538,7 @@ func (bridge *mobileBridge) todayBriefs(svc mobileBriefSource, now time.Time, sc
 		if !ok {
 			continue
 		}
-		pkg, ok := bridge.briefPackage(row.BriefID)
+		pkg, ok := bridge.briefPackageContext(pass, row.BriefID)
 		if !ok {
 			continue
 		}

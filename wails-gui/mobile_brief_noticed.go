@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"runtime"
@@ -245,4 +246,25 @@ func logNoticedReadCounts(counts map[string]int) {
 		parts = append(parts, fmt.Sprintf("%d %s", r.n, r.chain))
 	}
 	log.Printf("[noticed-pass] minute reads=%d by=%s", total, strings.Join(parts, " | "))
+}
+
+type mobileBriefNoticedPassKey struct{}
+
+// withMobileBriefNoticedPass returns ctx carrying one noticed lookup for a whole
+// pass (for example one phone Today request over every stored brief), so each
+// date is read once for the pass instead of once per brief. The lookup lives
+// only as long as ctx: nothing carries it into a later pass.
+func withMobileBriefNoticedPass(ctx context.Context, a *App) context.Context {
+	if _, ok := ctx.Value(mobileBriefNoticedPassKey{}).(*mobileBriefNoticedLookup); ok {
+		return ctx
+	}
+	return context.WithValue(ctx, mobileBriefNoticedPassKey{}, newMobileBriefNoticedLookup(a))
+}
+
+// mobileBriefNoticedFor is the pass's lookup when ctx carries one, else a new lookup.
+func mobileBriefNoticedFor(ctx context.Context, a *App) *mobileBriefNoticedLookup {
+	if lookup, ok := ctx.Value(mobileBriefNoticedPassKey{}).(*mobileBriefNoticedLookup); ok {
+		return lookup
+	}
+	return newMobileBriefNoticedLookup(a)
 }
