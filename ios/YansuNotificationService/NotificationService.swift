@@ -78,7 +78,7 @@ private final class PendingDelivery: @unchecked Sendable {
         let body: String?
         switch localizedKind {
         case "weekly_recap": body = chinese ? "你的一周已准备好。" : "Your week is ready."
-        case "chat_answer": body = chinese ? "Isoform 回答了你的消息。" : "Isoform answered your messages."
+        case "chat_answer": body = chinese ? "Isoform 已回复。" : "Isoform answered."
         default: body = nil
         }
         guard let body, let localized = fallback.mutableCopy() as? UNMutableNotificationContent else {

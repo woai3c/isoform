@@ -428,6 +428,14 @@ actor PendingWriteJournal {
         return writes[index]
     }
 
+    /// A draft send the relay took and never answered is gone from the relay after a day (PROTOCOL.md section 23), so
+    /// Send again may take it back and send it as a new send. Before that, a sent draft cannot be undone.
+    static func draftSendCanBeUndone(_ draft: PendingWrite.TodayDraftSend?, now: Date = Date()) -> Bool {
+        guard let draft else { return false }
+        guard let dispatchedAt = draft.dispatchedAt else { return true }
+        return now.timeIntervalSince(dispatchedAt) >= TaskSendWait.relayRetention
+    }
+
     func undoToday(key: String) throws -> Bool {
         loadIfNeeded()
         guard let index = writes.firstIndex(where: { $0.key == key && $0.hubID == hubID() }),
@@ -435,7 +443,7 @@ actor PendingWriteJournal {
                 (writes[index].todayRefresh == true && writes[index].todayRefreshDispatchedAt == nil) ||
                 (writes[index].todayFeedback != nil && writes[index].todayFeedback?.dispatchedAt == nil) ||
                 (writes[index].todayCorrection != nil && writes[index].todayCorrection?.dispatchedAt == nil) ||
-                (writes[index].todayDraftSend != nil && writes[index].todayDraftSend?.dispatchedAt == nil) else { return false }
+                (writes[index].todayDraftSend != nil && Self.draftSendCanBeUndone(writes[index].todayDraftSend)) else { return false }
         let previous = writes
         writes.remove(at: index)
         do { try persist() } catch { writes = previous; throw error }

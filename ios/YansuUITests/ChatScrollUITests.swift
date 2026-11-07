@@ -64,7 +64,7 @@ final class ChatScrollUITests: XCTestCase {
         XCTAssertTrue(waitUntilInView(sent, in: app), "sending keeps the chat at the bottom")
         // In Chat a waiting message has the short label; the thread line explains (phone-connection v1.1.0 section 2).
         let waiting = app.staticTexts.matching(identifier: "chat.message.status")
-            .matching(NSPredicate(format: "label == %@", "Waiting")).firstMatch
+            .matching(NSPredicate(format: "label == %@", "Waits for your computer")).firstMatch
         XCTAssertTrue(waiting.waitForExistence(timeout: 10))
         XCTAssertTrue(waitUntilInView(waiting, in: app), "the status sits under the new message, in view")
         XCTAssertTrue(app.descendants(matching: .any)["chat.away.line"].firstMatch.waitForExistence(timeout: 10),

@@ -22,8 +22,7 @@ final class P156QueueUITests: XCTestCase {
         }
     }
 
-    /// Chat: a message waiting for the computer. A typed message shows "Waiting" with Undo (ChatAwayUITests);
-    /// a message that carries a brief shows "Waits for your computer" (see testTalkAboutThisBriefWhileAsleep).
+    /// Chat: a message waiting for the computer reads "Waits for your computer · Undo".
     func testWaitingChatMessage() throws {
         for appearance in ["light", "dark"] {
             let app = launch(state: "chat-away", appearance: appearance, extra: [
@@ -36,18 +35,90 @@ final class P156QueueUITests: XCTestCase {
         }
     }
 
-    /// The 24-hour line: a drafted reply the relay held a day, with Send again.
-    func testTwentyFourHourLine() throws {
+    /// The 24-hour line in Chat: a message the computer did not take in a day. Under it, the line and Send again.
+    func testTwentyFourHourLineInChat() throws {
+        for appearance in ["light", "dark"] {
+            let app = launch(state: "chat-away", appearance: appearance, extra: [
+                "YANSU_UITEST_AWAY_CAUSE": "asleep", "YANSU_UITEST_AWAY_PHASE": "long", "YANSU_UITEST_TAB": "chat",
+            ])
+            let again = app.buttons["chat.message.sendAgain"].firstMatch
+            XCTAssertTrue(again.waitForExistence(timeout: 20), "the 24-hour line is missing in Chat (\(appearance))")
+            XCTAssertTrue(app.staticTexts["Your computer didn't wake, so this wasn't sent."].firstMatch
+                .waitForExistence(timeout: 5), "the 24-hour words are missing (\(appearance))")
+            try capture(app, named: "day-line-chat-\(appearance)")
+            app.terminate()
+        }
+    }
+
+    /// Today's line for that send: one line under the away block, with Show, which opens Chat at it.
+    func testTodayLineForAChatSendAfterADay() throws {
         for appearance in ["light", "dark"] {
             let app = launch(state: "feed-review", appearance: appearance, extra: [
                 "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off",
-                "YANSU_UITEST_HELD_SEND": "expired",
+                "YANSU_UITEST_CHAT_EXPIRED": "1",
             ])
-            XCTAssertTrue(app.descendants(matching: .any)["tasks.expiredSend"].firstMatch.waitForExistence(timeout: 20),
-                          "the 24-hour line is missing (\(appearance))")
-            try capture(app, named: "day-line-expired-\(appearance)")
+            XCTAssertTrue(app.descendants(matching: .any)["today.expired.line"].firstMatch.waitForExistence(timeout: 20),
+                          "the Today line is missing (\(appearance))")
+            XCTAssertTrue(app.staticTexts["Your computer didn't wake, so 2 messages weren't sent."].firstMatch
+                .waitForExistence(timeout: 5), "the Today words are missing (\(appearance))")
+            try capture(app, named: "day-line-today-\(appearance)")
+            app.buttons["today.expired.show"].firstMatch.tap()
+            XCTAssertTrue(app.buttons["tab.chat"].firstMatch.isSelected || app.buttons["chat.message.sendAgain"].firstMatch
+                .waitForExistence(timeout: 10), "Show did not open Chat (\(appearance))")
             app.terminate()
         }
+    }
+
+    /// A Tasks reply the computer did not take in a day: its row says so, with Send again (PROTOCOL.md section 23).
+    func testHeldTasksReplyShowsItsLineAndSendAgain() throws {
+        for appearance in ["light", "dark"] {
+            let app = launch(state: "feed-review", appearance: appearance, extra: [
+                "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off",
+                "YANSU_UITEST_HELD_SEND": "expired", "YANSU_UITEST_TAB": "tasks",
+            ])
+            let line = app.staticTexts["Your computer didn't wake, so this wasn't sent."].firstMatch
+            XCTAssertTrue(line.waitForExistence(timeout: 20), "the held reply has no line (\(appearance))")
+            let again = app.buttons["Send again"].firstMatch
+            XCTAssertTrue(again.waitForExistence(timeout: 5), "no Send again on the reply (\(appearance))")
+            try capture(app, named: "tasks-held-reply-\(appearance)")
+            again.tap()
+            // Sent again, it is a new send: the line goes until the computer answers or a day passes.
+            XCTAssertTrue(line.waitUntilGone(timeout: 15), "Send again did not clear the line (\(appearance))")
+            app.terminate()
+        }
+    }
+
+    /// Today's Show for a held Tasks reply opens Tasks at that row.
+    func testTodayShowOpensTasksAtTheHeldReply() throws {
+        let app = launch(state: "feed-review", appearance: "light", extra: [
+            "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off",
+            "YANSU_UITEST_HELD_SEND": "expired",
+        ])
+        let show = app.buttons["today.expired.show"].firstMatch
+        XCTAssertTrue(show.waitForExistence(timeout: 20), "the Today line is missing")
+        show.tap()
+        // The row's identifier is tasks.row.unread.draft.ui-sow while it is new, so match the task id.
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier CONTAINS %@", "draft.ui-sow")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "Show did not open Tasks at the reply")
+        let line = app.staticTexts["Your computer didn't wake, so this wasn't sent."].firstMatch
+        XCTAssertTrue(line.waitForExistence(timeout: 5), "the reply's row lost its line")
+        XCTAssertTrue(line.isHittable, "Show did not scroll Tasks to the reply")
+        app.terminate()
+    }
+
+    /// Today's Show for a Chat send the computer did not take scrolls Chat to that message.
+    func testTodayShowScrollsChatToTheMessage() throws {
+        let app = launch(state: "feed-review", appearance: "light", extra: [
+            "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off",
+            "YANSU_UITEST_CHAT_EXPIRED": "1",
+        ])
+        let show = app.buttons["today.expired.show"].firstMatch
+        XCTAssertTrue(show.waitForExistence(timeout: 20), "the Today line is missing")
+        show.tap()
+        let message = app.staticTexts["Can you move my 3 PM with Dana to Friday?"].firstMatch
+        XCTAssertTrue(message.waitForExistence(timeout: 10), "Chat did not open")
+        XCTAssertTrue(message.isHittable, "Chat did not scroll to the message")
+        app.terminate()
     }
 
     /// The ask-again prompt: "Your computer is awake. Send the reply to Sam now?"
@@ -66,7 +137,6 @@ final class P156QueueUITests: XCTestCase {
             let app = launch(state: "feed-review", appearance: appearance, extra: [
                 "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off", "YANSU_UITEST_TODAY_WAITS": "1",
             ])
-            // The section label is uppercase on screen, so its accessibility label is uppercase too.
             let waits = app.staticTexts.matching(NSPredicate(format: "label ==[c] %@", "Waits for your computer")).firstMatch
             XCTAssertTrue(waits.waitForExistence(timeout: 20), "the Needs-you wait line is missing (\(appearance))")
             for _ in 0..<8 where !waits.isHittable { app.swipeUp() }
@@ -126,5 +196,14 @@ final class P156QueueUITests: XCTestCase {
         let directory = URL(fileURLWithPath: path, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try screenshot.pngRepresentation.write(to: directory.appendingPathComponent("\(name).png"), options: .atomic)
+    }
+}
+
+private extension XCUIElement {
+    /// True once the element is gone, within the timeout.
+    func waitUntilGone(timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while exists && Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.2)) }
+        return !exists
     }
 }

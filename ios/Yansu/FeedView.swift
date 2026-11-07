@@ -565,6 +565,35 @@ struct FeedView: View {
                         fallbackLead: todayStore.snapshot?.briefs.first { $0.id == entry.id }?.lead)
     }
 
+    /// One line for the sends that went a day unanswered: in Chat (Show opens Chat) or in Tasks (Show opens Tasks).
+    private var expiredNotice: (text: String, open: () -> Void)? {
+        let chatIDs = environment.chat.expiredWaitingMessages(now: Date()).map(\.id)
+        let taskIDs = tasks.expiredDraftSends.compactMap { $0.todayDraftSend?.taskID }
+        let total = chatIDs.count + taskIDs.count
+        guard total > 0 else { return nil }
+        let text = total == 1
+            ? String(localized: "Your computer didn't wake, so your message wasn't sent.")
+            : String.localizedStringWithFormat(String(localized: "Your computer didn't wake, so %lld messages weren't sent."), total)
+        if let messageID = chatIDs.first {
+            return (text, { router.showChatMessage(messageID) })
+        }
+        if let taskID = taskIDs.first {
+            return (text, { router.showHeldTaskRow(taskID) })
+        }
+        return (text, { router.selectedTab = .tasks })
+    }
+
+    /// The write the phone holds for this Needs you card, if any.
+    private func queuedWrite(for need: TodayNeed) -> PendingWrite? {
+        guard let id = need.card?.proactive?.momentID else { return nil }
+        return actions.pendingToday.first { $0.todayReplay?.momentID == id }
+    }
+
+    /// Held a day with no answer: the relay let it go, so the card needs the person again.
+    private func isExpiredHeld(_ write: PendingWrite) -> Bool {
+        Date().timeIntervalSince(write.createdAt) >= TaskSendWait.relayRetention
+    }
+
     private func awayFirstLine(_ cause: TodayStore.ConnectionCause) -> String {
         TodayStore.ConnectionCause.firstLine(cause, reason: sleepReason, sleptAt: sleptAt.map(todayTime), asOf: todayStore.asOf.map(todayTime))
     }
@@ -604,7 +633,8 @@ struct FeedView: View {
             }
             return now.formatted(.dateTime.weekday(.wide).month(.wide).day().locale(locale))
         }()
-        let count = tasks.waitingCount
+        // A queued card that is on its way to the computer no longer needs the person.
+        let count = max(0, tasks.waitingCount - tasks.waitingItems.filter { queuedWrite(for: $0).map { !isExpiredHeld($0) } ?? false }.count)
         let cause = connectionCause
         return VStack(alignment: .leading, spacing: 8) {
             // The date line always stays (P133). The away line sits under it, in the sheet's own words, and opens the sheet.
@@ -626,6 +656,19 @@ struct FeedView: View {
                         Image(systemName: "chevron.right").font(.caption2)
                     }.font(.subheadline).foregroundStyle(YansuTheme.secondary)
                 }.buttonStyle(.plain).accessibilityIdentifier("today.connection.line")
+            }
+            if let expired = expiredNotice {
+                // A send the computer never answered for a day: the line says so, and Show opens it (PROTOCOL.md section 23).
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(expired.text)
+                        .font(.footnote).foregroundStyle(YansuTheme.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("today.expired.line")
+                    Button(String(localized: "Show"), action: expired.open)
+                        .buttonStyle(.plain)
+                        .font(.footnote.weight(.semibold)).foregroundStyle(YansuTheme.accent)
+                        .accessibilityIdentifier("today.expired.show")
+                }
             }
             if let cause, showingOfflineNote, todayStore.asOf != nil {
                 Text(ComputerSleepReason.directions(for: cause, reason: sleepReason, sentWaiting: environment.chat.hasUnsentMessages))
@@ -819,27 +862,12 @@ struct FeedView: View {
 
     @ViewBuilder
     private var todayPendingWrites: some View {
-        let live = todayStore.snapshot?.needsYou.compactMap { $0.card?.proactive } ?? []
-        let cards = actions.pendingToday.filter { write in
-            guard let replay = write.todayReplay,
-                  let item = live.first(where: { $0.momentID == replay.momentID }) else { return false }
-            return (try? PendingWriteJournal.cardDigest(item)) == replay.cardDigest
-        }
+        // A queued card stays on its Needs you row (queuedWrite), so only the other held writes show here.
         let corrections = actions.pendingToday.filter { $0.todayCorrection != nil }
-        if !cards.isEmpty || !corrections.isEmpty || !feed.pendingToday.isEmpty ||
+        if !corrections.isEmpty || !feed.pendingToday.isEmpty ||
             !notifications.pendingToday.isEmpty || todayStore.pendingFresh != nil {
             VStack(alignment: .leading, spacing: 12) {
                 sectionLabel("Waits for your computer")
-                ForEach(cards, id: \.key) { write in
-                    if let replay = write.todayReplay, let item = live.first(where: { $0.momentID == replay.momentID }) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ChatProactiveCard(item: item, showsStatus: false, showsActions: false) { _ in .cancelled }
-                            if !replay.dispatched {
-                                Button("Undo") { Task { await actions.undoToday(write.key) } }
-                            }
-                        }
-                    }
-                }
                 if let pending = todayStore.pendingFresh {
                     HStack {
                         Text("Make my brief now").font(.subheadline)

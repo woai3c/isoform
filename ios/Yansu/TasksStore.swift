@@ -575,7 +575,7 @@ final class TasksStore: ObservableObject {
         let made = Date().addingTimeInterval(-(TaskSendWait.relayRetention + 3600))
         // The relay took this send a day ago and never answered. Written with its dispatch time in one insert, so the
         // launch replay never sees it undispatched and sends it again: the same state a real held send is in.
-        _ = try? await journal.reserveTodayDraft(taskID: "ui-task", revision: "r1", text: "Yes, Thursday works.",
+        _ = try? await journal.reserveTodayDraft(taskID: "draft.ui-sow", revision: "r1", text: "Yes, Thursday works.",
                                                  deviceID: device, makeKey: { "ui-expired-draft" }, createdAt: made,
                                                  dispatchedAt: made)
         await loadPendingDraftSends()

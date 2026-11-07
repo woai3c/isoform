@@ -18,6 +18,17 @@ final class ChatDeliveryTests: XCTestCase {
         XCTAssertEqual(ChatDeliveryStatus.waitingForComputer.label, "Waits for your computer")
     }
 
+    /// A waiting message a day old is one the relay has let go; a fresh one, or one the computer took, is not.
+    func testAWaitingMessageExpiresAfterADayAndOnlyThen() {
+        let waiting = message("m", "Can you move my 3 PM?", after: 0)
+        let dayLater = start.addingTimeInterval(ChatOutgoingMessage.relayRetention)
+        XCTAssertFalse(waiting.expiredWhileWaiting(computerOnline: false, now: start.addingTimeInterval(3600)))
+        XCTAssertTrue(waiting.expiredWhileWaiting(computerOnline: false, now: dayLater))
+        let taken = message("t", "Sent", after: 0, state: .sent, seq: 4)
+        XCTAssertFalse(taken.expiredWhileWaiting(computerOnline: false, now: dayLater), "a message the computer took is not waiting")
+        XCTAssertFalse(waiting.expiredWhileWaiting(computerOnline: true, now: dayLater), "with the computer online it is sending, not waiting")
+    }
+
     func testStatesOnlyMoveForward() {
         XCTAssertEqual(ChatDeliveryState.sending.advanced(to: .sent), .sent)
         XCTAssertEqual(ChatDeliveryState.seen.advanced(to: .sent), .seen)

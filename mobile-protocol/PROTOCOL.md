@@ -1260,12 +1260,12 @@ The fallback text is shown when the phone cannot decrypt the notice. It names no
 | `playbook_suggested` | Isoform can take a routine off your hands. |
 | `playbook_result` | A playbook finished. |
 | `topic_finds` | Something new on a topic you follow. |
-| `chat_answer` | Isoform answered your messages. |
+| `chat_answer` | Isoform answered. |
 | any other kind | Isoform has something for you. |
 
 When a `weekly_recap` notice cannot be opened, the notification extension localizes its fixed fallback on
 the device: “Your week is ready.” or “你的一周已准备好。” A `chat_answer` fallback is localized the same way:
-“Isoform answered your messages.” or “Isoform 回答了你的消息。” The decrypted title and body remain the Mac's copy.
+“Isoform answered.” or “Isoform 已回复。” The decrypted title and body remain the Mac's copy.
 
 ### 14.5 Phone behaviour (notification extension)
 
@@ -3228,14 +3228,25 @@ still works while the computer sleeps; it waits and happens when the computer wa
   posts a new request with a new key and no `queuedAt`, which runs at once. A `queuedAt` more than
   5 minutes ahead of the computer's clock is refused with 400, as in 15.3.
 - **Expired.** A request the computer has not received within 24 hours is gone from the relay.
-  The phone notices at its next open, from its own journal time (it uses no timer), and shows
-  "Your computer didn't wake, so this wasn't sent." with Send again. Messages stay as drafts until
-  the person sends them.
+  The phone notices at its next open, from its own journal time (it uses no timer), and shows the
+  line in the place the request is:
+  - In Chat, under the message: "Your computer didn't wake, so this wasn't sent." with Send again as
+    a text link.
+  - On a Needs you card row: the same line, with the row's buttons back.
+  - On the Tasks row of a held reply: the same line under the row, with Send again as a text link. Send
+    again takes the reply back out of the journal and sends it as a new send, once the relay has let the
+    first one go (a day after it was sent).
+  - On Today, under the away block: one line, "Your computer didn't wake, so your message wasn't sent."
+    (two or more: "so 2 messages weren't sent.") with Show. Show opens the first held message in Chat and
+    scrolls to it; with no held message in Chat, it opens Tasks at the held reply's row.
+  Nothing is sent again until the person says so; the words stay in the phone's journal until then.
 - **Answers.** The answer to a chat message that waited is an `chat_answer` notification with the
   body "Isoform answered." (zh-CN "Isoform 已回复。"). It carries no answer text and no count. The
   phone opens Chat for the answer, which is read through the normal chat route.
-- **Waiting state.** A row that waits shows "Waits for your computer" (zh-CN "等待电脑唤醒") until
-  the computer answers. The phone decides this from its journal and the relay's presence; nothing
-  new is sent to the phone for it.
+- **Waiting state.** Every message or row that waits for the computer reads "Waits for your computer ·
+  Undo" (zh-CN "等待电脑连接 · 撤销"), with Undo as the accent link. A message from a brief carries the same
+  line. A Needs you row keeps its place and shows the line in place of its buttons, and the date line's
+  count leaves it out while it waits. The phone decides this from its journal and the relay's presence;
+  nothing new is sent to the phone for it.
 - **Not changed.** Chat, brief-opener and "Talk about this brief" routes, the brief made ahead
   (a later version), keep-awake settings and the relay's ciphertext-only rule.

@@ -101,6 +101,15 @@ struct TasksView: View {
         }
         .tabBarScrollVisibility()
         .refreshable { await refresh(caught: true) }
+        .task(id: router.heldTaskRowRequest) {
+            guard let id = router.heldTaskRowRequest, router.selectedTab == .tasks else { return }
+            // The list is laid out after the tab opens; scroll once it is.
+            try? await Task.sleep(for: .milliseconds(300))
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) {
+                proxy.scrollTo("task.row.\(id)", anchor: .center)
+            }
+            router.consumeHeldTaskRow(id)
+        }
         .task(id: router.upNextRequest) {
             guard let request = router.upNextRequest, router.selectedTab == .tasks else { return }
             await refresh()
@@ -279,7 +288,7 @@ struct TasksView: View {
                 VStack(spacing: 10) {
                     ForEach(tasks.waitingItems) { need in
                         if let task = need.task {
-                            zoomSource(TaskRow(task: task), task)
+                            heldRow(zoomSource(TaskRow(task: task), task), task)
                         } else {
                             PhoneWaitingProactiveRow(need: need)
                         }
@@ -343,6 +352,29 @@ struct TasksView: View {
     }
 
     private var scheduled: [MobileScheduledTask] { page?.scheduled ?? [] }
+
+    /// A reply the computer did not take in a day: its line and Send again sit under its row, and Send again re-sends
+    /// through the same path the old banner used (PROTOCOL.md section 23).
+    @ViewBuilder
+    private func heldRow<Row: View>(_ row: Row, _ task: MobileTask) -> some View {
+        let held = tasks.expiredDraftSends.first { $0.todayDraftSend?.taskID == task.id }
+        VStack(alignment: .leading, spacing: 6) {
+            row
+            if let held {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(String(localized: "Your computer didn't wake, so this wasn't sent."))
+                        .font(.footnote).foregroundStyle(YansuTheme.secondary)
+                        .accessibilityIdentifier("tasks.held.line")
+                    Button(String(localized: "Send again")) { Task { await tasks.sendExpiredAgain(held) } }
+                        .buttonStyle(.plain)
+                        .font(.footnote.weight(.semibold)).foregroundStyle(YansuTheme.accent)
+                        .accessibilityIdentifier("tasks.sendAgain.\(task.id)")
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+        .id("task.row.\(task.id)")
+    }
 
     /// A task you just started: in Running at once, with "Started · Undo" for five seconds (click rule v1.1.0).
     private func startingRow(_ offer: IdeaOffer) -> some View {
@@ -461,14 +493,14 @@ struct TasksView: View {
         } else {
             VStack(spacing: 10) {
                 ForEach(rows) { task in
-                    TaskRow(task: task, onSelect: {
+                    heldRow(TaskRow(task: task, onSelect: {
                         withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.48)) {
                             selectedTask = task
                             if navigation?.path(for: .tasks).last != .task(task.id) {
                                 navigation?.push(.task(task.id), on: .tasks)
                             }
                         }
-                    })
+                    }), task)
                 }
             }
         }

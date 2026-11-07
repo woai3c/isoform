@@ -1048,3 +1048,17 @@ final class PendingWriteHubScopeTests: XCTestCase {
         XCTAssertNil(HubRequestScope.hubID)
     }
 }
+
+/// Send again for a draft the relay took and never answered: undoable only once the relay has let it go (PROTOCOL.md section 23).
+final class TodayDraftUndoTests: XCTestCase {
+    func testADispatchedDraftCanBeTakenBackOnlyAfterTheRelayLetsItGo() {
+        let sent = Date(timeIntervalSince1970: 1_800_000_000)
+        let unsent = PendingWrite.TodayDraftSend(taskID: "draft.ui-sow", revision: "r1", text: "Yes", dispatchedAt: nil)
+        let dispatched = PendingWrite.TodayDraftSend(taskID: "draft.ui-sow", revision: "r1", text: "Yes", dispatchedAt: sent)
+        XCTAssertTrue(PendingWriteJournal.draftSendCanBeUndone(unsent, now: sent))
+        XCTAssertFalse(PendingWriteJournal.draftSendCanBeUndone(dispatched, now: sent.addingTimeInterval(3600)),
+                       "an answer may still come within the day")
+        XCTAssertTrue(PendingWriteJournal.draftSendCanBeUndone(dispatched, now: sent.addingTimeInterval(TaskSendWait.relayRetention)))
+        XCTAssertFalse(PendingWriteJournal.draftSendCanBeUndone(nil, now: sent))
+    }
+}

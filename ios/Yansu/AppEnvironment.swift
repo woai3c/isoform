@@ -864,7 +864,10 @@ extension AppEnvironment {
             let presentationItems = state == "day-one" ? [try ChatUITestSeed.firstReadItem(now: Date())]
                 : state == "chat-cards" ? try ChatUITestSeed.proactiveCards(now: Date()) : presentationItem.map { [$0] }
             let dayOneHub = state == "day-one" ? ChatUITestHub(now: Date(), main: presentationItems) : nil
-            let tasksTestHub = ["tasks-seeded", "day-one", "feed-review", "brain-dump"].contains(state) ? TasksUITestHub(brainDump: state == "brain-dump") : nil
+            // The Needs you frames with a queued card read the feed's needs, where the card is (FeedTasksUITestHub).
+            let feedNeedsCard = state == "feed-review" && ProcessInfo.processInfo.environment["YANSU_UITEST_TODAY_WAITS"] == "1"
+            let tasksTestHub = ["tasks-seeded", "day-one", "feed-review", "brain-dump"].contains(state) && !feedNeedsCard
+                ? TasksUITestHub(brainDump: state == "brain-dump") : nil
             let holdsTestHub = state == "holds-seeded" ? HoldsUITestHub() : nil
             // The launch demo's morning (LaunchDemoUITestSeed): its brief, Today, chat and Priya's Send.
             let demoBrief = state == "launch-demo" ? LaunchDemoUITestSeed.brief() : nil
@@ -975,6 +978,12 @@ extension AppEnvironment {
                                             cause: cause ?? .asleep, phase: awayPhase, now: Date())
                 environment.chat.reloadAwayPeriodsForUITest()
             }
+            // Today's line for a send the computer never answered, with that send in Chat (the feed's Today frame).
+            if isFirstLaunch && state == "feed-review" && ProcessInfo.processInfo.environment["YANSU_UITEST_CHAT_EXPIRED"] == "1" {
+                try ChatUITestSeed.seedAway(ChatCache(directory: directory.appendingPathComponent("chat", isDirectory: true)),
+                                            cause: .asleep, phase: "long", now: Date())
+                environment.chat.reloadAwayPeriodsForUITest()
+            }
             if isFirstLaunch, let presentationItems {
                 try ChatUITestSeed.seedPresentation(
                     ChatCache(directory: directory.appendingPathComponent("chat", isDirectory: true)),
@@ -989,7 +998,11 @@ extension AppEnvironment {
             if isFirstLaunch && state == "feed-review", ProcessInfo.processInfo.environment["YANSU_UITEST_TODAY_WAITS"] == "1",
                let item = try ChatUITestSeed.proactiveCards(now: Date()).compactMap(\.proactive).first,
                let actionID = item.actionIDs.first {
-                Task { await environment.actions.seedWaitingTodayForUITest(chatID: ChatUITestSeed.mainChatID, item: item, actionID: actionID) }
+                // Launch loads the held writes once the vault has its device; a seed that lands before that load is cleared.
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    await environment.actions.seedWaitingTodayForUITest(chatID: ChatUITestSeed.mainChatID, item: item, actionID: actionID)
+                }
             }
             #endif
             if isFirstLaunch && ["feed", "feed-empty", "feed-no-history", "feed-audio", "feed-audio-rendering", "feed-catchup", "feed-offline", "feed-review", "feed-fetch-failed"].contains(state) {

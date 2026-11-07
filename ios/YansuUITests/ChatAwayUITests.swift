@@ -28,7 +28,7 @@ final class ChatAwayUITests: XCTestCase {
             XCTAssertEqual(thread.label, line)
             XCTAssertEqual(app.buttons.matching(identifier: "chat.away.line").count, 1, "one line per away period")
             let waiting = app.staticTexts.matching(identifier: "chat.message.status")
-                .matching(NSPredicate(format: "label == %@", "Waiting"))
+                .matching(NSPredicate(format: "label == %@", "Waits for your computer"))
             XCTAssertEqual(waiting.count, 2)
             XCTAssertEqual(app.buttons.matching(identifier: "chat.message.undo").count, 2)
             try capture(app, named: "away-\(cause)-en-light")
@@ -74,13 +74,15 @@ final class ChatAwayUITests: XCTestCase {
         try capture(app, named: "away-longpress-en-light")
     }
 
-    func testADayLaterTheLineSaysSinceWhenAndTheMessagesStillWait() throws {
+    func testADayLaterTheLineSaysSinceAndTheMessagesSayTheyWereNotSent() throws {
         let app = launch(cause: "asleep", phase: "long")
         let thread = app.buttons["chat.away.line"].firstMatch
         XCTAssertTrue(thread.waitForExistence(timeout: 15))
         XCTAssertTrue(thread.label.hasPrefix("Your computer has been asleep since "), thread.label)
         XCTAssertTrue(thread.label.hasSuffix(". Isoform answers when it wakes. More"), thread.label)
-        XCTAssertEqual(app.buttons.matching(identifier: "chat.message.undo").count, 2)
+        // A day with no answer: the relay let the messages go. They say so and offer Send again, not Undo.
+        XCTAssertEqual(app.buttons.matching(identifier: "chat.message.undo").count, 0)
+        XCTAssertEqual(app.buttons.matching(identifier: "chat.message.sendAgain").count, 2)
         try capture(app, named: "away-long-en-light")
     }
 

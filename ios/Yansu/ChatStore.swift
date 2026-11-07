@@ -1352,35 +1352,61 @@ final class ChatStore: ObservableObject {
         return ChatWaitingFields(queuedAt: waited ? message.sentAt : nil, undone: undone)
     }
 
-    /// Whether Undo applies: the message is still waiting for the computer and is not a brief's Ask.
+    /// Whether Undo applies: the message is still waiting for the computer. A brief's question is queued the same way.
     func canUndoWaiting(_ message: ChatOutgoingMessage) -> Bool {
-        message.isQueued && message.briefReference == nil &&
-            (message.askUndispatched == true || message.deliveryIssue == .waitingForComputer || hubOnline == false)
+        message.isQueued && (message.askUndispatched == true || message.deliveryIssue == .waitingForComputer || hubOnline == false)
+    }
+
+    /// Messages the computer has not taken within a day, across every chat on this phone (PROTOCOL.md section 23).
+    /// Read without changing the store, so Today can call it while it draws.
+    func expiredWaitingMessages(now: Date) -> [ChatOutgoingMessage] {
+        var chatIDs = Set(chats.map(\.id)).union(outgoing.keys)
+        if let main = cache.loadMainChatSummary() { chatIDs.insert(main.id) }
+        return chatIDs.flatMap { outgoing[$0] ?? cache.loadOutgoing(chatID: $0) ?? [] }
+            .filter { $0.expiredWhileWaiting(computerOnline: hubOnline, now: now) }
+    }
+
+    /// Send again for a waiting message the computer never answered within a day: it leaves the outbox and goes out
+    /// as a new send with its words.
+    func sendExpiredAgain(_ messageID: String, in chatID: String) async -> Bool {
+        guard let message = loadedOutgoing(chatID).first(where: { $0.id == messageID }),
+              message.expiredWhileWaiting(computerOnline: hubOnline, now: now()) else { return false }
+        guard await discardWaiting(messageID, in: chatID) != nil else { return false }
+        return await send(message.text, offerReferences: message.offerReferences)
     }
 
     /// Undo takes a waiting message back: its words go in the box, after any text already there on a new line.
     /// The others keep their order.
+    /// Undo takes a waiting message back: its words go in the box, after any text already there on a new line.
+    /// The others keep their order.
     @discardableResult
     func undoWaiting(_ messageID: String, in chatID: String) async -> Bool {
-        let generation = pairingGeneration
-        let target = "send:\(chatID)"
-        guard isPaired(), claim(target) else { return false }
-        defer { release(target, generation: generation) }
-        guard !outgoingUnreadable.contains(chatID),
-              let message = loadedOutgoing(chatID).first(where: { $0.id == messageID }),
-              canUndoWaiting(message) else { return false }
-        let write = await journal.existing(operation: .chatMessage, target: chatID,
-                                           fingerprint: message.deliveryFingerprint)
-        guard isCurrent(generation), !outgoingUnreadable.contains(chatID) else { return false }
-        let remaining = loadedOutgoing(chatID).filter { $0.id != messageID }
-        do { try cache.saveOutgoing(remaining, chatID: chatID) } catch { notice = ChatCopy.saveFailed; return false }
-        outgoing[chatID] = remaining
-        updateReturnedDrafts(chatID)
-        if let write { await journal.remove(keys: [write.key]) }
-        guard isCurrent(generation) else { return false }
+        guard let message = await discardWaiting(messageID, in: chatID) else { return false }
         let current = draft(in: chatID)
         _ = editComposerDraft(current.isEmpty ? message.text : current + "\n" + message.text, in: chatID)
         undoneSinceSent[chatID, default: 0] += 1
+        return true
+    }
+
+    /// Takes a waiting message out of the outbox, its journal write and its away-period line. Returns the message, or nil
+    /// when nothing was taken. The box is left to the caller.
+    private func discardWaiting(_ messageID: String, in chatID: String) async -> ChatOutgoingMessage? {
+        let generation = pairingGeneration
+        let target = "send:\(chatID)"
+        guard isPaired(), claim(target) else { return nil }
+        defer { release(target, generation: generation) }
+        guard !outgoingUnreadable.contains(chatID),
+              let message = loadedOutgoing(chatID).first(where: { $0.id == messageID }),
+              canUndoWaiting(message) || message.expiredWhileWaiting(computerOnline: hubOnline, now: now()) else { return nil }
+        let write = await journal.existing(operation: .chatMessage, target: chatID,
+                                           fingerprint: message.deliveryFingerprint)
+        guard isCurrent(generation), !outgoingUnreadable.contains(chatID) else { return nil }
+        let remaining = loadedOutgoing(chatID).filter { $0.id != messageID }
+        do { try cache.saveOutgoing(remaining, chatID: chatID) } catch { notice = ChatCopy.saveFailed; return nil }
+        outgoing[chatID] = remaining
+        updateReturnedDrafts(chatID)
+        if let write { await journal.remove(keys: [write.key]) }
+        guard isCurrent(generation) else { return nil }
         if var list = awayPeriods[chatID], let index = list.lastIndex(where: { $0.messageIDs.contains(messageID) }) {
             list[index].messageIDs.removeAll { $0 == messageID }
             if list[index].messageIDs.isEmpty {
@@ -1392,7 +1418,7 @@ final class ChatStore: ObservableObject {
             periods[chatID] = list
             saveAwayPeriods(periods)
         }
-        return true
+        return message
     }
 
     /// Records the Mac's answer with the message. False when it could not be saved.

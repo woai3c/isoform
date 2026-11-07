@@ -106,6 +106,31 @@ final class NotificationRouter: ObservableObject {
         if pendingTaskID == id { pendingTaskID = nil }
     }
 
+    /// Today's Show for a reply the computer did not take: Tasks opens and scrolls to that reply's row.
+    @Published private(set) var heldTaskRowRequest: String?
+
+    func showHeldTaskRow(_ taskID: String) {
+        sheet = nil
+        selectedTab = .tasks
+        heldTaskRowRequest = taskID
+    }
+
+    func consumeHeldTaskRow(_ taskID: String) {
+        if heldTaskRowRequest == taskID { heldTaskRowRequest = nil }
+    }
+
+    /// Today's Show for a Chat message the computer did not take: Chat opens and scrolls to that message.
+    @Published private(set) var chatMessageRequest: String?
+
+    func showChatMessage(_ messageID: String) {
+        openMainChat()
+        chatMessageRequest = messageID
+    }
+
+    func consumeChatMessage(_ messageID: String) {
+        if chatMessageRequest == messageID { chatMessageRequest = nil }
+    }
+
     func openUpNext() {
         sheet = nil
         upNextRequest = UUID()

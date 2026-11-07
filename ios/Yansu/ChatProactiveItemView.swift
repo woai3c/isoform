@@ -3,35 +3,92 @@ import SwiftUI
 /// The same waiting card can appear in Tasks and in Today's first three rows.
 struct PhoneWaitingProactiveRow: View {
     let need: TodayNeed
+    @EnvironmentObject private var actions: ActionStore
     @Environment(\.locale) private var locale
     @State private var showing = false
 
+    /// The action the phone holds for this card, if any.
+    private var queued: PendingWrite? {
+        guard let id = need.card?.proactive?.momentID else { return nil }
+        return actions.pendingToday.first { $0.todayReplay?.momentID == id }
+    }
+
+    /// Held a day with no answer: the relay let it go, so the card needs the person again.
+    private var expired: Bool {
+        queued.map { Date().timeIntervalSince($0.createdAt) >= TaskSendWait.relayRetention } ?? false
+    }
+
     var body: some View {
         if let item = need.card?.proactive, let chatID = need.chatId {
-            Button { showing = true } label: {
-                HStack(alignment: .center, spacing: 12) {
-                    Circle().fill(YansuTheme.warning).frame(width: 8, height: 8)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.copy(language: ChatPresentationLanguage(locale: locale).code).headline)
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(YansuTheme.ink)
-                        if let source = item.evidence.first {
-                            Text(source.sourceLabel(language: ChatPresentationLanguage(locale: locale).code))
-                                .font(.footnote).foregroundStyle(YansuTheme.secondary)
+            if let queued, !expired {
+                waitingRow(item, queued: queued)
+            } else {
+                Button {
+                    if let queued { onUndo(queued.key) }
+                    showing = true
+                } label: {
+                    HStack(alignment: .center, spacing: 12) {
+                        Circle().fill(YansuTheme.warning).frame(width: 8, height: 8)
+                        VStack(alignment: .leading, spacing: 4) {
+                            titleLines(item)
+                            if expired {
+                                Text(String(localized: "Your computer didn't wake, so this wasn't sent."))
+                                    .font(.footnote).foregroundStyle(YansuTheme.secondary)
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        // P135: a row's action is always the outlined pill, as the task rows show it.
+                        Text(ChatCardButtons.make(for: item).main?.label(locale: locale) ?? String(localized: "Review"))
+                            .font(.footnote.weight(.semibold)).foregroundStyle(YansuTheme.ink)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .overlay(Capsule().stroke(YansuTheme.border))
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    // P135: a row's action is always the outlined pill, as the task rows show it.
-                    Text(ChatCardButtons.make(for: item).main?.label(locale: locale) ?? String(localized: "Review"))
-                        .font(.footnote.weight(.semibold)).foregroundStyle(YansuTheme.ink)
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                        .overlay(Capsule().stroke(YansuTheme.border))
+                    .padding(16).contentShape(Rectangle())
                 }
-                .padding(16).contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("today.waiting.\(need.id)")
+                .sheet(isPresented: $showing) {
+                    ChatProactiveItemView(item: item, chatID: chatID, showsSource: true, queuesForToday: true) { showing = false }
+                }
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("today.waiting.\(need.id)")
-            .sheet(isPresented: $showing) {
-                ChatProactiveItemView(item: item, chatID: chatID, showsSource: true, queuesForToday: true) { showing = false }
+        }
+    }
+
+    private func onUndo(_ key: String) {
+        Task { await actions.undoToday(key) }
+    }
+
+    /// Queued and waiting: the same words as Chat's waiting line, with Undo as the accent link.
+    private func waitingRow(_ item: ChatProactiveView, queued: PendingWrite) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Circle().fill(YansuTheme.warning).frame(width: 8, height: 8)
+            VStack(alignment: .leading, spacing: 4) {
+                titleLines(item)
+                HStack(spacing: 4) {
+                    Text(String(localized: "Waits for your computer"))
+                        .accessibilityIdentifier("today.waiting.status")
+                    Text(verbatim: "·").accessibilityHidden(true)
+                    Button(String(localized: "Undo")) { onUndo(queued.key) }
+                        .buttonStyle(.plain)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(YansuTheme.accent)
+                        .accessibilityIdentifier("today.waiting.undo")
+                }
+                .font(.footnote).foregroundStyle(YansuTheme.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(16)
+        .accessibilityIdentifier("today.waiting.\(need.id)")
+    }
+
+    private func titleLines(_ item: ChatProactiveView) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(item.copy(language: ChatPresentationLanguage(locale: locale).code).headline)
+                .font(.subheadline.weight(.semibold)).foregroundStyle(YansuTheme.ink)
+            if let source = item.evidence.first {
+                Text(source.sourceLabel(language: ChatPresentationLanguage(locale: locale).code))
+                    .font(.footnote).foregroundStyle(YansuTheme.secondary)
             }
         }
     }

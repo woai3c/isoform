@@ -148,6 +148,13 @@ struct ChatView: View {
             .onChange(of: firstReadCorrectionSignal) { _, _ in
                 follow(scroll.policy.jumpToLatest(), proxy)
             }
+            // Today's Show for a send the computer did not take: Chat scrolls to that message (PROTOCOL.md section 23).
+            .task(id: router.chatMessageRequest) {
+                guard let id = router.chatMessageRequest else { return }
+                try? await Task.sleep(for: .milliseconds(300))
+                proxy.scrollTo(id, anchor: .center)
+                router.consumeChatMessage(id)
+            }
             .overlay(alignment: .bottom) {
                 if latest != .hidden {
                     latestButton(proxy)
@@ -396,6 +403,7 @@ struct ChatView: View {
         let rows = chat.openChatID == chatID ? chat.transcript?.items : nil
         ForEach(ChatDelivery.drawnBelowRows(outgoing, rows: rows)) { message in
             outgoingBubble(message)
+                .id(message.id)
                 .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
         }
         .animation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.42),
@@ -486,9 +494,12 @@ struct ChatView: View {
     private func outgoingBubble(_ message: ChatOutgoingMessage) -> some View {
         let delivery = message.deliveryStatus(computerOnline: chat.hubOnline)
         let period = chat.awayPeriod(containing: message.id, in: chatID)
+        let expired = message.expiredWhileWaiting(computerOnline: chat.hubOnline, now: Date())
         VStack(spacing: 8) {
-            if delivery == .waitingForComputer, chat.canUndoWaiting(message) {
-                waitingBubble(message)
+            if expired {
+                waitingBubble(message, expired: true)
+            } else if delivery == .waitingForComputer, chat.canUndoWaiting(message) {
+                waitingBubble(message, expired: false)
             } else {
                 userBubble(text: message.text, delivery: delivery,
                            retry: message.hasFailed ? { Task { await chat.retryFailed(message.id, in: chatID) } } : nil,
@@ -501,7 +512,7 @@ struct ChatView: View {
         }
     }
 
-    private func waitingBubble(_ message: ChatOutgoingMessage) -> some View {
+    private func waitingBubble(_ message: ChatOutgoingMessage, expired: Bool) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
             HStack(alignment: .bottom) {
                 Spacer(minLength: 48)
@@ -526,15 +537,26 @@ struct ChatView: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("chat.message.waiting")
             HStack(spacing: 4) {
-                Text(String(localized: "Waiting"))
-                    .accessibilityIdentifier("chat.message.status")
-                Text(verbatim: "·")
-                    .accessibilityHidden(true)
-                Button(String(localized: "Undo")) { undoWaiting(message) }
-                    .buttonStyle(.plain)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(YansuTheme.accent)
-                    .accessibilityIdentifier("chat.message.undo")
+                if expired {
+                    // A day with no answer: the relay let it go, so it did not send (PROTOCOL.md section 23).
+                    Text(String(localized: "Your computer didn't wake, so this wasn't sent."))
+                        .accessibilityIdentifier("chat.message.status")
+                    Button(String(localized: "Send again")) { Task { await chat.sendExpiredAgain(message.id, in: chatID) } }
+                        .buttonStyle(.plain)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(YansuTheme.accent)
+                        .accessibilityIdentifier("chat.message.sendAgain")
+                } else {
+                    Text(String(localized: "Waits for your computer"))
+                        .accessibilityIdentifier("chat.message.status")
+                    Text(verbatim: "·")
+                        .accessibilityHidden(true)
+                    Button(String(localized: "Undo")) { undoWaiting(message) }
+                        .buttonStyle(.plain)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(YansuTheme.accent)
+                        .accessibilityIdentifier("chat.message.undo")
+                }
             }
             .font(.caption)
             .foregroundStyle(YansuTheme.secondary)

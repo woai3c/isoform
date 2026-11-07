@@ -409,21 +409,6 @@ struct TaskThreadDestination: ViewModifier {
                 Button(String(localized: "Send")) { Task { await tasks.confirmHeldSend(held) } }
                 Button(String(localized: "Not now"), role: .cancel) { Task { await tasks.setHeldSendAside(held) } }
             }
-            .safeAreaInset(edge: .top) {
-                if let expired = tasks.expiredDraftSends.first {
-                    HStack(spacing: 10) {
-                        Text("Your computer didn't wake, so this wasn't sent.")
-                            .font(.footnote).foregroundStyle(YansuTheme.secondary)
-                        Spacer(minLength: 8)
-                        Button("Send again") { Task { await tasks.sendExpiredAgain(expired) } }
-                            .font(.footnote.weight(.semibold)).foregroundStyle(YansuTheme.accent)
-                            .accessibilityIdentifier("tasks.sendAgain")
-                    }
-                    .padding(.horizontal, 16).padding(.vertical, 8)
-                    .background(YansuTheme.surface)
-                    .accessibilityIdentifier("tasks.expiredSend")
-                }
-            }
     }
 }
 

@@ -123,6 +123,17 @@ struct ChatOutgoingMessage: Codable, Equatable, Sendable, Identifiable {
 }
 
 extension ChatOutgoingMessage {
+    /// The relay keeps a request for a sleeping computer for a day (PROTOCOL.md section 23).
+    static let relayRetention: TimeInterval = 24 * 60 * 60
+
+    /// Still waiting for the computer a day after it was sent: the relay has let it go.
+    func expiredWhileWaiting(computerOnline: Bool?, now: Date) -> Bool {
+        isQueued && deliveryStatus(computerOnline: computerOnline) == .waitingForComputer &&
+            now.timeIntervalSince(sentAt) >= Self.relayRetention
+    }
+}
+
+extension ChatOutgoingMessage {
     enum CodingKeys: String, CodingKey {
         case id, text, after, sentAt, turnID, seq, state, returnedToDraft, offerReferences, briefReference
         case deliveryIssue, failureDraftRecovered, askUndispatched

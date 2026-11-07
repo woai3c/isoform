@@ -119,13 +119,18 @@ struct BriefAskSheet: View {
                                         .accessibilityIdentifier("brief.ask.refresh")
                                 }
                             } else if outgoing?.isQueued == true && (chat.hubOnline == false || outgoing?.deliveryIssue == .waitingForComputer) {
-                                HStack {
+                                HStack(spacing: 4) {
                                     Text("Waits for your computer")
                                         .accessibilityIdentifier("brief.ask.waiting")
-                                    if outgoing?.askUndispatched == true, let chatID, let messageID {
+                                    Text(verbatim: "·")
+                                        .accessibilityHidden(true)
+                                    if let chatID, let messageID {
                                         Button("Undo") {
                                             Task {
-                                                if await chat.undoBriefAsk(chatID: chatID, messageID: messageID) {
+                                                let undone = outgoing?.askUndispatched == true
+                                                    ? await chat.undoBriefAsk(chatID: chatID, messageID: messageID)
+                                                    : await chat.undoWaiting(messageID, in: chatID)
+                                                if undone {
                                                     text = question
                                                     self.question = nil
                                                     self.messageID = nil
@@ -133,6 +138,9 @@ struct BriefAskSheet: View {
                                                 }
                                             }
                                         }
+                                        .buttonStyle(.plain)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(YansuTheme.accent)
                                         .accessibilityIdentifier("brief.ask.undo")
                                     }
                                 }
