@@ -322,7 +322,7 @@ struct BriefContentView: View {
     }
 
     static func shortDateTime(_ date: Date) -> String {
-        date.formatted(date: .abbreviated, time: .shortened)
+        BriefClock.stamp(date)
     }
 
     // Match the Mac-local hours in the day shape even when this iPhone is in another timezone.

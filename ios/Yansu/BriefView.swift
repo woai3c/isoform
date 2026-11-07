@@ -21,7 +21,7 @@ enum BriefView {
         if Calendar.current.isDateInToday(date) {
             return timeText(date)
         }
-        return date.formatted(date: .abbreviated, time: .shortened)
+        return BriefClock.stamp(date)
     }
 
     /// The time in brief copy (`BriefClock`): the design's zh-Hans form, the system's short time elsewhere.

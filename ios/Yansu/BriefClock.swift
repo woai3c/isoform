@@ -31,3 +31,22 @@ enum BriefClock {
         locale.language.languageCode?.identifier == "zh"
     }
 }
+
+extension BriefClock {
+    /// The date line on a brief item and the "as of" line (P136, the desktop rule): a time alone for today, the day
+    /// and time with no year for this year, and the year too for an earlier year.
+    static func stamp(_ date: Date, now: Date = Date(), locale: Locale = .current, timeZone: TimeZone = .current) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let time = text(date, locale: locale, timeZone: timeZone)
+        if calendar.isDate(date, inSameDayAs: now) { return time }
+        let style = Date.FormatStyle(locale: locale, calendar: calendar, timeZone: timeZone)
+        let day: String
+        if calendar.component(.year, from: date) == calendar.component(.year, from: now) {
+            day = date.formatted(style.month(.abbreviated).day())
+        } else {
+            day = date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, locale: locale, calendar: calendar, timeZone: timeZone))
+        }
+        return String(format: String(localized: "brief.stamp.dayAndTime"), day, time)
+    }
+}
