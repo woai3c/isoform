@@ -131,6 +131,13 @@ enum ComputerSleepReason: String, CaseIterable, Sendable {
         }
     }
 
+    /// What Today tells the person to do while the computer is away (P147). A sleep with a known reason gets that
+    /// reason's steps, so a closed lid reads "Open its lid." and not the generic line.
+    static func directions(for cause: TodayStore.ConnectionCause, reason: ComputerSleepReason?) -> String {
+        if cause == .sleeping, let reason { return reason.steps.joined(separator: " ") }
+        return cause.directions
+    }
+
     /// "Asleep since {time} · {detail}", or the plain title with the detail when the relay has no time.
     func status(since: String?) -> String {
         guard let since else { return "\(TodayStore.ConnectionCause.sleeping.title) · \(detail)" }

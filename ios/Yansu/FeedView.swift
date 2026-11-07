@@ -594,7 +594,7 @@ struct FeedView: View {
                 .accessibilityIdentifier("feed.summary")
             }
             if let cause, showingOfflineNote, todayStore.asOf != nil {
-                Text(cause.directions)
+                Text(ComputerSleepReason.directions(for: cause, reason: sleepReason))
                     .font(.footnote)
                     .foregroundStyle(YansuTheme.secondary)
                     .fixedSize(horizontal: false, vertical: true)
