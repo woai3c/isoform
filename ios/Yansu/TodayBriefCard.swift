@@ -251,28 +251,27 @@ struct TodayBriefCardView: View {
                     .accessibilityIdentifier("feed.brief.newer")
                 }
                 // Side-by-side links stack at accessibility sizes, so their labels never run into each other.
-                let links = Group {
-                    NavigationLink {
-                        BriefDetailView(entry: entry, player: player,
-                                        fallbackLead: todayStore.snapshot?.briefs.first { $0.id == shown.identifier }?.lead)
-                    } label: {
-                        Text("Read all")
-                    }
-                    .accessibilityIdentifier("feed.readAll")
-                    Button(action: onPastBriefs) {
-                        HStack(spacing: 4) {
-                            Text("Past briefs")
-                            Image(systemName: "chevron.right").font(.caption.weight(.semibold))
-                        }
-                    }
-                    .accessibilityIdentifier("feed.pastBriefs")
+                let readAll = NavigationLink {
+                    BriefDetailView(entry: entry, player: player,
+                                    fallbackLead: todayStore.snapshot?.briefs.first { $0.id == shown.identifier }?.lead)
+                } label: {
+                    Text("Read all")
                 }
+                .accessibilityIdentifier("feed.readAll")
+                let pastBriefs = Button(action: onPastBriefs) {
+                    HStack(spacing: 4) {
+                        Text("Past briefs")
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                    }
+                }
+                .accessibilityIdentifier("feed.pastBriefs")
+                // The two links sit at the card's two ends at the default size, and stack at accessibility sizes (P149).
                 if dynamicTypeSize.isAccessibilitySize {
-                    VStack(alignment: .leading, spacing: 10) { links }
+                    VStack(alignment: .leading, spacing: 10) { readAll; pastBriefs }
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(YansuTheme.accent)
                 } else {
-                    HStack { links; Spacer() }
+                    HStack { readAll; Spacer(minLength: 12); pastBriefs }
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(YansuTheme.accent)
                 }
