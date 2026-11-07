@@ -181,8 +181,17 @@ func TestThreadOutcomeOCRFixtures(t *testing.T) {
 				if mobileBriefBannedOutcomePhrase(text) || strings.Contains(text, "I saw work on") {
 					t.Fatalf("weak copy: %s", text)
 				}
-				if f.NextStep != "" && !strings.Contains(text, f.NextStep) {
-					t.Fatalf("lost next step: %s", text)
+				// A template is never spoken (design R74): nothing is read aloud, and the
+				// next step must reach the written brief instead.
+				if text != "" {
+					t.Fatalf("a template was spoken: %s", text)
+				}
+				written := ""
+				for _, paragraph := range paragraphs {
+					written += paragraph.Text + "\n"
+				}
+				if f.NextStep != "" && !strings.Contains(written, f.NextStep) {
+					t.Fatalf("lost next step from the written brief: %+v", paragraphs)
 				}
 				// Since backlog item 65 an observed thread, anchored or not,
 				// never reaches the written brief's prompt.

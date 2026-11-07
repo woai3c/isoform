@@ -47,7 +47,9 @@ func TestLaunchPublishesObservationPolicyBeforeFirstScreen(t *testing.T) {
 			app.handoffStore = work
 			// A real, locally rendered recording makes the withheld-audio
 			// assertion meaningful; no provider, model or native capture runs.
-			brief.Narrative = mobileBriefNarrativeTemplate(brief, "en")
+			// Only the model's ok text is read aloud (design R74): a recording needs model
+			// words. A template opening is never spoken, so it would publish with no audio.
+			brief.Narrative, brief.NarrativeStatus, _ = testModelCompose(context.Background(), nil, brief, nil)
 			if err := svc.store.save(brief, svc.now()); err != nil {
 				t.Fatal(err)
 			}
