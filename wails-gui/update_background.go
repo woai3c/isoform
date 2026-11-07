@@ -223,6 +223,16 @@ func (a *App) restorePendingUpdate() bool {
 // RestartToUpdate is the explicit, user-initiated restart action.
 func (a *App) RestartToUpdate() error { return a.QuitAndInstall() }
 
+// AcknowledgeRollbackNotice clears the one-time rollback notice after About shows it.
+func (a *App) AcknowledgeRollbackNotice() {
+	if a.updater == nil {
+		return
+	}
+	a.updater.mu.Lock()
+	a.updater.rollbackNotice = ""
+	a.updater.mu.Unlock()
+}
+
 // DismissUpdateUntilNextLaunch keeps the account status and staged update.
 func (a *App) DismissUpdateUntilNextLaunch() {
 	a.updater.mu.Lock()

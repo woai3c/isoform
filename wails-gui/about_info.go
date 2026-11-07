@@ -23,6 +23,7 @@ type AboutInfo struct {
 	BackgroundUpdates   bool         `json:"backgroundUpdates"`
 	LastChecked         int64        `json:"lastChecked"`
 	Later               bool         `json:"later"`
+	RollbackNotice      string       `json:"rollbackNotice,omitempty"`
 	ReleaseNotesVersion string       `json:"releaseNotesVersion"`
 	ReleaseNotes        string       `json:"releaseNotes"`
 	ReleaseNotesURL     string       `json:"releaseNotesUrl"`
@@ -42,6 +43,7 @@ func (a *App) GetAboutInfo() (AboutInfo, error) {
 		out.Update = a.updater.status
 		out.LastChecked = a.updater.lastChecked
 		out.Later = a.updater.later
+		out.RollbackNotice = a.updater.rollbackNotice
 		if selected := a.updater.info; selected.Latest != "" && (selected.Available || selected.Latest == strings.TrimPrefix(Version, "v")) {
 			out.ReleaseNotesVersion = selected.Latest
 			out.ReleaseNotes = selected.ReleaseNotes

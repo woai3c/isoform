@@ -32,6 +32,9 @@ type installedRecord struct {
 type updateRecoveryRecord struct {
 	Detail  string `json:"detail"`
 	Version string `json:"version,omitempty"`
+	// Previous is set on a rollback: the version restored. The restored app
+	// writes Detail again in its own language from these two versions.
+	Previous string `json:"previous,omitempty"`
 }
 
 // quitInstallInput is everything the quit decision reads, so the decision can

@@ -6134,6 +6134,7 @@ export interface AboutInfo {
     backgroundUpdates: boolean;
     lastChecked: number;
     later: boolean;
+    rollbackNotice?: string;
     releaseNotesVersion: string;
     releaseNotes: string;
     releaseNotesUrl: string;
@@ -6145,6 +6146,7 @@ export const RestartToUpdate = appBinding<[], void>('RestartToUpdate');
 export const SaveSupportLogs = appBinding<[], void>('SaveSupportLogs');
 export const OpenDataFolder = appBinding<[], void>('OpenDataFolder');
 export const DismissUpdateUntilNextLaunch = appBinding<[], void>('DismissUpdateUntilNextLaunch');
+export const AcknowledgeRollbackNotice = appBinding<[], void>('AcknowledgeRollbackNotice');
 export const CheckForUpdates = appBinding<[], {
     available: boolean;
     current: string;

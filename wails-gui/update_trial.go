@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -117,8 +116,9 @@ func runQuitInstallTrial(dataHome, version, bundle string, launch func(bundle st
 	// The same recovery record the click path leaves: the restored app shows it
 	// and blocks the failed version from background downloads.
 	recovery := updateRecoveryRecord{
-		Detail:  fmt.Sprintf("Isoform %s did not start, so the previous version was restored.", version),
-		Version: version,
+		Detail:   rollbackRecoveryDetail("en", version, t.From),
+		Version:  version,
+		Previous: t.From,
 	}
 	if err := writeUpdateJSON(filepath.Join(dataHome, "updates", "last-error.json"), recovery); err != nil {
 		log.Printf("[update] save rollback message: %v", err)
@@ -132,6 +132,17 @@ func runQuitInstallTrial(dataHome, version, bundle string, launch func(bundle st
 		log.Printf("[update] reopen restored app: %v", err)
 	}
 	return true
+}
+
+// rollbackRecoveryCopy is the one-time message after a rollback. {new} is the
+// version that did not start and {old} the version the person is back on.
+var rollbackRecoveryCopy = map[string]string{
+	"en":    "Isoform {new} didn't start, so you're back on {old}. The next version installs as usual.",
+	"zh-CN": "Isoform {new} 未能启动，已回到 {old}。下一个版本会照常安装。",
+}
+
+func rollbackRecoveryDetail(lang, failed, previous string) string {
+	return strings.NewReplacer("{new}", failed, "{old}", previous).Replace(rollbackRecoveryCopy[normalizeUILanguage(lang)])
 }
 
 // launchRestoredApp reopens the bundle at path with this process's executable name.

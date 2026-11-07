@@ -119,20 +119,22 @@ type UpdateStatus struct {
 
 // updater holds the runtime state for the self-update lifecycle.
 type updater struct {
-	opMu                sync.Mutex // serializes check, download and install
-	mu                  sync.Mutex
-	status              UpdateStatus
-	downloadURL         string  // set after a successful check finds an update
-	stagingPath         string  // path to the downloaded update asset
-	peakPercent         float64 // highest percent ever broadcast — prevents progress bar regression
-	expectedChecksum    string  // SHA-256 hex digest paired with the selected release asset
-	targetVersion       string
-	downloadedChecksum  string
-	downloadedVersion   string
-	info                UpdateInfo
-	recoveryError       bool
-	lastChecked         int64
-	later               bool
+	opMu               sync.Mutex // serializes check, download and install
+	mu                 sync.Mutex
+	status             UpdateStatus
+	downloadURL        string  // set after a successful check finds an update
+	stagingPath        string  // path to the downloaded update asset
+	peakPercent        float64 // highest percent ever broadcast — prevents progress bar regression
+	expectedChecksum   string  // SHA-256 hex digest paired with the selected release asset
+	targetVersion      string
+	downloadedChecksum string
+	downloadedVersion  string
+	info               UpdateInfo
+	recoveryError      bool
+	lastChecked        int64
+	later              bool
+	// rollbackNotice is the one-time message after a rollback, cleared once About shows it.
+	rollbackNotice      string
 	backgroundQueued    bool
 	backgroundRequested bool
 	backgroundDone      chan struct{}

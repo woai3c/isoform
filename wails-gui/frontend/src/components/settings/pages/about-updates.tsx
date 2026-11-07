@@ -18,6 +18,7 @@ import {
     SaveSupportLogs,
     OpenDataFolder,
     OpenExternalURL,
+    AcknowledgeRollbackNotice,
 } from "@/lib/wails-shim-app";
 
 const LICENSE_URL = "https://github.com/yubozhao/isoform/blob/main/LICENSE.md";
@@ -31,6 +32,14 @@ export function AboutUpdates() {
     const [busy, setBusy] = useState(false);
     // Shown from the click until the app quits; cleared only on failure.
     const [restarting, setRestarting] = useState(false);
+    // The rollback notice is shown once: it is kept here after the backend clears it.
+    const [rollbackNotice, setRollbackNotice] = useState("");
+    const backendNotice = info?.rollbackNotice ?? "";
+    useEffect(() => {
+        if (!backendNotice) return;
+        setRollbackNotice(backendNotice);
+        void AcknowledgeRollbackNotice().catch(() => undefined);
+    }, [backendNotice]);
     async function restart() {
         setRestarting(true);
         try {
@@ -180,6 +189,9 @@ export function AboutUpdates() {
                 <p role="status" className="text-[12.5px] text-muted">
                     {statusLine}
                 </p>
+                {rollbackNotice && (
+                    <p className="text-[12.5px] text-muted">{rollbackNotice}</p>
+                )}
                 {status === "update-available" && (
                     <Button
                         className="self-start"

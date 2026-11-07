@@ -94,6 +94,16 @@ func TestMenuBarMenuModel(t *testing.T) {
 	}
 }
 
+// The popover's restart row ends at Restart now, so its copy has no trailing dot.
+func TestMenuBarUpdateRestartCopy(t *testing.T) {
+	if got := menuBarWords("en")["updateRestart"]; got != "{version} is ready" {
+		t.Fatalf("en restart row %q", got)
+	}
+	if got := menuBarWords("zh-CN")["updateRestart"]; got != "{version} 已准备好" {
+		t.Fatalf("zh-CN restart row %q", got)
+	}
+}
+
 // The brief row's states, from the newest brief and the schedule.
 func TestMenuBarBriefRow(t *testing.T) {
 	now := time.Date(2026, 10, 27, 8, 40, 0, 0, time.Local)

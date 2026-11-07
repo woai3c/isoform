@@ -276,8 +276,18 @@ func (a *App) reportUpdateRecovery() {
 		}
 		rec = updateRecoveryRecord{Detail: detail}
 	}
+	// A rollback is news, not a failure: it becomes a one-time notice in About
+	// and never the error status, so the retry card and the generic failed line stay away.
+	rollback := rec.Previous != ""
+	if rollback {
+		rec.Detail = rollbackRecoveryDetail(a.currentUILanguage(), rec.Version, rec.Previous)
+	}
 	a.updater.mu.Lock()
-	a.updater.recoveryError = true
+	if rollback {
+		a.updater.rollbackNotice = rec.Detail
+	} else {
+		a.updater.recoveryError = true
+	}
 	newBlock := rec.Version != "" && rec.Version != a.updater.blockedVersion
 	if newBlock {
 		a.updater.blockedVersion = rec.Version
@@ -288,6 +298,8 @@ func (a *App) reportUpdateRecovery() {
 			log.Printf("[update] save blocked version: %v", err)
 		}
 	}
-	a.broadcastUpdateStatus(UpdateStatus{Status: "error", Detail: rec.Detail})
+	if !rollback {
+		a.broadcastUpdateStatus(UpdateStatus{Status: "error", Detail: rec.Detail})
+	}
 	_ = os.Remove(path)
 }

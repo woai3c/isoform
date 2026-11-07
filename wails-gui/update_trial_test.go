@@ -67,7 +67,7 @@ func TestQuitInstallCrashingBeforeHealthAckIsRolledBack(t *testing.T) {
 	}
 	restored := &App{updater: &updater{}}
 	restored.reportUpdateRecovery()
-	if !restored.updater.recoveryError || restored.updater.blockedVersion != "0.2.0" {
+	if restored.updater.recoveryError || restored.updater.blockedVersion != "0.2.0" || restored.updater.rollbackNotice == "" {
 		t.Fatalf("failed version not blocked: %+v", restored.updater)
 	}
 	// The restored app reports the rollback once.
@@ -153,5 +153,54 @@ func TestUpdateRolledBackEventAllowsOnlyClosedShapes(t *testing.T) {
 	}
 	if _, ok := productTelemetryProperties("update.rolled_back", map[string]any{"from": "free text", "to": "0.1.0", "attempts": 1}); ok {
 		t.Fatal("free text version accepted")
+	}
+}
+
+// The rollback message names the failed version and the one the person is back
+// on, in each UI language.
+func TestRollbackRecoveryMessageCopy(t *testing.T) {
+	if got := rollbackRecoveryDetail("en", "0.2.0", "0.1.0"); got != "Isoform 0.2.0 didn't start, so you're back on 0.1.0. The next version installs as usual." {
+		t.Fatalf("en %q", got)
+	}
+	if got := rollbackRecoveryDetail("zh-CN", "0.2.0", "0.1.0"); got != "Isoform 0.2.0 未能启动，已回到 0.1.0。下一个版本会照常安装。" {
+		t.Fatalf("zh-CN %q", got)
+	}
+}
+
+// A rollback shows its notice in About once: it is not an error status, the
+// record is consumed at launch, and acknowledging it clears it for good.
+func TestRollbackNoticeAppearsOnceAndOnlyOnce(t *testing.T) {
+	dataHome := t.TempDir()
+	t.Setenv(agentHomeEnv, dataHome)
+	t.Setenv(appFlavorEnv, appFlavorIsoform)
+	if err := os.MkdirAll(filepath.Join(dataHome, "updates"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	want := rollbackRecoveryDetail("en", "0.2.0", "0.1.0")
+	if err := writeUpdateJSON(filepath.Join(dataHome, "updates", "last-error.json"), updateRecoveryRecord{Detail: want, Version: "0.2.0", Previous: "0.1.0"}); err != nil {
+		t.Fatal(err)
+	}
+	app := &App{updater: &updater{}}
+	app.reportUpdateRecovery()
+	if got := app.GetUpdateStatus(); got.Status == "error" {
+		t.Fatalf("rollback shown as an error status: %+v", got)
+	}
+	info, err := app.GetAboutInfo()
+	if err != nil || info.RollbackNotice != want {
+		t.Fatalf("first open notice %q: %v", info.RollbackNotice, err)
+	}
+	// A second open before the acknowledgement still shows it; the acknowledgement ends it.
+	if again, _ := app.GetAboutInfo(); again.RollbackNotice != want {
+		t.Fatalf("notice lost before acknowledgement: %q", again.RollbackNotice)
+	}
+	app.AcknowledgeRollbackNotice()
+	if after, _ := app.GetAboutInfo(); after.RollbackNotice != "" {
+		t.Fatalf("notice shown again after acknowledgement: %q", after.RollbackNotice)
+	}
+	// A later launch does not bring it back: the record was consumed at launch.
+	relaunched := &App{updater: &updater{}}
+	relaunched.reportUpdateRecovery()
+	if got, _ := relaunched.GetAboutInfo(); got.RollbackNotice != "" {
+		t.Fatalf("notice reappeared on a later launch: %q", got.RollbackNotice)
 	}
 }
