@@ -1187,10 +1187,11 @@ struct ChatProactiveCard: View {
     }
 
     private func actionButtons(_ choices: [ChatCardButton]) -> some View {
-        ForEach(Array(choices.enumerated()), id: \.element.id) { index, button in
+        let primary = ChatCardPrimary.index(in: choices)
+        return ForEach(Array(choices.enumerated()), id: \.element.id) { index, button in
             Button(button.label(locale: locale)) { handle(button) }
-                .buttonStyle(index == 0 ? AnyButtonStyle(YansuPrimaryButtonStyle())
-                                       : AnyButtonStyle(YansuSecondaryButtonStyle()))
+                .buttonStyle(index == primary ? AnyButtonStyle(YansuPrimaryButtonStyle())
+                                              : AnyButtonStyle(YansuSecondaryButtonStyle()))
                 .fixedSize(horizontal: true, vertical: false)
                 .disabled(busy || (button.behavior == .answer && !current.canAct))
                 .accessibilityLabel(button.label(locale: locale))

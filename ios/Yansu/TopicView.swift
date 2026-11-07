@@ -493,7 +493,8 @@ struct TopicReplyCard: View {
                 Button(showsDraft ? String(localized: "Hide the draft") : String(localized: "Read the draft")) {
                     showsDraft.toggle()
                 }
-                .buttonStyle(YansuPillButtonStyle(prominent: false))
+                // The draft's own action is the filled one, so Read the draft leads the card (P130 follow-up, #648).
+                .buttonStyle(YansuPillButtonStyle(prominent: true))
                 .disabled(busy)
                 .accessibilityIdentifier("topic.readDraft")
                 if showsDraft {

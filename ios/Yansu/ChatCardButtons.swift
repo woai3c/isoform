@@ -12,6 +12,16 @@ enum ChatCardButtonBehavior: Equatable, Sendable {
     case file
 }
 
+/// Which choice on a card is the filled one (P130): the first that is not a dismissal. "Not now" is never primary,
+/// even when it is the only choice left after an empty slot drops out.
+enum ChatCardPrimary {
+    static let dismissalID = "not_now"
+
+    static func index(in choices: [ChatCardButton]) -> Int? {
+        choices.firstIndex { $0.id != dismissalID }
+    }
+}
+
 struct ChatCardButton: Equatable, Sendable, Identifiable {
     var id: String
     var labelKey: String
