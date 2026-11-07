@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -16,7 +17,7 @@ var mobileBriefDisplayClock = regexp.MustCompile(`(?i)\b(?:[0-2]?[0-9][:：][0-5
 var mobileBriefDisplayClockRange = regexp.MustCompile(`(?:` + mobileBriefDisplayClock.String() + `)\s*(?:to|[-–—]|至)\s*(?:` + mobileBriefDisplayClock.String() + `)`)
 
 var mobileBriefClockJoiner = regexp.MustCompile(`(?i)\b(?:at|from|to|between)\s*(?:[-–—,;.]\s*)?$`)
-var mobileBriefDeviceName = regexp.MustCompile(`(?i)(?:\b(your|this|my|the user's)\s+(MacBook Pro|MacBook Air|MacBook|Mac|iMac|iPhone)\b|(你的|这台|这个|我的|用户的)\s*(MacBook Pro|MacBook Air|MacBook|Mac|iMac|iPhone)\b[ \t]*)`)
+var mobileBriefDeviceName = regexp.MustCompile(`(?i)(?:\b(your|this|my|the user's)\s+(MacBook Pro|MacBook Air|MacBook|Mac Studio|Mac Pro|Mac mini|Mac|iMac|iPhone)\b|(你的|这台|这个|我的|用户的)\s*(MacBook Pro|MacBook Air|MacBook|Mac Studio|Mac Pro|Mac mini|Mac|iMac|iPhone)\b[ \t]*)`)
 var mobileBriefQuotedText = regexp.MustCompile(`"[^"\r\n]*"|“[^”\r\n]*”|「[^」\r\n]*」|『[^』\r\n]*』|《[^》\r\n]*》`)
 
 type mobileBriefTextRange struct {
@@ -495,15 +496,23 @@ func mobileBriefWithOwnVoice(brief MobileBriefV1) MobileBriefV1 {
 	rewrite := func(value string) string {
 		return mobileBriefOwnVoiceText(value, protected...)
 	}
-	lost := func(before, after string) bool {
-		return strings.TrimSpace(before) != "" && after == ""
+	rewriteAction := func(value, kind string) string {
+		rewritten, clean := rewriteMobileBriefOwnVoice(value, protected...)
+		if clean {
+			return strings.TrimSpace(rewritten)
+		}
+		if kind == "" {
+			kind = "unspecified"
+		}
+		log.Printf("[mobile-brief] kept an action with an unclean device reference: kind=%s", kind)
+		return value
 	}
 	rewriteHold := func(hold *TodayDayShapeHold) *TodayDayShapeHold {
 		if hold == nil {
 			return nil
 		}
 		out := *hold
-		out.Label = rewrite(out.Label)
+		out.Label = rewriteAction(out.Label, "hold")
 		return &out
 	}
 
@@ -537,11 +546,7 @@ func mobileBriefWithOwnVoice(brief MobileBriefV1) MobileBriefV1 {
 		week.Headline = rewrite(week.Headline)
 		week.Open = append([]MobileBriefWeekOpen(nil), week.Open...)
 		for i := range week.Open {
-			label := rewrite(week.Open[i].Label)
-			if lost(week.Open[i].Label, label) {
-				week.Open[i].CardID = ""
-			}
-			week.Open[i].Label = label
+			week.Open[i].Label = rewriteAction(week.Open[i].Label, "week_open")
 		}
 		week.Learned = append([]MobileBriefWeekLearned(nil), week.Learned...)
 		for i := range week.Learned {
@@ -551,13 +556,10 @@ func mobileBriefWithOwnVoice(brief MobileBriefV1) MobileBriefV1 {
 		}
 		if week.Ask != nil {
 			ask := *week.Ask
-			ask.Text, ask.Message = rewrite(ask.Text), rewrite(ask.Message)
+			ask.Text = rewriteAction(ask.Text, "week_ask")
+			ask.Message = rewriteAction(ask.Message, "week_ask")
 			ask.Hold = rewriteHold(ask.Hold)
-			if lost(week.Ask.Text, ask.Text) || lost(week.Ask.Message, ask.Message) {
-				week.Ask = nil
-			} else {
-				week.Ask = &ask
-			}
+			week.Ask = &ask
 		}
 		brief.YourWeek = &week
 	}
@@ -590,26 +592,17 @@ func mobileBriefWithOwnVoice(brief MobileBriefV1) MobileBriefV1 {
 		brief.WeeklyRecap[i].Hold = rewriteHold(brief.WeeklyRecap[i].Hold)
 	}
 
-	cards := make([]MobileBriefCard, 0, len(brief.Cards))
-	for _, card := range brief.Cards {
-		label, message := rewrite(card.Label), rewrite(card.Message)
-		if lost(card.Label, label) || lost(card.Message, message) {
-			continue
-		}
-		card.Label, card.Message = label, message
-		cards = append(cards, card)
+	for i := range brief.Cards {
+		card := &brief.Cards[i]
+		card.Label = rewriteAction(card.Label, card.Kind)
+		card.Message = rewriteAction(card.Message, card.Kind)
 	}
-	brief.Cards = cards
-	offers := make([]MobileBriefOffer, 0, len(brief.Offers))
-	for _, offer := range brief.Offers {
-		label, prompt, text := rewrite(offer.Label), rewrite(offer.Prompt), rewrite(offer.Text)
-		if lost(offer.Label, label) || lost(offer.Prompt, prompt) || lost(offer.Text, text) {
-			continue
-		}
-		offer.Label, offer.Prompt, offer.Text = label, prompt, text
-		offers = append(offers, offer)
+	for i := range brief.Offers {
+		offer := &brief.Offers[i]
+		offer.Label = rewriteAction(offer.Label, offer.Kind)
+		offer.Prompt = rewriteAction(offer.Prompt, offer.Kind)
+		offer.Text = rewriteAction(offer.Text, offer.Kind)
 	}
-	brief.Offers = offers
 
 	for _, items := range []*[]MobileBriefItem{
 		&brief.Sections.Noticed, &brief.Sections.Decide, &brief.Sections.Review,

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"strings"
 	"testing"
 	"time"
@@ -126,8 +127,8 @@ func TestMobileBriefOwnVoiceRewritesOnlyDeviceReferences(t *testing.T) {
 		{"the user's MacBook Air", "the user's MacBook Air", "the user's computer"},
 		{"your iMac", "your iMac", "your computer"},
 		{"your Mac mini", "Your Mac mini is asleep.", "Your computer is asleep."},
-		{"Mac Pro work name", "Your Mac Pro is ready.", "Your Mac Pro is ready."},
-		{"Mac Studio work name", "Your Mac Studio is ready.", "Your Mac Studio is ready."},
+		{"your Mac Pro", "Your Mac Pro is ready.", "Your computer is ready."},
+		{"your Mac Studio", "Your Mac Studio is ready.", "Your computer is ready."},
 		{"Mac Air work name", "Your Mac Air is ready.", "Your Mac Air is ready."},
 		{"Mac app work name", "Your Mac App Store update", "Your Mac App Store update"},
 		{"Mac Store work name", "Your Mac Store update", "Your Mac Store update"},
@@ -135,6 +136,8 @@ func TestMobileBriefOwnVoiceRewritesOnlyDeviceReferences(t *testing.T) {
 		{"Mac version work name", "your Mac 2 is public", "your Mac 2 is public"},
 		{"MacBook version work name", "your MacBook Pro 1.0.41", "your MacBook Pro 1.0.41"},
 		{"Mac mini version work name", "your Mac mini 1.0.41", "your Mac mini 1.0.41"},
+		{"Mac Pro version work name", "your Mac Pro 1.0.41", "your Mac Pro 1.0.41"},
+		{"Mac Studio version work name", "your Mac Studio 1.0.41", "your Mac Studio 1.0.41"},
 		{"Chinese computer", "你的 Mac", "你的电脑"},
 		{"Chinese computer in a sentence", "在你的 MacBook Pro 上打开。", "在你的电脑上打开。"},
 		{"Chinese Mac computer", "你的Mac电脑", "你的电脑"},
@@ -276,6 +279,158 @@ func TestMobileBriefWithOwnVoiceCoversWeeklyAndComputedLines(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.got != tc.want {
 				t.Fatalf("got %q, want %q", tc.got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMobileBriefWithOwnVoiceKeepsUncleanActions(t *testing.T) {
+	const unclean = `Open "Your Mac Studio writer-only-marker`
+	const clean = "Open it on your Mac."
+	const rewritten = "Open it on your computer."
+	for _, tc := range []struct {
+		name, kind string
+		brief      MobileBriefV1
+		fields     func(MobileBriefV1) []string
+		want       []string
+	}{
+		{
+			name: "card label", kind: mobileBriefCardItem,
+			brief: MobileBriefV1{Cards: []MobileBriefCard{{ID: "card", Kind: mobileBriefCardItem, Label: unclean, Message: clean}}},
+			fields: func(got MobileBriefV1) []string {
+				if len(got.Cards) != 1 {
+					return nil
+				}
+				return []string{got.Cards[0].Label, got.Cards[0].Message}
+			},
+			want: []string{unclean, rewritten},
+		},
+		{
+			name: "card message", kind: mobileBriefCardItem,
+			brief: MobileBriefV1{Cards: []MobileBriefCard{{ID: "card", Kind: mobileBriefCardItem, Label: clean, Message: unclean}}},
+			fields: func(got MobileBriefV1) []string {
+				if len(got.Cards) != 1 {
+					return nil
+				}
+				return []string{got.Cards[0].Label, got.Cards[0].Message}
+			},
+			want: []string{rewritten, unclean},
+		},
+		{
+			name: "offer label", kind: "review",
+			brief: MobileBriefV1{Offers: []MobileBriefOffer{{ID: "offer", Kind: "review", Label: unclean, Prompt: clean, Text: clean}}},
+			fields: func(got MobileBriefV1) []string {
+				if len(got.Offers) != 1 {
+					return nil
+				}
+				return []string{got.Offers[0].Label, got.Offers[0].Prompt, got.Offers[0].Text}
+			},
+			want: []string{unclean, rewritten, rewritten},
+		},
+		{
+			name: "offer prompt", kind: "review",
+			brief: MobileBriefV1{Offers: []MobileBriefOffer{{ID: "offer", Kind: "review", Label: clean, Prompt: unclean, Text: clean}}},
+			fields: func(got MobileBriefV1) []string {
+				if len(got.Offers) != 1 {
+					return nil
+				}
+				return []string{got.Offers[0].Label, got.Offers[0].Prompt, got.Offers[0].Text}
+			},
+			want: []string{rewritten, unclean, rewritten},
+		},
+		{
+			name: "week open chip", kind: "week_open",
+			brief: MobileBriefV1{YourWeek: &MobileBriefWeek{Open: []MobileBriefWeekOpen{{Title: "Launch", Label: unclean, CardID: "card"}}}},
+			fields: func(got MobileBriefV1) []string {
+				if got.YourWeek == nil || len(got.YourWeek.Open) != 1 {
+					return nil
+				}
+				return []string{got.YourWeek.Open[0].Label, got.YourWeek.Open[0].CardID}
+			},
+			want: []string{unclean, "card"},
+		},
+		{
+			name: "week ask", kind: "week_ask",
+			brief: MobileBriefV1{YourWeek: &MobileBriefWeek{Ask: &MobileBriefWeekAsk{Text: unclean, Message: clean, CardID: "card"}}},
+			fields: func(got MobileBriefV1) []string {
+				if got.YourWeek == nil || got.YourWeek.Ask == nil {
+					return nil
+				}
+				return []string{got.YourWeek.Ask.Text, got.YourWeek.Ask.Message, got.YourWeek.Ask.CardID}
+			},
+			want: []string{unclean, rewritten, "card"},
+		},
+		{
+			name: "hold chip", kind: "hold",
+			brief: MobileBriefV1{DayShape: &MobileBriefDay{TodayDayShape: &TodayDayShape{Hold: &TodayDayShapeHold{Label: unclean}}}},
+			fields: func(got MobileBriefV1) []string {
+				if got.DayShape == nil || got.DayShape.TodayDayShape == nil || got.DayShape.Hold == nil {
+					return nil
+				}
+				return []string{got.DayShape.Hold.Label}
+			},
+			want: []string{unclean},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var logged strings.Builder
+			previous := log.Writer()
+			log.SetOutput(&logged)
+			t.Cleanup(func() { log.SetOutput(previous) })
+
+			fields := tc.fields(mobileBriefWithOwnVoice(tc.brief))
+			if len(fields) != len(tc.want) {
+				t.Fatalf("action fields = %q, want %q", fields, tc.want)
+			}
+			for i := range tc.want {
+				if fields[i] != tc.want[i] {
+					t.Errorf("field %d = %q, want %q", i, fields[i], tc.want[i])
+				}
+			}
+			logs := logged.String()
+			if !strings.Contains(logs, "kind="+tc.kind) {
+				t.Errorf("log does not identify the action kind %q: %q", tc.kind, logs)
+			}
+			if strings.Contains(logs, "writer-only-marker") || strings.Contains(logs, "Mac Studio") {
+				t.Errorf("log contains label contents: %q", logs)
+			}
+		})
+	}
+}
+
+func TestMobileBriefStoredReadsDoNotRewriteExistingBrief(t *testing.T) {
+	const id = "2026-10-09-on_request-090000"
+	original := MobileBriefV1{
+		BriefID: id, LocalDate: "2026-10-09", Slot: mobileBriefSlotOnRequest, AsOf: "2026-10-09T09:00:00Z",
+		Narrative: []MobileBriefPara{{Text: "Open it on your Mac Studio."}},
+		Cards:     []MobileBriefCard{{ID: "card", Kind: mobileBriefCardItem, Label: "Open it on your Mac Pro"}},
+		Offers:    []MobileBriefOffer{{ID: "offer", Kind: "review", Label: "Open it on your Mac mini"}},
+	}
+	store := newMobileBriefStore(t.TempDir())
+	if err := store.saveDocument(original, mobileBriefAsOfTime(original)); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name string
+		read func() (MobileBriefV1, bool)
+	}{
+		{name: "by ID", read: func() (MobileBriefV1, bool) { return store.load(id) }},
+		{name: "latest", read: store.latest},
+		{name: "collection", read: func() (MobileBriefV1, bool) {
+			briefs := store.briefs()
+			if len(briefs) != 1 {
+				return MobileBriefV1{}, false
+			}
+			return briefs[0], true
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := tc.read()
+			if !ok || len(got.Narrative) != 1 || len(got.Cards) != 1 || len(got.Offers) != 1 {
+				t.Fatalf("stored brief did not survive its read: %+v", got)
+			}
+			if got.Narrative[0].Text != original.Narrative[0].Text || got.Cards[0].Label != original.Cards[0].Label || got.Offers[0].Label != original.Offers[0].Label {
+				t.Fatalf("read rewrote an existing brief: %+v", got)
 			}
 		})
 	}
