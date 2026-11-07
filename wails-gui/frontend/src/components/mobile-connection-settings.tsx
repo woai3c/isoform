@@ -1043,27 +1043,6 @@ export function MobileConnectionSettings({
                         >
                             {t("mobileConnection.getApp")}
                         </button>
-                        {hasDevices && keepAwake !== null && (
-                            <SettingRow
-                                title={t("mobileConnection.keepAwakeTitle")}
-                                description={keepAwake.hasBattery
-                                    ? t("mobileConnection.keepAwakeDescription")
-                                    : t("mobileConnection.keepAwakeDescriptionDesktop")}
-                                control={
-                                    <Switch
-                                        aria-label={t("mobileConnection.keepAwakeTitle")}
-                                        checked={keepAwake.on}
-                                        onCheckedChange={(checked) => void setKeepAwakeOn(checked)}
-                                    />
-                                }
-                            >
-                                {errors.keepAwake && (
-                                    <p role="alert" className="text-xs text-copper">
-                                        {errors.keepAwake}
-                                    </p>
-                                )}
-                            </SettingRow>
-                        )}
                         {hasDevices && (
                             <div className="flex flex-col">
                                 {devices.map((device) => {
@@ -1194,6 +1173,27 @@ export function MobileConnectionSettings({
                                 </p>
                             )}
                         </div>
+                        {hasDevices && keepAwake !== null && (
+                            <SettingRow
+                                title={t("mobileConnection.keepAwakeTitle")}
+                                description={keepAwake.hasBattery
+                                    ? t("mobileConnection.keepAwakeDescription")
+                                    : t("mobileConnection.keepAwakeDescriptionDesktop")}
+                                control={
+                                    <Switch
+                                        aria-label={t("mobileConnection.keepAwakeTitle")}
+                                        checked={keepAwake.on}
+                                        onCheckedChange={(checked) => void setKeepAwakeOn(checked)}
+                                    />
+                                }
+                            >
+                                {errors.keepAwake && (
+                                    <p role="alert" className="text-xs text-copper">
+                                        {errors.keepAwake}
+                                    </p>
+                                )}
+                            </SettingRow>
+                        )}
                     </div>
                 )}
             </SettingsCard>

@@ -992,6 +992,15 @@ describe("MobileConnectionSettings component", () => {
         expect(await screen.findByRole("switch", { name: KEEP_AWAKE_NAME })).not.toBeChecked();
     });
 
+    it("reads the keep-awake switch after the phone list and Pair another phone", async () => {
+        mocks.getStatus.mockResolvedValue(connectedStatus);
+        mocks.getKeepAwake.mockResolvedValue({ on: true, pairedPhones: 1, onPower: true, hasBattery: true });
+        await renderReady();
+        const pairAnother = screen.getByRole("button", { name: "Pair another phone" });
+        const keepAwake = await screen.findByRole("switch", { name: KEEP_AWAKE_NAME });
+        expect(pairAnother.compareDocumentPosition(keepAwake) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
     it.each(["en", "zh-CN"])("chooses the laptop or desktop keep-awake copy from battery status in %s", async (language) => {
         await i18n.changeLanguage(language);
         const copy = language === "en" ? en.mobileConnection : zh.mobileConnection;
