@@ -145,6 +145,15 @@ enum ComputerSleepReason: String, CaseIterable, Sendable {
         return text
     }
 
+    /// The Computer sheet's first line for a sleep with a known reason. `sleptAt` is when the computer went to sleep (the
+    /// relay goodbye's time), so it reads "since"; without it, `asOf` is when Isoform last heard from the computer, so it
+    /// reads "as of". The same phrase rule applies to every cause (P147 follow-up).
+    func status(sleptAt: String?, asOf: String?) -> String {
+        if let sleptAt { return String.localizedStringWithFormat(String(localized: "connection.asleepSince"), sleptAt, detail) }
+        guard let asOf else { return "\(TodayStore.ConnectionCause.sleeping.title) · \(detail)" }
+        return String.localizedStringWithFormat(String(localized: "connection.asleepAsOf"), asOf, detail)
+    }
+
     /// "Asleep since {time} · {detail}", or the plain title with the detail when the relay has no time.
     func status(since: String?) -> String {
         guard let since else { return "\(TodayStore.ConnectionCause.sleeping.title) · \(detail)" }

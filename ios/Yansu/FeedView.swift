@@ -285,9 +285,12 @@ struct FeedView: View {
                         VStack(alignment: .leading, spacing: 18) {
                             VStack(alignment: .leading, spacing: 8) {
                                 if cause == .sleeping, let reason = sleepReason {
-                                    Text(reason.status(since: (todayStore.connectionSince ?? todayStore.asOf).map(todayTime)))
+                                    Text(reason.status(sleptAt: sleptAt.map(todayTime), asOf: todayStore.asOf.map(todayTime)))
                                         .font(.headline).foregroundStyle(YansuTheme.ink)
                                         .accessibilityIdentifier("today.connection.status")
+                                } else if cause == .sleeping, let sleptAt {
+                                    Text(String.localizedStringWithFormat(String(localized: "connection.sleepingSince"), cause.title, todayTime(sleptAt)))
+                                        .font(.headline).foregroundStyle(YansuTheme.ink)
                                 } else if let asOf = todayStore.asOf {
                                     Text("\(cause.title) · as of \(todayTime(asOf))")
                                         .font(.headline).foregroundStyle(YansuTheme.ink)
@@ -562,6 +565,14 @@ struct FeedView: View {
            let cause = TodayStore.ConnectionCause(rawValue: seed) { return cause }
         #endif
         return todayStore.connectionCause
+    }
+
+    /// When the computer went to sleep: the relay goodbye's time. Nil when no goodbye has a time.
+    private var sleptAt: Date? {
+        #if DEBUG && targetEnvironment(simulator)
+        if let seed = ProcessInfo.processInfo.environment["YANSU_UITEST_GOODBYE_AT"], let date = RelayTime.parse(seed) { return date }
+        #endif
+        return todayStore.connectionSince
     }
 
     private var sleepReason: ComputerSleepReason? {

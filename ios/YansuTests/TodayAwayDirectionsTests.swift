@@ -47,3 +47,14 @@ extension TodayAwayDirectionsTests {
         XCTAssertTrue(ComputerSleepReason.directions(for: .sleeping, reason: .lidClosed).hasPrefix("Open the lid."))
     }
 }
+
+extension TodayAwayDirectionsTests {
+    /// The sheet's first line says "since" when the sleep time is known, and "as of" when only the last-heard time is.
+    func testTheSheetLineSaysSinceWhenTheSleepTimeIsKnown() {
+        XCTAssertEqual(ComputerSleepReason.lidClosed.status(sleptAt: "6:20 PM", asOf: "6:40 PM"), "Asleep since 6:20 PM · Its lid is closed.")
+    }
+
+    func testTheSheetLineSaysAsOfWithoutTheSleepTime() {
+        XCTAssertEqual(ComputerSleepReason.lidClosed.status(sleptAt: nil, asOf: "6:40 PM"), "Asleep as of 6:40 PM · Its lid is closed.")
+    }
+}
