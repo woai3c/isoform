@@ -106,6 +106,10 @@ func (s *mobileBriefStore) writeLatestShown(record mobileBriefLatestShown) error
 
 // noteLatestShown makes brief the latest brief.
 func (s *mobileBriefService) noteLatestShown(brief MobileBriefV1) {
+	// An early brief is never the latest record before its slot.
+	if mobileBriefHeld(brief, mobileBriefClock()) {
+		return
+	}
 	if current, ok := s.store.readLatestShown(); ok && current.BriefID == brief.BriefID {
 		return
 	}
@@ -144,7 +148,7 @@ func (s *mobileBriefService) latestShown() (MobileBriefV1, bool, error) {
 	var written MobileBriefV1
 	haveWritten := false
 	visit := func(source MobileBriefV1) (MobileBriefV1, bool, error) {
-		if seen[source.BriefID] || source.NarrativeStatus == "quiet" {
+		if seen[source.BriefID] || source.NarrativeStatus == "quiet" || mobileBriefHeld(source, mobileBriefClock()) {
 			return MobileBriefV1{}, false, nil
 		}
 		seen[source.BriefID] = true

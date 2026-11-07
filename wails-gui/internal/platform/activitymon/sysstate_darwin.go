@@ -151,6 +151,9 @@ static void install_system_state_observers(void) {
 		[center addObserverForName:NSWorkspaceWillSleepNotification object:nil queue:nil usingBlock:^(NSNotification *note) {
 			goSystemStateChanged("sleep");
 		}];
+		[center addObserverForName:NSWorkspaceScreensDidSleepNotification object:nil queue:nil usingBlock:^(NSNotification *note) {
+			goSystemStateChanged("screens-sleep");
+		}];
 		[center addObserverForName:NSWorkspaceWillPowerOffNotification object:nil queue:nil usingBlock:^(NSNotification *note) {
 			goSystemStateChanged("poweroff");
 		}];

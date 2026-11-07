@@ -35,7 +35,7 @@ func (s *mobileBriefService) nextAdaptivePredictionFor(now time.Time, settings m
 	s.mu.Unlock()
 	for day := 0; day < 2; day++ {
 		for _, p := range mobileBriefPredictDay(now.In(loc).AddDate(0, 0, day), loc, settings, input) {
-			if s.briefSignInAssistant(p.BriefID) != "" || (slot != "" && p.Slot != slot) || p.ScheduledAt.IsZero() || !now.Before(p.Deadline) || s.store.exists(p.BriefID) {
+			if s.briefSignInAssistant(p.BriefID) != "" || (slot != "" && p.Slot != slot) || p.ScheduledAt.IsZero() || !now.Before(p.Deadline) || s.slotBlocked(p.BriefID, p.ScheduledAt) {
 				continue
 			}
 			if fixed, found := s.slotOccurrence(p.ScheduledAt, settings, p.Slot); found && fixed.BriefID == p.BriefID && s.slotHasRequestedBrief(fixed, settings) {
@@ -102,7 +102,7 @@ func (s *mobileBriefService) checkAdaptiveDue(ctx context.Context, now time.Time
 		return
 	}
 	for _, p := range predictions {
-		if p.ScheduledAt.IsZero() || now.Before(p.ScheduledAt) || !now.Before(p.Deadline) || s.store.exists(p.BriefID) || !s.catchUpAllowed(slotAt[p.BriefID], now, settings) || s.slotHasRequestedBrief(mobileBriefSlotOccurrence{BriefID: p.BriefID, Slot: p.Slot, ScheduledAt: slotAt[p.BriefID]}, settings) {
+		if p.ScheduledAt.IsZero() || now.Before(p.ScheduledAt) || !now.Before(p.Deadline) || s.slotBlocked(p.BriefID, slotAt[p.BriefID]) || !s.catchUpAllowed(slotAt[p.BriefID], now, settings) || s.slotHasRequestedBrief(mobileBriefSlotOccurrence{BriefID: p.BriefID, Slot: p.Slot, ScheduledAt: slotAt[p.BriefID]}, settings) {
 			continue
 		}
 		s.runAdaptiveSlot(ctx, p.mobileBriefSlotOccurrence, mobileBriefReasonAdaptive, nil)

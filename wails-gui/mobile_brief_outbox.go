@@ -27,9 +27,11 @@ type mobileBriefOutboxEntry struct {
 	AsOf     string `json:"asOf"`
 	Version  string `json:"version"`
 	Notify   bool   `json:"notify"`
-	QueuedAt string `json:"queuedAt"`
-	HandedAt string `json:"handedAt,omitempty"`
-	Resent   bool   `json:"resent,omitempty"`
+	// DeliverAt is an early brief's slot time; the relay holds it until then.
+	DeliverAt string `json:"deliverAt,omitempty"`
+	QueuedAt  string `json:"queuedAt"`
+	HandedAt  string `json:"handedAt,omitempty"`
+	Resent    bool   `json:"resent,omitempty"`
 }
 
 type mobileBriefOutboxFile struct {

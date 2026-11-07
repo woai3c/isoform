@@ -40,11 +40,11 @@ type mobileBriefRun struct {
 	ScheduledAt string `json:"scheduledAt"`
 	// ScheduledReady distinguishes a configured slot from legacy adaptive
 	// preparation timestamps when the schedule changes later.
-	ScheduledReady   bool   `json:"scheduledReady,omitempty"`
-	Status           string `json:"status"`
-	At               string `json:"at"`
-	Attempts         int    `json:"attempts,omitempty"`
-	FailureKey       string `json:"failureKey,omitempty"`
+	ScheduledReady bool   `json:"scheduledReady,omitempty"`
+	Status         string `json:"status"`
+	At             string `json:"at"`
+	Attempts       int    `json:"attempts,omitempty"`
+	FailureKey     string `json:"failureKey,omitempty"`
 	// FailureText is the failure's first line, redacted and at most 200 bytes,
 	// kept with the key so the next failure of a kind can be read on the record.
 	FailureText      string `json:"failureText,omitempty"`
@@ -57,6 +57,16 @@ type mobileBriefRun struct {
 	Reason string `json:"reason,omitempty"`
 	// Notified marks that the missed-brief moment was submitted for this slot.
 	Notified bool `json:"notified,omitempty"`
+	// Early is set on the run of a brief made before its slot: what made it, when,
+	// and whether the slot's own build replaced it (replaced=true).
+	Early *mobileBriefEarlyRun `json:"early,omitempty"`
+}
+
+// mobileBriefEarlyRun is the record of an early brief.
+type mobileBriefEarlyRun struct {
+	Trigger  string `json:"trigger"`
+	MadeAt   string `json:"madeAt"`
+	Replaced bool   `json:"replaced"`
 }
 
 type mobileBriefRunsFile struct {
@@ -168,6 +178,21 @@ func (s *mobileBriefRunStore) saveFileLocked(file mobileBriefRunsFile) error {
 // record upserts the run for a brief id and returns the stored record. A slot
 // already marked ok or missed is never moved back to failed, and the notified
 // flag survives every update.
+// markEarlyReplaced sets replaced=true on the early run of a brief that its slot's
+// own build replaced.
+func (s *mobileBriefRunStore) markEarlyReplaced(briefID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	runs := s.loadLocked().Runs
+	for i := range runs {
+		if runs[i].BriefID == briefID && runs[i].Early != nil {
+			runs[i].Early.Replaced = true
+			return s.saveLocked(runs)
+		}
+	}
+	return nil
+}
+
 func (s *mobileBriefRunStore) record(run mobileBriefRun) (mobileBriefRun, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -175,6 +200,10 @@ func (s *mobileBriefRunStore) record(run mobileBriefRun) (mobileBriefRun, error)
 	for i, existing := range runs {
 		if existing.BriefID != run.BriefID {
 			continue
+		}
+		// The slot's own run keeps the early record and its replaced flag.
+		if run.Early == nil && existing.Early != nil {
+			run.Early = existing.Early
 		}
 		switch existing.Status {
 		case mobileBriefRunOK, mobileBriefRunMissed:

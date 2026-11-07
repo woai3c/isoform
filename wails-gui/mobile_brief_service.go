@@ -119,10 +119,14 @@ type mobileBriefService struct {
 	// windowLogged are the slots already logged as having no delivery window.
 	windowLogged map[string]bool
 	wake         chan struct{}
-	sleeping     bool
-	sleepAt      time.Time
-	wakeWindows  []mobileBriefWakeWindow
-	sleepState   func() activitymon.SystemStateChange
+	// ahead carries early-brief triggers (lock, display sleep, the scheduled moment).
+	ahead       chan string
+	aheadArmed  string
+	aheadTimer  *time.Timer
+	sleeping    bool
+	sleepAt     time.Time
+	wakeWindows []mobileBriefWakeWindow
+	sleepState  func() activitymon.SystemStateChange
 	// timing is a fixture seam; production projects only existing timestamps.
 	timing func(time.Time) mobileBriefTimingInput
 	wg     sync.WaitGroup
@@ -188,6 +192,7 @@ func buildMobileBriefService(app *App) *mobileBriefService {
 		lastOnDemand: map[string]time.Time{},
 		missedLogged: map[string]bool{},
 		wake:         make(chan struct{}, 1),
+		ahead:        make(chan string, 4),
 		sleepState:   activitymon.LatestSystemSleepState,
 		authResumed:  map[string]bool{},
 	}
@@ -313,6 +318,8 @@ func (s *mobileBriefService) loop(ctx context.Context) {
 			s.checkDue(ctx)
 		case <-s.wake:
 			s.checkDue(ctx)
+		case trigger := <-s.ahead:
+			s.aheadCheck(ctx, trigger)
 		}
 	}
 }
@@ -320,6 +327,7 @@ func (s *mobileBriefService) loop(ctx context.Context) {
 // checkDue generates the scheduled brief that is due now, if any. Observed
 // sleep recovers missed slots even after their normal catch-up window closes.
 func (s *mobileBriefService) checkDue(ctx context.Context) {
+	s.armAheadMoment(s.now(), s.location)
 	if s.app.firstWeekBriefWait(s.now()) {
 		return
 	}
@@ -1089,6 +1097,10 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 	if err != nil {
 		return MobileBriefV1{}, withLogStage("gather", err)
 	}
+	// An early brief is about its slot's day; every other brief uses its as-of day.
+	if day, ok := ctx.Value(mobileBriefAheadDayKey{}).(time.Time); ok {
+		input.BriefDay = day
+	}
 	// The brief's local date is stamped in the service's zone, the one its
 	// schedule and Today read, whatever zone the sources came with.
 	if s.location != nil && input.Location != s.location {
@@ -1253,8 +1265,21 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 	firstReadBriefMu.Lock()
 	// The copy is sealed after patchMu is released (below), so the save does not
 	// announce or seal under the lock.
+	// An awake slot's brief replaces the early brief stored under its ID (R40).
+	prior, hadPrior := s.store.load(brief.BriefID)
+	replacedAhead := hadPrior && mobileBriefIsAhead(prior) && !mobileBriefIsAhead(brief)
+	// A remake of a held early brief sends the phone no second notice either: its push is already due at the slot.
+	remadeAhead := hadPrior && mobileBriefIsAhead(prior) && mobileBriefIsAhead(brief)
 	err = s.store.saveDocument(brief, asOf)
 	s.patchMu.Unlock()
+	if err == nil && replacedAhead {
+		logMobileBriefAhead("slot", brief.BriefID, true)
+		if s.runs != nil {
+			if markErr := s.runs.markEarlyReplaced(brief.BriefID); markErr != nil {
+				log.Printf("[mobile-brief] the early run could not record its replacement")
+			}
+		}
+	}
 	if err != nil {
 		firstReadBriefMu.Unlock()
 		return MobileBriefV1{}, err
@@ -1275,15 +1300,21 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 		}
 		return brief, nil
 	}
+	// An early brief makes no desktop notice now; the phone's notice is due at
+	// its slot. A brief replacing an early one sends the phone no second notice.
+	ahead := mobileBriefIsAhead(brief)
 	notify := false
 	if s.app != nil {
 		s.app.recordBriefContextUses(brief, useEpoch)
-		notify = s.app.produceBriefReady(brief, reason != mobileBriefReasonPhone && reason != mobileBriefReasonWake, reason == mobileBriefReasonSettings)
+		if !ahead {
+			notify = s.app.produceBriefReady(brief, reason != mobileBriefReasonPhone && reason != mobileBriefReasonWake, reason == mobileBriefReasonSettings)
+		}
 	}
+	phoneNotify := mobileBriefPhoneNotify(ahead, replacedAhead || remadeAhead, notify)
 	firstReadBriefMu.Unlock()
 	if s.app != nil {
 		s.deliverStoredBrief(brief, func(current MobileBriefV1) {
-			if err := s.publish(current, notify); err != nil {
+			if err := s.publish(current, phoneNotify); err != nil {
 				log.Printf("[mobile-brief] paired-device delivery did not complete")
 			}
 		})

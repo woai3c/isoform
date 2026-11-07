@@ -103,6 +103,8 @@ type mobileDeviceFile struct {
 
 // mobileBriefFrame is the relay frame that stores a sealed brief.
 type mobileBriefFrame struct {
+	// DeliverAt, for an early brief, is its slot time (RFC 3339, UTC).
+	DeliverAt string `json:"deliverAt,omitempty"`
 	// Local dependencies survive offline queuing but never enter relay JSON.
 	attendanceSourceSessions map[string][]string
 	desktopOffers            []MobileBriefOffer
@@ -1153,6 +1155,7 @@ func (bridge *mobileBridge) publishBrief(brief MobileBriefV1, notify bool) error
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
+	deliverAt := mobileBriefDeliverAtText(brief)
 	previous := make(map[string]uint64, len(ids))
 	frames := make(map[string]mobileBriefFrame, len(ids))
 	revert := func() {
@@ -1177,7 +1180,7 @@ func (bridge *mobileBridge) publishBrief(brief MobileBriefV1, notify bool) error
 			return err
 		}
 		frames[id] = mobileBriefFrame{
-			T: "brief", Env: env, AsOf: brief.AsOf, Notify: notify,
+			T: "brief", Env: env, AsOf: brief.AsOf, Notify: notify, DeliverAt: deliverAt,
 			attendanceSourceSessions: attendanceSources, desktopOffers: desktopOffers,
 			weekLead: weekLead, weekLeadFacts: weekLeadFacts,
 		}
@@ -1196,7 +1199,7 @@ func (bridge *mobileBridge) publishBrief(brief MobileBriefV1, notify bool) error
 	for _, id := range ids {
 		bridge.briefOutbox.record(mobileBriefOutboxEntry{
 			DeviceID: id, BriefID: brief.BriefID, AsOf: brief.AsOf, Version: pkg.Version,
-			Notify: notify, QueuedAt: mobileTimestamp(now),
+			Notify: notify, QueuedAt: mobileTimestamp(now), DeliverAt: deliverAt,
 		})
 		if client == nil || client.send(frames[id]) != nil {
 			bridge.storePendingBrief(frames[id], true)
@@ -1284,7 +1287,7 @@ func (bridge *mobileBridge) resendBriefOutbox(client *mobileRelayClient, covered
 			entry.Version = pkg.Version
 			bridge.briefOutbox.record(entry)
 		}
-		frame := mobileBriefFrame{T: "brief", Env: env, AsOf: entry.AsOf, Notify: entry.Notify}
+		frame := mobileBriefFrame{T: "brief", Env: env, AsOf: entry.AsOf, Notify: entry.Notify, DeliverAt: entry.DeliverAt}
 		if client.send(frame) == nil {
 			bridge.briefOutbox.handed(entry.DeviceID, entry.BriefID, time.Now())
 		}

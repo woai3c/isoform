@@ -19,8 +19,10 @@ const (
 	SystemStateLocked   SystemStateKind = "locked"
 	SystemStateUnlocked SystemStateKind = "unlocked"
 	SystemStateSleep    SystemStateKind = "sleep"
-	SystemStateWake     SystemStateKind = "wake"
-	SystemStatePowerOff SystemStateKind = "poweroff"
+	// SystemStateScreensSleep is the display going to sleep (an event, no polling).
+	SystemStateScreensSleep SystemStateKind = "screens-sleep"
+	SystemStateWake         SystemStateKind = "wake"
+	SystemStatePowerOff     SystemStateKind = "poweroff"
 	// SystemStateAppActivated is the frontmost app changing. It is not a
 	// system state change: it only asks screen-state consumers to look again.
 	SystemStateAppActivated SystemStateKind = "app-activated"

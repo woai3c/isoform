@@ -33,6 +33,10 @@ func (s *mobileBriefService) systemStateChangedLocked(change activitymon.SystemS
 		return
 	}
 	switch change.Kind {
+	case activitymon.SystemStateLocked:
+		s.queueAhead("lock")
+	case activitymon.SystemStateScreensSleep:
+		s.queueAhead("screens_sleep")
 	case activitymon.SystemStateSleep:
 		s.sleeping = true
 		s.sleepAt = change.At

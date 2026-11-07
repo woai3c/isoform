@@ -233,7 +233,7 @@ func (s *mobileBriefStore) latest() (MobileBriefV1, bool) {
 	if data, err := os.ReadFile(filepath.Join(s.dir, mobileBriefLatestFileName)); err == nil {
 		var pointer mobileBriefLatestPointer
 		if json.Unmarshal(data, &pointer) == nil {
-			if brief, ok := s.load(pointer.BriefID); ok {
+			if brief, ok := s.load(pointer.BriefID); ok && !mobileBriefHeld(brief, mobileBriefClock()) {
 				return brief, true
 			}
 		}
@@ -290,7 +290,8 @@ func (s *mobileBriefStore) briefs() []MobileBriefV1 {
 		if id == entry.Name() {
 			continue
 		}
-		if brief, ok := s.load(id); ok {
+		// An early brief is held until its slot: no reader sees it before then.
+		if brief, ok := s.load(id); ok && !mobileBriefHeld(brief, mobileBriefClock()) {
 			out = append(out, brief)
 		}
 	}
