@@ -1949,7 +1949,7 @@ code,
 
 /* The phone-sized reading column keeps the same calendar drawing, with less chrome. */
 @container today-page (max-width: 477px) {
-    .today-day-hour-secondary, .today-day-caption { display: none; }
+    .today-day-caption { display: none; }
     .today-day-strip [data-testid="today-day-track"] { height: 32px !important; }
     .today-day-strip [data-testid="today-day-event"], .today-day-strip [data-testid="today-day-hold"], .today-day-block-label { height: 24px !important; margin-top: -2px; }
     .today-day-strip [data-inset="true"] { height: 16px !important; }

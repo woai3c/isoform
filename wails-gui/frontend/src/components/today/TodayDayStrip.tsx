@@ -22,6 +22,11 @@ function measureDayStripChip(text: string): number {
     return chipMeasureContext.measureText(text).width;
 }
 
+/** The first whole word of a name: the most a narrow block shows, never cut mid-word (R30). */
+function firstWholeWord(text: string): string {
+    return text.trim().split(/\s+/).find((word) => /[\p{L}\p{N}]/u.test(word)) ?? '';
+}
+
 /** Older day shapes can carry the recurrence word as their short name. */
 function meetingLabel(shortName: string, title: string): string {
     const source = /^weekly$/i.test(shortName.trim()) ? title : shortName;
@@ -211,6 +216,29 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
     const firstHour = new Date(start);
     firstHour.setMinutes(0, 0, 0);
     for (let at = firstHour.getTime(); at <= end; at += 3_600_000) if (at >= start) hours.push(at);
+    // R69: hour labels never touch. Every 2 hours when they fit, else every 4, else every 6; each stays inside the strip.
+    const hourLabels = (() => {
+        const anchor = hours[0] ?? start;
+        const fitsStep = (step: number) => {
+            const shown = hours.filter((at) => Math.round((at - anchor) / 3_600_000) % step === 0);
+            if (width <= 0) return { shown, ok: step === 2 };
+            let edge = -Infinity;
+            for (const at of shown) {
+                const text = briefClockTime(new Date(at).toISOString(), i18n.language, tr, timeZone) ?? '';
+                const w = measureDayStripChip(text);
+                const x = percent(at) / 100 * width;
+                const left = percent(at) === 0 ? x : percent(at) > 90 ? x - w : x - w / 2;
+                if (left < 0 || left + w > width || left < edge + 6) return { shown, ok: false };
+                edge = left + w;
+            }
+            return { shown, ok: true };
+        };
+        for (const step of [2, 4, 6]) {
+            const result = fitsStep(step);
+            if (result.ok) return result.shown;
+        }
+        return hours.slice(0, 1);
+    })();
     const now = Date.parse(shape.now) + Math.max(0, Date.now() - shapeClock.current.received);
     const civilDay = (at: number) => {
         let parts: Intl.DateTimeFormatPart[];
@@ -223,6 +251,49 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
     const dayDifference = Number.isFinite(now) && Number.isFinite(day) ? Math.round((day - civilDay(now)) / 86_400_000) : null;
     const dayLabel = dayDifference === null || dayDifference === 0 ? '' : dayDifference === 1 ? t('dayStrip.tomorrow')
         : new Date(day).toLocaleDateString(i18n.language, { weekday: 'long', timeZone: 'UTC' });
+    // Hover and the accessible name: the time, then the full title (R30). Busy and Private read as before.
+    const eventTitle = (item: DayBlock) => item.event?.private ? t('dayStrip.private') : item.event && !item.event.holdId && !item.event.title?.trim() ? t('dayStrip.busy') : t('dayStrip.eventTimeTitle', {
+        title: item.event?.title ?? shape.hold!.label, start: clock(item.originalStart), end: clock(item.originalEnd),
+    });
+    // A block the brief names gets its short name under the strip: the person for a one-on-one, else the title's first whole word.
+    const briefShortName = (event: NonNullable<DayBlock['event']>): string | null => {
+        if (!briefText?.trim() || event.holdId || event.private || !event.title?.trim()) return null;
+        const brief = briefText.toLowerCase();
+        const found = [event.shortName, event.shortestName, firstWholeWord(event.title)]
+            .find((name) => { const text = name?.trim().toLowerCase() ?? ''; return text.length >= 2 && brief.includes(text); });
+        return found?.trim() || null;
+    };
+    // One block's name inside it: the short name, then its first word, then nothing (R30).
+    const layoutLabel = (entry: DayBlock) => {
+        const pieces = blocks.filter((block) => block.event === entry.event);
+        const covers = pieces.length ? blocks.filter((other) => other.layer > pieces[0].layer && other.start < entry.end && other.end > entry.start) : [];
+        const labelSpan = freeDaySpans(entry.start, entry.end, covers).sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
+        const { event } = entry;
+        const labelWidth = labelSpan ? width * (labelSpan.end - labelSpan.start) / (end - start) - 2 : 0;
+        // A private event reads Private; an event with no title reads Busy (R30 v3).
+        const untitled = !!event && !event.holdId && !event.private && !event.title?.trim();
+        const rawLabel = event?.private ? t('dayStrip.private') : untitled ? t('dayStrip.busy') : event ? event.holdId ? t('dayStrip.held') : event.kind === 'meeting' ? meetingLabel(event.shortName, event.title) : event.shortName || event.title
+            : holdPreview === 'held' ? t('dayStrip.held') : t('dayStrip.proposed');
+        // The short name, then the first word of it (shortestName), never a cut name.
+        const names = event && !event.holdId && !event.private && !untitled ? [rawLabel, event.shortestName] : [rawLabel];
+        const fits = (text: string) => fitChipLabel(text, labelWidth - 12, measureDayStripChip, event?.initial);
+        const label = names.map((name) => fits(name ?? '')).find(Boolean) ?? '';
+        return { pieces, labelSpan, label, untitled, rawLabel };
+    };
+    const briefLabels: { entry: DayBlock; text: string; shown: boolean }[] = [];
+    let labelEdge = -Infinity;
+    for (const entry of entries) {
+        if (!entry.event) continue;
+        // R30 handoff: the label under the strip is only for a block the brief names that shows no name inside.
+        if (layoutLabel(entry).label) continue;
+        const text = briefShortName(entry.event);
+        if (!text) continue;
+        // Two labels that would overlap: the earlier shows, the later is on hover only.
+        const left = percent(entry.start) / 100 * width;
+        const shown = width > 0 && left >= labelEdge;
+        if (shown) labelEdge = left + measureDayStripChip(text) + 8;
+        briefLabels.push({ entry, text, shown });
+    }
     return (
         <div className="today-day-strip flex flex-col gap-1.5" data-testid="today-day-strip" role="group" aria-label={heading?.title ?? t('dayStrip.label')}>
             {heading && (
@@ -235,46 +306,29 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
                 never read as today's (today-review v1.1.17 R21). */}
             {dayLabel && <span className="text-[12px] font-medium text-muted" data-testid="today-day-strip-day">{dayLabel}</span>}
             <div className="relative h-3.5 text-[11px] leading-[14px] text-muted" data-testid="today-day-hours">
-                {hours.filter((_, i) => i % 2 === 0).map((at, i) => <span key={at} className={cn('today-day-hour absolute whitespace-nowrap', i % 2 === 1 && 'today-day-hour-secondary')} style={{ left: `${percent(at)}%`, transform: percent(at) > 90 ? 'translateX(-100%)' : percent(at) === 0 ? undefined : 'translateX(-50%)' }}>{clock(at)}</span>)}
+                {hourLabels.map((at) => <span key={at} className="today-day-hour absolute whitespace-nowrap" style={{ left: `${percent(at)}%`, transform: percent(at) > 90 ? 'translateX(-100%)' : percent(at) === 0 ? undefined : 'translateX(-50%)' }}>{clock(at)}</span>)}
             </div>
             <div ref={track} data-testid="today-day-track" data-rows="1" className="patina-ground relative isolate rounded-lg border border-border bg-background" style={{ height: 40 }}>
                 {hours.map((at) => <span key={at} aria-hidden className="absolute inset-y-0 w-px bg-border" style={{ left: `${percent(at)}%` }} />)}
                 {events.length === 0 && !hold ? <span className="absolute inset-0 flex items-center justify-center text-[12px] text-muted">{dayLabel ? t('dayStrip.emptyOnDay', { day: dayLabel }) : t('dayStrip.empty')}</span> : <FreeLabels spans={dayDifference !== null && dayDifference < 0 ? [] : free} start={start} end={end} initialNow={now} isToday={dayDifference === 0} width={width} language={i18n.language} tr={tr} />}
                 {entries.map((entry) => {
-                    const pieces = blocks.filter((block) => block.event === entry.event);
+                    const { pieces, labelSpan, label } = layoutLabel(entry);
                     if (!pieces.length) return null;
-                    const covers = blocks.filter((other) => other.layer > pieces[0].layer && other.start < entry.end && other.end > entry.start);
-                    const labelSpan = freeDaySpans(entry.start, entry.end, covers).sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
                     const { event } = entry;
-                    const labelWidth = labelSpan ? width * (labelSpan.end - labelSpan.start) / (end - start) - 2 : 0;
-                    // A private event reads Private; an event with no title reads Busy (R30 v3).
-                    const untitled = !!event && !event.holdId && !event.private && !event.title?.trim();
-                    const rawLabel = event?.private ? t('dayStrip.private') : untitled ? t('dayStrip.busy') : event ? event.holdId ? t('dayStrip.held') : event.kind === 'meeting' ? meetingLabel(event.shortName, event.title) : event.shortName || event.title
-                        : holdPreview === 'held' ? t('dayStrip.held') : t('dayStrip.proposed');
-                    // A block shows the first of its names that fits (today-review v1.1.13 D7). A name never shows cut.
-                    const names = event && !event.holdId && !event.private && !untitled ? [rawLabel, event.shortestName, event.title] : [rawLabel];
-                    // An event the brief names gets its first whole word that fits, when no whole name does (R30 v3).
-                    const briefNamed = !!event && !event.holdId && !event.private && !untitled && !!briefText?.trim() && [event.title, event.shortName, event.shortestName]
-                        .some((name) => { const text = name?.trim().toLowerCase() ?? ''; return text.length >= 2 && briefText.toLowerCase().includes(text); });
-                    const fits = (text: string) => fitChipLabel(text, labelWidth - 12, measureDayStripChip, event?.initial);
-                    const label = names.map((name) => fits(name ?? '')).find(Boolean)
-                        ?? (briefNamed ? (event?.title ?? '').split(/\s+/).map((word) => word.trim()).filter((word) => /[\p{L}\p{N}]/u.test(word)).map(fits).find(Boolean) ?? '' : '');
                     return <span key={event?.id ?? 'hold'} data-testid={event ? 'today-day-event-group' : 'today-day-hold-group'}
-                        className="pointer-events-none absolute inset-0" style={{ zIndex: pieces[0].layer + 1, opacity: entry.originalEnd <= now ? 0.45 : 1 }}>
+                        className="pointer-events-none absolute inset-0" style={{ zIndex: pieces[0].layer + 1, opacity: !event && entry.originalEnd <= now ? 0.45 : 1 }}>
                         {pieces.map((block, pieceIndex) => {
                             // Hover and the accessible name carry the word or the full name, even where the block is too narrow to show it.
-                            const eventTitle = (item: DayBlock) => item.event?.private ? t('dayStrip.private') : item.event && !item.event.holdId && !item.event.title?.trim() ? t('dayStrip.busy') : t('dayStrip.eventTime', {
-                                title: item.event?.title ?? shape.hold!.label, start: clock(item.originalStart), end: clock(item.originalEnd),
-                            });
                             const title = [eventTitle(block), ...(block.hidden.length ? [t('dayStrip.more', { count: block.hidden.length }), ...block.hidden.map(eventTitle)] : [])].join('\n');
-                            const className = cn('pointer-events-auto absolute flex items-center justify-center overflow-hidden whitespace-nowrap rounded-md text-[11.5px] font-medium', event ? event.holdId ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : event.kind === 'personal' || event.private || untitled ? 'border-[1.5px] border-ink bg-background text-ink' : 'bg-ink text-background' : holdPreview === 'held' ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : 'border-[1.5px] border-dashed border-accent bg-accent-light text-accent');
+                            // Every calendar block is an ink outline with a light tint, never a solid fill; an ended one dims its tint (R30).
+                            const className = cn('pointer-events-auto absolute flex items-center justify-center overflow-hidden whitespace-nowrap rounded-md text-[11.5px] font-medium', event ? event.holdId ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : cn('border-[1.5px] border-ink', entry.originalEnd <= now ? 'bg-panel-warm/50' : 'bg-panel-warm') : holdPreview === 'held' ? 'text-[10px] bg-solid-btn-bg text-solid-btn-fg' : 'border-[1.5px] border-dashed border-accent bg-accent-light text-accent');
                             const style = { ...placement(block, block.end === Math.min(end, block.originalEnd) ? 2 : 0), zIndex: 1, top: block.inset ? 10 : 6, height: block.inset ? 20 : 28 };
                             return event?.kind === 'meeting' && !event.holdId && !event.private && onOpenMeeting
                                 ? <button key={block.start} type="button" data-testid="today-day-event" data-inset={block.inset} data-kind={event.kind} title={title} aria-label={t('dayStrip.openPrep', { event: eventTitle(block) })} tabIndex={pieceIndex === 0 ? 0 : -1} className={cn(className, 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent')} style={style} onClick={() => onOpenMeeting(event.id)} />
                                 : <span key={block.start} data-testid={event ? 'today-day-event' : 'today-day-hold'} data-inset={block.inset} data-kind={event?.kind} data-state={event ? undefined : holdPreview} title={title} aria-label={title} className={className} style={style} />;
                         })}
                         {labelSpan && <BlockLabel eventId={event?.id} label={label}
-                            className={event ? event.holdId ? 'text-solid-btn-fg' : event.kind === 'personal' || event.private || untitled ? 'text-ink' : 'text-background' : holdPreview === 'held' ? 'text-solid-btn-fg' : 'text-accent'}
+                            className={event ? event.holdId ? 'text-solid-btn-fg' : entry.originalEnd <= now ? 'text-muted' : 'text-ink' : holdPreview === 'held' ? 'text-solid-btn-fg' : 'text-accent'}
                             style={{ ...placement(labelSpan), top: 6, height: 28, zIndex: 2 }} />}
                         {!event && labelSpan && holdPreview === 'held' && onRemoveHold && <button type="button"
                             aria-label={t('holds.heldFor', { title: holdTitle ?? shape.hold?.label })}
@@ -294,6 +348,11 @@ export const TodayDayStrip = memo(function TodayDayStrip({ shape, holdPreview = 
                 })}
                 {Number.isFinite(now) && dayDifference === 0 && <NowLine initialNow={now} start={start} end={end} layer={markerLayer} clock={clock} label={(time) => String(t('dayStrip.now', { time }))} />}
             </div>
+            {briefLabels.length > 0 && <div className="relative h-4" data-testid="today-day-brief-labels">
+                {briefLabels.map(({ entry, text, shown }) => shown
+                    ? <span key={entry.event?.id} data-testid="today-day-brief-label" className="absolute top-0 whitespace-nowrap text-[11px] font-medium text-muted" style={{ left: `${percent(entry.start)}%` }}>{text}</span>
+                    : <span key={entry.event?.id} data-testid="today-day-brief-label-hover" aria-label={eventTitle(entry)} title={eventTitle(entry)} className="absolute top-0 h-4" style={{ left: `${percent(entry.start)}%`, width: `${percent(entry.end) - percent(entry.start)}%` }} />)}
+            </div>}
             {currentMenu && onRemoveHold && <div className="self-start rounded-lg border border-border bg-background p-2 text-[13px] shadow-sm">
                 <p className="text-muted">{t('holds.heldFor', { title: currentMenu.title })}</p>
                 <button type="button" className="mt-1 text-accent" onClick={() => { setHoldMenu(null); onRemoveHold(currentMenu.id); }}>{t('holds.remove')}</button>

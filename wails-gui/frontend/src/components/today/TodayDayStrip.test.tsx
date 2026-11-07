@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import i18n from '@/i18n';
 import { TodayDayStrip, freeDaySpans } from './TodayDayStrip';
@@ -99,13 +99,13 @@ it('draws the shorter overlap above the longer event, inset 4 px with its label 
             events: [event('short', '09:15', '09:45'), event('long', '09:00', '10:00')] }} />);
         expect(screen.getByTestId('today-day-track')).toHaveStyle({ height: '40px' });
         const blocks = screen.getAllByTestId('today-day-event');
-        expect(blocks.map((block) => block.title.split(' · ')[0])).toEqual(['long', 'short']);
+        expect(blocks.map((block) => block.title.split(' · ')[1])).toEqual(['long', 'short']);
         expect(blocks[0]).toHaveStyle({ top: '6px', height: '28px' });
         expect(blocks[1]).toHaveStyle({ top: '10px', height: '20px' });
         expect(screen.getByText('short', { exact: true })).toBeVisible();
         expect(blocks[1].parentElement).toContainElement(screen.getByText('short', { exact: true }));
         expect(Number(blocks[1].parentElement!.style.zIndex)).toBeGreaterThan(Number(blocks[0].parentElement!.style.zIndex));
-        expect(blocks[0]).toHaveAccessibleName(/long.*9:00 AM.*10:00 AM/);
+        expect(blocks[0]).toHaveAccessibleName(/9:00 AM.*10:00 AM.*long/);
     } finally { vi.restoreAllMocks(); }
 });
 it('keeps one full-span label when a shorter event extends beyond its longer overlap', () => {
@@ -149,15 +149,17 @@ it.each([3, 4])('draws the two shortest of %i simultaneous events and folds the 
 it('does not fold events that overlap in a chain but never three at once', () => {
     render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, hold: null,
         events: [event('first', '09:00', '11:00'), event('middle', '10:00', '12:00'), event('last', '11:00', '13:00')] }} />);
-    expect(new Set(screen.getAllByTestId('today-day-event').map((block) => block.title.split(' · ')[0])).size).toBe(3);
+    expect(new Set(screen.getAllByTestId('today-day-event').map((block) => block.title.split(' · ')[1])).size).toBe(3);
     for (const block of screen.getAllByTestId('today-day-event')) expect(block.title).not.toContain(' more');
 });
 it('preserves ink/personal distinction, ended opacity, grain and a two-pixel inter-block gap', () => {
     render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, now: '2026-10-23T11:15:00-07:00' }} />);
     const events = screen.getAllByTestId('today-day-event');
-    expect(events[0]).toHaveClass('bg-ink', 'text-background');
-    expect(events[0].parentElement).toHaveStyle({ opacity: '0.45' });
-    expect(events[3]).toHaveClass('border-ink', 'bg-background', 'text-ink');
+    for (const block of events) {
+        expect(block).toHaveClass('border-ink');
+        expect(block).not.toHaveClass('bg-ink');
+        expect(block.parentElement).not.toHaveStyle({ opacity: '0.45' });
+    }
     expect(events[1].style.width).toMatch(/- 2px\)/);
     expect(screen.getByTestId('today-day-track')).toHaveClass('patina-ground');
     expect(screen.getByTestId('today-day-now')).toHaveClass('w-0.5', 'bg-accent');
@@ -219,7 +221,10 @@ it('draws no now line after the strip\'s hours and dims all ended events (R53)',
     render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, now: '2026-10-23T22:00:00-07:00' }} timeZone="America/Los_Angeles" />);
     expect(screen.queryByTestId('today-day-now')).not.toBeInTheDocument();
     expect(screen.getByTestId('today-day-hold-group')).toHaveStyle({ opacity: '0.45' });
-    for (const group of screen.getAllByTestId('today-day-event-group')) expect(group).toHaveStyle({ opacity: '0.45' });
+    for (const group of screen.getAllByTestId('today-day-event-group')) {
+        expect(group).not.toHaveStyle({ opacity: '0.45' });
+        for (const block of group.querySelectorAll('[data-testid="today-day-event"]')) expect(block).toHaveClass('border-ink', 'bg-panel-warm/50');
+    }
 });
 it.each(['en', 'zh-CN'])('uses the requested Friday even when an overnight event widens the range into Thursday (%s)', async (language) => {
     await i18n.changeLanguage(language);
@@ -267,11 +272,14 @@ it('dims each ended event once around its background pieces and single label', (
     const groups = [...screen.getAllByTestId('today-day-event-group'), screen.getByTestId('today-day-hold-group')];
     expect(groups).toHaveLength(dayShapeFixture.events.length + 1);
     for (const group of groups) {
-        expect(group).toHaveStyle({ opacity: '0.45' });
         const label = group.querySelector('[data-testid$="-label"]')!;
         expect(label).toBeInTheDocument();
         expect((label as HTMLElement).style.opacity).toBe('');
         for (const piece of group.querySelectorAll<HTMLElement>('[data-inset]')) expect(piece.style.opacity).toBe('');
+    }
+    for (const group of screen.getAllByTestId('today-day-event-group')) {
+        expect(group).not.toHaveStyle({ opacity: '0.45' });
+        expect(group.querySelector('[data-testid="today-day-event-label"]')).toHaveClass('text-muted');
     }
 });
 
@@ -409,17 +417,20 @@ it('keeps a narrow private block with no word inside it, but its hover and acces
     expect(block.getAttribute('aria-label')).toBe('Private');
 });
 
-it('names an event the brief names with its first whole word that fits, never a cut name (R30 v3)', () => {
-    const review = { ...dayShapeFixture.events[0], id: 'review', kind: 'meeting' as const, title: 'Design review with Maya', shortName: '', shortestName: '' };
+it('names a block inside by its short name or first word; under the strip only when nothing fits (R30 v3, PR 656 review)', () => {
+    const review = { ...dayShapeFixture.events[0], id: 'review', kind: 'meeting' as const, title: 'Design review with Maya', shortName: 'Design review', shortestName: 'Design' };
     const shape = { ...dayShapeFixture, events: [review], hold: null };
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1000 } as DOMRect);
     const { unmount } = render(<TodayDayStrip requestedDate="2026-10-23" shape={shape} briefText="Start with the 10:15 design review with Maya, then clear the memo." />);
+    // The first word fits inside, so it shows inside, and nothing goes under the strip.
     expect(screen.getByTestId('today-day-event-label')).toHaveTextContent(/^Design$/);
+    expect(screen.queryByTestId('today-day-brief-label')).toBeNull();
     unmount();
-    // Too narrow for even the first word: nothing shows, and the full name stays on hover.
+    // Too narrow for the first word: nothing inside, and the brief's name goes under the strip.
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 400 } as DOMRect);
     render(<TodayDayStrip requestedDate="2026-10-23" shape={shape} briefText="Start with the 10:15 design review with Maya." />);
     expect(screen.getByTestId('today-day-event-label').textContent).toBe('');
+    expect(screen.getByTestId('today-day-brief-label')).toHaveTextContent('Design review');
     expect(screen.getByTestId('today-day-event').getAttribute('title')).toContain('Design review with Maya');
 });
 
@@ -468,9 +479,84 @@ it.each(['en', 'zh-CN'])('a strip read at 8:00 and shown at 11:29 keeps past fre
         act(() => { vi.advanceTimersByTime(209 * 60_000); });
         expect(label(morningFree)).toBe(false);
         const priya = screen.getAllByTestId('today-day-event-group').find((group) => group.querySelector('[aria-label*="Priya"]'));
-        expect(priya).toHaveStyle({ opacity: '0.45' });
+        expect(priya).not.toHaveStyle({ opacity: '0.45' });
+        expect(priya!.querySelector('[data-testid="today-day-event"]')).toHaveClass('bg-panel-warm/50');
         expect(screen.getByTestId('today-day-now')).toBeInTheDocument();
     } finally {
         vi.useRealTimers();
     }
+});
+
+// R30 (design decisions 2026-11-06): one outline look; a name only in whole words; no text when nothing fits;
+// a brief-named block's short name under the strip; Busy and Private unchanged.
+it('shows a name whole, else its first whole word, else no text, with the time and full title on hover (R30)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 900 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, hold: null,
+            events: [{ ...event('x', '09:00', '10:00'), title: 'Alexandra Rivera planning', shortName: 'Alexandra Rivera planning', shortestName: 'Alexandra', kind: 'meeting' }] }} />);
+        expect(screen.getByTestId('today-day-event-label')).toHaveTextContent('Alexandra');
+        expect(screen.getByTestId('today-day-event-label')).not.toHaveTextContent('planning');
+        expect(screen.getAllByTestId('today-day-event')[0]).toHaveAccessibleName(/9:00 AM.*10:00 AM.*Alexandra Rivera planning/);
+    } finally { vi.restoreAllMocks(); }
+    cleanup();
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 300 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, hold: null,
+            events: [{ ...event('y', '09:00', '10:00'), title: 'Alexandra Rivera planning', shortName: 'Alexandra Rivera planning', shortestName: 'Alexandra', kind: 'meeting' }] }} />);
+        expect(screen.getByTestId('today-day-event-label').textContent).toBe('');
+        expect(screen.getAllByTestId('today-day-event')[0]).toHaveAccessibleName(/9:00 AM.*Alexandra Rivera planning/);
+    } finally { vi.restoreAllMocks(); }
+});
+
+it('keeps Busy for an untitled block and Private for a private one (R30 point 5)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 3000 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, hold: null,
+            events: [{ ...event('u', '09:00', '10:00'), title: '', shortName: '', shortestName: '', kind: 'meeting' },
+                { ...event('p', '11:00', '12:00'), title: '', shortName: '', shortestName: '', kind: 'meeting', private: true }] }} />);
+        const labels = screen.getAllByTestId('today-day-event-label').map((node) => node.textContent);
+        expect(labels).toEqual(['Busy', 'Private']);
+    } finally { vi.restoreAllMocks(); }
+});
+
+it('names a block the brief names under the strip, and never inside a block too narrow for it (R30 point 4)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 600 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, hold: null,
+            events: [{ ...event('j', '09:00', '09:15'), title: 'One-on-one with Jenny', shortName: 'Jenny', shortestName: 'Jenny', kind: 'meeting' }] }}
+            briefText="Start with Jenny before ten." />);
+        expect(screen.getByTestId('today-day-brief-label')).toHaveTextContent('Jenny');
+        expect(screen.getByTestId('today-day-event-label')).toHaveTextContent('');
+        expect(screen.getAllByTestId('today-day-event')[0]).toHaveAccessibleName(/9:00 AM.*One-on-one with Jenny/);
+    } finally { vi.restoreAllMocks(); }
+});
+
+it('shows only the earlier of two brief labels that would overlap; the later one is on hover (R30 point 4)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 600 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" shape={{ ...dayShapeFixture, hold: null,
+            events: [{ ...event('a', '09:00', '09:15'), title: 'Priya sync', shortName: 'Priya', shortestName: 'Priya', kind: 'meeting' },
+                { ...event('b', '09:15', '09:30'), title: 'Maya sync', shortName: 'Maya', shortestName: 'Maya', kind: 'meeting' }] }}
+            briefText="Priya and Maya first." />);
+        expect(screen.getAllByTestId('today-day-brief-label').map((node) => node.textContent)).toEqual(['Priya']);
+        expect(screen.getByTestId('today-day-brief-label-hover')).toHaveAttribute('title', expect.stringContaining('Maya sync'));
+    } finally { vi.restoreAllMocks(); }
+});
+
+// R69: hour labels never touch; fewer hours, evenly spaced, when they would.
+it('shows every fourth hour at 360 px, with no two hour labels touching (R69)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 360 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" timeZone="America/Los_Angeles" shape={{ ...dayShapeFixture, hold: null, events: [event('a', '09:00', '10:00')] }} />);
+        const labels = [...screen.getByTestId('today-day-hours').querySelectorAll<HTMLElement>('.today-day-hour')];
+        expect(labels.map((label) => label.textContent)).toEqual(['8:00 AM', '12:00 PM', '4:00 PM']);
+    } finally { vi.restoreAllMocks(); }
+});
+
+it('keeps every hour label at a wide width (R69)', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 1100 } as DOMRect);
+    try {
+        render(<TodayDayStrip requestedDate="2026-10-23" timeZone="America/Los_Angeles" shape={{ ...dayShapeFixture, hold: null, events: [event('a', '09:00', '10:00')] }} />);
+        expect(screen.getByTestId('today-day-hours').querySelectorAll('.today-day-hour')).toHaveLength(6);
+    } finally { vi.restoreAllMocks(); }
 });

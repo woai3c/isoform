@@ -1806,7 +1806,8 @@ describe("TodayPage brief slot selects the strip date without changing the read 
         expect(pauseMocks.dayShape.mock.calls.every((args) => args.length === 1)).toBe(true);
         {
             expect(screen.queryByTestId("today-day-now")).not.toBeInTheDocument();
-            for (const group of screen.getAllByTestId("today-day-event-group")) expect(group).toHaveStyle({ opacity: "0.45" });
+            // R30: an ended calendar block keeps its outline and dims its tint, not the whole group.
+            for (const group of screen.getAllByTestId("today-day-event-group")) expect(group).not.toHaveStyle({ opacity: "0.45" });
             expect(screen.queryByTestId("today-day-hold-group")).not.toBeInTheDocument();
             expect(screen.queryByTestId("today-day-caption")).not.toBeInTheDocument();
         }
