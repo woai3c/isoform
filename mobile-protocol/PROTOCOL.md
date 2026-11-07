@@ -278,7 +278,7 @@ Hub to relay:
 | `pairing_approve` | `pairing`, `deviceId`, `bearerHash`, `scopes`, `expiresAt`, `ct` | creates the device and delivers the approval |
 | `pairing_decline` | `pairing` | declines the claim |
 | `out` | `env`; for a moment push also `notify`, `push:"moment"`, `noticeId`, `kind`, `ct`, `category`, `collapse`, `level` | an `h2d` envelope of kind `res` or `event`; stored and delivered to the device poll; the notice fields queue one sealed push per enabled token (14.3, 14.4) |
-| `brief` | `env`, `asOf`, `notify` | an `h2d` envelope of kind `brief`; stored as a brief; `notify:true` queues one push per enabled token |
+| `brief` | `env`, `asOf`, `notify`, optional `deliverAt` | an `h2d` envelope of kind `brief`; stored as a brief; `notify:true` queues one push per enabled token; a `deliverAt` (RFC 3339 UTC, at most 24 hours after relay time) holds the brief from every read and makes its push due then, for a brief made ahead of its slot |
 | `revoke` | `deviceId` | deletes the device and everything stored for it |
 | `ack` | `dev`, `upTo` | the hub consumed `d2h` envelopes of device `dev` up to `upTo` (relay deletes them); a frame without `dev` is refused |
 | `sms_ack` | `id` | the hub took a text reply (18.5); the relay deletes it |
@@ -315,7 +315,10 @@ Relay behaviours the hub must expect (decided in the relay implementation):
 - `pairing_open.expiresAt` may be at most 15 minutes ahead of relay time (10 minutes plus
   clock skew); `pairing_approve.expiresAt` at most 366 days ahead.
 - A `brief` whose version (`env.seq`) is already stored is ignored: no replacement, no second
-  push. A duplicate `out` with identical bytes is accepted silently; different bytes under
+  push.
+- A `brief` with `deliverAt` later than relay time is stored but not returned by `GET /brief/latest` or
+  `GET /briefs` until that time, and its push is first due then. A `deliverAt` in the past or absent means
+  at once. A frame whose `deliverAt` is unparseable or more than 24 hours ahead is refused. A duplicate `out` with identical bytes is accepted silently; different bytes under
   the same `seq` are an error.
 - `seq` values are bounded to 2^53-1 so they survive JSON number handling.
 - The hub credential is trust-on-first-use: the first connection presenting a hub id fixes

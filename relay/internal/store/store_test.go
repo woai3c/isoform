@@ -330,7 +330,7 @@ func TestBriefsKeepSevenAndQueueOnePushEach(t *testing.T) {
 	if n := count(t, s, "SELECT count(*) FROM push_outbox WHERE device_id=?", dev.ID); n != 9 {
 		t.Fatalf("push rows %d, want one per brief", n)
 	}
-	latest, err := s.LatestBrief(ctx, dev.ID)
+	latest, err := s.LatestBrief(ctx, dev.ID, now)
 	if err != nil || latest.Version != 9 {
 		t.Fatalf("latest %+v %v", latest, err)
 	}

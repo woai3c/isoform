@@ -53,7 +53,7 @@ func (h *Handler) latestBrief(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	brief, err := h.Store.LatestBrief(r.Context(), device.ID)
+	brief, err := h.Store.LatestBrief(r.Context(), device.ID, h.Now())
 	switch {
 	case err == nil:
 		reply(w, http.StatusOK, briefView{Version: brief.Version, AsOf: brief.AsOf, Env: brief.Body}, "")
@@ -78,7 +78,7 @@ func (h *Handler) listBriefs(w http.ResponseWriter, r *http.Request) {
 		}
 		limit = parsed
 	}
-	briefs, err := h.Store.ListBriefs(r.Context(), device.ID, int(limit))
+	briefs, err := h.Store.ListBriefs(r.Context(), device.ID, int(limit), h.Now())
 	if err != nil {
 		reply(w, http.StatusInternalServerError, nil, "Unable to list briefs")
 		return

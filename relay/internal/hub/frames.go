@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"isoform-relay/internal/notify"
 	"isoform-relay/internal/push"
@@ -79,7 +80,14 @@ type briefFrame struct {
 	Env    json.RawMessage `json:"env"`
 	AsOf   string          `json:"asOf"`
 	Notify bool            `json:"notify"`
+	// DeliverAt, optional, is when a brief made ahead of its slot becomes
+	// visible to the phone and its push is due (RFC 3339, UTC).
+	DeliverAt string `json:"deliverAt,omitempty"`
 }
+
+// maxBriefDelay bounds how far ahead a brief may be held, so a held brief always
+// comes due within a day of its frame.
+const maxBriefDelay = 24 * time.Hour
 
 type revokeFrame struct {
 	T        string `json:"t"`
@@ -425,7 +433,15 @@ func (s *session) brief(data []byte) string {
 	}
 	ctx, cancel := storeContext()
 	defer cancel()
-	if err = s.m.Store.PutBrief(ctx, s.hubID, env, body, wire.FormatTime(asOf), f.Notify, s.m.Now()); err != nil {
+	now := s.m.Now()
+	var deliverAt time.Time
+	if f.DeliverAt != "" {
+		deliverAt, err = wire.ParseTime(f.DeliverAt)
+		if err != nil || deliverAt.After(now.Add(maxBriefDelay)) {
+			return "invalid brief frame"
+		}
+	}
+	if err = s.m.Store.PutBriefDueAt(ctx, s.hubID, env, body, wire.FormatTime(asOf), f.Notify, now, deliverAt); err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return "unknown device"
 		}

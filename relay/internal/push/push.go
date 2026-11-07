@@ -131,6 +131,12 @@ func Remove(ctx context.Context, db *sql.DB, deviceID string) error {
 // with a registration. It is a no-op for devices without one. Repeating an
 // event queues nothing new.
 func Enqueue(ctx context.Context, q Querier, deviceID, eventID, kind string, now time.Time) error {
+	return EnqueueAt(ctx, q, deviceID, eventID, kind, now, now)
+}
+
+// EnqueueAt queues one push that is first due at due (not before now). Its
+// expiry runs from due, so a push held for a later time keeps its full day.
+func EnqueueAt(ctx context.Context, q Querier, deviceID, eventID, kind string, now, due time.Time) error {
 	switch kind {
 	case KindBrief, KindNeedsYou:
 	default:
@@ -144,7 +150,7 @@ func Enqueue(ctx context.Context, q Querier, deviceID, eventID, kind string, now
 		return nil
 	}
 	_, err := q.ExecContext(ctx, `INSERT INTO push_outbox(device_id,event_id,notification_id,kind,state,created_at,expires_at,next_at)
-	VALUES(?,?,?,?,'queued',?,?,?) ON CONFLICT(device_id,event_id) DO NOTHING`, deviceID, eventID, uuid.NewString(), kind, now.UnixMilli(), now.Add(Expiry).UnixMilli(), now.UnixMilli())
+	VALUES(?,?,?,?,'queued',?,?,?) ON CONFLICT(device_id,event_id) DO NOTHING`, deviceID, eventID, uuid.NewString(), kind, now.UnixMilli(), due.Add(Expiry).UnixMilli(), due.UnixMilli())
 	return err
 }
 

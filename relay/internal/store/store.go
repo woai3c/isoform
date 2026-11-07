@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS briefs (
 	as_of TEXT NOT NULL,
 	body TEXT NOT NULL,
 	stored_at INTEGER NOT NULL,
+	deliver_at INTEGER NOT NULL DEFAULT 0,
 	PRIMARY KEY (device_id, version)
 );
 CREATE TABLE IF NOT EXISTS push_devices (
@@ -217,6 +218,12 @@ var goodbyeColumns = []struct{ name, definition string }{
 	{"reason", "TEXT NOT NULL DEFAULT ''"},
 }
 
+// briefColumns were added to briefs after the first releases. deliver_at is the
+// time a brief becomes visible and its push is due; 0 means at once.
+var briefColumns = []struct{ name, definition string }{
+	{"deliver_at", "INTEGER NOT NULL DEFAULT 0"},
+}
+
 var pushDeviceColumns = []struct{ name, definition string }{
 	{"gateway_grant", "TEXT NOT NULL DEFAULT ''"},
 }
@@ -231,6 +238,18 @@ func migrate(db *sql.DB) error {
 			continue
 		}
 		if _, err = db.Exec("ALTER TABLE hub_goodbyes ADD COLUMN " + column.name + " " + column.definition); err != nil {
+			return err
+		}
+	}
+	for _, column := range briefColumns {
+		present, err := hasColumn(db, "briefs", column.name)
+		if err != nil {
+			return err
+		}
+		if present {
+			continue
+		}
+		if _, err = db.Exec("ALTER TABLE briefs ADD COLUMN " + column.name + " " + column.definition); err != nil {
 			return err
 		}
 	}

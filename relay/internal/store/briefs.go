@@ -21,6 +21,20 @@ type Brief struct {
 // PutBrief stores a brief for a device of the hub and keeps the newest
 // KeptBriefs. With notify it queues one push for the brief, once.
 func (s *Store) PutBrief(ctx context.Context, hubID string, env wire.Envelope, body []byte, asOf string, notify bool, now time.Time) error {
+	return s.PutBriefDueAt(ctx, hubID, env, body, asOf, notify, now, time.Time{})
+}
+
+// PutBriefDueAt is PutBrief for a brief that is due later: a deliverAt after now
+// keeps the brief out of every read until that time, and its one push is due
+// then. A zero or past deliverAt is the same as PutBrief.
+func (s *Store) PutBriefDueAt(ctx context.Context, hubID string, env wire.Envelope, body []byte, asOf string, notify bool, now, deliverAt time.Time) error {
+	// A brief that is not held stores 0, so it is visible whatever clock a read uses.
+	due := now
+	heldUntil := int64(0)
+	if deliverAt.After(now) {
+		due = deliverAt
+		heldUntil = millis(deliverAt)
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -29,7 +43,7 @@ func (s *Store) PutBrief(ctx context.Context, hubID string, env wire.Envelope, b
 	if err = deviceInHub(ctx, tx, hubID, env.Dev); err != nil {
 		return err
 	}
-	result, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO briefs(device_id,version,as_of,body,stored_at) VALUES(?,?,?,?,?)", env.Dev, int64(env.Seq), asOf, string(body), millis(now))
+	result, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO briefs(device_id,version,as_of,body,stored_at,deliver_at) VALUES(?,?,?,?,?,?)", env.Dev, int64(env.Seq), asOf, string(body), millis(now), heldUntil)
 	if err != nil {
 		return err
 	}
@@ -38,7 +52,7 @@ func (s *Store) PutBrief(ctx context.Context, hubID string, env wire.Envelope, b
 		return err
 	}
 	if inserted == 1 && notify {
-		if err = push.Enqueue(ctx, tx, env.Dev, strconv.FormatUint(env.Seq, 10), push.KindBrief, now); err != nil {
+		if err = push.EnqueueAt(ctx, tx, env.Dev, strconv.FormatUint(env.Seq, 10), push.KindBrief, now, due); err != nil {
 			return err
 		}
 	}
@@ -48,9 +62,9 @@ func (s *Store) PutBrief(ctx context.Context, hubID string, env wire.Envelope, b
 	return tx.Commit()
 }
 
-// LatestBrief returns the device's newest brief, or ErrNotFound.
-func (s *Store) LatestBrief(ctx context.Context, deviceID string) (Brief, error) {
-	briefs, err := s.ListBriefs(ctx, deviceID, 1)
+// LatestBrief returns the device's newest brief that is due at now, or ErrNotFound.
+func (s *Store) LatestBrief(ctx context.Context, deviceID string, now time.Time) (Brief, error) {
+	briefs, err := s.ListBriefs(ctx, deviceID, 1, now)
 	if err != nil {
 		return Brief{}, err
 	}
@@ -60,9 +74,10 @@ func (s *Store) LatestBrief(ctx context.Context, deviceID string) (Brief, error)
 	return briefs[0], nil
 }
 
-// ListBriefs returns up to limit briefs, newest first.
-func (s *Store) ListBriefs(ctx context.Context, deviceID string, limit int) ([]Brief, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT version,as_of,body FROM briefs WHERE device_id=? ORDER BY version DESC LIMIT ?", deviceID, limit)
+// ListBriefs returns up to limit briefs due at now, newest first. A brief held
+// for a later time is not listed.
+func (s *Store) ListBriefs(ctx context.Context, deviceID string, limit int, now time.Time) ([]Brief, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT version,as_of,body FROM briefs WHERE device_id=? AND deliver_at<=? ORDER BY version DESC LIMIT ?", deviceID, millis(now), limit)
 	if err != nil {
 		return nil, err
 	}
