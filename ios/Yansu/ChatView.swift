@@ -62,6 +62,18 @@ struct ChatView: View {
         chat.outgoingMessages(in: chatID)
     }
 
+    /// P141: the newest message from this iPhone that the Mac has not stored yet. It is newer than every stored item,
+    /// so it is the latest message of yours and the only one whose receipt shows then.
+    private var unsentLatestOutgoingID: String? {
+        guard let last = outgoing.last, last.seq == nil else { return nil }
+        return last.id
+    }
+
+    /// P141: the seq of the newest stored message of yours on screen.
+    private var latestStoredUserSeq: Int? {
+        chat.transcript?.items.last(where: { $0.role == .user })?.seq
+    }
+
     /// Changes when a row or a message is added at the bottom.
     private var bottomMarker: String {
         let newest = chat.openChatID == chatID ? (chat.transcript?.newestSeq ?? 0) : 0
@@ -437,7 +449,8 @@ struct ChatView: View {
             VStack(spacing: 8) {
                 userBubble(text: item.text,
                            delivery: outgoing.first { $0.seq == item.seq }?.deliveryStatus(computerOnline: chat.hubOnline) ?? .sent,
-                           sentLabel: wentOut.map { ChatAwayCopy.time($0, locale: locale) })
+                           sentLabel: wentOut.map { ChatAwayCopy.time($0, locale: locale) },
+                           showsReceipt: unsentLatestOutgoingID == nil && item.seq == latestStoredUserSeq)
                 if let period, let first = period.messageIDs.first, period.seqs[first] == item.seq {
                     awayLine(period)
                 }
@@ -479,7 +492,8 @@ struct ChatView: View {
             } else {
                 userBubble(text: message.text, delivery: delivery,
                            retry: message.hasFailed ? { Task { await chat.retryFailed(message.id, in: chatID) } } : nil,
-                           sentLabel: period?.sentAt[message.id].map { ChatAwayCopy.time($0, locale: locale) })
+                           sentLabel: period?.sentAt[message.id].map { ChatAwayCopy.time($0, locale: locale) },
+                           showsReceipt: message.id == unsentLatestOutgoingID)
             }
             if let period, period.messageIDs.first == message.id {
                 awayLine(period)
@@ -613,8 +627,9 @@ struct ChatView: View {
     }
 
     /// A message from the user. One sent from this iPhone says under it how far it has got.
+    /// P141: only the latest message of yours shows its receipt. A retry for a failed one always shows.
     private func userBubble(text: String, delivery: ChatDeliveryStatus, retry: (() -> Void)? = nil,
-                            sentLabel: String? = nil) -> some View {
+                            sentLabel: String? = nil, showsReceipt: Bool = true) -> some View {
         VStack(alignment: .trailing, spacing: 4) {
             HStack(alignment: .bottom) {
                 Spacer(minLength: 48)
@@ -631,18 +646,20 @@ struct ChatView: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("chat.message.user")
             HStack(spacing: 10) {
-                Group {
-                    if let sentLabel {
-                        Text(sentLabel)
-                    } else if let explanation = delivery.explanation {
-                        Button(delivery.label) { deliveryExplanation = explanation }
-                            .buttonStyle(.plain)
-                    } else {
-                        Text(delivery.label)
+                if showsReceipt {
+                    Group {
+                        if let sentLabel {
+                            Text(sentLabel)
+                        } else if let explanation = delivery.explanation {
+                            Button(delivery.label) { deliveryExplanation = explanation }
+                                .buttonStyle(.plain)
+                        } else {
+                            Text(delivery.label)
+                        }
                     }
+                    .foregroundStyle(YansuTheme.secondary)
+                    .accessibilityIdentifier("chat.message.status")
                 }
-                .foregroundStyle(YansuTheme.secondary)
-                .accessibilityIdentifier("chat.message.status")
                 if let retry, delivery == .failed {
                     // The words are back in the box; this sends them as an ordinary message.
                     Button(String(localized: "Try again"), action: retry)
@@ -1421,7 +1438,8 @@ struct ChatMessageText: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(message.text)
                 .font(.body)
-                .foregroundStyle(kind == .reply ? YansuTheme.accent : YansuTheme.ink)
+                // P141: Isoform's words are the primary text color; blue is for links and actions only.
+                .foregroundStyle(YansuTheme.ink)
                 .fixedSize(horizontal: false, vertical: true)
             ChatTruncationNote(note: message.truncationNote)
         }
