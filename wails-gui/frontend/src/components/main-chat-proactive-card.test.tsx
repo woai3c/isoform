@@ -654,7 +654,7 @@ describe('main chat proactive messages', () => {
     // The week's card is a brief card too: Play only with the brief's words.
     it('offers Play and Read it on the weekly recap card only when its brief has words or recap rows (design v1.0.1)', async () => {
         briefByID.mockReset();
-        const week = { ...(readyBrief('week-1') as object), slot: 'evening', yourWeek: { days: [] } };
+        const week = { ...(readyBrief('week-1') as object), slot: 'evening', yourWeek: { start: '2026-10-26', end: '2026-11-01', lead: 'Your week' } };
         const noRows = { ...(readyBrief('week-1') as object), narrativeStatus: 'unavailable', narrative: [], audio: undefined, yourWeek: { start: '2026-10-26', end: '2026-11-01', lead: 'Your week' } };
         const withRows = { ...noRows, yourWeek: { ...noRows.yourWeek, time: [{ name: 'Brief work', hours: 2 }] } };
         briefByID.mockResolvedValueOnce({ brief: noRows, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
@@ -674,6 +674,25 @@ describe('main chat proactive messages', () => {
         act(() => emitRuntimeEvent('brief:stored', {}));
         expect(await screen.findByRole('button', { name: en.mainChat.card.button.hearIt })).toBeInTheDocument();
     });
+    it('Read it on a recap appears only when the Your week view would draw a row (design PR #664)', async () => {
+        const base = { ...(readyBrief('week-1') as object), narrativeStatus: 'unavailable', narrative: [], audio: undefined };
+        const cases: [string, Record<string, unknown>, boolean][] = [
+            ['zero-hour time bars', { time: [{ name: 'Brief work', hours: 0 }] }, false],
+            ['a done row with no file or task', { done: [{ id: 'd1', kind: 'deliverable', title: 'Doc' }] }, false],
+            ['a done row with a task Today can open', { done: [{ id: 'd2', kind: 'outcome', taskId: 't1', title: 'Task' }] }, true],
+            ['an open row', { open: [{ id: 'o1', title: 'Follow up' }] }, true],
+        ];
+        for (const [, rows, shows] of cases) {
+            briefByID.mockReset();
+            briefByID.mockResolvedValue({ brief: { ...base, yourWeek: { start: '2026-10-26', end: '2026-11-01', lead: 'Your week', ...rows } }, building: false, enabled: true, nextAt: '', nextSlot: '', empty: false, missing: [] });
+            const { unmount } = render(<MainChatProactiveCard item={proactive({ kind: 'weekly_recap', briefId: 'week-1' })} onOpenTarget={vi.fn()} />);
+            await waitFor(() => expect(briefByID).toHaveBeenCalled());
+            await act(async () => {});
+            expect(screen.queryByRole('button', { name: en.mainChat.card.button.readIt }) !== null).toBe(shows);
+            unmount();
+        }
+    });
+
     it('opens the source brief from the weekly recap card in Chat', () => {
         const onOpen = vi.fn();
         render(<MainChatProactiveCard item={weekDoorbell()} onOpenTarget={onOpen} />);

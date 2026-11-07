@@ -167,7 +167,7 @@ describe("MainChatBriefCard", () => {
         expect(screen.queryByRole('alert')).toBeNull();
     });
     it("opens the week's brief on Today from Read it, since its sections are not in the card", async () => {
-        getByID.mockResolvedValue(view({ ...withWords, yourWeek: { days: [] } } as never));
+        getByID.mockResolvedValue(view({ ...withWords, yourWeek: { start: '2026-10-26', end: '2026-11-01', lead: 'Your week' } } as never));
         const onOpenBrief = vi.fn();
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={onOpenBrief} />);
         await screen.findByText("Quiet day. Priya is waiting on your review.");

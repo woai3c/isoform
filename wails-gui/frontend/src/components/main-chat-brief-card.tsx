@@ -7,6 +7,8 @@ import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { toggleBriefPlayback, useBriefPlayback } from '@/lib/brief-audio';
 import { briefHasWords, briefKind, briefTitle } from '@/lib/brief-title';
 import { mainChatBriefRelativeText } from '@/lib/main-chat-brief-relative';
+import { briefForDisplay } from '@/lib/brief-hygiene';
+import { weekRowsShown } from '@/lib/brief-week-rows';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -102,8 +104,9 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead:
     const playable = !changedWords && briefHasWords(current) && !!current?.audio && current.audio.bytes > 0;
     // Read it and Hear it appear with the words, never on a held or failed card (design, PR #646).
     // A recap's Read it opens its rows on Today, so it shows when the recap has rows (design v1.0.1).
-    const weekRows = !!current?.yourWeek && [current.yourWeek.time, current.yourWeek.done, current.yourWeek.open, current.yourWeek.learned]
-        .some((rows) => (rows?.length ?? 0) > 0);
+    // The rows the opened recap would draw: the same hygiene pass and row filters as Today's week view.
+    const shownWeek = week && current ? weekRowsShown(briefForDisplay(current).yourWeek, true) : null;
+    const weekRows = !!shownWeek && (shownWeek.time.length > 0 || shownWeek.done.length > 0 || shownWeek.open.length > 0 || shownWeek.learned.length > 0);
     const canRead = !reading && (paragraphs.length > 0 || (week && weekRows));
 
     return (

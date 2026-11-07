@@ -2,6 +2,7 @@ import { useTodaySectionSeen } from "@/hooks/useTodaySectionSeen";
 import { measureToday, recordTodayAction, type TodayActionKind, type TodayActionOutcome } from "@/lib/today-telemetry";
 import { isCommitmentItemKey, isFindTimeLabel } from "./commitment-key";
 import { findTimeRangeFor } from "@/lib/find-time-range";
+import { weekRowsShown } from "@/lib/brief-week-rows";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -163,9 +164,7 @@ export function YourWeekCard({ week, cards, timeZone, handlers, onCard, onAskCar
 
     const time = week.time ?? [];
     const totalHours = time.reduce((sum, row) => sum + row.hours, 0);
-    const done = (week.done ?? []).filter((row) =>
-        (row.kind === "deliverable" && !!row.source && !!row.sourceId && !!row.path)
-        || (!!row.taskId && !!handlers.onOpenWeekTask));
+    const done = weekRowsShown(week, !!handlers.onOpenWeekTask).done;
     const open = week.open ?? [];
     const learned = (week.learned ?? []).filter((row) => !undone.has(row.id));
     const seenRef = useTodaySectionSeen(active && !hideTurnOff, "your_week", (totalHours > 0 ? time.length : 0) + done.length + open.length + learned.length);
