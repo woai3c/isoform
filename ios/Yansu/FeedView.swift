@@ -514,11 +514,25 @@ struct FeedView: View {
             repairCard
         } else {
             todaySummary(now: now)
+            let _ = brief.logFetchOutcomes(at: "render")
             if let current = todayStore.newestBrief(), let hubID = pairing.paired?.hubID {
+                if !Calendar.current.isDate(current.asOfDate ?? .distantPast, inSameDayAs: now) {
+                    todayFetchLine(state: brief.todayFetchState(localDate: FeedAssembly.localDate(for: now)))
+                }
                 TodayBriefCardView(current: current, hubID: hubID, player: environment.audioPlayer,
                                    topics: topics, onPrepareInTopic: onPrepareInTopic,
                                    canMakeBrief: scopes.contains("brief:refresh"), now: now,
                                    onPastBriefs: { showingPastBriefs = true })
+                if !Calendar.current.isDate(current.asOfDate ?? .distantPast, inSameDayAs: now),
+                   let line = TodayAwaitingBrief.nextBriefLine(in: todayStore.snapshot, now: now, locale: locale) {
+                    Text(line)
+                        .font(.subheadline)
+                        .foregroundStyle(YansuTheme.secondary)
+                        .accessibilityIdentifier("today.nextBrief")
+                }
+            } else {
+                TodayAwaitingBriefCard(computerName: pairing.paired?.hubName ?? String(localized: "your computer"),
+                                       snapshot: todayStore.snapshot, now: now)
             }
             todayNeedsYou
             todayDoneForYou
@@ -618,6 +632,37 @@ struct FeedView: View {
         }
         .onChange(of: cause, initial: true) { _, value in
             showingOfflineNote = value != nil
+        }
+    }
+
+    /// Today's brief is missing (#631): while the phone tries, it says so; once the tries stop it keeps saying so, with
+    /// Try again, until today's brief arrives.
+    @ViewBuilder
+    private func todayFetchLine(state: BriefStore.TodayFetchState) -> some View {
+        let computer = pairing.paired?.hubName ?? String(localized: "your computer")
+        switch state {
+        case .none:
+            EmptyView()
+        case .retrying:
+            Text(String.localizedStringWithFormat(String(localized: "Couldn't get today's brief from %@ yet. Trying again."), computer))
+                .font(.subheadline)
+                .foregroundStyle(YansuTheme.secondary)
+                .accessibilityIdentifier("today.fetchFailing")
+        case .stopped:
+            VStack(alignment: .leading, spacing: 10) {
+                Text(String.localizedStringWithFormat(String(localized: "Couldn't get today's brief from %@."), computer))
+                    .font(.subheadline)
+                    .foregroundStyle(YansuTheme.secondary)
+                    .accessibilityIdentifier("today.fetchStopped")
+                // Try again is a text link under its line, in the accent color, never a full-width button.
+                Button(String(localized: "Try again")) { Task { await todayStore.refresh() } }
+                    .buttonStyle(.plain)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(YansuTheme.accent)
+                    .accessibilityIdentifier("today.fetchRetry")
+            }
+            // Opening Today again starts a fresh try while the line says it stopped (#631).
+            .task { await todayStore.refresh() }
         }
     }
 

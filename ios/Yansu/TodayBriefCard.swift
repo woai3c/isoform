@@ -177,7 +177,7 @@ struct TodayBriefCardView: View {
                 }
                 HStack(alignment: .top, spacing: 8) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(verbatim: shown.titleText)
+                        Text(verbatim: TodayAwaitingBrief.cardTitle(shown, now: now, locale: locale))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(YansuTheme.secondary)
                             .accessibilityIdentifier("feed.brief.title")

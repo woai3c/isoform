@@ -765,7 +765,7 @@ extension AppEnvironment {
     static func settingsUITestEnvironment() -> AppEnvironment? {
         guard let state = ProcessInfo.processInfo.environment["YANSU_UITEST_SETTINGS_STATE"],
               ["first-run", "unpaired", "paired", "unreadable", "older-pairing", "push-unavailable", "push-denied", "feed", "feed-empty",
-               "feed-no-history", "feed-catchup", "feed-offline", "feed-review",
+               "feed-no-history", "feed-catchup", "feed-offline", "feed-review", "feed-first-brief", "feed-fetching", "feed-fetch-failed",
                "feed-audio", "feed-audio-rendering", "feed-words", "feed-conversation", "feed-your-week", "feed-topics", "feed-topics-no-chat-read", "chat",
                "chat-not-sent", "chat-sent", "chat-away", "chat-live", "chat-live-cold", "chat-proactive", "chat-status", "chat-draft", "chat-cards", "goals",
                "goals-empty", "library", "ideas", "ideas-empty", "tasks-seeded", "brain-dump", "holds-seeded", "launch-demo", "day-one"].contains(state) else { return nil }
@@ -814,7 +814,7 @@ extension AppEnvironment {
                 try PairingVault(directory: directory, secrets: secrets)
                     .store(paired, devicePrivateKey: RelayCrypto.base64URLEncode(device.privateKey),
                            bearer: RelayCrypto.base64URLEncode(RelayCrypto.randomBytes(32)))
-            case "paired", "older-pairing", "push-unavailable", "push-denied", "feed", "feed-empty", "feed-no-history",
+            case "paired", "older-pairing", "push-unavailable", "push-denied", "feed", "feed-empty", "feed-no-history", "feed-first-brief", "feed-fetching", "feed-fetch-failed",
                  "feed-audio", "feed-audio-rendering", "feed-words", "feed-catchup", "feed-offline", "feed-review", "library", "tasks-seeded", "brain-dump", "holds-seeded":
                 let paired = PairedDevice(
                     hubID: "settings-ui-hub", hubName: "Settings Test Mac", hubPublicKey: "",
@@ -975,9 +975,10 @@ extension AppEnvironment {
                     ChatCache(directory: directory.appendingPathComponent("chat", isDirectory: true)),
                     items: presentationItems, now: Date())
             }
-            if isFirstLaunch && ["feed", "feed-empty", "feed-no-history", "feed-audio", "feed-audio-rendering", "feed-catchup", "feed-offline", "feed-review"].contains(state) {
+            if isFirstLaunch && ["feed", "feed-empty", "feed-no-history", "feed-audio", "feed-audio-rendering", "feed-catchup", "feed-offline", "feed-review", "feed-fetch-failed"].contains(state) {
                 if state != "feed-no-history" {
-                    var seeded = FeedUITestSeed.briefs(today: state != "feed-empty", now: Date())
+                    // The fetch-failed state keeps yesterday cached: today's brief is named but its text never arrived.
+                    var seeded = FeedUITestSeed.briefs(today: state != "feed-empty" && state != "feed-fetch-failed", now: Date())
                     if state.hasPrefix("feed-audio"), let index = seeded.indices.last {
                         seeded[index].audio = BriefAudio(mime: "audio/wav", bytes: BriefAudioUITestSeed.wav().count,
                                                          durationSeconds: BriefAudioUITestSeed.duration)
@@ -987,6 +988,11 @@ extension AppEnvironment {
                     for brief in seeded { try environment.cache.save(brief) }
                 }
                 environment.brief.loadCached()
+                if state == "feed-fetch-failed" {
+                    // An evening id the snapshot does not name, so the real fetch of the morning brief cannot overwrite it.
+                    environment.brief.recordFetchOutcomeForUITest("\(FeedAssembly.localDate(for: Date()))-evening", "attempt 1 failed: hub noAnswer; retrying in 5s")
+                    environment.brief.logFetchOutcomes(at: "seed")
+                }
                 if state == "feed-audio", let brief = environment.brief.current {
                     let data = BriefAudioUITestSeed.wav()
                     let audio = BriefAudio(mime: "audio/wav", bytes: data.count,

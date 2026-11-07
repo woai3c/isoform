@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import os
 
 enum BriefOpenError: LocalizedError, Equatable {
     case mismatchedEnvelope
@@ -48,6 +49,9 @@ struct BriefTarget: Equatable {
 final class BriefStore: ObservableObject {
     /// The current brief under the one rule (design section 1): the newest brief whose full text is in the library.
     @Published private(set) var current: MobileBriefV1?
+    /// The last outcome of each brief fetch, by brief id. Diagnostic only; it holds no brief text.
+    @Published private(set) var fetchOutcomes: [String: String] = [:]
+    private static let fetchLog = Logger(subsystem: "com.isoform.companion", category: "brief-fetch")
     @Published private(set) var hubOnline: Bool?
     @Published private(set) var lastRefreshFailed = false
     @Published private(set) var isRefreshing = false
@@ -324,19 +328,81 @@ final class BriefStore: ObservableObject {
     /// saved, on a pairing change (the generation or the paired Mac changes), when the brief is withdrawn or no longer
     /// named, or when the Mac says it will not serve it (403, an invalid id, 404).
     private func fetchUntilPresent(_ identifier: String, token: UUID, generation current: UUID, pairedHub: String?) async {
-        defer { if fetches[identifier]?.token == token { fetches[identifier] = nil } }
+        defer {
+            if fetches[identifier]?.token == token { fetches[identifier] = nil }
+            // A retrying line must not outlive its fetch: whatever ended the loop, the last outcome is no longer a retry.
+            if fetchOutcomes[identifier]?.hasPrefix("attempt") == true {
+                record(identifier, "ended: fetch stopped while retrying")
+            }
+        }
         var delay = 5
+        var attempt = 0
         while !Task.isCancelled, generation == current, vault.current()?.hubID == pairedHub, !withdrawnIDs.contains(identifier),
               let target = targets[identifier], needsFetch(identifier, target) {
+            attempt += 1
             do {
                 try await fetchOnce(identifier, target: target, generation: current, pairedHub: pairedHub)
+                record(identifier, "saved after \(attempt) attempt(s)")
                 return
             } catch {
-                if Self.stopsFetching(error) { return }
+                if Self.stopsFetching(error) {
+                    record(identifier, "stopped after \(attempt) attempt(s): \(Self.outcomeKind(error))")
+                    return
+                }
+                record(identifier, "attempt \(attempt) failed: \(Self.outcomeKind(error)); retrying in \(delay)s")
             }
             do { try await Task.sleep(for: .seconds(delay)) } catch { return }
             delay = min(delay * 2, 60)
         }
+        if Task.isCancelled || generation != current || vault.current()?.hubID != pairedHub {
+            record(identifier, "ended: pairing changed or fetch cancelled")
+        } else if withdrawnIDs.contains(identifier) {
+            record(identifier, "ended: brief withdrawn")
+        }
+    }
+
+    /// The last outcome of each brief fetch, for diagnosis (walk 1.0.0, P125). It names the brief and the error's kind,
+    /// never brief text or an error message, and goes to the device log.
+    private func record(_ identifier: String, _ outcome: String) {
+        fetchOutcomes[identifier] = outcome
+        BriefStore.fetchLog.info("brief \(identifier, privacy: .public): \(outcome, privacy: .public)")
+    }
+
+    /// Debug for the #631 seed mismatch: the outcome dictionary as this store holds it, at a named point.
+    func logFetchOutcomes(at point: String) {
+        BriefStore.fetchLog.info("outcomes at \(point, privacy: .public): \(String(describing: self.fetchOutcomes), privacy: .public) store=\(ObjectIdentifier(self).hashValue)")
+    }
+
+    /// What Today says about today's brief while it is missing (#631): retrying while the phone is actually trying,
+    /// stopped once it has stopped, and none when there is nothing to say.
+    enum TodayFetchState: Equatable { case none, retrying, stopped }
+
+    func todayFetchState(localDate: String) -> TodayFetchState {
+        #if DEBUG && targetEnvironment(simulator)
+        // UI-test seam: frames of the retrying and stopped states, without a network read (see the PR).
+        if ProcessInfo.processInfo.environment["YANSU_UITEST_FETCH_RETRY"] == "1" { return .retrying }
+        if ProcessInfo.processInfo.environment["YANSU_UITEST_FETCH_STOPPED"] == "1" { return .stopped }
+        #endif
+        return Self.todayFetchState(fetchOutcomes, localDate: localDate)
+    }
+
+    static func todayFetchState(_ outcomes: [String: String], localDate: String) -> TodayFetchState {
+        let today = outcomes.filter { $0.key.hasPrefix(localDate) }.values
+        if today.contains(where: { $0.hasPrefix("attempt") }) { return .retrying }
+        if today.contains(where: { $0.hasPrefix("stopped") || $0.hasPrefix("ended") }) { return .stopped }
+        return .none
+    }
+
+    /// UI tests only: shows the retrying state for a brief without a network read.
+    func recordFetchOutcomeForUITest(_ identifier: String, _ outcome: String) {
+        record(identifier, outcome)
+    }
+
+    /// The error's case name only (for example "rejected" or "noAnswer"), so no status text or message is logged.
+    private static func outcomeKind(_ error: Error) -> String {
+        if let hub = error as? HubRequestError { return "hub \("\(hub)".components(separatedBy: "(").first ?? "error")" }
+        if let relay = error as? RelayClientError { return "relay \("\(relay)".components(separatedBy: "(").first ?? "error")" }
+        return "error \(String(describing: type(of: error)))"
     }
 
     /// One attempt: read the brief, verify it, save it to the library, then acknowledge a package so the Mac stops

@@ -280,6 +280,8 @@ extension FeedUITestSeed {
         case let value where value.hasPrefix("feed-topics"):
             briefs = [TopicUITestSeed.brief(now: now)] + libraryBriefs(now: now)
         case "feed-words": briefs = [wordsBrief(now: now)]
+        // No brief at all yet (a paired phone just before the first one): Today says when it comes.
+        case "feed-first-brief": briefs = []
         default: briefs = self.briefs(today: state != "feed-empty", now: now)
         }
         briefs.sort { ($0.asOfDate ?? .distantPast) > ($1.asOfDate ?? .distantPast) }
@@ -313,7 +315,15 @@ extension FeedUITestSeed {
                                    briefRequest: moment == "making"
                                        ? TodayBriefRequest(state: "making", readyAt: stamp(now.addingTimeInterval(3 * 60))) : nil,
                                    schedule: MobileBriefSchedule(morning: "07:00",
-                                                                 evening: moment == "waiting" ? clock(now.addingTimeInterval(-2 * 60)) : "19:30"))
+                                                                 evening: moment == "waiting" ? clock(now.addingTimeInterval(-2 * 60)) : "19:30"),
+                                   briefSchedule: nextMorningBrief(now: now))
+    }
+
+    /// The computer's next morning brief at 6:50 AM, the time the Today copy shows.
+    private static func nextMorningBrief(now: Date) -> [ScheduledPhoneBrief]? {
+        guard let next = Calendar.current.nextDate(after: now, matching: DateComponents(hour: 6, minute: 50),
+                                                   matchingPolicy: .nextTime) else { return nil }
+        return [ScheduledPhoneBrief(slot: "morning", at: stamp(next))]
     }
 
     private static func clock(_ date: Date) -> String {
