@@ -136,7 +136,6 @@ struct BriefDetailView: View {
                     paragraphs(brief, spokenNow: spokenNow, hubID: hub)
                     SectionLabel(title: String(localized: "In this brief"))
                     BriefContentView(brief: brief, now: Date(), readOnly: readOnly, topics: environment.topics)
-                    if !readOnly { BriefFeedbackView(brief: brief, now: Date(), feed: environment.feed) }
                 }
                 .padding(.horizontal, YansuTheme.gutter)
                 .padding(.top, 8)

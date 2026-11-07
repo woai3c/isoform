@@ -85,18 +85,22 @@ struct BriefContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel(title: title)
             VStack(alignment: .leading, spacing: 16) {
+                let cards = readOnly ? [] : FeedAssembly.cards(in: brief)
                 ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                     if index > 0 {
                         Divider().overlay(YansuTheme.border)
                     }
-                    itemRow(item)
+                    itemRow(item, cards: cards)
                 }
             }
         }
     }
 
-    private func itemRow(_ item: BriefItem) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+    /// One item in its own row, with the actions its feed card offers in the same row (P152): Sources, Useful and
+    /// Not for me. Open loops pass no cards, as the Feed never showed them.
+    private func itemRow(_ item: BriefItem, cards: [FeedCardModel] = []) -> some View {
+        let card = BriefItemActions.card(for: item, in: cards)
+        return VStack(alignment: .leading, spacing: 6) {
             BriefItemTitle(item: item)
             if let detail = item.detail, !detail.isEmpty {
                 Text(detail)
@@ -131,12 +135,17 @@ struct BriefContentView: View {
                     .frame(minHeight: 32)
                     .accessibilityIdentifier("brief.notRight")
                 }
-                let sources = brief.purposeSources(for: item)
+                let sources = brief.purposeSources(for: item).isEmpty ? (card?.sources ?? []) : brief.purposeSources(for: item)
                 if !sources.isEmpty {
                     EvidenceChip(title: sourceCountText(sources.count)) {
                         evidence = EvidenceRequest(title: item.title ?? "Sources", sources: sources)
                     }
                 }
+            }
+            if let card, !readOnly {
+                BriefItemActions(card: card,
+                                 canGiveFeedback: SettingsView.allowsFeedFeedback(pairing.paired?.scopes ?? []),
+                                 feed: environment.feed, today: environment.today, briefStore: environment.brief)
             }
             if let target = memoryCorrection, singleMemory(for: item)?.id == target.id {
                 InlineMemoryCorrection(initialReason: correctionDraft, initiallyFailed: correctionFailed,
