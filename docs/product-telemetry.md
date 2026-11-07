@@ -116,6 +116,16 @@ Only the events below are allowed. Unknown legacy agent events are dropped.
 | `iphone.paired` | A completed iPhone pairing, without device or person details. |
 | `today.action`, `phone_today.action` | A Today action's product-map ID, kind, outcome, and elapsed milliseconds. |
 | `today.section_seen` | A visible Today section and the number of rows shown. |
+| `update.checked` | One release check: `result` is `none`, `found`, or `error`. An error carries only `error_class` (`network`, `http`, `feed`, or `other`), never the message or URL. |
+| `update.staged` | A newer release was verified and is waiting to install: `from` and `to` version strings. |
+| `update.installed` | An install swapped the app: `from`, `to`, `how` (`quit` when the app quit with an update waiting, or `restart_now` for Restart now), and `waited_days`, the whole days from staging to install. |
+| `update.quit_probe` | The headless check that runs before a quit install: `result` is `passed` or `failed`, and `reason` is `clean`, `timeout`, `exit_status`, `signal`, or `launch_error`. A failed probe leaves the update staged. |
+| `update.rolled_back` | A quit install that never acked healthy and was restored at launch: `from` is the failed version, `to` the restored one, and `attempts` the unacked launches counted before the restore. |
+| `update.running` | The first launch of an installed version: `version`, `how`, and `release_to_run_minutes` when the feed publishes a release time. |
+
+Update events use only these fields. Version fields must match a version
+number pattern, and no update event carries the release notes, URLs, file
+names, or error text.
 
 All events carry `app_version`, `flavor`, `build_channel` (`release` for
 `build-wails.sh` release builds, otherwise `development`), `os`, `os_version`,

@@ -88,7 +88,7 @@ var menuBarCopy = map[string]map[string]string{
 		"making": "Making your brief now.", "makingMorning": "Making your morning brief now.", "makingEvening": "Making your evening brief now.", "triedTimeout": "Tried {n} times. It timed out. Isoform tries again at {time}.", "triedTimeoutOnce": "Tried once. It timed out. Isoform tries again at {time}.", "playing": "{elapsed} of {length}",
 		"waiting": "Waiting on you", "seeAll": "See all {n} in Chat", "empty": "Nothing is waiting on you.",
 		"failed": "Could not load what is waiting on you. Your chat still has everything.",
-		"update": "Isoform {version} is ready", "restart": "Restart",
+		"update": "{version} installs when you quit", "updateRestart": "{version} is ready ·", "restart": "Restart now",
 		"models":   "Downloading models · {percent}%",
 		"settings": "Settings", "footerQuit": "Quit", "onThisMac": "What Isoform sees", "openShortcut": "⌘⇧I",
 		"label": "Isoform, {state}, {n} waiting on you", "labelNone": "Isoform, {state}",
@@ -109,7 +109,7 @@ var menuBarCopy = map[string]map[string]string{
 		"making": "正在生成简报。", "makingMorning": "正在生成你的早间简报。", "makingEvening": "正在生成你的晚间简报。", "triedTimeout": "试了 {n} 次。超时了。Isoform 会在{time}再试。", "triedTimeoutOnce": "试了 1 次。超时了。Isoform 会在{time}再试。", "playing": "{elapsed} / {length}",
 		"waiting": "等你处理", "seeAll": "在聊天中查看全部 {n} 项", "empty": "没有等你处理的事。",
 		"failed": "没能读取等你处理的事。聊天里的内容都还在。",
-		"update": "Isoform {version} 已就绪", "restart": "重新启动",
+		"update": "退出时安装 Isoform {version}", "updateRestart": "{version} 已准备好 ·", "restart": "立即重启",
 		"models":   "正在下载模型 · {percent}%",
 		"settings": "设置", "footerQuit": "退出", "onThisMac": "Isoform 能看到什么", "openShortcut": "⌘⇧I",
 		"label": "Isoform，{state}，{n} 项等你处理", "labelNone": "Isoform，{state}",
@@ -178,6 +178,8 @@ type menuBarView struct {
 	Brief      menuBarBrief         `json:"brief"`
 	// Update is the downloaded update's version, shown only then.
 	Update string `json:"update,omitempty"`
+	// UpdateRestart is set when the staged update needs Restart now to install.
+	UpdateRestart bool `json:"updateRestart,omitempty"`
 	// Models is "Downloading models · 64%" while the local models setup
 	// confirmed are still downloading (setup v2.2.0 §2); empty otherwise.
 	Models string            `json:"models,omitempty"`
@@ -495,6 +497,7 @@ func (a *App) menuBarView(lang string, readWaiting bool) (perfValue menuBarView,
 	view.Label = menuBarLabel(w, view.State, 0)
 	if status := a.GetUpdateStatus(); status.Status == "update-downloaded" && status.Version != "" {
 		view.Update = status.Version
+		view.UpdateRestart = status.RestartNeeded
 	}
 	view.Models = a.menuBarModels(w)
 	// The launch preload can run before startup starts the brief service.

@@ -127,6 +127,17 @@ func main() {
 	if code, handled := runUpdateHelperCommand(os.Args[1:]); handled {
 		os.Exit(code)
 	}
+	if code, handled := runUpdateProbeCommand(os.Args[1:]); handled {
+		os.Exit(code)
+	}
+	// Self-rollback for a quit install that never started healthy. It runs
+	// before the singleton lock and before Wails, so it works even when this
+	// version crashes during Wails startup.
+	if home, err := flavorDataDir(); err == nil {
+		if runQuitInstallTrial(home, Version, findAppBundle(), launchRestoredApp) {
+			os.Exit(0)
+		}
+	}
 	if exitCode, handled := runPurposeMailBackfillCommand(os.Args[1:], os.Stderr); handled {
 		os.Exit(exitCode)
 	}

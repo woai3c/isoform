@@ -75,6 +75,7 @@ type r2Manifest struct {
 	Checksums        map[string]string `json:"checksums,omitempty"`         // platform -> SHA-256 hex digest
 	UpdaterAssets    map[string]string `json:"updater_assets,omitempty"`    // current multi-file updater archives
 	UpdaterChecksums map[string]string `json:"updater_checksums,omitempty"` // platform -> SHA-256 hex digest
+	PublishedAt      string            `json:"published_at,omitempty"`      // RFC 3339 release time, when the feed has it
 }
 
 // githubAsset is one file attached to a GitHub release.
@@ -98,6 +99,8 @@ type UpdateInfo struct {
 	DownloadURL  string `json:"download_url,omitempty"`
 	ReleaseNotes string `json:"release_notes,omitempty"`
 	Error        string `json:"error,omitempty"`
+	// ReleasedAt is unix ms from the feed's published_at; internal, never sent to the frontend.
+	ReleasedAt int64 `json:"-"`
 }
 
 // UpdateStatus is the payload broadcast to the frontend via the
@@ -109,6 +112,9 @@ type UpdateStatus struct {
 	Percent     float64 `json:"percent,omitempty"`     // download progress 0-100
 	Transferred int64   `json:"transferred,omitempty"` // bytes downloaded
 	Total       int64   `json:"total,omitempty"`       // total bytes
+	// RestartNeeded is set when the staged update failed the quit probe: it
+	// installs only through Restart now, which runs the full checks.
+	RestartNeeded bool `json:"restart_needed,omitempty"`
 }
 
 // updater holds the runtime state for the self-update lifecycle.
@@ -132,6 +138,16 @@ type updater struct {
 	backgroundDone      chan struct{}
 	prepared            *preparedUpdate // extracted and verified app for a fast restart
 	prepareFailed       string          // version/checksum whose preparation failed
+	targetNotes         string          // release notes for targetVersion
+	targetReleasedAt    int64           // unix ms the feed published targetVersion, 0 if unknown
+	stagedAt            int64           // unix ms the staged archive was verified
+	releasedAt          int64           // unix ms the staged version was published, 0 if unknown
+	blockedVersion      string          // version whose install failed; background downloads and quit installs skip it
+	recoveryNextCheck   time.Time       // earliest scheduled check after a failed install
+	recoveryBackoff     time.Duration   // gap used for the last recovery check
+	installStarted      bool            // a click or quit install has swapped the bundle
+	restartNeeded       bool            // the staged version failed the quit probe
+	quietDownload       bool            // a newer release is downloading behind a ready update: no progress
 }
 
 // initUpdater starts the background update checker — called once from
@@ -142,6 +158,8 @@ func (a *App) initUpdater() {
 	}
 
 	a.reportUpdateRecovery()
+	a.reportInstalledUpdate()
+	a.reportRolledBackUpdate()
 	if startUpdateQAHook(a) {
 		return
 	}
@@ -172,6 +190,14 @@ func (a *App) initUpdater() {
 // so the progress bar never visually regresses during download retries.
 func (a *App) broadcastUpdateStatus(s UpdateStatus) {
 	a.updater.mu.Lock()
+	if s.Status == "downloading" && a.updater.quietDownload {
+		// A newer release downloads behind the ready one: the cards keep showing the ready one.
+		a.updater.mu.Unlock()
+		return
+	}
+	if s.Status == "update-downloaded" {
+		s.RestartNeeded = a.updater.restartNeeded
+	}
 	if s.Status == "downloading" {
 		if s.Percent < a.updater.peakPercent {
 			s.Percent = a.updater.peakPercent
@@ -225,6 +251,8 @@ func (a *App) CheckForUpdates() UpdateInfo {
 		return info
 	}
 	a.updater.recoveryError = false
+	a.updater.recoveryNextCheck = time.Time{}
+	a.updater.recoveryBackoff = 0
 	a.updater.mu.Unlock()
 	return a.checkForUpdates()
 }
@@ -247,6 +275,7 @@ func (a *App) checkForUpdates() UpdateInfo {
 	a.broadcastUpdateStatus(UpdateStatus{Status: "checking"})
 
 	info := a.fetchLatestRelease()
+	a.recordUpdateCheck(info)
 	a.updater.mu.Lock()
 	a.updater.info = info
 	a.updater.lastChecked = time.Now().UnixMilli()
@@ -262,8 +291,7 @@ func (a *App) checkForUpdates() UpdateInfo {
 	}
 
 	a.updater.mu.Lock()
-	a.updater.downloadURL = info.DownloadURL
-	a.updater.targetVersion = info.Latest
+	a.setTargetLocked(info)
 	a.updater.mu.Unlock()
 
 	a.broadcastUpdateStatus(UpdateStatus{
@@ -295,11 +323,22 @@ func (a *App) downloadUpdate(background bool) error {
 		return nil
 	}
 	a.updater.mu.Lock()
-	if a.updater.stagingPath != "" || (background && a.updater.recoveryError) {
+	staged := a.updater.stagingPath
+	url := a.updater.downloadURL
+	target := a.updater.targetVersion
+	if staged != "" {
+		// A waiting update is replaced only by a newer release, verified in the other slot.
+		newer := background && url != "" && target != "" && isNewer(target, a.updater.downloadedVersion)
+		a.updater.mu.Unlock()
+		if !newer {
+			return nil
+		}
+		return a.downloadNewerStaged(url, target)
+	}
+	if background && a.updater.blocksBackground(target) {
 		a.updater.mu.Unlock()
 		return nil
 	}
-	url := a.updater.downloadURL
 	a.updater.mu.Unlock()
 
 	if url == "" {
@@ -319,27 +358,12 @@ func (a *App) downloadUpdate(background bool) error {
 		return fmt.Errorf("create staging dir: %w", err)
 	}
 
-	assetName := platformAssetName()
-	stagingPath := filepath.Join(stagingDir, assetName)
-
-	// Transport with connection-level timeouts only (no overall deadline).
-	transport := &http.Transport{
-		TLSHandshakeTimeout:   15 * time.Second,
-		ResponseHeaderTimeout: 15 * time.Second,
-	}
-	client := &http.Client{Transport: transport}
-
-	var lastErr error
-	for attempt := 1; attempt <= downloadMaxRetries; attempt++ {
-		lastErr = a.downloadAttempt(client, url, stagingPath, attempt)
-		if lastErr == nil {
-			a.queuePrepareDownloadedUpdate()
-			return nil
-		}
-		log.Printf("[update] download attempt %d/%d failed: %v", attempt, downloadMaxRetries, lastErr)
-		if attempt < downloadMaxRetries {
-			time.Sleep(time.Duration(attempt) * 2 * time.Second)
-		}
+	stagingPath := filepath.Join(stagingDir, platformAssetName())
+	lastErr := a.downloadWithRetries(newUpdateDownloadClient(), url, stagingPath)
+	if lastErr == nil {
+		a.recordStagedUpdate()
+		a.queuePrepareDownloadedUpdate()
+		return nil
 	}
 
 	// All retries exhausted.
@@ -489,15 +513,22 @@ func (a *App) downloadAttempt(client *http.Client, url, stagingPath string, atte
 		return fmt.Errorf("checksum verification failed: %w", err)
 	}
 	a.updater.mu.Lock()
-	version, notes := a.updater.targetVersion, a.updater.info.ReleaseNotes
+	version, notes, released := a.updater.targetVersion, a.updater.targetNotes, a.updater.targetReleasedAt
 	a.updater.mu.Unlock()
-	if err := savePendingUpdate(stagingPath, expected, version, notes); err != nil {
+	// This pending write is the commit point: the archive is staged only once it names this file.
+	stagedAt := time.Now().UnixMilli()
+	if err := savePendingUpdateRecord(pendingUpdate{Path: stagingPath, Checksum: expected, Version: version,
+		ReleaseNotes: notes, StagedAt: stagedAt, ReleasedAt: released}); err != nil {
 		return err
 	}
 	a.updater.mu.Lock()
 	a.updater.stagingPath = stagingPath
 	a.updater.downloadedChecksum = expected
 	a.updater.downloadedVersion = a.updater.targetVersion
+	a.updater.stagedAt = stagedAt
+	a.updater.releasedAt = released
+	// A freshly verified archive has not been probed yet.
+	a.updater.restartNeeded = false
 	ver := a.updater.targetVersion
 	a.updater.mu.Unlock()
 
@@ -593,16 +624,25 @@ func (a *App) autoCheckForUpdates() {
 	a.updater.mu.Lock()
 	staged := a.updater.stagingPath != ""
 	recovery := a.updater.recoveryError
+	due := !time.Now().Before(a.updater.recoveryNextCheck)
 	a.updater.mu.Unlock()
 	if staged && runtime.GOOS == "darwin" {
 		// Covers a download restored at launch or a preparation cut short.
 		a.prepareDownloadedUpdateLocked(findAppBundle(), darwinInstallSteps.verify)
 	}
-	if staged || recovery {
-		return
+	switch {
+	case staged:
+		// Keep checking while an update waits: a newer verified release replaces it.
+		a.checkNewerThanStaged()
+	case recovery:
+		// After a failed install, retry with backoff. The failed version is never downloaded again.
+		if due {
+			a.checkAfterRecovery()
+		}
+	default:
+		// Background failures stay in the event stream, so Settings can show them.
+		a.checkForUpdates()
 	}
-	// Background failures stay in the event stream, so Settings can show them.
-	a.checkForUpdates()
 }
 
 // fetchLatestRelease checks the JSON feed first, falling back to the GitHub API.
@@ -673,6 +713,7 @@ func (a *App) fetchFromR2() UpdateInfo {
 		Latest:       latest,
 		DownloadURL:  downloadURL,
 		ReleaseNotes: manifest.ReleaseNotes,
+		ReleasedAt:   parseReleaseTimeMillis(manifest.PublishedAt),
 	}
 }
 
@@ -828,11 +869,15 @@ func platformAssetSuffix() string {
 // prepared update (or, without one, the extracted and verified archive), then
 // quits; the helper opens the new app once this process has exited.
 func (a *App) installDarwin(stagingPath, checksum string) error {
+	a.updater.mu.Lock()
+	version, stagedAt, released := a.updater.downloadedVersion, a.updater.stagedAt, a.updater.releasedAt
+	a.updater.mu.Unlock()
 	if err := a.installBundleUpdate(findAppBundle(), stagingPath, checksum, darwinInstallSteps); err != nil {
 		return err
 	}
-	_ = os.Remove(stagingPath)
-	removePendingUpdate()
+	_ = writeInstalledRecord(installedRecord{Version: version, From: Version, How: updateHowRestartNow,
+		ReleasedAt: released, InstalledAt: time.Now().UnixMilli()})
+	a.finishInstallRecords(stagingPath, version, stagedAt, updateHowRestartNow)
 	a.quitAfterUpdateSwap()
 	return nil
 }

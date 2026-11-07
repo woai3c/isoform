@@ -104,9 +104,12 @@ export function AboutUpdates() {
                 : t("aboutPolish.upToDate");
             break;
         case "update-downloaded":
-            statusLine = t("aboutPolish.ready", {
-                version: info.update.version,
-            });
+            statusLine = t(
+                info.update.restart_needed
+                    ? "aboutPolish.readyRestart"
+                    : "aboutPolish.ready",
+                { version: info.update.version },
+            );
             break;
         case "update-available":
             statusLine = t("aboutPolish.available", {
@@ -132,20 +135,15 @@ export function AboutUpdates() {
                             {t("aboutPolish.product")}
                         </h2>
                         <p className="text-[12.5px] text-muted">
-                            {t(
-                                ready
-                                    ? "aboutPolish.versionReady"
-                                    : "aboutPolish.version",
-                                {
-                                    version: info.version,
-                                    next: info.update.version,
-                                },
-                            )}
+                            {t("aboutPolish.version", {
+                                version: info.version,
+                            })}
                         </p>
                     </div>
                     {ready && (
                         <Button
                             size="sm"
+                            variant="outline"
                             disabled={busy || restarting}
                             onClick={() => void perform(restart)}
                         >

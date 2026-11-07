@@ -149,7 +149,7 @@ describe("Sidebar (main chat, no side chats)", () => {
         const card = await screen.findByRole("region", { name: "Update ready" });
         const observing = screen.getByRole("button", { name: "Background observing status" });
         expect(card.compareDocumentPosition(observing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+        fireEvent.click(screen.getByRole("button", { name: "Later" }));
         await waitFor(() => expect(screen.queryByRole("region", { name: "Update ready" })).not.toBeInTheDocument());
         expect(screen.getByText("Update ready")).toBeInTheDocument();
     });
@@ -168,7 +168,7 @@ describe("Sidebar (main chat, no side chats)", () => {
         rerender(<SidebarHarness sessions={[]} active={null} />);
         expect(await screen.findByRole("region", { name: "Update ready" })).toBe(card);
         expect(card).toBeVisible();
-        fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+        fireEvent.click(screen.getByRole("button", { name: "Later" }));
         await waitFor(() => expect(screen.queryByRole("region", { name: "Update ready" })).not.toBeInTheDocument());
         expect(screen.getByText(en.userMenu.updateReady)).toBeVisible();
     });

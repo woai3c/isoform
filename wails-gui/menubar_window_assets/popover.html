@@ -209,7 +209,7 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         el('mdl').hidden = !model.models;
         el('mdlText').textContent = model.models || '';
         el('upd').hidden = !model.update;
-        el('updText').textContent = fill(w.update, {version: model.update || ''});
+        el('updText').textContent = fill(model.updateRestart ? w.updateRestart : w.update, {version: model.update || ''});
         el('restart').textContent = w.restart;
         el('sees').textContent = w.onThisMac;
         el('settings').textContent = w.settings;

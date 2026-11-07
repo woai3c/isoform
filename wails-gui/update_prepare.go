@@ -43,12 +43,16 @@ type bundleInstallSteps struct {
 	verify func(current, candidate, version string) (string, error)
 	quick  func(current, candidate, version, requirement string) error
 	start  func(*bundleUpdate) error
+	// probe runs the candidate headless before a quit install commits. A nil
+	// probe fails closed: a quit install then never happens.
+	probe func(candidateBundle string) (bool, string)
 }
 
 var darwinInstallSteps = bundleInstallSteps{
 	verify: verifyUpdateBundleRequirement,
 	quick:  quickVerifyPreparedBundle,
 	start:  startUpdateHelper,
+	probe:  probeCandidateBundle,
 }
 
 func dataHomeOutsideBundle(bundle, dataHome string) error {

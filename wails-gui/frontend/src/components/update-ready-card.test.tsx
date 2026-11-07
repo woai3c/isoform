@@ -30,7 +30,7 @@ describe("Update ready sidebar card", () => {
     });
     it("restarts only when Restart now is clicked", async () => {
         render(<UpdateReadyCard version="0.1.302" onLater={vi.fn()} />);
-        expect(screen.getByText("Update ready · v0.1.302")).toBeInTheDocument();
+        expect(screen.getByText("Isoform 0.1.302 is ready")).toBeInTheDocument();
         expect(mocks.restart).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole("button", { name: "Restart now" }));
         await waitFor(() => expect(mocks.restart).toHaveBeenCalledOnce());
@@ -49,7 +49,7 @@ describe("Update ready sidebar card", () => {
         expect(
             screen.getByRole("button", { name: "Restarting…" }),
         ).toBeDisabled();
-        expect(screen.getByRole("button", { name: "Not now" })).toBeDisabled();
+        expect(screen.getByRole("button", { name: "Later" })).toBeDisabled();
         await act(async () => {
             accept();
         });
@@ -60,7 +60,7 @@ describe("Update ready sidebar card", () => {
     it("Later hides only after the backend accepts the session dismissal", async () => {
         const hide = vi.fn();
         render(<UpdateReadyCard version="0.1.302" onLater={hide} />);
-        fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+        fireEvent.click(screen.getByRole("button", { name: "Later" }));
         await waitFor(() => expect(hide).toHaveBeenCalledOnce());
         expect(mocks.later).toHaveBeenCalledOnce();
         expect(mocks.restart).not.toHaveBeenCalled();
@@ -102,7 +102,7 @@ describe("Update ready sidebar card", () => {
         mocks.later.mockRejectedValueOnce(new Error("unavailable"));
         const hide = vi.fn();
         render(<UpdateReadyCard version="0.1.302" onLater={hide} />);
-        fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+        fireEvent.click(screen.getByRole("button", { name: "Later" }));
         expect(await screen.findByRole("alert")).toBeInTheDocument();
         expect(hide).not.toHaveBeenCalled();
     });
@@ -118,9 +118,9 @@ describe("Update ready sidebar card", () => {
     it("translates the complete card", async () => {
         await i18n.changeLanguage("zh-CN");
         render(<UpdateReadyCard version="0.1.302" onLater={vi.fn()} />);
-        expect(screen.getByText("更新已就绪 · v0.1.302")).toBeInTheDocument();
+        expect(screen.getByText("Isoform 0.1.302 已准备好")).toBeInTheDocument();
         expect(
-            screen.getByRole("button", { name: "暂不" }),
+            screen.getByRole("button", { name: "稍后" }),
         ).toBeInTheDocument();
     });
 });

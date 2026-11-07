@@ -24,6 +24,8 @@ type bundleUpdate struct {
 	Version    string
 	DataHome   string
 	ParentPID  int
+	// Quit installs swap the bundle and stop there: nothing reopens the app.
+	Quit bool
 }
 
 type updateStartup struct {
@@ -161,8 +163,15 @@ func runUpdateHelperCommand(args []string) (int, bool) {
 	// new app opens the moment the old process is gone.
 	if !waitUpdateProcessExit(u.ParentPID, 30*time.Second) {
 		err := u.restore()
+		removeInstalledRecordIn(u.DataHome)
 		log.Printf("[update] parent did not exit; restored bundle: %v", err)
 		return 1, true
+	}
+	if u.Quit {
+		// The person quit: the new app opens when they next launch Isoform. The
+		// previous app stays in the transaction folder until that launch.
+		log.Printf("[update] installed %s on quit; not reopening", u.Version)
+		return 0, true
 	}
 	// This bounds mandatory core/storage readiness, not optional model work.
 	// storageStartupState acknowledges before starting optional services.
@@ -211,7 +220,8 @@ func (u *bundleUpdate) relaunch(launch func(*bundleUpdate, string) (*exec.Cmd, e
 	// This error is displayed by the restored app, and retry requires a new
 	// download. Never delete or reset the existing data home.
 	_ = os.MkdirAll(filepath.Join(u.DataHome, "updates"), 0700)
-	if err := writeUpdateJSON(filepath.Join(u.DataHome, "updates", "last-error.json"), failure.Error()); err != nil {
+	removeInstalledRecordIn(u.DataHome)
+	if err := writeUpdateJSON(filepath.Join(u.DataHome, "updates", "last-error.json"), updateRecoveryRecord{Detail: failure.Error(), Version: u.Version}); err != nil {
 		log.Printf("[update] save rollback error: %v", err)
 	}
 	if _, err := launch(u, ""); err != nil {
@@ -247,15 +257,37 @@ func (a *App) reportUpdateRecovery() {
 	if err != nil {
 		return
 	}
+	if v := loadBlockedVersion(home); v != "" {
+		a.updater.mu.Lock()
+		a.updater.blockedVersion = v
+		a.updater.mu.Unlock()
+	}
 	path := filepath.Join(home, "updates", "last-error.json")
 	data, err := os.ReadFile(path)
-	var detail string
-	if err != nil || json.Unmarshal(data, &detail) != nil {
+	if err != nil {
 		return
+	}
+	// Records from older helpers hold a bare string; newer ones name the version too.
+	var rec updateRecoveryRecord
+	if json.Unmarshal(data, &rec) != nil || rec.Detail == "" {
+		var detail string
+		if json.Unmarshal(data, &detail) != nil {
+			return
+		}
+		rec = updateRecoveryRecord{Detail: detail}
 	}
 	a.updater.mu.Lock()
 	a.updater.recoveryError = true
+	newBlock := rec.Version != "" && rec.Version != a.updater.blockedVersion
+	if newBlock {
+		a.updater.blockedVersion = rec.Version
+	}
 	a.updater.mu.Unlock()
-	a.broadcastUpdateStatus(UpdateStatus{Status: "error", Detail: detail})
+	if newBlock {
+		if err := saveBlockedVersion(rec.Version); err != nil {
+			log.Printf("[update] save blocked version: %v", err)
+		}
+	}
+	a.broadcastUpdateStatus(UpdateStatus{Status: "error", Detail: rec.Detail})
 	_ = os.Remove(path)
 }

@@ -86,6 +86,10 @@ func (s *storageStartupState) start(open func() (*storage.Store, error), publish
 				// acknowledgement hostage to network speed. Failed, pending or
 				// stopped storage startup must never acknowledge an update.
 				acknowledgeUpdateStartup()
+				// The same health signal clears a quit install's trial and its kept previous app.
+				if home, err := flavorDataDir(); err == nil {
+					ackQuitInstallTrial(home, Version, findAppBundle())
+				}
 			}
 			s.lifecycle.Unlock()
 			if err == nil {

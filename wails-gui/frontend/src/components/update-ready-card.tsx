@@ -11,10 +11,13 @@ import {
 export function UpdateReadyCard({
     version,
     visible = true,
+    restartNeeded = false,
     onLater,
 }: {
     version: string;
     visible?: boolean;
+    /** The quit probe refused this update: it installs only through Restart now. */
+    restartNeeded?: boolean;
     onLater: () => void;
 }) {
     const { t } = useTranslation("settings");
@@ -63,12 +66,15 @@ export function UpdateReadyCard({
                 {t(
                     retry
                         ? "aboutPolish.retryDescription"
-                        : "aboutPolish.cardDescription",
+                        : restartNeeded
+                          ? "aboutPolish.cardRestartNeeded"
+                          : "aboutPolish.cardDescription",
                 )}
             </p>
             <div className="mt-2.5 flex gap-2">
                 <Button
                     size="sm"
+                    variant={retry ? "default" : "outline"}
                     disabled={busy || restarting}
                     onClick={() =>
                         void perform(

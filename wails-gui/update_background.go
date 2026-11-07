@@ -147,16 +147,28 @@ type pendingUpdate struct {
 	Checksum     string `json:"checksum"`
 	Version      string `json:"version"`
 	ReleaseNotes string `json:"release_notes,omitempty"`
+	StagedAt     int64  `json:"staged_at,omitempty"` // unix ms the archive was verified
+	// ProbeFailed records that the quit probe refused this archive; it installs
+	// only through Restart now.
+	ProbeFailed bool  `json:"probe_failed,omitempty"`
+	ReleasedAt  int64 `json:"released_at,omitempty"` // unix ms the feed published it, when known
 	// Prepared is the extracted and verified app waiting beside the bundle.
 	Prepared *preparedUpdate `json:"prepared,omitempty"`
 }
 
 func savePendingUpdate(path, checksum, version, releaseNotes string) error {
+	return savePendingUpdateRecord(pendingUpdate{Path: path, Checksum: checksum, Version: version,
+		ReleaseNotes: releaseNotes, StagedAt: time.Now().UnixMilli()})
+}
+
+// savePendingUpdateRecord atomically replaces pending.json. Its rename is the
+// commit point that makes one archive the staged one.
+func savePendingUpdateRecord(pending pendingUpdate) error {
 	flag, err := updateStatePath("pending.json")
 	if err != nil {
 		return err
 	}
-	return writeUpdateJSON(flag, pendingUpdate{Path: path, Checksum: checksum, Version: version, ReleaseNotes: releaseNotes})
+	return writeUpdateJSON(flag, pending)
 }
 
 // restorePendingUpdate only restores verified bytes in this computer's update
@@ -174,18 +186,30 @@ func (a *App) restorePendingUpdate() bool {
 	if err != nil || json.Unmarshal(raw, &pending) != nil {
 		return false
 	}
-	valid := pending.Path == filepath.Join(filepath.Dir(flag), platformAssetName()) &&
+	primary, next := updateSlotPaths(filepath.Dir(flag))
+	valid := (pending.Path == primary || pending.Path == next) &&
 		isNewer(pending.Version, Version) && verifySHA256(pending.Path, pending.Checksum) == nil
 	if !valid {
 		_ = os.Remove(flag)
+		// An archive no record commits to is an orphan from an interrupted download.
+		_ = os.Remove(next)
 		return false
+	}
+	// Only the committed slot stays; the other is an orphan from an interrupted replacement.
+	if pending.Path == primary {
+		_ = os.Remove(next)
+	} else {
+		_ = os.Remove(primary)
 	}
 	a.updater.mu.Lock()
 	a.updater.stagingPath = pending.Path
 	a.updater.downloadedChecksum = pending.Checksum
 	a.updater.downloadedVersion = pending.Version
+	a.updater.stagedAt = pending.StagedAt
+	a.updater.releasedAt = pending.ReleasedAt
+	a.updater.restartNeeded = pending.ProbeFailed
 	a.updater.info = UpdateInfo{Available: true, Current: Version, Latest: pending.Version, ReleaseNotes: pending.ReleaseNotes}
-	a.updater.status = UpdateStatus{Status: "update-downloaded", Version: pending.Version}
+	a.updater.status = UpdateStatus{Status: "update-downloaded", Version: pending.Version, RestartNeeded: pending.ProbeFailed}
 	// Startup cleanup removes a prepared folder that no record keeps.
 	if p := pending.Prepared; p != nil && p.Version == pending.Version && p.Checksum == pending.Checksum {
 		if st, err := os.Stat(p.candidate()); err == nil && st.IsDir() {

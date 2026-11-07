@@ -739,6 +739,7 @@ export function Sidebar({
                         <UpdateReadyCard
                             visible={updateDownloaded && !aboutInfo?.later && !updateDismissed}
                             version={aboutInfo?.update.version ?? ""}
+                            restartNeeded={aboutInfo?.update.restart_needed ?? false}
                             onLater={() => setUpdateDismissed(true)}
                         />
                     </div>

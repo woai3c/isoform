@@ -6137,7 +6137,7 @@ export interface AboutInfo {
     releaseNotesVersion: string;
     releaseNotes: string;
     releaseNotesUrl: string;
-    update: { status: string; version?: string; percent?: number; detail?: string };
+    update: { status: string; version?: string; percent?: number; detail?: string; restart_needed?: boolean };
 }
 export const GetAboutInfo = appBinding<[], AboutInfo>('GetAboutInfo');
 export const SetBackgroundUpdates = appBinding<[boolean], void>('SetBackgroundUpdates');

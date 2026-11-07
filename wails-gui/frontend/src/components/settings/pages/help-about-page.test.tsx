@@ -235,13 +235,13 @@ describe("Settings About", () => {
         );
         await status({ status: "update-downloaded", version: "0.1.302" });
         expect(
-            screen.getByText("v0.1.301 · v0.1.302 is downloaded"),
+            screen.getByText("Version 0.1.301"),
         ).toBeInTheDocument();
         expect(
-            screen.getByText(/Observing keeps running while it does/),
+            screen.getByText(/installs when you quit/),
         ).toBeInTheDocument();
         fireEvent.click(
-            screen.getByRole("button", { name: "Restart to update" }),
+            screen.getByRole("button", { name: "Restart now" }),
         );
         expect(
             screen.getByRole("button", { name: "Restarting…" }),
@@ -335,7 +335,7 @@ describe("Settings About", () => {
             new Error("native metadata unavailable"),
         );
         render(<HelpAboutPage onReplayOnboarding={vi.fn()} />);
-        expect(await screen.findByText("v0.1.301")).toBeInTheDocument();
+        expect(await screen.findByText("Version 0.1.301")).toBeInTheDocument();
         expect(
             screen.getByRole("button", { name: "Retry" }),
         ).toBeInTheDocument();
@@ -353,17 +353,17 @@ describe("Settings About", () => {
         info.update = { status: "update-downloaded", version: "0.1.302" };
         render(<HelpAboutPage onReplayOnboarding={vi.fn()} />);
         expect(
-            await screen.findByText("v0.1.301 · v0.1.302 已下载"),
+            await screen.findByText("版本 0.1.301"),
         ).toBeInTheDocument();
         expect(screen.getByText("新功能").parentElement).toHaveTextContent(
             "v0.1.302： Today with topics.",
         );
         expect(
-            screen.getByRole("button", { name: "重启以更新" }),
+            screen.getByRole("button", { name: "立即重启" }),
         ).toBeInTheDocument();
         expect(
             screen.getByRole("switch", {
-                name: "在后台下载更新，并在下次重启时安装",
+                name: "在后台下载更新，并在退出 Isoform 时安装。",
             }),
         ).toBeChecked();
         expect(

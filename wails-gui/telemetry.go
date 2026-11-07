@@ -288,6 +288,74 @@ func productTelemetryProperties(event string, in map[string]any) (posthog.Proper
 			return nil, false
 		}
 		out["section"], out["rows"] = section, in["rows"]
+	case "update.checked":
+		result, _ := in["result"].(string)
+		switch result {
+		case "none", "found":
+			out["result"] = result
+		case "error":
+			class, _ := in["error_class"].(string)
+			if !updateErrorClassAllowed(class) {
+				return nil, false
+			}
+			out["result"], out["error_class"] = result, class
+		default:
+			return nil, false
+		}
+	case "update.staged":
+		from, okFrom := updateTelemetryVersion(in["from"])
+		to, okTo := updateTelemetryVersion(in["to"])
+		if !okFrom || !okTo {
+			return nil, false
+		}
+		out["from"], out["to"] = from, to
+	case "update.installed":
+		from, okFrom := updateTelemetryVersion(in["from"])
+		to, okTo := updateTelemetryVersion(in["to"])
+		how, _ := in["how"].(string)
+		if !okFrom || !okTo || !updateHowAllowed(how) {
+			return nil, false
+		}
+		out["from"], out["to"], out["how"] = from, to, how
+		if _, present := in["waited_days"]; present {
+			days, ok := updateTelemetryInt(in["waited_days"], 3650)
+			if !ok {
+				return nil, false
+			}
+			out["waited_days"] = days
+		}
+	case "update.rolled_back":
+		from, okFrom := updateTelemetryVersion(in["from"])
+		to, okTo := updateTelemetryVersion(in["to"])
+		if !okFrom || !okTo {
+			return nil, false
+		}
+		attempts, ok := updateTelemetryInt(in["attempts"], 10)
+		if !ok {
+			return nil, false
+		}
+		out["from"], out["to"], out["attempts"] = from, to, attempts
+	case "update.quit_probe":
+		result, _ := in["result"].(string)
+		reason, _ := in["reason"].(string)
+		if (result != "passed" && result != "failed") || !updateProbeReasonAllowed(reason) {
+			return nil, false
+		}
+		out["result"], out["reason"] = result, reason
+	case "update.running":
+		version, okVersion := updateTelemetryVersion(in["version"])
+		how, _ := in["how"].(string)
+		if !okVersion || !updateHowAllowed(how) {
+			return nil, false
+		}
+		out["version"], out["how"] = version, how
+		if _, present := in["release_to_run_minutes"]; present {
+			minutes, ok := updateTelemetryInt(in["release_to_run_minutes"], 1000000)
+			if !ok {
+				return nil, false
+			}
+			out["release_to_run_minutes"] = minutes
+		}
 	case "app.daily_active":
 		day, ok := in["date"].(string)
 		if _, err := time.Parse(time.DateOnly, day); !ok || err != nil {

@@ -1348,6 +1348,9 @@ func (a *App) handleSingletonMessages() {
 
 func (a *App) shutdown(ctx context.Context) {
 	a.handoffShuttingDown.Store(true)
+	// Before any teardown and before telemetry starts its final flush, so the
+	// quit install and its event are sent with the rest.
+	a.installStagedUpdateOnQuit()
 	// Send while the relay is still connected. Shutdown must remain bounded.
 	done := make(chan struct{})
 	go func() {
