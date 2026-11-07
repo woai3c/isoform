@@ -20,8 +20,11 @@ struct PhoneWaitingProactiveRow: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    // P135: a row's action is always the outlined pill, as the task rows show it.
                     Text(ChatCardButtons.make(for: item).main?.label(locale: locale) ?? String(localized: "Review"))
                         .font(.footnote.weight(.semibold)).foregroundStyle(YansuTheme.ink)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .overlay(Capsule().stroke(YansuTheme.border))
                 }
                 .padding(16).contentShape(Rectangle())
             }

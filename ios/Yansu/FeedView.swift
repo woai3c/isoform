@@ -886,7 +886,8 @@ struct FeedView: View {
                         }
                         .foregroundStyle(YansuTheme.ink)
                         .buttonStyle(.plain)
-                        .disabled(event.id == nil || event.kind == "personal")
+                        // P135: taps are off, but the event stays in the primary color; .disabled would grey it out.
+                        .allowsHitTesting(!(event.id == nil || event.kind == "personal"))
                         .accessibilityIdentifier("today.day.next")
                     }
                     if let free = day.free.first, let start = RelayTime.parse(free.start), let end = RelayTime.parse(free.end) {
