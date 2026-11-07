@@ -883,6 +883,9 @@ extension AppEnvironment {
             let askPresence: (@Sendable () async throws -> Bool)? = state == "feed-conversation"
                 ? { ProcessInfo.processInfo.environment["YANSU_UITEST_ASK_OFFLINE"] != "1" }
                 : state == "chat-away" ? { awayPhase == "back" } : nil
+            // "Talk about this brief" frames: offline means the computer is already known to be away.
+            let talkPresence: (@Sendable () async throws -> Bool)? =
+                ProcessInfo.processInfo.environment["YANSU_UITEST_BRIEF_TALK"] == "offline" ? { false } : nil
             if failQuietSave || failAwakeSave { try Data().write(to: blockedDirectory) }
             let failBriefDeletion = ProcessInfo.processInfo.environment["YANSU_UITEST_FAIL_BRIEF_DELETE"] == "1"
             let environment = AppEnvironment(
@@ -904,6 +907,7 @@ extension AppEnvironment {
                 guardian: guardian,
                 chatHub: demoHub.map { $0 as ChatHubAPI } ?? dayOneHub.map { $0 as ChatHubAPI } ?? (state.hasPrefix("chat-live") || state.hasPrefix("ideas") || state == "feed-conversation"
                     || state == "feed-your-week"
+                    || ProcessInfo.processInfo.environment["YANSU_UITEST_BRIEF_TALK"] != nil
                     || state == "chat-cards" || state.hasPrefix("feed-topics") || presentationItems != nil
                     ? ChatUITestHub(now: Date(), main: presentationItems) : nil),
                 proactiveHub: demoHub.map { LaunchDemoProactiveHub(hub: $0) as ProactiveActionHubAPI }
@@ -918,7 +922,8 @@ extension AppEnvironment {
                 holdsHub: holdsTestHub,
                 topicHub: demoHub.map { $0 as TopicHubAPI } ?? (state.hasPrefix("feed-topics") || state == "tasks-seeded" || state == "feed-review"
                     ? TopicUITestHub(now: Date()) : nil),
-                todayHub: state.hasPrefix("feed") || demoBrief != nil ? TodayUITestHub(snapshot: todayFixture, offline: state == "feed-offline" || FeedUITestSeed.moment == "waiting") : nil,
+                todayHub: state.hasPrefix("feed") || demoBrief != nil ? TodayUITestHub(snapshot: todayFixture, offline: state == "feed-offline" || FeedUITestSeed.moment == "waiting"
+                    || ProcessInfo.processInfo.environment["YANSU_UITEST_BRIEF_TALK"] == "offline") : nil,
                 weekDeclineHub: state == "feed-your-week" ? YourWeekDeclineUITestHub(defaults: defaults) : nil,
                 keepAwakeHub: ProcessInfo.processInfo.environment["YANSU_UITEST_KEEP_AWAKE"].map {
                     KeepAwakeUITestHub(on: $0 == "on", offline: state == "feed-offline",
@@ -928,7 +933,7 @@ extension AppEnvironment {
                 seesHub: ProcessInfo.processInfo.environment["YANSU_UITEST_SEES"] == "1" ? SeesUITestHub() : nil,
                 firstReadHub: dayOneHub,
                 notificationSettingsURL: failQuietSave ? blockedDirectory.appendingPathComponent("notification-settings.json") : nil,
-                presenceOverride: askPresence,
+                presenceOverride: askPresence ?? talkPresence,
                 removeLocalItem: { url in
                     if failBriefDeletion && url.lastPathComponent == "briefs" { throw CocoaError(.fileWriteNoPermission) }
                     try FileManager.default.removeItem(at: url)

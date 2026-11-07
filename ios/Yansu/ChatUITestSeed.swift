@@ -432,6 +432,19 @@ actor ChatUITestHub: ChatHubAPI, FirstReadHubAPI {
                                                turnId: accepted.turnId, state: "done", seq: 2, at: ""))
     }
 
+    /// "Talk about this brief" frames (YANSU_UITEST_BRIEF_TALK): a refusal (409) or a computer without the route
+    /// (404, as an older Mac answers); otherwise the computer says the conversation is in the main chat.
+    func briefConversation(briefID: String) async throws -> BriefConversation {
+        switch ProcessInfo.processInfo.environment["YANSU_UITEST_BRIEF_TALK"] {
+        case "refused":
+            throw HubRequestError.conflict(message: BriefConversationCopy.changed)
+        case "too-old":
+            throw HubRequestError.rejected(status: 404, message: "mobile route not found")
+        default:
+            return BriefConversation(briefId: briefID, briefVersion: "ui-conversation-version", chatId: ChatUITestSeed.mainChatID)
+        }
+    }
+
     func savedBriefAsk(reference: ChatBriefReference) async throws -> SavedBriefAsk? {
         guard reference.ask == true else { return nil }
         if let cardID = reference.cardId { return cardAskAnswers[cardID] }

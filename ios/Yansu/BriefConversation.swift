@@ -77,7 +77,15 @@ enum BriefConversationCopy {
         String(localized: "Send or discard your current draft before discussing another brief or idea.")
     }
     static var unavailable: String {
-        String(localized: "Refresh this brief from your computer to talk about it on your phone.")
+        String(localized: "Talk about this works when your computer is back.")
+    }
+    /// The computer's gate refused the brief (withheld, withdrawn, Closed Eyes, or no such brief). One line, no reason,
+    /// no Try again: asking again does not change a gate's answer.
+    static var gateRefused: String { String(localized: "Couldn't open this conversation.") }
+    /// The computer answered but has no conversation route yet (an older Mac). Not an error code, not the
+    /// unreachable line: the computer did answer.
+    static var computerTooOld: String {
+        String(localized: "Talk about this works after Isoform updates on your computer.")
     }
     static var offline: String { String(localized: "Your computer is offline.") }
     /// A question, an answer or "Talk about this brief" tapped while the computer is offline.

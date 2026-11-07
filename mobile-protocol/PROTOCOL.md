@@ -3006,6 +3006,21 @@ and `weekMessage` in `brief-messages` with `ask: true`. The computer validates
 the current brief revision and recommendation, then resolves the topic through
 the normal source checks. The saved-answer route accepts those same fields.
 
+`POST /briefs/{id}/conversation` is the phone's "Talk about this brief" when the
+brief on screen has no conversation reference of its own. The phone asks the
+computer for that brief's context by its id. It requires `chat:write` and
+`brief:read`, takes no body, and answers `{"briefId","briefVersion","chatId"}`:
+the brief's delivered `conversationKey` and the main chat, made on the computer
+if it does not exist yet. The computer reads the brief through the same
+sealed-read gates as `GET /briefs/{id}` and the words Talk already uses. It
+never makes a brief (`/brief/refresh` is not called), posts no opener and sends
+no words. A brief that is withheld, withdrawn or seen in Closed Eyes gets 409
+with the brief-changed message and no conversation; an unknown brief gets 404.
+Asking again returns the same answer and the same chat. A computer without the
+route answers 404; the phone then shows the same line it shows when the
+computer cannot be reached. The phone's own conversation reference still
+decides the opener and answer routes that follow.
+
 `GET /status` may advertise `briefWeekDecline`. When present, `GET
 /briefs/{id}/week-decline?version={conversationKey}` reads the stored choice;
 `POST` to the same path accepts `idempotencyKey` and `version` and stores Not

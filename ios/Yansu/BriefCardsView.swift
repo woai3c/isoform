@@ -22,6 +22,8 @@ struct BriefCardsView: View {
     @EnvironmentObject private var router: NotificationRouter
     @EnvironmentObject private var environment: AppEnvironment
     @State private var notice: String?
+    /// The one line under "Talk about this brief" when the conversation cannot open (P151).
+    @State private var talkLine: String?
     @State private var opening = false
     @State private var showingFindTime = false
     @State private var askRequest: BriefAskRequest?
@@ -190,7 +192,7 @@ struct BriefCardsView: View {
 
     @ViewBuilder
     private func paragraphChip(forParagraph index: Int) -> some View {
-        if canTalk, let card = brief.paragraphChip(forParagraph: index) {
+        if canTalk, brief.chatReference != nil, let card = brief.paragraphChip(forParagraph: index) {
             Button { put(card) } label: {
                 HStack(spacing: 5) {
                     Text(verbatim: card.label ?? "")
@@ -246,7 +248,9 @@ struct BriefCardsView: View {
                         }
                     }
                 }
-                if canTalk, brief.chatReference != nil {
+                if canTalk, talkReplaced {
+                    talkLineText(BriefConversationCopy.unavailable)
+                } else if canTalk {
                     Button { talk() } label: {
                         HStack(spacing: 6) {
                             if opening {
@@ -267,11 +271,9 @@ struct BriefCardsView: View {
                     .accessibilityLabel("Talk about this brief")
                     .accessibilityHint("Asks this in a sheet")
                     .accessibilityIdentifier("brief.talk")
-                } else if canTalk {
-                    Text(BriefConversationCopy.unavailable)
-                        .font(.footnote)
-                        .foregroundStyle(YansuTheme.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let talkLine {
+                        talkLineText(talkLine)
+                    }
                 }
             }
             .padding(16)
@@ -292,8 +294,8 @@ struct BriefCardsView: View {
         ForEach(Array(brief.narrative.enumerated()), id: \.offset) { index, paragraph in
             topicLabel(paragraph, index: index)
         }
-        if canTalk, brief.chatReference != nil {
-            if !brief.actionCards.isEmpty {
+        if canTalk {
+            if brief.chatReference != nil, !brief.actionCards.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(brief.actionCards) { card in
                         let label = card.label
@@ -317,18 +319,21 @@ struct BriefCardsView: View {
                     }
                 }
             }
-            Button { talk() } label: {
-                Label("Talk about this brief", systemImage: "bubble.left.and.bubble.right")
+            if talkReplaced {
+                talkLineText(BriefConversationCopy.unavailable)
+            } else {
+                Button { talk() } label: {
+                    Label("Talk about this brief", systemImage: "bubble.left.and.bubble.right")
+                }
+                .buttonStyle(YansuSecondaryButtonStyle())
+                .disabled(opening)
+                .accessibilityLabel("Talk about this brief")
+                .accessibilityHint("Asks this in a sheet")
+                .accessibilityIdentifier("brief.talk")
+                if let talkLine {
+                    talkLineText(talkLine)
+                }
             }
-            .buttonStyle(YansuSecondaryButtonStyle())
-            .disabled(opening)
-            .accessibilityLabel("Talk about this brief")
-            .accessibilityHint("Asks this in a sheet")
-            .accessibilityIdentifier("brief.talk")
-        } else if canTalk {
-            Text(BriefConversationCopy.unavailable)
-                .font(.footnote)
-                .foregroundStyle(YansuTheme.secondary)
         }
     }
 
@@ -347,7 +352,7 @@ struct BriefCardsView: View {
                     .accessibilityIdentifier("brief.attention.reason.\(index)")
             }
             Spacer(minLength: 8)
-            if canTalk, let card = brief.itemCard(for: item) {
+            if canTalk, brief.chatReference != nil, let card = brief.itemCard(for: item) {
                 Button { put(card) } label: {
                     Image(systemName: "bubble.left")
                         .font(.subheadline)
@@ -424,19 +429,51 @@ struct BriefCardsView: View {
             (label.hasPrefix("find time") || label.range(of: #"^为.*留出时间"#, options: .regularExpression) != nil)
     }
 
+    /// Talk asks the computer for this brief's conversation when the phone has no reference for it, then opens the
+    /// sheet on Isoform's question. With the computer away, the notice says so and no sheet opens.
+    /// The unreachable line stands where Talk would be when the phone already knows the computer is away, or when a
+    /// tap found it unreachable. A refusal or an older computer keeps the button, with its line under it.
+    private var talkReplaced: Bool {
+        // The same away state Today's line reads: the connection cause, mirrored into the chat store.
+        Self.talkReplacedByLine(knownAway: chat.awayCause != nil, tapLine: talkLine)
+    }
+
+    static func talkReplacedByLine(knownAway: Bool, tapLine: String?) -> Bool {
+        knownAway || tapLine == BriefConversationCopy.unavailable
+    }
+
+    private func talkLineText(_ line: String) -> some View {
+        Text(line)
+            .font(.footnote)
+            .foregroundStyle(YansuTheme.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("brief.talk.line")
+    }
+
+    /// Every tap resolves first, so a press always ends in the sheet or in a line under Talk. Nothing returns early.
     private func talk() {
-        guard var reference = brief.chatReference,
-              let opener = brief.cards.first(where: { $0.kind == "opener" && !$0.message.isEmpty }) else { return }
-        let choices = brief.sendCards.filter { $0.kind == "opener_answer" && !($0.label ?? "").isEmpty }
-        guard let first = choices.first, choices.count >= 2 else {
-            notice = BriefConversationCopy.unavailable
-            return
+        Task {
+            opening = true
+            let resolved = await chat.resolveTalkReference(for: brief)
+            opening = false
+            guard var reference = resolved.reference else {
+                talkLine = resolved.notice
+                return
+            }
+            // The sheet opens on Isoform's question and two answers; a brief without them cannot open one.
+            let choices = brief.sendCards.filter { $0.kind == "opener_answer" && !($0.label ?? "").isEmpty }
+            guard choices.count >= 2, let opener = brief.cards.first(where: { $0.kind == "opener" && !$0.message.isEmpty }) else {
+                talkLine = BriefConversationCopy.gateRefused
+                return
+            }
+            let first = choices[0]
+            talkLine = nil
+            reference.ask = true
+            reference.cardId = first.id
+            reference.cardMessage = first.message
+            askRequest = BriefAskRequest(reference: reference, quote: nil, openingQuestion: opener.message,
+                                         answerChoices: Array(choices.prefix(3)))
         }
-        reference.ask = true
-        reference.cardId = first.id
-        reference.cardMessage = first.message
-        askRequest = BriefAskRequest(reference: reference, quote: nil, openingQuestion: opener.message,
-                                     answerChoices: Array(choices.prefix(3)))
     }
 
     private func askAboutParagraph(_ index: Int) {

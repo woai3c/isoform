@@ -20,6 +20,9 @@ protocol ChatHubAPI: Sendable {
     func sendBriefMessage(chatID: String, text: String, reference: ChatBriefReference,
                           idempotencyKey: String) async throws -> ChatMessageAccepted
     func savedBriefAsk(reference: ChatBriefReference) async throws -> SavedBriefAsk?
+    /// The brief's conversation on the computer, asked by the brief's id when the phone has no reference of its own
+    /// (POST /briefs/{id}/conversation). The computer makes the main chat if needed and makes no brief.
+    func briefConversation(briefID: String) async throws -> BriefConversation
     /// The computer says the brief's opener first in the chat (POST /chats/{id}/brief-opener).
     func openBrief(chatID: String, reference: ChatBriefReference, idempotencyKey: String) async throws
     /// The computer quotes a paragraph from its delivered brief (POST /chats/{id}/brief-paragraph).
@@ -154,6 +157,10 @@ extension ProactiveActionHubAPI {
 
 extension ChatHubAPI {
     func savedBriefAsk(reference: ChatBriefReference) async throws -> SavedBriefAsk? { nil }
+    /// A computer without the route answers 404, which the phone shows as it shows an unreachable computer.
+    func briefConversation(briefID: String) async throws -> BriefConversation {
+        throw HubRequestError.rejected(status: 404, message: "")
+    }
     func stopBriefAsk(chatID: String, turnID: String, idempotencyKey: String) async throws -> Bool {
         throw HubRequestError.rejected(status: 404, message: "")
     }
@@ -217,6 +224,10 @@ extension HubChannel: ChatHubAPI {
                                         topicID: topicID, message: message)
         } else { return nil }
         return try await perform(route).payload(SavedBriefAskPayload.self).answer
+    }
+    func briefConversation(briefID: String) async throws -> BriefConversation {
+        guard Identifiers.isSafeBriefID(briefID) else { throw HubRequestError.invalidIdentifier }
+        return try await perform(.write(path: "/briefs/\(briefID)/conversation", body: "{}")).payload(BriefConversation.self)
     }
     func chats(limit: Int) async throws -> [ChatSummaryView] {
         try await perform(.chats(limit: limit)).payload(ChatListPayload.self).chats
@@ -354,6 +365,14 @@ extension HubChannel: ChatHubAPI {
         }
         return try response.payload(type)
     }
+}
+
+/// The computer's answer to "Talk about this brief" when the phone asked by the brief's id: the revision the
+/// conversation belongs to and the main chat it lives in. It carries no brief words.
+struct BriefConversation: Decodable, Equatable, Sendable {
+    let briefId: String
+    let briefVersion: String
+    let chatId: String
 }
 
 /// The computer's answer to "Talk about this brief": its opener is in the chat.

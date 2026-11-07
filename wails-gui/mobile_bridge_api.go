@@ -362,6 +362,11 @@ func (bridge *mobileBridge) handleAuthorized(w http.ResponseWriter, r *http.Requ
 				return
 			}
 			bridge.serveBriefReceived(w, r, device, mobilePathSegments(path)[1])
+		case "POST /briefs/*/conversation":
+			if !mobileRequireScope(w, device, mobileScopeChatWrite) || !mobileRequireScope(w, device, mobileScopeBriefRead) {
+				return
+			}
+			bridge.serveBriefConversation(w, r, device, mobilePathSegments(path)[1])
 		case "GET /goals/*":
 			if !mobileRequireScope(w, device, mobileScopeGoalsRead) {
 				return
@@ -440,6 +445,8 @@ func mobileRouteFamily(method, path string) string {
 		return "GET /briefs/*/audio"
 	case len(parts) == 3 && parts[0] == "briefs" && parts[2] == "received" && method == http.MethodPost:
 		return "POST /briefs/*/received"
+	case len(parts) == 3 && parts[0] == "briefs" && parts[2] == "conversation" && method == http.MethodPost:
+		return "POST /briefs/*/conversation"
 	case len(parts) == 3 && parts[0] == "briefs" && parts[2] == "week-intent" && method == http.MethodPost:
 		return "POST /briefs/*/week-intent"
 	case len(parts) == 3 && parts[0] == "briefs" && parts[2] == "week-decline" && method == http.MethodGet:

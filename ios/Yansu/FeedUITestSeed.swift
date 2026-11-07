@@ -133,6 +133,10 @@ enum FeedUITestSeed {
             ("deliverables", item("The Q3 outline is ready", "Drafted from your notes. Open it on your computer.", "deliverable", "d-9")),
         ])
         brief.narrative = wordsParagraphs.map { BriefParagraph(text: $0) }
+        // "Talk about this brief" frames: a refusal or an older computer is asked about a brief with no reference.
+        if ["refused", "too-old"].contains(ProcessInfo.processInfo.environment["YANSU_UITEST_BRIEF_TALK"]) {
+            brief.conversationKey = nil
+        }
         return brief
     }
 

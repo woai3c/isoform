@@ -62,6 +62,14 @@ private actor BriefConversationHub: ChatHubAPI {
         if fails { throw HubRequestError.conflict(message: "This brief changed. Refresh and try again.") }
         return ChatMessageAccepted(turnId: "turn", seq: 1)
     }
+    var conversationAsked: [String] = []
+    var conversationFailure: HubRequestError?
+    func setConversationFailure(_ value: HubRequestError?) { conversationFailure = value }
+    func briefConversation(briefID: String) async throws -> BriefConversation {
+        conversationAsked.append(briefID)
+        if let conversationFailure { throw conversationFailure }
+        return BriefConversation(briefId: briefID, briefVersion: "revision-1", chatId: "main")
+    }
     var opened: [Sent] = []
     var openFailure: HubRequestError?
     func setOpenFailure(_ value: HubRequestError?) { openFailure = value }
@@ -130,8 +138,9 @@ final class BriefConversationTests: XCTestCase {
         ChatBriefReference(briefId: "2026-10-18-morning", briefVersion: version, cardId: card.id, cardMessage: card.message)
     }
     private func store(hub: BriefConversationHub, cache: ChatCache, journal: PendingWriteJournal,
-                       isRemote: @escaping @MainActor () -> Bool = { false }) -> ChatStore {
-        ChatStore(hub: hub, journal: journal, guardian: BriefConversationGuard(), presence: { true },
+                       isRemote: @escaping @MainActor () -> Bool = { false },
+                       presence: @escaping @Sendable () async throws -> Bool = { true }) -> ChatStore {
+        ChatStore(hub: hub, journal: journal, guardian: BriefConversationGuard(), presence: presence,
                   isPaired: { true }, cache: cache, isRemote: isRemote)
     }
     private func resources() throws -> (ChatCache, PendingWriteJournal) {
@@ -286,6 +295,128 @@ final class BriefConversationTests: XCTestCase {
         XCTAssertEqual(chat.takeReturnedDrafts(in: "main", appendingTo: ""), "")
         XCTAssertEqual(chat.composerDraft(in: "main").briefReference, brief().chatReference,
                        "the user's answer goes with the brief")
+    }
+
+    /// A brief the phone drew without a conversation reference is asked of the computer by its id; the computer's
+    /// revision then carries the opener and the user's answer. No brief is made on the phone.
+    func testTalkAboutABriefWithoutAReferenceAsksTheComputerForItsConversation() async throws {
+        let hub = BriefConversationHub()
+        let (cache, journal) = try resources()
+        let chat = store(hub: hub, cache: cache, journal: journal)
+        var unkeyed = brief()
+        unkeyed.conversationKey = nil
+        XCTAssertNil(unkeyed.chatReference)
+        let opened = await chat.openBriefConversation(unkeyed)
+        XCTAssertTrue(opened)
+        let asked = await hub.conversationAsked
+        XCTAssertEqual(asked, ["2026-10-18-morning"])
+        let requests = await hub.opened
+        XCTAssertEqual(requests.first?.reference, brief().chatReference)
+        XCTAssertNil(chat.notice)
+    }
+
+    /// With the computer unreachable, Talk says so in the one line and opens nothing.
+    func testTalkAboutABriefWithoutAReferenceSaysTheComputerIsBackWhenItCannotBeReached() async throws {
+        let hub = BriefConversationHub()
+        let (cache, journal) = try resources()
+        let chat = store(hub: hub, cache: cache, journal: journal)
+        await hub.setConversationFailure(.noAnswer)
+        var unkeyed = brief()
+        unkeyed.conversationKey = nil
+        let opened = await chat.openBriefConversation(unkeyed)
+        XCTAssertFalse(opened)
+        XCTAssertEqual(chat.notice, BriefConversationCopy.unavailable)
+        let requests = await hub.opened
+        XCTAssertTrue(requests.isEmpty, "no opener is posted while the computer is away")
+    }
+
+    /// The computer's answer decides the one line under Talk. A gate refusal and a brief the computer does not
+    /// hold both say the conversation will not open, with no reason. Only a route an older computer lacks says
+    /// to update it; a computer that cannot be reached says it is away.
+    func testTheComputersAnswerDecidesTheLineUnderTalk() async throws {
+        let hub = BriefConversationHub()
+        let (cache, journal) = try resources()
+        let chat = store(hub: hub, cache: cache, journal: journal)
+        var unkeyed = brief()
+        unkeyed.conversationKey = nil
+        let cases: [(HubRequestError, String)] = [
+            (.conflict(message: "This brief changed. Refresh and try again."), BriefConversationCopy.gateRefused),
+            (.rejected(status: 404, message: "brief not found"), BriefConversationCopy.gateRefused),
+            (.rejected(status: 404, message: "mobile route not found"), BriefConversationCopy.computerTooOld),
+            (.rejected(status: 404, message: ""), BriefConversationCopy.computerTooOld),
+            (.noAnswer, BriefConversationCopy.unavailable),
+        ]
+        for (failure, line) in cases {
+            await hub.setConversationFailure(failure)
+            let resolved = await chat.briefConversationReference(for: unkeyed)
+            XCTAssertNil(resolved.reference, "\(failure)")
+            XCTAssertEqual(resolved.notice, line, "\(failure)")
+        }
+        XCTAssertNotEqual(BriefConversationCopy.computerTooOld, BriefConversationCopy.unavailable)
+    }
+
+    /// A brief with a reference and an unreachable computer: Talk gives the one line and opens no sheet, and makes
+    /// no route call.
+    func testTalkWithAReferenceAndOfflineGivesTheLineAndOpensNoSheet() async throws {
+        let hub = BriefConversationHub()
+        let (cache, journal) = try resources()
+        let chat = store(hub: hub, cache: cache, journal: journal, presence: { false })
+        let resolved = await chat.resolveTalkReference(for: brief())
+        XCTAssertNil(resolved.reference)
+        XCTAssertEqual(resolved.notice, BriefConversationCopy.unavailable)
+        let asked = await hub.conversationAsked
+        XCTAssertTrue(asked.isEmpty)
+        let opened = await hub.opened
+        XCTAssertTrue(opened.isEmpty)
+    }
+
+    /// A brief with a reference and a reachable computer keeps its reference and makes no route call (an older
+    /// computer keeps Talk).
+    func testTalkWithAReferenceAndOnlineMakesNoRouteCall() async throws {
+        let hub = BriefConversationHub()
+        let (cache, journal) = try resources()
+        let chat = store(hub: hub, cache: cache, journal: journal, presence: { true })
+        let resolved = await chat.resolveTalkReference(for: brief())
+        XCTAssertEqual(resolved.reference, brief().chatReference)
+        XCTAssertNil(resolved.notice)
+        let asked = await hub.conversationAsked
+        XCTAssertTrue(asked.isEmpty, "a brief with a reference makes no route call")
+    }
+
+    /// A brief without a reference still asks the computer by its id when the computer is reachable.
+    func testTalkWithoutAReferenceStillAsksByIdWhenOnline() async throws {
+        let hub = BriefConversationHub()
+        let (cache, journal) = try resources()
+        let chat = store(hub: hub, cache: cache, journal: journal, presence: { true })
+        var unkeyed = brief()
+        unkeyed.conversationKey = nil
+        let resolved = await chat.resolveTalkReference(for: unkeyed)
+        XCTAssertEqual(resolved.reference, brief().chatReference)
+        let asked = await hub.conversationAsked
+        XCTAssertEqual(asked, ["2026-10-18-morning"])
+    }
+
+    /// An answer that never comes counts as unreachable, so Talk does not hang.
+    func testTalkWithAReferenceTreatsASilentComputerAsUnreachable() async throws {
+        let hub = BriefConversationHub()
+        let (cache, journal) = try resources()
+        let chat = store(hub: hub, cache: cache, journal: journal, presence: {
+            try await Task.sleep(nanoseconds: 5_000_000_000)
+            return true
+        })
+        let resolved = await chat.resolveTalkReference(for: brief(), timeout: .milliseconds(100))
+        XCTAssertNil(resolved.reference)
+        XCTAssertEqual(resolved.notice, BriefConversationCopy.unavailable)
+    }
+
+    /// Talk gives way to its line when the phone already knows the computer is away, or a tap found it unreachable.
+    /// A refusal or an older computer keeps the button, so those lines never replace it.
+    func testTheUnreachableLineReplacesTalkOnlyWhenTheComputerIsAway() {
+        XCTAssertTrue(BriefCardsView.talkReplacedByLine(knownAway: true, tapLine: nil))
+        XCTAssertTrue(BriefCardsView.talkReplacedByLine(knownAway: false, tapLine: BriefConversationCopy.unavailable))
+        XCTAssertFalse(BriefCardsView.talkReplacedByLine(knownAway: false, tapLine: nil))
+        XCTAssertFalse(BriefCardsView.talkReplacedByLine(knownAway: false, tapLine: BriefConversationCopy.gateRefused))
+        XCTAssertFalse(BriefCardsView.talkReplacedByLine(knownAway: false, tapLine: BriefConversationCopy.computerTooOld))
     }
 
     func testSheetOpenerRetriesItsReceiptWithoutChangingChatDraft() async throws {

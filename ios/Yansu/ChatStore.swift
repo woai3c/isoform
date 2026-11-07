@@ -928,13 +928,67 @@ final class ChatStore: ObservableObject {
         return prefillMainChat(card.message, briefReference: reference)
     }
 
+    /// The brief's conversation reference for "Talk about this brief": the phone's own when it drew one. A brief
+    /// without one is asked of the computer by its id (POST /briefs/{id}/conversation); the computer makes the main
+    /// chat if needed and no brief. The notice is what to show when there is no reference; nil with no reference
+    /// means the answer is no longer current.
+    func briefConversationReference(for brief: MobileBriefV1) async -> (reference: ChatBriefReference?, notice: String?) {
+        if let reference = brief.chatReference { return (reference, nil) }
+        guard isPaired() else { return (nil, BriefConversationCopy.unavailable) }
+        let generation = pairingGeneration
+        do {
+            let answer = try await hub.briefConversation(briefID: brief.identifier)
+            guard isCurrent(generation) else { return (nil, nil) }
+            guard Identifiers.isSafePathID(answer.briefId), answer.briefId == brief.identifier,
+                  !answer.briefVersion.isEmpty else { return (nil, BriefConversationCopy.unavailable) }
+            return (ChatBriefReference(briefId: answer.briefId, briefVersion: answer.briefVersion), nil)
+        } catch {
+            guard isCurrent(generation) else { return (nil, nil) }
+            // The computer answered when it refused: a gate refusal (409), a brief it does not hold (404 "brief not
+            // found"), or a route an older computer lacks (any other 404). No answer at all says it is away.
+            switch error as? HubRequestError {
+            case .conflict?:
+                return (nil, BriefConversationCopy.gateRefused)
+            case .rejected(let status, let message)? where status == 404:
+                return (nil, message == "brief not found" ? BriefConversationCopy.gateRefused : BriefConversationCopy.computerTooOld)
+            default:
+                return (nil, BriefConversationCopy.unavailable)
+            }
+        }
+    }
+
+    /// Whether the computer can be reached for "Talk about this brief": the existing presence check, bounded. No
+    /// answer within the bound, or an answer still unknown, counts as unreachable, so Talk never hangs.
+    func talkReachable(timeout: Duration = .seconds(3)) async -> Bool {
+        let presence = checkPresence()
+        let answered = await withTaskGroup(of: Bool.self) { group -> Bool in
+            group.addTask { await presence.value; return true }
+            group.addTask { try? await Task.sleep(for: timeout); return false }
+            let first = await group.next() ?? false
+            group.cancelAll()
+            return first
+        }
+        return answered && hubOnline == true
+    }
+
+    /// The reference "Talk about this brief" opens with. A brief that already has a reference keeps it and makes
+    /// no route call, but the computer must be reachable first; without one, the computer is asked by the brief's id.
+    func resolveTalkReference(for brief: MobileBriefV1,
+                              timeout: Duration = .seconds(3)) async -> (reference: ChatBriefReference?, notice: String?) {
+        guard let reference = brief.chatReference else { return await briefConversationReference(for: brief) }
+        guard await talkReachable(timeout: timeout) else { return (nil, BriefConversationCopy.unavailable) }
+        return (reference, nil)
+    }
+
     /// "Talk about this brief", as on the computer: Isoform says the brief's opener first in the chat, and
     /// the box waits for the user's answer with the brief attached. Nothing the phone wrote is sent.
     @discardableResult
     func openBriefConversation(_ brief: MobileBriefV1) async -> Bool {
         let generation = pairingGeneration
-        guard let reference = brief.chatReference else {
-            notice = BriefConversationCopy.unavailable
+        let resolved = await briefConversationReference(for: brief)
+        guard isCurrent(generation) else { return false }
+        guard let reference = resolved.reference else {
+            notice = resolved.notice
             return false
         }
         if prepareMainChat() == nil { await refreshList() }
