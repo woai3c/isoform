@@ -1,6 +1,7 @@
 import { GetEngagementWeekSummary, GetMobileBriefHealth, usePageQueryRefresh, PageEventsOn as EventsOn } from '@/lib/page-queries';
 import { pageQueryCache } from '@/lib/query-cache';
 import { useCallback, useEffect, useRef, useState } from "react";
+import { appActive, onAppShown } from "@/lib/app-activity";
 import {
     type EngagementWeekSummary,
     type MobileBriefHealth,
@@ -29,7 +30,15 @@ export function useTodayStatus(enabled: boolean): TodayStatusData {
     // a stored brief) cannot leave the older answer on screen.
     const version = useRef(0);
 
+    // A locked or hidden window does not read Today's brief health: the request
+    // is held and runs once when the window is looked at again.
+    const held = useRef(false);
     const refresh = useCallback(() => {
+        if (!appActive()) {
+            held.current = true;
+            return;
+        }
+        held.current = false;
         const current = ++version.current;
         Promise.all([
             GetEngagementWeekSummary().catch(() => null),
@@ -43,6 +52,11 @@ export function useTodayStatus(enabled: boolean): TodayStatusData {
     }, []);
 
     usePageQueryRefresh(['GetEngagementWeekSummary', 'GetMobileBriefHealth'], refresh, enabled);
+
+    useEffect(() => {
+        if (!enabled) return;
+        return onAppShown(() => { if (held.current) refresh(); });
+    }, [enabled, refresh]);
 
     useEffect(() => {
         if (!enabled) return;

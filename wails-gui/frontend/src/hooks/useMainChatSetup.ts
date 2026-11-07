@@ -14,6 +14,7 @@ import {
     type MainChatSetupStep,
 } from '@/lib/wails-shim-app';
 import { refreshUserProfile, useUserProfile } from '@/hooks/useUserProfile';
+import { appActive, onAppShown } from '@/lib/app-activity';
 
 // The main chat's setup sequence. Go owns the order and the "never re-ask"
 // rule (GetMainChatSetup); this hook shows the step it names, and a macOS
@@ -80,8 +81,16 @@ export function useMainChatSetup(enabled: boolean): MainChatSetupApi {
         setState(next);
     }, []);
 
+    // A locked or hidden window does not read the setup state: the request is
+    // held and runs once when the window is looked at again.
+    const held = useRef(false);
     const refresh = useCallback(async (): Promise<MainChatSetupState | null | undefined> => {
         if (!liveRef.current) return;
+        if (!appActive()) {
+            held.current = true;
+            return;
+        }
+        held.current = false;
         const request = ++requestRef.current;
         const next = await GetMainChatSetup(setupLanguage()).catch(() => null);
         if (request !== requestRef.current) return;
@@ -110,6 +119,7 @@ export function useMainChatSetup(enabled: boolean): MainChatSetupApi {
             if (document.visibilityState === 'visible') onFocus();
         };
         void refresh();
+        const offShown = onAppShown(() => { if (held.current) void refresh(); });
         const unsubs = [
             EventsOn('permissions:changed', schedule),
             EventsOn('model-accounts:updated', schedule),
@@ -120,6 +130,7 @@ export function useMainChatSetup(enabled: boolean): MainChatSetupApi {
         return () => {
             if (timer) clearTimeout(timer);
             requestRef.current++;
+            offShown();
             unsubs.forEach((u) => u());
             window.removeEventListener('focus', onFocus);
             document.removeEventListener('visibilitychange', onVisible);
