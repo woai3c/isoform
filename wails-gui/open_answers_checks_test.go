@@ -174,6 +174,7 @@ func assertOneOpenAnswerCheckAt(t *testing.T, app *App, recordID string, at int6
 
 func TestCompleteOpenAnswerCheckInterimLifecycle(t *testing.T) {
 	app := mainChatTestApp(t)
+	pinOpenAnswerQuietOff(t, app)
 	now := time.Now().Truncate(time.Millisecond)
 	row := createOpenAnswerCheckFixture(t, app, "interim-lifecycle", now)
 	if err := app.ensureOpenAnswerCheck(row, ""); err != nil {
@@ -279,6 +280,7 @@ func TestOpenAnswerCheckLifecycleRecoveryExcludesRunningJob(t *testing.T) {
 
 func TestCompleteOpenAnswerCheckStripsResearchMeta(t *testing.T) {
 	app := mainChatTestApp(t)
+	pinOpenAnswerQuietOff(t, app)
 	now := time.Now().Truncate(time.Millisecond)
 	row := createOpenAnswerCheckFixture(t, app, "meta-result", now)
 	raw := withResearchMeta(
@@ -400,5 +402,19 @@ func TestRecoverExpiredMailOpenAnswerHoldsClosingLineDuringQuietHours(t *testing
 	released, err := app.store.GetOpenAnswer(ctx, expiredMail.ID)
 	if err != nil || released.State != "gave_up" || released.Posts != 1 || released.HeldTransition != "" {
 		t.Fatalf("released expired Mail record = %+v, %v", released, err)
+	}
+}
+
+// pinOpenAnswerQuietOff makes the quiet window empty for a test. Quiet hours
+// default to 21:00-09:00 and 23:00-07:00, so without this the tests held every
+// post when they ran at night, and passed by day: they must not depend on the
+// clock.
+func pinOpenAnswerQuietOff(t *testing.T, app *App) {
+	t.Helper()
+	svc := newEngagementService(app.store, nil, engagementDelivery{})
+	rules := svc.rulesRow()
+	rules.QuietStartMinutes, rules.QuietEndMinutes = 0, 0
+	if err := app.store.SetEngagementRules(t.Context(), rules); err != nil {
+		t.Fatal(err)
 	}
 }

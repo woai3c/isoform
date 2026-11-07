@@ -12,6 +12,7 @@ import (
 func newOpenAnswerObservationApp(t *testing.T) *App {
 	t.Helper()
 	app := mainChatTestApp(t)
+	pinOpenAnswerQuietOff(t, app)
 	app.activity = &activityMonitorState{store: newTimelineTestStore(t)}
 	return app
 }
