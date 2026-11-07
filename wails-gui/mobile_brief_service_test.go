@@ -218,8 +218,10 @@ func TestMobileBriefCatchUpOnStart(t *testing.T) {
 	if !ok || latest.BriefID != "2026-10-09-morning" || latest.Slot != "morning" {
 		t.Fatalf("latest = %+v (ok=%v)", latest, ok)
 	}
-	if latest.NarrativeStatus != "unavailable" {
-		t.Fatalf("narrativeStatus = %q, want unavailable without the native runner", latest.NarrativeStatus)
+	// Without the native runner no model text is written. The brief still opens with its
+	// template sentence (design R74), so the status is "skipped" when nothing was picked.
+	if latest.NarrativeStatus == "ok" {
+		t.Fatalf("narrativeStatus = %q, want model text absent without the native runner", latest.NarrativeStatus)
 	}
 	if rows := svc.ListMobileBriefs(10); len(rows) != 1 || rows[0].BriefID != latest.BriefID {
 		t.Fatalf("list = %+v", rows)
@@ -560,6 +562,7 @@ func TestMobileBriefStopWaitsForTodayRefresh(t *testing.T) {
 func TestMobileBriefStopWaitsForGeneratedAudio(t *testing.T) {
 	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(7, 0)}
 	svc, _ := newTestMobileBriefService(t, clock)
+	svc.compose = testModelCompose // only model text is read aloud (design R74)
 	entered, release := make(chan struct{}), make(chan struct{})
 	var enteredOnce sync.Once
 	svc.speaker = fakeSpeaker("en", testWAV(1), nil)

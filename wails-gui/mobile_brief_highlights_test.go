@@ -95,9 +95,11 @@ func TestMobileBriefHighlightsOrderAcrossPromptTemplateSpeechAndJSON(t *testing.
 			texts = append(texts, p.Text)
 			spokenTexts = append(spokenTexts, normalizeBriefText(p.Text, lang, mobileBriefTextReference(brief), true))
 		}
-		if spoken := mobileBriefSpokenText(brief, mobileBriefVoiceLang(lang)); spoken != strings.Join(spokenTexts, "\n\n") {
-			t.Fatalf("speech changed the written order or length: %q", spoken)
+		// A template is never spoken (design R74): the written order stands, and nothing is read aloud.
+		if spoken := mobileBriefSpokenText(brief, mobileBriefVoiceLang(lang)); spoken != "" {
+			t.Fatalf("a template was spoken: %q", spoken)
 		}
+		_ = spokenTexts
 		for _, held := range []string{"09:30", "08:00", "10:00", "09:15", "07:45", "08:15", "PRIVATE_WAITING_DETAIL", "PRIVATE_BROWSING_LIST", "PRIVATE_FILE_LIST"} {
 			if strings.Contains(prompt+strings.Join(texts, ""), held) {
 				t.Fatalf("held-back text returned: %s", held)

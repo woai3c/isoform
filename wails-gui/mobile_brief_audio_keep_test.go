@@ -33,6 +33,16 @@ func audioKeepRig(t *testing.T) (*handoffTestRig, *mobileBriefService, *fakeMobi
 		return testWAV(2), nil
 	}
 	svc.speaker = speaker
+	// A recording is made from model text only (design R74), and only when the model text
+	// reaches the 100-word publication floor, and fits the 600-byte paragraph bound speech reads;
+	// the reply cites its evidence, as a model brief does.
+	svc.compose = func(_ context.Context, _ *App, brief MobileBriefV1, _ []MobileBriefCard) ([]MobileBriefPara, string, []mobileBriefCardWords) {
+		var refs []string
+		if len(brief.Evidence) > 0 {
+			refs = []string{brief.Evidence[0].Ref}
+		}
+		return []MobileBriefPara{{Text: "All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today.", Refs: refs}}, "ok", nil
+	}
 	brief, err := svc.generate(context.Background(), mobileBriefSlotMorning, mobileBriefReasonSchedule)
 	if err != nil {
 		t.Fatal(err)
@@ -248,26 +258,30 @@ func TestMobileBriefAudioIsReadAgainWhenTheTextChangesWhileSpeaking(t *testing.T
 		return testWAV(2), nil
 	}
 	svc.speaker = speaker
+	// A recording is made from model text only (design R74), and only when the model text
+	// reaches the 100-word publication floor, and fits the 600-byte paragraph bound speech reads;
+	// the reply cites its evidence, as a model brief does.
+	svc.compose = func(_ context.Context, _ *App, brief MobileBriefV1, _ []MobileBriefCard) ([]MobileBriefPara, string, []mobileBriefCardWords) {
+		var refs []string
+		if len(brief.Evidence) > 0 {
+			refs = []string{brief.Evidence[0].Ref}
+		}
+		return []MobileBriefPara{{Text: "All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today. All clear, one quick check left today.", Refs: refs}}, "ok", nil
+	}
 	brief, err := svc.generate(context.Background(), mobileBriefSlotMorning, mobileBriefReasonSchedule)
 	if err != nil {
 		t.Fatal(err)
 	}
 	<-started
 	stored, _ := svc.store.load(brief.BriefID)
-	stored.Narrative[0].Text = "Highlights: Shipped the plan, and the notes."
+	stored.Narrative[0].Text = "Changed plan, " + stored.Narrative[0].Text
 	if err := svc.store.save(stored, svc.now()); err != nil {
 		t.Fatal(err)
 	}
 	close(release)
 	svc.wg.Wait()
-	// Each paragraph is read on its own: a reading starts at "Highlights".
-	var readings []string
-	for _, text := range spoken {
-		if strings.HasPrefix(text, "Highlights:") {
-			readings = append(readings, text)
-		}
-	}
-	if len(readings) != 2 || !strings.Contains(readings[1], "and the notes") {
+	// The voice reads the brief again as it reads now: its last reading starts with the changed text.
+	if len(spoken) == 0 || !strings.HasPrefix(spoken[len(spoken)-1], "Changed plan,") {
 		t.Fatalf("the voice did not read the brief again as it reads now: %q", spoken)
 	}
 	assertBriefPlays(t, rig, svc, brief.BriefID, "after the second reading")
@@ -290,26 +304,27 @@ func TestMobileBriefAudioBindingFollowsWhatTheVoiceReads(t *testing.T) {
 		return b
 	}
 	long := MobileBriefPara{Text: strings.TrimSpace(strings.Repeat("word ", mobileBriefMaxWords+20)), Refs: base.Narrative[0].Refs}
+	// A template is never spoken (design R74): only written text is read, so only its rows bind the audio.
 	for _, tc := range []struct {
 		name      string
 		narrative []MobileBriefPara
-		template  bool
+		spoken    bool
 	}{
-		{"written text", base.Narrative, false},
-		{"no written text", nil, true},
-		{"text too long to read aloud", []MobileBriefPara{long}, true},
+		{"written text", base.Narrative, true},
+		{"no written text", nil, false},
+		{"text too long to read aloud", []MobileBriefPara{long}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			b := base
 			b.Narrative = tc.narrative
-			before, template := mobileBriefSpeech(b, "en")
-			after, _ := mobileBriefSpeech(retitled(b), "en")
-			if template != tc.template || tc.template && before == after {
-				t.Fatalf("the fixture does not read the row as expected: template=%v %q", template, before)
+			before, _ := mobileBriefSpeech(b, "en")
+			if (before != "") != tc.spoken {
+				t.Fatalf("spoken=%v, want %v: %q", before != "", tc.spoken, before)
 			}
 			changed := mobileBriefAudioBinding(b, "en") != mobileBriefAudioBinding(retitled(b), "en")
-			if changed != tc.template {
-				t.Fatalf("a row the voice reads changed the binding = %v, want %v", changed, tc.template)
+			// Written text does not read the rows, and a template is not read, so no row changes the binding.
+			if changed {
+				t.Fatalf("a row changed the binding although the voice does not read rows")
 			}
 		})
 	}

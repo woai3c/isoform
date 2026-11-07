@@ -38,8 +38,10 @@ func TestMorningBriefRankedEditionSurvivesStorageAndNeverUsesTemplate(t *testing
 	if speech, template := mobileBriefSpeech(missing, "en"); speech != "" || template {
 		t.Fatalf("audio replaced the unavailable ranked brief: %q, template=%v", speech, template)
 	}
-	tooLong := []MobileBriefPara{{Text: strings.Repeat("x", mobileBriefNarrativeMaxBytes+1), Refs: brief.Narrative[0].Refs}}
-	if got := prepareMobileBriefNarrative(restored, tooLong, "en"); len(got) != 0 {
-		t.Fatal("budget substituted a template for an invalid ranked brief")
+	// Over-long model text is trimmed to whole sentences within the limit, never silenced or replaced by a template (design v1.0.1).
+	tooLong := []MobileBriefPara{{Text: strings.Repeat("Review the draft today. ", 40), Refs: brief.Narrative[0].Refs}}
+	got := prepareMobileBriefNarrative(restored, tooLong, "en")
+	if len(got) != 1 || len(got[0].Text) > mobileBriefNarrativeMaxBytes || !strings.HasSuffix(got[0].Text, "Review the draft today.") {
+		t.Fatalf("over-long ranked model text was not trimmed to whole sentences: %+v", got)
 	}
 }

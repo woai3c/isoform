@@ -20,11 +20,9 @@ func TestBriefHygieneShortBriefIsQuietAndNeverPublished(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if published.Load() != 0 || brief.NarrativeStatus != "quiet" {
-		t.Fatalf("short brief was posted: published=%d status=%s words=%d", published.Load(), brief.NarrativeStatus, mobileBriefNarrativeWords(brief.Narrative))
-	}
-	if len(brief.Narrative) != 0 || len(brief.Cards) != 0 || len(brief.Offers) != 0 || brief.Audio != nil {
-		t.Fatalf("quiet slot carries brief content: %+v", brief)
+	// A short template opening publishes: the word floor is for model text (design R74).
+	if published.Load() != 1 || brief.NarrativeStatus == "quiet" || len(brief.Narrative) == 0 {
+		t.Fatalf("a template opening was not published: published=%d status=%s words=%d", published.Load(), brief.NarrativeStatus, mobileBriefNarrativeWords(brief.Narrative))
 	}
 }
 

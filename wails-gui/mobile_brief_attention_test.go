@@ -540,9 +540,9 @@ func TestMobileBriefGoalSentenceStaysOutOfTheModel(t *testing.T) {
 	for _, paragraph := range paragraphs {
 		text += paragraph.Text + "\n"
 	}
-	// The template and its speech may name the goal; the model never sees it.
-	if !strings.Contains(text, "The goal is Customer interview notes.") || !strings.Contains(spoken, "The goal is Customer interview notes.") {
-		t.Fatalf("goal sentence missing:\n%s\n%s", text, spoken)
+	// The template may name the goal; the model never sees it. A template is never spoken (design R74).
+	if !strings.Contains(text, "The goal is Customer interview notes.") || spoken != "" {
+		t.Fatalf("goal sentence missing or a template was spoken:\n%s\nspoken=%q", text, spoken)
 	}
 	if prompt := mobileBriefTestPrompt(brief, "English"); strings.Contains(prompt, "ustomer interview notes") {
 		t.Fatal("the goal reached the narrative model")

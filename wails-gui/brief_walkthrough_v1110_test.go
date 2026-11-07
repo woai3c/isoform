@@ -338,12 +338,13 @@ func TestBriefV1111LegacyBriefOnScreenIsRemadeOnce(t *testing.T) {
 			t.Fatalf("the legacy line survived the remake: %+v", stored.Narrative)
 		}
 	}
-	if stored.NarrativeStatus == "ok" || syntheses == 0 || strings.Contains(spoken, "physio") || stored.Audio == nil || stored.Audio.Status != mobileBriefAudioStatusOK {
-		t.Fatalf("not remade with audio: status=%s syntheses=%d spoken=%q audio=%+v", stored.NarrativeStatus, syntheses, spoken, stored.Audio)
+	if syntheses != 0 || strings.Contains(spoken, "physio") || stored.Audio != nil {
+		t.Fatalf("a template opening was spoken (design R74): status=%s syntheses=%d spoken=%q audio=%+v", stored.NarrativeStatus, syntheses, spoken, stored.Audio)
 	}
 	shown := svc.app.mobileBriefWithCards(svc.app.mobileBriefForDelivery(stored))
-	if len(shown.Narrative) == 0 || shown.Audio == nil {
-		t.Fatalf("the remade brief does not read or play: %+v", shown)
+	// The remade brief shows its opening sentence and plays nothing: a template is never spoken (design R74).
+	if len(shown.Narrative) == 0 || shown.Audio != nil {
+		t.Fatalf("the remade brief should show its opening and not play: %+v", shown)
 	}
 	// Once: a later launch leaves it alone.
 	brief.BriefID = stored.BriefID

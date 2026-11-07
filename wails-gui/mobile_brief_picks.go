@@ -404,6 +404,32 @@ func mobileBriefPickMeetingDetail(detail string) string {
 
 // mobileBriefPickCounts is the log line's tally: picks by tier, in rank
 // order, never their text.
+// mobileBriefLogSummary is the one log line a stored brief gets: its picks by tier,
+// who wrote the words and how many sentences they are. It carries no words (design R74 v1.0.0).
+func mobileBriefLogSummary(brief MobileBriefV1) string {
+	writer := "none"
+	switch {
+	case brief.NarrativeStatus == "ok":
+		writer = "model"
+	case len(brief.Narrative) > 0:
+		writer = "template"
+	}
+	return fmt.Sprintf("[mobile-brief] stored %s brief: %s writer=%s sentences=%d",
+		brief.Slot, mobileBriefPickCounts(mobileBriefPicks(brief)), writer, mobileBriefSentenceCount(brief.Narrative))
+}
+
+// mobileBriefSentenceCount counts sentence ends: a full stop, question or
+// exclamation mark followed by a space or the end, or a Chinese full stop, question or exclamation mark.
+var mobileBriefSentenceMark = regexp.MustCompile(`[.!?](?:\s|$)|[。！？]`)
+
+func mobileBriefSentenceCount(paragraphs []MobileBriefPara) int {
+	n := 0
+	for _, paragraph := range paragraphs {
+		n += len(mobileBriefSentenceMark.FindAllStringIndex(paragraph.Text, -1))
+	}
+	return n
+}
+
 func mobileBriefPickCounts(picks []mobileBriefPick) string {
 	counts := map[string]int{}
 	for _, pick := range picks {

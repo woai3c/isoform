@@ -103,9 +103,9 @@ func TestBriefConversationFixtureVoice(t *testing.T) {
 					t.Fatal("missing closing accepted")
 				}
 				brief.Narrative = paras
-				spoken := mobileBriefSpokenText(brief, lang)
-				if !strings.Contains(spoken, normalizeBriefText(closing.Text, lang, mobileBriefTextReference(brief), true)) {
-					t.Fatal("speech lost closing")
+				// A template is never spoken (design R74): its closing is shown, not read aloud.
+				if spoken := mobileBriefSpokenText(brief, lang); spoken != "" {
+					t.Fatalf("a template was spoken: %q", spoken)
 				}
 				t.Logf("Example %s (%s):\n%s", f.Date, lang, strings.Join(func() []string {
 					var texts []string

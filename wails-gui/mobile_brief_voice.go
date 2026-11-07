@@ -641,7 +641,20 @@ func mobileBriefWithOwnVoice(brief MobileBriefV1) MobileBriefV1 {
 // is a vague Purpose's goal or map step, as its own sentence; the narrative
 // model never sees the template. Each group contributes one next step rather
 // than a source inventory.
+// mobileBriefNarrativeTemplate is the template a brief is written with when no
+// model text stands: its template paragraphs, or, when it has nothing to name, the
+// sentence its own counts make (design R74).
 func mobileBriefNarrativeTemplate(brief MobileBriefV1, languageName string) []MobileBriefPara {
+	if out := mobileBriefNarrativeTemplateOnly(brief, languageName); len(out) > 0 {
+		return out
+	}
+	return []MobileBriefPara{{Text: mobileBriefOpeningSentence(brief, languageName)}}
+}
+
+// mobileBriefNarrativeTemplateOnly is the template's paragraphs without the opening.
+// A brief withheld on delivery (withdrawn, Closed Eyes, a missing source) gets no
+// sentence (design R74), so delivery uses this.
+func mobileBriefNarrativeTemplateOnly(brief MobileBriefV1, languageName string) []MobileBriefPara {
 	// A pathological source title cannot consume the forward budget. Rebuild
 	// complete template actions with shorter titles rather than cutting prose.
 	for titleBytes := mobileBriefHighlightBytes; ; titleBytes /= 2 {
@@ -886,4 +899,112 @@ func mobileBriefTemplateItem(brief MobileBriefV1, item MobileBriefItem, section,
 	default:
 		return ""
 	}
+}
+
+// mobileBriefOpeningSentence is the sentence a brief opens with when its template
+// has nothing to name (design R74). It is built on the computer from the brief's
+// own counts, with no model and no network:
+//   - nothing in the brief: "A quiet evening. Nothing needs you."
+//   - items, none needing the person: "Nothing needs you this evening. Today had 8
+//     meetings, and 8 things moved." (at most the two largest sections, in the
+//     brief's order, never a zero)
+//   - items needing the person: "2 need you this evening." first.
+//
+// Digits in both languages; zh-CN has no space between a Chinese word and a number.
+func mobileBriefOpeningSentence(brief MobileBriefV1, languageName string) string {
+	zh := strings.Contains(strings.ToLower(languageName), "chinese") || strings.HasPrefix(strings.ToLower(languageName), "zh")
+	morning := brief.Slot == mobileBriefSlotMorning
+	need := mobileBriefOpeningNeed(brief)
+	counts := mobileBriefOpeningCounts(brief, zh)
+	if zh {
+		when := "今晚"
+		if morning {
+			when = "今早"
+		}
+		head := "安静的晚上。没有需要你处理的事。"
+		if morning {
+			head = "安静的早上。没有需要你处理的事。"
+		}
+		switch {
+		case len(counts) == 0 && need == 0:
+			return head
+		case need > 0:
+			return fmt.Sprintf("%d件事需要你处理。", need) + counts
+		default:
+			return when + "没有需要你处理的事。" + counts
+		}
+	}
+	slot := "evening"
+	if morning {
+		slot = "morning"
+	}
+	switch {
+	case len(counts) == 0 && need == 0:
+		return "A quiet " + slot + ". Nothing needs you."
+	case need > 0:
+		return fmt.Sprintf("%d need you this %s. ", need, slot) + counts
+	default:
+		return "Nothing needs you this " + slot + ". " + counts
+	}
+}
+
+// mobileBriefOpeningNeed counts what needs the person: decisions and reviews, but
+// not uncertain attendance (a sighting, not a fact; design R74 v1.0.1).
+func mobileBriefOpeningNeed(brief MobileBriefV1) int {
+	n := len(brief.Sections.Decide)
+	for _, item := range brief.Sections.Review {
+		if item.Kind != mobileBriefAttendanceSource {
+			n++
+		}
+	}
+	return n
+}
+
+// mobileBriefOpeningCounts is the count sentence: at most two countable sections,
+// never a zero, in the brief's own order. Meetings are calendar facts ("Your calendar
+// had 8 meetings today"); sightings (noticed) are never counted.
+func mobileBriefOpeningCounts(brief MobileBriefV1, zh bool) string {
+	type count struct {
+		n     int
+		en    func(n int) string
+		zhFmt func(n int) string
+	}
+	rows := []count{
+		{len(brief.Sections.Meetings), func(n int) string { return fmt.Sprintf("Your calendar had %d meetings today", n) },
+			func(n int) string { return fmt.Sprintf("你的日历今天有%d场会议", n) }},
+		{len(brief.Sections.Moved), func(n int) string { return fmt.Sprintf("%d things moved", n) },
+			func(n int) string { return fmt.Sprintf("%d件事推进了", n) }},
+		{len(brief.Sections.Doing), func(n int) string { return fmt.Sprintf("%d things in progress", n) },
+			func(n int) string { return fmt.Sprintf("%d件事在进行", n) }},
+		{len(brief.Sections.Learned), func(n int) string { return fmt.Sprintf("%d things learned", n) },
+			func(n int) string { return fmt.Sprintf("%d件事学到了", n) }},
+		{len(brief.Sections.Schedules), func(n int) string { return fmt.Sprintf("%d schedules", n) },
+			func(n int) string { return fmt.Sprintf("%d个日程", n) }},
+	}
+	var shown []int
+	for i, row := range rows {
+		if row.n > 0 {
+			shown = append(shown, i)
+		}
+	}
+	sort.SliceStable(shown, func(a, b int) bool { return rows[shown[a]].n > rows[shown[b]].n })
+	if len(shown) > 2 {
+		shown = shown[:2]
+	}
+	sort.Ints(shown)
+	if len(shown) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(shown))
+	for _, i := range shown {
+		if zh {
+			parts = append(parts, rows[i].zhFmt(rows[i].n))
+		} else {
+			parts = append(parts, rows[i].en(rows[i].n))
+		}
+	}
+	if zh {
+		return strings.Join(parts, "，") + "。"
+	}
+	return strings.Join(parts, ", and ") + "."
 }

@@ -40,7 +40,7 @@ func fakeSpeaker(lang string, wav []byte, synthErr error) mobileBriefSpeaker {
 }
 
 func TestMobileBriefSpokenTextPrefersNarrativeAndFallsBackToPlan(t *testing.T) {
-	brief := MobileBriefV1{Slot: "morning", Narrative: []MobileBriefPara{{Text: " First paragraph. "}, {Text: "Second."}}}
+	brief := MobileBriefV1{Slot: "morning", NarrativeStatus: "ok", Narrative: []MobileBriefPara{{Text: " First paragraph. "}, {Text: "Second."}}}
 	if got := mobileBriefSpokenText(brief, "en"); got != "First paragraph.\n\nSecond." {
 		t.Fatalf("narrative text = %q", got)
 	}
@@ -48,18 +48,13 @@ func TestMobileBriefSpokenTextPrefersNarrativeAndFallsBackToPlan(t *testing.T) {
 	if got := mobileBriefSpokenText(empty, "en"); got != "" {
 		t.Fatalf("an empty brief must say nothing, got %q", got)
 	}
+	// A template is never spoken (design R74): the plan rows that used to be read aloud stay silent.
 	brief = buildMobileBriefV1(mobileBriefGoldenInput())
-	en := mobileBriefSpokenText(brief, "en")
-	// Chat review v1.0.4 #5 keeps a commitment's name in the spoken brief.
-	if !strings.Contains(en, "Book the offsite room") || !strings.Contains(en, "Want me to") || strings.ContainsAny(en, "“”()") {
-		t.Fatalf("English fallback = %q", en)
+	if en := mobileBriefSpokenText(brief, "en"); en != "" {
+		t.Fatalf("a template was spoken: %q", en)
 	}
-	if strings.Contains(en, "things moved") || strings.Contains(en, "in this brief") {
-		t.Fatal("the fallback must help review and plan, not count source rows")
-	}
-	zh := mobileBriefSpokenText(brief, "zh")
-	if !strings.Contains(zh, "仍在你的计划中") || !strings.Contains(zh, "要我") {
-		t.Fatalf("Chinese fallback = %q", zh)
+	if zh := mobileBriefSpokenText(brief, "zh"); zh != "" {
+		t.Fatalf("a template was spoken in zh: %q", zh)
 	}
 	long := MobileBriefV1{Narrative: []MobileBriefPara{{Text: strings.Repeat("词", 4050)}}}
 	if got := mobileBriefSpokenText(long, "zh"); got != "" {
@@ -119,7 +114,7 @@ func TestWAVDurationSeconds(t *testing.T) {
 
 func TestRenderMobileBriefAudioStoresWavBesideTheBrief(t *testing.T) {
 	dir := t.TempDir()
-	brief := MobileBriefV1{BriefID: "2026-10-09-morning", Slot: "morning", Narrative: []MobileBriefPara{{Text: "Hello."}}}
+	brief := MobileBriefV1{BriefID: "2026-10-09-morning", Slot: "morning", NarrativeStatus: "ok", Narrative: []MobileBriefPara{{Text: "Hello."}}}
 	file, ok, status := renderMobileBriefAudio(context.Background(), fakeSpeaker("en", testWAV(1.5), nil), dir, brief)
 	if !ok || status != mobileBriefAudioStatusOK {
 		t.Fatalf("render failed: %v %q", ok, status)
@@ -144,7 +139,7 @@ func TestRenderMobileBriefAudioStoresWavBesideTheBrief(t *testing.T) {
 
 func TestRenderMobileBriefAudioFallsBackGracefully(t *testing.T) {
 	dir := t.TempDir()
-	brief := MobileBriefV1{BriefID: "2026-10-09-morning", Slot: "morning", Narrative: []MobileBriefPara{{Text: "Hello."}}}
+	brief := MobileBriefV1{BriefID: "2026-10-09-morning", Slot: "morning", NarrativeStatus: "ok", Narrative: []MobileBriefPara{{Text: "Hello."}}}
 
 	noVoice := fakeSpeaker("en", testWAV(1), nil)
 	synthCalls := 0
@@ -181,6 +176,7 @@ func TestRenderMobileBriefAudioFallsBackGracefully(t *testing.T) {
 func TestMobileBriefServiceStoresAudioAndServesIt(t *testing.T) {
 	clock := &fakeMobileBriefClock{now: mobileBriefTestDay(7, 0)}
 	svc, _ := newTestMobileBriefService(t, clock)
+	svc.compose = testModelCompose // model text, as a model brief has (design R74)
 	svc.speaker = fakeSpeaker("en", testWAV(2), nil)
 	svc.gather = func(_ context.Context, slot string, windowStart, asOf time.Time) (mobileBriefInput, error) {
 		return mobileBriefInput{Slot: slot, WindowStart: windowStart, AsOf: asOf, Location: time.UTC,
@@ -228,6 +224,7 @@ func TestMobileBriefServiceStoresModelLeadAndDropsAudioAfterWithdrawal(t *testin
 	now := time.Date(2026, 10, 23, 18, 5, 0, 0, time.UTC)
 	clock := &fakeMobileBriefClock{now: now}
 	svc, _ := newTestMobileBriefService(t, clock)
+	svc.compose = testModelCompose // model text, as a model brief has (design R74)
 	app := svc.app
 	ctx := context.Background()
 	activity, err := NewActivityStore(filepath.Join(t.TempDir(), "activity"))
@@ -407,7 +404,7 @@ func TestMobileBriefMissingVoiceWaitsForSetupConfirmation(t *testing.T) {
 				syntheses.Add(1)
 				return testWAV(1), nil
 			}
-			brief := MobileBriefV1{BriefID: "2026-10-09-morning", Narrative: []MobileBriefPara{{Text: "Hello."}}}
+			brief := MobileBriefV1{BriefID: "2026-10-09-morning", NarrativeStatus: "ok", Narrative: []MobileBriefPara{{Text: "Hello."}}}
 			for attempt := 0; attempt < 2; attempt++ {
 				file, ok, status := renderMobileBriefAudio(t.Context(), speaker, t.TempDir(), brief)
 				if ok || status != "no voice installed" || file.Audio.Bytes != 0 {

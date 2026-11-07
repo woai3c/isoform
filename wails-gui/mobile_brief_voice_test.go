@@ -501,6 +501,8 @@ func TestMobileBriefAssemblyUsesOwnVoiceAndKeepsWorkNames(t *testing.T) {
 			t.Fatalf("offer needs voice repair: clean=%v before=%q after=%q", clean, text, rewritten)
 		}
 	}
+	// Only the model's ok text is spoken (design R74): the assembled brief is model text, so it reads aloud.
+	assembled.NarrativeStatus = "ok"
 	spoken := mobileBriefSpokenText(assembled, "en")
 	for _, want := range []string{"on your computer", "Mac 1.0.41 is public", "Your Mac setup"} {
 		if !strings.Contains(spoken, want) {
@@ -527,8 +529,14 @@ func TestMobileBriefNarrativeTemplateQualifiesAttendance(t *testing.T) {
 			paragraphs := mobileBriefNarrativeTemplate(brief, "English")
 			// Today review v1.1.6 allows uncertain attendance to be omitted.
 			if tc.state == "unknown" {
-				if len(paragraphs) != 0 {
-					t.Fatalf("uncertain attendance was not omitted: %+v", paragraphs)
+				// Uncertain attendance is never counted or named; with nothing else to say the brief opens with the quiet sentence (design v1.0.1).
+				for _, p := range paragraphs {
+					if strings.Contains(p.Text, "Team sync") || strings.Contains(p.Text, "tell whether") {
+						t.Fatalf("uncertain attendance was named: %+v", paragraphs)
+					}
+				}
+				if len(paragraphs) != 1 || paragraphs[0].Text != mobileBriefOpeningSentence(brief, "English") {
+					t.Fatalf("uncertain attendance did not leave only the opening: %+v", paragraphs)
 				}
 				if prompt := mobileBriefTestPrompt(brief, "English"); strings.Contains(prompt, "Team sync") {
 					t.Fatal("past attendance reached the prompt")
@@ -621,8 +629,17 @@ func TestMobileBriefNarrativePeopleAreBoundedContextOnly(t *testing.T) {
 		t.Fatalf("people context reached the prompt:\n%s", prompt)
 	}
 	brief.Sections = MobileBriefSections{People: brief.Sections.People}
-	if paragraphs, status, _ := composeMobileBriefNarrative(context.Background(), nil, brief, nil); len(paragraphs) != 0 || status != "skipped" {
-		t.Fatalf("sightings alone created a brief: %+v %s", paragraphs, status)
+	// Sightings are never counted or named; with nothing else the brief opens with the quiet sentence (design v1.0.1).
+	paragraphs, status, _ := composeMobileBriefNarrative(context.Background(), nil, brief, nil)
+	if status != "skipped" || len(paragraphs) != 1 || paragraphs[0].Text != mobileBriefOpeningSentence(brief, "English") {
+		t.Fatalf("sightings alone did not leave only the quiet opening: %+v %s", paragraphs, status)
+	}
+	for _, p := range paragraphs {
+		for _, name := range []string{"Dana", "Priya", "Chen", "Mei", "Private mail subject"} {
+			if strings.Contains(p.Text, name) {
+				t.Fatalf("a sighting was named in the brief: %q", p.Text)
+			}
+		}
 	}
 }
 

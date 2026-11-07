@@ -161,7 +161,7 @@ func (a *App) mobileBriefWithTemplate(brief MobileBriefV1) MobileBriefV1 {
 		return brief
 	}
 	language := a.currentUILanguageName()
-	brief.Narrative = mobileBriefNarrativeTemplate(brief, language)
+	brief.Narrative = mobileBriefNarrativeTemplateOnly(brief, language)
 	if len(brief.Narrative) == 0 {
 		return brief
 	}

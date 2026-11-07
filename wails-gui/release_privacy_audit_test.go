@@ -296,6 +296,7 @@ func TestReleaseAudioPublicationRejectsChangedSynthesisAtSameAsOf(t *testing.T) 
 			svc.app = nil
 			brief := buildMobileBriefV1(mobileBriefInput{Slot: mobileBriefSlotMorning, AsOf: now, Location: time.UTC})
 			brief.Narrative = []MobileBriefPara{{Text: "Original source synthesis", Refs: []string{"e1"}}}
+			brief.NarrativeStatus = "ok" // only model text is read aloud (design R74)
 			if err := svc.store.save(brief, now); err != nil {
 				t.Fatal(err)
 			}

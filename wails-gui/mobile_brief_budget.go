@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -94,11 +95,61 @@ func fitMobileBriefNarrative(brief MobileBriefV1, paragraphs []MobileBriefPara, 
 		if paragraph.Text == "" {
 			continue
 		}
-		if len(paragraph.Text) > mobileBriefNarrativeMaxBytes {
-			return nil, false
-		}
+		// Over-long text is trimmed to whole sentences, never silenced (design R74 v1.0.1).
+		paragraph.Text = mobileBriefTrimSentences(paragraph.Text, mobileBriefNarrativeMaxBytes)
 		out = append(out, paragraph)
 	}
 	out = trimMobileBriefNarrative(brief, out)
 	return out, mobileBriefNarrativeWords(out) <= mobileBriefMaxWords
+}
+
+// mobileBriefSentenceEnd splits text into sentences: each ends at a terminal mark
+// (a full stop only when a space or the end follows, so "1.5" stays whole).
+var mobileBriefSentenceEnd = regexp.MustCompile(`[^.!?。！？]*(?:[.!?。！？]+(?:\s|$)|[^.!?。！？]+$)`)
+
+// mobileBriefTrimSentences keeps whole sentences of text within limit bytes (design
+// R74 v1.0.1): over-long text is never cut mid-sentence and never silenced for length.
+// If even the first sentence is over the limit, it is cut at the last word boundary
+// that fits, the only cut that can leave the limit.
+func mobileBriefTrimSentences(text string, limit int) string {
+	text = strings.TrimSpace(text)
+	if len(text) <= limit {
+		return text
+	}
+	kept := ""
+	for _, sentence := range mobileBriefSentenceEnd.FindAllString(text, -1) {
+		sentence = strings.TrimSpace(sentence)
+		if sentence == "" {
+			continue
+		}
+		next := sentence
+		if kept != "" {
+			next = kept + " " + sentence
+		}
+		if len(next) > limit {
+			break
+		}
+		kept = next
+	}
+	if kept != "" {
+		return kept
+	}
+	cut := text[:limit]
+	if i := strings.LastIndexAny(cut, " \n\t"); i > 0 {
+		cut = cut[:i]
+	}
+	return strings.TrimSpace(cut)
+}
+
+// mobileBriefTrimParagraphs trims every paragraph to the per-paragraph limit, so the
+// shown words and the spoken words are the same trimmed text.
+func mobileBriefTrimParagraphs(paragraphs []MobileBriefPara) []MobileBriefPara {
+	out := make([]MobileBriefPara, 0, len(paragraphs))
+	for _, paragraph := range paragraphs {
+		paragraph.Text = mobileBriefTrimSentences(paragraph.Text, mobileBriefNarrativeMaxBytes)
+		if paragraph.Text != "" {
+			out = append(out, paragraph)
+		}
+	}
+	return out
 }

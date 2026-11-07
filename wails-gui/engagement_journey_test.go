@@ -251,6 +251,7 @@ func TestYourWeekSpeechKeepsConcreteClosingLast(t *testing.T) {
 			// This daily body fits by itself, but forces whole-paragraph
 			// trimming when the week and the closing are reserved: the last
 			// daily paragraph goes, the others stay.
+			brief.NarrativeStatus = "ok" // only the model's ok text is spoken (design R74)
 			brief.Narrative = []MobileBriefPara{
 				{Text: strings.Repeat("Review the plan. ", 16), Refs: closing.Refs},
 				{Text: strings.Repeat("Check the budget. ", 33), Refs: closing.Refs},

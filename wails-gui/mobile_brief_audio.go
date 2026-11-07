@@ -151,7 +151,8 @@ func mobileBriefSpeech(brief MobileBriefV1, lang string) (string, bool) {
 	if brief.YourWeek != nil {
 		return yourWeekSpeech(brief, lang), false
 	}
-	if brief.NarrativeStatus == "quiet" {
+	// A template opening is never spoken (design R74): only the model's ok text is.
+	if brief.NarrativeStatus != "ok" {
 		return "", false
 	}
 	narrative := make([]MobileBriefPara, 0, len(brief.Narrative))
@@ -171,12 +172,9 @@ func mobileBriefSpeech(brief MobileBriefV1, lang string) (string, bool) {
 			}
 		}
 	}
-	template := !fits || len(paragraphs) == 0
-	if template {
-		if brief.rankedEdition {
-			return "", false
-		}
-		paragraphs = mobileBriefNarrativeTemplate(brief, lang)
+	// A template is never spoken (design R74): with no model text that fits, nothing is read aloud.
+	if !fits || len(paragraphs) == 0 {
+		return "", false
 	}
 	for attempt := 0; attempt < 2; attempt++ {
 		var parts []string
@@ -189,8 +187,8 @@ func mobileBriefSpeech(brief MobileBriefV1, lang string) (string, bool) {
 			if brief.rankedEdition {
 				return "", false
 			}
-			paragraphs, template = mobileBriefNarrativeTemplate(brief, lang), true
-			continue
+			// Model text too long to read aloud is not replaced by a template (design R74).
+			return "", false
 		}
 		if len(brief.WeeklyRecap) > 0 {
 			weekly := append([]MobileBriefPara{}, brief.WeeklyRecap...)
@@ -216,7 +214,7 @@ func mobileBriefSpeech(brief MobileBriefV1, lang string) (string, bool) {
 			if mobileBriefNarrativeWords(fixed) > mobileBriefMaxWords {
 				// Neither the recap nor its final offers may be cut mid-thought.
 				// Keep the written brief when those fixed parts cannot fit audio.
-				return "", template
+				return "", false
 			}
 			paragraphs = trimMobileBriefNarrative(brief, append(daily, fixed...))
 			for len(paragraphs) > len(fixed) && mobileBriefNarrativeWords(paragraphs) > mobileBriefMaxWords {
@@ -238,11 +236,11 @@ func mobileBriefSpeech(brief MobileBriefV1, lang string) (string, bool) {
 			parts = append(parts, weekQuestion)
 		}
 		if mobileBriefWordCount(strings.Join(parts, " ")) > mobileBriefMaxWords {
-			return "", template
+			return "", false
 		}
-		return speechDisplayText(strings.Join(parts, "\n\n"), lang), template
+		return speechDisplayText(strings.Join(parts, "\n\n"), lang), false
 	}
-	return "", template
+	return "", false
 }
 
 func yourWeekSpeech(brief MobileBriefV1, lang string) string {

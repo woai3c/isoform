@@ -87,7 +87,7 @@ func TestNormalizeBriefText(t *testing.T) {
 func TestBriefSpeechPreparationAndSynthesisNormalizeTimes(t *testing.T) {
 	for _, language := range []string{"en", "zh-CN"} {
 		t.Run(language, func(t *testing.T) {
-			brief := MobileBriefV1{AsOf: "2026-10-17T18:00:00Z", Timezone: "UTC", Narrative: []MobileBriefPara{{Text: "Fri Oct 16, 6:00 PM; 1:30 PM. 1 h 33 min. 11:04 AM to 05:06 PM."}}}
+			brief := MobileBriefV1{AsOf: "2026-10-17T18:00:00Z", Timezone: "UTC", NarrativeStatus: "ok", Narrative: []MobileBriefPara{{Text: "Fri Oct 16, 6:00 PM; 1:30 PM. 1 h 33 min. 11:04 AM to 05:06 PM."}}}
 			var received string
 			speaker := fakeSpeaker(language, testWAV(1), nil)
 			speaker.synthesize = func(_ context.Context, _, text string) ([]byte, error) {

@@ -1229,6 +1229,10 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 	brief = mobileBriefWithOwnVoice(brief)
 	s.app.finishMobileBriefModelBindingFrom(ctx, &brief, modelBinding, sources)
 	brief = mobileBriefForPublication(brief)
+	// Over-long model text is trimmed to whole sentences after the word floor has judged the
+	// whole reply, so it is never silenced for its length; what is stored is what is shown and
+	// spoken (design R74 v1.0.1).
+	brief.Narrative = mobileBriefTrimParagraphs(brief.Narrative)
 	if s.app != nil && !mobileBriefStaticEmpty(brief) {
 		s.app.appendOpenAnswerBriefParagraph(ctx, &brief, windowStart, asOf, language)
 	}
@@ -1293,7 +1297,7 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 			}()
 		}
 	}
-	log.Printf("[mobile-brief] stored %s brief (narrative %s)", brief.Slot, brief.NarrativeStatus)
+	log.Print(mobileBriefLogSummary(brief))
 
 	// The spoken version follows in a second step, so the text brief and its
 	// notice never wait for synthesis, the encode or the upload. Stop cancels

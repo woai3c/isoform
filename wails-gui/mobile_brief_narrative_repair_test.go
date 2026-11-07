@@ -143,13 +143,20 @@ func TestMobileBriefWrittenBriefRetriesOnceWithTheReason(t *testing.T) {
 	if status != "unavailable" || len(paragraphs) == 0 {
 		t.Fatalf("status=%s paragraphs=%d", status, len(paragraphs))
 	}
-	line := logged.String()
-	if !strings.Contains(line, "[mobile-brief] morning brief: picks=3 meeting=2 due=0 waiting=0 follow_up=1 due_soon=0 own_work=0 goal=0 noticed=0 written=unavailable") {
-		t.Fatalf("log = %q", line)
+	// The composer logs no line of its own; the store step logs the one summary line (design R74 v1.0.0).
+	if line := logged.String(); strings.Contains(line, "[mobile-brief] morning brief:") {
+		t.Fatalf("the composer logged a per-outcome line: %q", line)
+	}
+	summary := mobileBriefLogSummary(MobileBriefV1{Slot: "morning", Sections: brief.Sections, Narrative: paragraphs, NarrativeStatus: status})
+	if !strings.Contains(summary, "writer=template sentences=") || !strings.Contains(summary, "stored morning brief:") {
+		t.Fatalf("summary = %q", summary)
+	}
+	if want := mobileBriefPickCounts(picks); want == "" || !strings.Contains(mobileBriefPickCounts(picks), "picks=3 meeting=2 due=0 waiting=0 follow_up=1") {
+		t.Fatalf("picks tally = %q", want)
 	}
 	for _, word := range []string{"Northwind", "Sam", "Wei"} {
-		if strings.Contains(line, word) {
-			t.Fatalf("the log carries item text: %q", line)
+		if strings.Contains(summary, word) {
+			t.Fatalf("the log carries item text: %q", summary)
 		}
 	}
 }

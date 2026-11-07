@@ -126,6 +126,7 @@ func TestTodayReadsDoNotWaitForAudioPublication(t *testing.T) {
 	now := mobileBriefTestDay(7, 15)
 	svc, _ := newTestMobileBriefService(t, &fakeMobileBriefClock{now: now})
 	svc.app = rig.app
+	svc.compose = testModelCompose // model text, as a model brief has (design R74)
 	if _, err := rig.handoffs.Save(handoff.Entry{ID: "h-morning", Title: "Shipped the plan", Source: "manual", Status: handoff.StatusCompleted}); err != nil {
 		t.Fatal(err)
 	}

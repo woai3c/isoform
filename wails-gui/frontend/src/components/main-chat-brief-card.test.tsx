@@ -25,6 +25,8 @@ const withWords = {
     narrative: [{ text: "Quiet day. Priya is waiting on your review." }],
     audio: { mime: "audio/wav", bytes: 10, durationSeconds: 90 },
 };
+// A brief with more than the card shows: Read it opens the second paragraph (design R40 v1.0.0).
+const withMore = { ...withWords, narrative: [...withWords.narrative, { text: "Review the launch notes before you sign off." }] };
 
 describe("MainChatBriefCard", () => {
     beforeEach(() => {
@@ -72,7 +74,7 @@ describe("MainChatBriefCard", () => {
         expect(await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" })).toBeInTheDocument();
     });
     it("shows the title and opening sentence, and Read it opens the brief in the card", async () => {
-        getByID.mockResolvedValue(view(withWords));
+        getByID.mockResolvedValue(view(withMore));
         const onReadAll = vi.fn();
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={onReadAll} meta={() => <span>From brief</span>} />);
         expect(await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" })).toBeInTheDocument();
@@ -85,8 +87,15 @@ describe("MainChatBriefCard", () => {
         expect(screen.queryByRole("button", { name: en.mainChat.card.button.readIt })).toBeNull();
     });
 
+    it("a quiet brief with nothing beyond the card shows no Read it (design R40 v1.0.0)", async () => {
+        getByID.mockResolvedValue(view({ ...withWords, audio: undefined, narrative: [{ text: "A quiet evening. Nothing needs you." }] }));
+        render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
+        expect(await screen.findByText("A quiet evening. Nothing needs you.")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: en.mainChat.card.button.readIt })).toBeNull();
+    });
+
     it("hides Play when the brief has no recording", async () => {
-        getByID.mockResolvedValue(view({ ...withWords, audio: undefined }));
+        getByID.mockResolvedValue(view({ ...withMore, audio: undefined }));
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
         await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" });
         expect(screen.queryByRole("button", { name: en.mainChat.card.button.hearIt })).toBeNull();
@@ -94,7 +103,7 @@ describe("MainChatBriefCard", () => {
     });
 
     it('does not carry a previous brief or its expanded state to another id', async () => {
-        getByID.mockResolvedValueOnce(view(withWords)).mockReturnValueOnce(new Promise(() => {}));
+        getByID.mockResolvedValueOnce(view(withMore)).mockReturnValueOnce(new Promise(() => {}));
         const component = render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
         fireEvent.click(await screen.findByRole('button', { name: 'Read it' }));
         component.rerender(<MainChatBriefCard briefId="brief-2" display={{ slot: 'morning', asOf: '2026-10-29T09:23:00Z', timezone: 'UTC' }} onOpenBrief={vi.fn()} />);
@@ -136,7 +145,7 @@ describe("MainChatBriefCard", () => {
     });
     it("Read it and Hear it appear only with the words; a held card has neither, and no reserved space (design, PR #646)", async () => {
         getByID.mockResolvedValueOnce(view({ ...withWords, narrative: [] }, 'store_unavailable'));
-        getByID.mockResolvedValueOnce(view(withWords));
+        getByID.mockResolvedValueOnce(view(withMore));
         const { container } = render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'evening', asOf: '2026-10-28T18:00:00Z', timezone: 'UTC' }} onOpenBrief={vi.fn()} meta={() => <span>From brief</span>} />);
         expect(await screen.findByRole('heading', { name: 'Evening brief · 6:00 PM' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: en.mainChat.card.button.readIt })).toBeNull();
@@ -167,7 +176,7 @@ describe("MainChatBriefCard", () => {
         expect(screen.queryByRole('alert')).toBeNull();
     });
     it("opens the week's brief on Today from Read it, since its sections are not in the card", async () => {
-        getByID.mockResolvedValue(view({ ...withWords, yourWeek: { start: '2026-10-26', end: '2026-11-01', lead: 'Your week' } } as never));
+        getByID.mockResolvedValue(view({ ...withMore, yourWeek: { start: '2026-10-26', end: '2026-11-01', lead: 'Your week' } } as never));
         const onOpenBrief = vi.fn();
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={onOpenBrief} />);
         await screen.findByText("Quiet day. Priya is waiting on your review.");
@@ -191,7 +200,7 @@ describe("MainChatBriefCard", () => {
     });
     it("a held card shows its title and time with no body and no error, and fills in when the store opens (R40)", async () => {
         getByID.mockResolvedValueOnce(view({ ...withWords, narrative: [] }, 'store_unavailable'));
-        getByID.mockResolvedValueOnce(view(withWords));
+        getByID.mockResolvedValueOnce(view(withMore));
         render(<MainChatBriefCard briefId="brief-1" onOpenBrief={vi.fn()} />);
         expect(await screen.findByRole("heading", { name: "Evening brief · 6:00 PM" })).toBeInTheDocument();
         expect(screen.queryByRole('alert')).toBeNull();

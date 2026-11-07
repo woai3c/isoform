@@ -84,9 +84,15 @@ func TestMobileBriefBudgetOversizedForwardUsesWholeTemplate(t *testing.T) {
 	original := []MobileBriefPara{{Text: strings.Repeat("Review the proposed scope. ", 150), Refs: brief.Sections.Decide[0].Refs}}
 	for _, language := range []string{"en", "zh-CN"} {
 		got := prepareMobileBriefNarrative(brief, original, language)
-		want := mobileBriefNarrativeTemplate(brief, language)
-		if !reflect.DeepEqual(got, want) || mobileBriefNarrativeWords(got) > mobileBriefMaxWords {
-			t.Fatalf("oversized forward work was sliced instead of using full actions: %+v", got)
+		// Over-long model text is trimmed to whole sentences within the limit (design R74 v1.0.1):
+		// never cut mid-sentence, never replaced by the template.
+		if len(got) == 0 || mobileBriefNarrativeWords(got) > mobileBriefMaxWords {
+			t.Fatalf("oversized model text was not trimmed to whole sentences: %+v", got)
+		}
+		for _, p := range got {
+			if len(p.Text) > mobileBriefNarrativeMaxBytes || !strings.HasSuffix(p.Text, ".") {
+				t.Fatalf("trimmed paragraph is over the limit or cut mid-sentence: %q", p.Text)
+			}
 		}
 		if err := validateMobileBriefNarrativeVoice(brief, got, language); err != nil {
 			t.Fatal(err)
@@ -106,8 +112,8 @@ func TestMobileBriefBudgetTemplatesAndSparseDays(t *testing.T) {
 				if mobileBriefNarrativeWords(got) > mobileBriefMaxWords {
 					t.Fatal("fallback exceeds reading budget")
 				}
-				if name == "empty" && len(got) != 0 {
-					t.Fatal("empty day was padded with unsupported content")
+				if name == "empty" && (len(got) != 1 || len(got[0].Text) == 0) {
+					t.Fatalf("empty day should open with exactly its one sentence (design R74): %+v", got)
 				}
 				if err := validateMobileBriefNarrativeVoice(brief, got, language); err != nil {
 					t.Fatal(err)
@@ -119,6 +125,7 @@ func TestMobileBriefBudgetTemplatesAndSparseDays(t *testing.T) {
 
 func TestMobileBriefBudgetSpeechExpansionAndEmptyLegacyParagraphs(t *testing.T) {
 	brief := mobileBriefVoiceFixture()
+	brief.NarrativeStatus = "ok" // only the model's ok text is spoken (design R74)
 	// The written form fits; spoken duration words expand beyond the cap.
 	refs := brief.Sections.Decide[0].Refs
 	brief.Narrative = []MobileBriefPara{
@@ -126,12 +133,14 @@ func TestMobileBriefBudgetSpeechExpansionAndEmptyLegacyParagraphs(t *testing.T) 
 		{Text: strings.Repeat("1 h 33 min. ", 22), Refs: refs},
 		{Text: strings.Repeat("1 h 33 min. ", 22), Refs: refs},
 	}
-	if got := mobileBriefSpokenText(brief, "en"); mobileBriefWordCount(got) > mobileBriefMaxWords || !strings.Contains(got, "Want me to") {
-		t.Fatalf("expanded speech must use complete bounded template actions: %q", got)
+	// Model text too long to read aloud is not replaced by a template, so nothing is
+	// spoken and nothing over the budget is spoken either (design R74).
+	if got := mobileBriefSpokenText(brief, "en"); got != "" {
+		t.Fatalf("over-long model text must not be spoken or replaced by a template: %q", got)
 	}
 	brief.Narrative = []MobileBriefPara{{Text: " \n "}}
-	if got := mobileBriefSpokenText(brief, "en"); !strings.Contains(got, "Want me to") {
-		t.Fatal("empty legacy paragraphs must use the source-backed fallback")
+	if got := mobileBriefSpokenText(brief, "en"); got != "" {
+		t.Fatalf("a template fallback was spoken (design R74): %q", got)
 	}
 	// Localization must not break the existing per-paragraph byte contract.
 	// "6 PM" is written "18:00" in Chinese, one byte longer.
@@ -139,8 +148,9 @@ func TestMobileBriefBudgetSpeechExpansionAndEmptyLegacyParagraphs(t *testing.T) 
 	if len(brief.Narrative[0].Text) > mobileBriefNarrativeMaxBytes {
 		t.Fatal("fixture must fit the original byte bound")
 	}
-	if _, fits := fitMobileBriefNarrative(brief, brief.Narrative, "zh-CN"); fits {
-		t.Fatal("the model caller must report unavailable when localization exceeds the wire byte limit")
+	// Over-long localized text is trimmed to whole sentences and kept, not reported unavailable (design R74 v1.0.1).
+	if out, _ := fitMobileBriefNarrative(brief, brief.Narrative, "zh-CN"); len(out) == 0 {
+		t.Fatal("over-long localized text was dropped instead of trimmed")
 	}
 	for _, paragraph := range prepareMobileBriefNarrative(brief, brief.Narrative, "zh-CN") {
 		if len(paragraph.Text) > mobileBriefNarrativeMaxBytes {

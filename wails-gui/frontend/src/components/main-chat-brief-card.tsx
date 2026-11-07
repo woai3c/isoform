@@ -113,7 +113,10 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead:
     // Not on a held, gated or failed card.
     const holdsItems = !!current && wordsWithheld === '' && !readError && Object.values(current.sections ?? {})
         .some((list) => Array.isArray(list) && list.length > 0);
-    const canRead = !reading && (paragraphs.length > 0 || (week && weekRows) || holdsItems);
+    // Read it shows only when what it opens has something beyond the card (design R40 v1.0.0):
+    // a second paragraph, items, a week's rows, or a paragraph the card clamps. A quiet brief has none.
+    const clampedLead = (paragraphs[0]?.length ?? 0) > 160;
+    const canRead = !reading && (paragraphs.length > 1 || clampedLead || (week && weekRows) || holdsItems);
 
     return (
         <div className="flex flex-col gap-2" data-testid="main-chat-brief-card" aria-busy={!current}>

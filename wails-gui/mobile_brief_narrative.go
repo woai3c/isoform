@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"sort"
 	"strings"
 	"time"
@@ -58,25 +57,13 @@ func composeMobileBriefNarrativeWithLeadAt(ctx context.Context, a *App, brief Mo
 	languageName := a.currentUILanguageName()
 	fallback := mobileBriefNarrativeTemplate(brief, languageName)
 	picks := mobileBriefPicks(brief)
-	outcome := func(status, check string) {
-		line := fmt.Sprintf("[mobile-brief] %s brief: %s written=%s", brief.Slot, mobileBriefPickCounts(picks), status)
-		if check != "" {
-			line += " check=" + check
-		}
-		log.Print(line)
-	}
-	if len(mobileBriefNarrativeInputEvidence(brief)) == 0 {
-		outcome("skipped", "")
+	// The writer gets the picks (design R74): picks and words follow one rule. Only
+	// a brief with nothing picked skips the model.
+	if len(picks) == 0 && len(mobileBriefDayItems(brief)) == 0 {
 		return fallback, "skipped", nil, "", ""
 	}
 	if ctx.Err() != nil || !mobileBriefNarrativeAvailable(a) {
-		outcome("unavailable", "")
 		return fallback, "unavailable", nil, "", ""
-	}
-	// Nothing worth saying and no day to describe: the template stands.
-	if len(picks) < mobileBriefPickMinimum && len(mobileBriefDayItems(brief)) == 0 {
-		outcome("skipped", "")
-		return fallback, "skipped", nil, "", ""
 	}
 	var week *MobileBriefWeek
 	if a != nil {
@@ -91,14 +78,8 @@ func composeMobileBriefNarrativeWithLeadAt(ctx context.Context, a *App, brief Mo
 		}
 		return a.validateMobileBriefQuestionHold(brief, paragraphs, now())
 	})
-	switch check {
-	case "":
-		outcome("ok", "")
+	if check == "" {
 		return paragraphs, "ok", words, weekLead, weekLeadFacts
-	case "model_call":
-		outcome("unavailable", check)
-	default:
-		outcome("template", check)
 	}
 	return fallback, "unavailable", nil, "", ""
 }

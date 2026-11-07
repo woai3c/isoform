@@ -247,7 +247,7 @@ func TestMobileBriefChiefLeavesPurposeCommitmentAliasesOut(t *testing.T) {
 						if !tc.chatReport && !tc.legacyChat {
 							want = 2 // Source-backed item plus the required closing offer.
 						}
-						if got := mobileBriefNarrativeTemplate(brief, language); len(got) != want {
+						if got := withoutOpening(mobileBriefNarrativeTemplate(brief, language)); len(got) != want {
 							t.Errorf("%s fallback: got %+v, want %d due-card reminders", language, got, want)
 						}
 					}
@@ -302,7 +302,7 @@ func TestMobileBriefChiefKeepsChatDedupAfterPurposeBudgetTruncation(t *testing.T
 			if prompt := mobileBriefTestPrompt(document, "English"); strings.Contains(prompt, legacy.Title) {
 				t.Fatal("truncated chat reminder returned to the prompt")
 			}
-			if paragraphs := mobileBriefNarrativeTemplate(document, "English"); len(paragraphs) != 0 {
+			if paragraphs := withoutOpening(mobileBriefNarrativeTemplate(document, "English")); len(paragraphs) != 0 {
 				t.Fatalf("truncated chat reminder returned to the template: %+v", paragraphs)
 			}
 		})

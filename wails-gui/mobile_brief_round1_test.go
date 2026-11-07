@@ -245,6 +245,11 @@ func TestBriefRound1SourceCollectionBudget(t *testing.T) {
 	}
 	t.Run("audio_patch", func(t *testing.T) {
 		a, _, svc, brief, now := round1TopicBrief(t, mobileBriefTestDay(8, 0))
+		// Only model text is read aloud (design R74): give the brief the model's reply.
+		brief.Narrative, brief.NarrativeStatus, _ = testModelCompose(t.Context(), nil, brief, nil)
+		if err := svc.store.save(brief, now); err != nil {
+			t.Fatal(err)
+		}
 		svc.speaker = fakeSpeaker("en", nil, nil)
 		svc.speaker.voiceReady = func(string) bool { return false }
 		svc.speaker.downloadVoice = func(context.Context, string) bool { return true }

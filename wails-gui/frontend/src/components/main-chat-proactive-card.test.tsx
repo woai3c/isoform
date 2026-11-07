@@ -106,7 +106,7 @@ function proactive(overrides: Record<string, unknown> = {}): StreamItem {
 function readyBrief(briefId: string) {
     return {
         briefId, slot: 'morning', asOf: '2026-10-28T13:50:00Z', timezone: 'UTC', narrativeStatus: 'ok',
-        narrative: [{ text: 'Good morning. Three meetings are scheduled.', refs: [] }],
+        narrative: [{ text: 'Good morning. Three meetings are scheduled.', refs: [] }, { text: 'Your first call is at nine.', refs: [] }],
         audio: { mime: 'audio/wav', bytes: 10, durationSeconds: 3 },
     } as never;
 }
