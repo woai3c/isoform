@@ -127,15 +127,19 @@ enum ComputerSleepReason: String, CaseIterable, Sendable {
             return [String(localized: "connection.sleepReason.batteryFloor.step"),
                     String(localized: "connection.sleepReason.picksUp")]
         case .lowPower: return [String(localized: "connection.sleepReason.lowPower.step")]
-        case .lidClosed: return [String(localized: "connection.sleepReason.lidClosed.step")]
+        case .lidClosed: return [String(localized: "connection.sleepReason.lidClosed.step"), String(localized: "connection.sleepReason.picksUp")]
         }
     }
 
     /// What Today tells the person to do while the computer is away (P147). A sleep with a known reason gets that
     /// reason's steps, so a closed lid reads "Open its lid." and not the generic line.
-    static func directions(for cause: TodayStore.ConnectionCause, reason: ComputerSleepReason?) -> String {
-        if cause == .sleeping, let reason { return reason.steps.joined(separator: " ") }
-        return cause.directions
+    static func directions(for cause: TodayStore.ConnectionCause, reason: ComputerSleepReason?, sentWaiting: Bool = false) -> String {
+        var text = cause == .sleeping ? (reason.map { $0.steps.joined(separator: " ") } ?? cause.directions) : cause.directions
+        // With something of the person's waiting to send, the line says it goes out too (P147).
+        if sentWaiting, !text.isEmpty {
+            text = String(text.dropLast()) + String(localized: "connection.sentWaiting")
+        }
+        return text
     }
 
     /// "Asleep since {time} · {detail}", or the plain title with the detail when the relay has no time.

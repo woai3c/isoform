@@ -25,3 +25,18 @@ final class TodayAwayDirectionsTests: XCTestCase {
                        TodayStore.ConnectionCause.shuttingDown.directions)
     }
 }
+
+extension TodayAwayDirectionsTests {
+    /// P147: the lid and battery lines end with Isoform picking up, and the waiting clause appears only with something to send.
+    func testTheLidLineKeepsTheSentenceAboutPickingUp() {
+        XCTAssertTrue(ComputerSleepReason.directions(for: .sleeping, reason: .lidClosed).hasSuffix(String(localized: "connection.sleepReason.picksUp")))
+    }
+
+    func testTheWaitingClauseAppearsOnlyWhenSomethingWaits() {
+        let plain = ComputerSleepReason.directions(for: .sleeping, reason: nil)
+        let waiting = ComputerSleepReason.directions(for: .sleeping, reason: nil, sentWaiting: true)
+        XCTAssertNotEqual(plain, waiting)
+        XCTAssertTrue(waiting.hasSuffix(String(localized: "connection.sentWaiting").replacingOccurrences(of: "，", with: ",")) || waiting.contains(String(localized: "connection.sentWaiting")))
+        XCTAssertEqual(ComputerSleepReason.directions(for: .sleeping, reason: nil, sentWaiting: false), plain)
+    }
+}

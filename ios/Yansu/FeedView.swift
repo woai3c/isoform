@@ -608,7 +608,7 @@ struct FeedView: View {
                 .accessibilityIdentifier("feed.summary")
             }
             if let cause, showingOfflineNote, todayStore.asOf != nil {
-                Text(ComputerSleepReason.directions(for: cause, reason: sleepReason))
+                Text(ComputerSleepReason.directions(for: cause, reason: sleepReason, sentWaiting: environment.chat.hasUnsentMessages))
                     .font(.footnote)
                     .foregroundStyle(YansuTheme.secondary)
                     .fixedSize(horizontal: false, vertical: true)

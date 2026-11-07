@@ -180,6 +180,13 @@ final class ChatStore: ObservableObject {
         answeredRequestIDs.contains(requestID)
     }
 
+    /// Whether any message from this phone is still waiting to be sent, read from the saved queue of every chat the
+    /// phone knows, not only the chats already opened (#668).
+    var hasUnsentMessages: Bool {
+        let ids = Set(chats.map(\.id) + [openChatID].compactMap { $0 })
+        return ids.contains { !loadedOutgoing($0).isEmpty }
+    }
+
     func outgoingMessages(in chatID: String) -> [ChatOutgoingMessage] {
         (outgoing[chatID] ?? []).filter(\.isVisibleInTranscript)
     }
