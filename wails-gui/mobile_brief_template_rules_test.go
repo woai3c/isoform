@@ -49,8 +49,9 @@ func validateMobileBriefNarrativeVoice(brief MobileBriefV1, paragraphs []MobileB
 		return err
 	}
 	clocksByRef := mobileBriefFutureClocks(brief, languageName)
+	protected := mobileBriefQuotedContent(brief)
 	for _, paragraph := range paragraphs {
-		if mobileBriefVoiceBroken(paragraph.Text) {
+		if mobileBriefVoiceBroken(paragraph.Text, protected...) {
 			return mobileBriefNarrativeRuleErr(mobileBriefRuleVoice, "narrative violates the voice rules")
 		}
 		if !mobileBriefClocksSupported(paragraph.Text, paragraph.Refs, clocksByRef) {

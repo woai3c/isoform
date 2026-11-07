@@ -84,6 +84,7 @@ type storedMobileBrief struct {
 	ModelBinding  *mobileBriefModelBinding `json:"modelReadBinding,omitempty"`
 	RankedEdition bool                     `json:"rankedEdition,omitempty"`
 	RankedEmpty   bool                     `json:"rankedEmpty,omitempty"`
+	OwnVoiceFacts bool                     `json:"ownVoiceFacts,omitempty"`
 	MobileBriefV1
 	AttendanceSourceSessions map[string][]string `json:"attendanceSourceSessions,omitempty"`
 	AudioBinding             string              `json:"audioBinding,omitempty"`
@@ -92,7 +93,7 @@ type storedMobileBrief struct {
 }
 
 func marshalStoredMobileBrief(brief MobileBriefV1) ([]byte, error) {
-	stored := storedMobileBrief{ModelBinding: brief.modelBinding, RankedEdition: brief.rankedEdition, RankedEmpty: brief.rankedEmpty, MobileBriefV1: brief,
+	stored := storedMobileBrief{ModelBinding: brief.modelBinding, RankedEdition: brief.rankedEdition, RankedEmpty: brief.rankedEmpty, OwnVoiceFacts: brief.ownVoiceFacts, MobileBriefV1: brief,
 		AttendanceSourceSessions: map[string][]string{}, WeekLead: brief.WeekLead, WeekLeadFacts: brief.WeekLeadFacts}
 	if brief.Audio != nil {
 		stored.AudioBinding = brief.Audio.binding
@@ -114,6 +115,7 @@ func unmarshalStoredMobileBrief(data []byte, brief *MobileBriefV1) error {
 	brief.modelBinding = stored.ModelBinding
 	brief.rankedEdition = stored.RankedEdition
 	brief.rankedEmpty = stored.RankedEmpty
+	brief.ownVoiceFacts = stored.OwnVoiceFacts
 	brief.WeekLead, brief.WeekLeadFacts = stored.WeekLead, stored.WeekLeadFacts
 	if brief.Audio != nil {
 		brief.Audio.binding = stored.AudioBinding

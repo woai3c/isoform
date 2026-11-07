@@ -173,15 +173,17 @@ func TestMobileBriefWrittenBriefKeepsTheWordBudget(t *testing.T) {
 	}
 }
 
-// One sentence that breaks a voice rule costs that sentence, not the brief.
+// A repairable device reference is rewritten; only an unsafe sentence costs
+// that sentence, not the brief.
 func TestMobileBriefWrittenBriefDropsOnlyTheSentenceThatBreaksARule(t *testing.T) {
 	brief, picks := writtenBriefFixture()
 	closing := &mobileBriefNarrativeReplyClosing{Text: "Want me to draft the note to Sam?", Card: "offer-2"}
-	for _, tc := range []struct{ name, sentence, rule string }{
-		{"a clock time for the past", " The check-in started at 7am.", mobileBriefRuleClock},
-		{"a second question", " Should we skip it?", mobileBriefRuleQuestion},
-		{"uncertainty copy", " I noticed you joined late.", mobileBriefRuleBanned},
-		{"a device name", " Teams is open on your Mac.", mobileBriefRuleVoice},
+	for _, tc := range []struct{ name, sentence, rule, kept string }{
+		{"a clock time for the past", " The check-in started at 7am.", mobileBriefRuleClock, ""},
+		{"a second question", " Should we skip it?", mobileBriefRuleQuestion, ""},
+		{"uncertainty copy", " I noticed you joined late.", mobileBriefRuleBanned, ""},
+		{"a device name", " Teams is open on your Mac.", mobileBriefRuleVoice, " Teams is open on your computer."},
+		{"an ambiguous device quotation", ` The document "Your Mac setup is ready.`, mobileBriefRuleVoice, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			logged := captureMobileBriefLog(t)
@@ -192,7 +194,7 @@ func TestMobileBriefWrittenBriefDropsOnlyTheSentenceThatBreaksARule(t *testing.T
 			if err != nil {
 				t.Fatalf("rule=%s", mobileBriefNarrativeRule(err))
 			}
-			if want := writtenCheckIn + " I can pull up what is open with them."; paragraphs[0].Text != want || len(paragraphs) != 3 {
+			if want := writtenCheckIn + tc.kept + " I can pull up what is open with them."; paragraphs[0].Text != want || len(paragraphs) != 3 {
 				t.Fatalf("paragraphs = %+v", paragraphs)
 			}
 			if !strings.Contains(logged.String(), "rules="+tc.rule) {
@@ -232,7 +234,7 @@ func TestMobileBriefRepairLeavesNoDanglingPronoun(t *testing.T) {
 	brief, _ := writtenBriefFixture()
 	for _, text := range []string{
 		"I noticed the shoe insert follow-up with Sam. It has been open since last Sunday. I can draft the note for you.",
-		"The check-in is on your Mac. They are waiting on your answer to the invite. I can pull up what is open with them.",
+		"The check-in started at 7am. They are waiting on your answer to the invite. I can pull up what is open with them.",
 		"I can't tell whether Sam replied. That leaves the note open. Its draft can be ready in a minute. I can draft the note for you.",
 		"I saw the check-in. This is the one to answer first. These people meet weekly. I can pull up what is open with them.",
 	} {

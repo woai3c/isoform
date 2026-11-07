@@ -116,6 +116,247 @@ func TestMobileBriefNarrativeVoiceOnlyAllowsCitedFutureClocks(t *testing.T) {
 	}
 }
 
+func TestMobileBriefOwnVoiceRewritesOnlyDeviceReferences(t *testing.T) {
+	for _, tc := range []struct{ name, input, want string }{
+		{"on your Mac", "Open it on your Mac.", "Open it on your computer."},
+		{"this MacBook Pro", "this MacBook Pro", "this computer"},
+		{"your iPhone", "your iPhone", "your phone"},
+		{"this Mac", "this Mac", "this computer"},
+		{"my MacBook", "my MacBook", "my computer"},
+		{"the user's MacBook Air", "the user's MacBook Air", "the user's computer"},
+		{"your iMac", "your iMac", "your computer"},
+		{"your Mac mini", "Your Mac mini is asleep.", "Your computer is asleep."},
+		{"Mac Pro work name", "Your Mac Pro is ready.", "Your Mac Pro is ready."},
+		{"Mac Studio work name", "Your Mac Studio is ready.", "Your Mac Studio is ready."},
+		{"Mac Air work name", "Your Mac Air is ready.", "Your Mac Air is ready."},
+		{"Mac app work name", "Your Mac App Store update", "Your Mac App Store update"},
+		{"Mac Store work name", "Your Mac Store update", "Your Mac Store update"},
+		{"iPhone app work name", "your iPhone app", "your iPhone app"},
+		{"Mac version work name", "your Mac 2 is public", "your Mac 2 is public"},
+		{"MacBook version work name", "your MacBook Pro 1.0.41", "your MacBook Pro 1.0.41"},
+		{"Mac mini version work name", "your Mac mini 1.0.41", "your Mac mini 1.0.41"},
+		{"Chinese computer", "你的 Mac", "你的电脑"},
+		{"Chinese computer in a sentence", "在你的 MacBook Pro 上打开。", "在你的电脑上打开。"},
+		{"Chinese Mac computer", "你的Mac电脑", "你的电脑"},
+		{"Chinese Mac mini", "你的Mac mini睡着了。", "你的电脑睡着了。"},
+		{"Chinese release name", "你的 Mac 1.0.41", "你的 Mac 1.0.41"},
+		{"Chinese phone", "你的 iPhone", "你的手机"},
+		{"release name", "Mac 1.0.41 is public", "Mac 1.0.41 is public"},
+		{"app name", "the iPhone app", "the iPhone app"},
+		{"platform name", "macOS 15", "macOS 15"},
+		{"store name", "Mac App Store", "Mac App Store"},
+		{"straight quoted title", `The document "Your Mac setup" is ready.`, `The document "Your Mac setup" is ready.`},
+		{"curly quoted title", "The document “Your Mac setup. Guide” is ready.", "The document “Your Mac setup. Guide” is ready."},
+		{"unclean quotation", `The document "Your Mac setup is ready.`, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := mobileBriefOwnVoiceText(tc.input); got != tc.want {
+				t.Fatalf("mobileBriefOwnVoiceText(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+
+	brief := MobileBriefV1{
+		Evidence: []MobileBriefRef{{Ref: "e1", Label: "Your Mac setup"}},
+		Sections: MobileBriefSections{Moved: []MobileBriefItem{{Title: "Your Mac setup", Refs: []string{"e1"}}}},
+	}
+	protected := mobileBriefQuotedContent(brief)
+	input := "Review Your Mac setup on your Mac. The document “Your Mac setup. Guide” is ready."
+	want := "Review Your Mac setup on your computer. The document “Your Mac setup. Guide” is ready."
+	if got := mobileBriefOwnVoiceText(input, protected...); got != want {
+		t.Fatalf("source title was not preserved: got %q, want %q", got, want)
+	}
+}
+
+func TestMobileBriefOwnVoiceProtectedTitleMatchesCaseInsensitive(t *testing.T) {
+	for _, tc := range []struct{ name, title, input, want string }{
+		{"lower initial", "Your Mac setup", "Review your Mac setup on your Mac.", "Review your Mac setup on your computer."},
+		{"upper device", "Your Mac setup", "Review YOUR MAC SETUP on your Mac.", "Review YOUR MAC SETUP on your computer."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := mobileBriefOwnVoiceText(tc.input, tc.title); got != tc.want {
+				t.Fatalf("mobileBriefOwnVoiceText(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMobileBriefOwnVoiceSentenceSplitOddInput(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		text      string
+		protected []string
+		wantVoice string
+	}{
+		{"invalid byte before span", "Before \xff. \"Your Mac. setup\" on your Mac. After", []string{"Your Mac. setup"}, "your computer"},
+		{"invalid byte in span", "\"Your Mac \xff. setup\" on your Mac.", []string{"Your Mac \xff. setup"}, "your computer"},
+		{"truncated encoding in span", "\"Your Mac \xe2\x82. setup\" on your Mac.", []string{"Your Mac \xe2\x82. setup"}, "your computer"},
+		{"Chinese sentence in span", "“你的 Mac。设置” 在你的 Mac 上。", []string{"你的 Mac。设置"}, "你的电脑"},
+		{"newline in span", "\"Your Mac\nsetup\" on your Mac. Next", []string{"Your Mac\nsetup"}, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sentences := splitMobileBriefOwnVoiceSentences(tc.text, tc.protected)
+			if got := strings.Join(sentences, ""); got != tc.text {
+				t.Fatalf("sentence slices changed the input: %q, want %q", got, tc.text)
+			}
+			if tc.wantVoice != "" {
+				if got := mobileBriefOwnVoiceText(tc.text, tc.protected...); !strings.Contains(got, tc.wantVoice) {
+					t.Fatalf("rewritten odd input = %q, want it to contain %q", got, tc.wantVoice)
+				}
+			}
+		})
+	}
+}
+
+func TestMobileBriefWithOwnVoiceCoversWeeklyAndComputedLines(t *testing.T) {
+	brief := MobileBriefV1{
+		Narrative: []MobileBriefPara{{Text: "Open it on your Mac.", Hold: &TodayDayShapeHold{Label: "Open on your Mac"}}},
+		WeekLead:  "Open it on your Mac.", WeekLeadFacts: "facts",
+		Generation: &MobileBriefGeneration{Message: "Open it on your Mac."},
+		Audio:      &MobileBriefAudio{StatusMessage: "Open it on your Mac."},
+		DayShape: &MobileBriefDay{TodayDayShape: &TodayDayShape{
+			Hold: &TodayDayShapeHold{Label: "Open on your Mac"},
+		}},
+		YourWeek: &MobileBriefWeek{
+			Headline: "Open it on your Mac.",
+			Open:     []MobileBriefWeekOpen{{Title: "Your Mac setup", Label: "Open on your Mac", CardID: "card"}},
+			Learned: []MobileBriefWeekLearned{
+				{Kind: yourWeekLearnedMute, Text: "Open it on your Mac."},
+				{Kind: yourWeekLearnedMemory, Text: "Your Mac setup"},
+			},
+			Ask: &MobileBriefWeekAsk{Text: "Open it on your Mac?", Message: "Open it on your iPhone.", Hold: &TodayDayShapeHold{Label: "Open on your Mac"}},
+		},
+		WeeklyRecap: []MobileBriefPara{
+			{Role: yourWeekParagraphLead, Text: "Open it on your Mac.", Hold: &TodayDayShapeHold{Label: "Open on your Mac"}},
+			{Role: yourWeekParagraphLearned, Text: "Open it on your Mac."},
+			{Role: yourWeekParagraphLearned, Text: "Your Mac setup"},
+			{Role: yourWeekParagraphAsk, Text: "Open it on your Mac?"},
+		},
+		Sections: MobileBriefSections{Moved: []MobileBriefItem{{
+			Title: "Your Mac setup", Detail: "Open it on your Mac.", NextStep: "Open it on your iPhone.",
+			AttentionReason: "Open it on your Mac.",
+			Outcome: &ActivityThreadOutcome{
+				Summary: "Open it on your Mac.", NextStep: "Open it on your iPhone.", Question: "Open it on your Mac?", UserActed: "Open it on your Mac.",
+			},
+		}}},
+		MeetingAttendance: []MobileBriefAttendance{{Reason: "Open it on your Mac."}},
+	}
+	got := mobileBriefWithOwnVoice(brief)
+	item := got.Sections.Moved[0]
+	for _, tc := range []struct{ name, got, want string }{
+		{"narrative", got.Narrative[0].Text, "Open it on your computer."},
+		{"narrative hold", got.Narrative[0].Hold.Label, "Open on your computer"},
+		{"audio status", got.Audio.StatusMessage, "Open it on your computer."},
+		{"day hold", got.DayShape.Hold.Label, "Open on your computer"},
+		{"week lead", got.WeekLead, "Open it on your computer."},
+		{"week headline", got.YourWeek.Headline, "Open it on your computer."},
+		{"week open title", got.YourWeek.Open[0].Title, "Your Mac setup"},
+		{"week open chip", got.YourWeek.Open[0].Label, "Open on your computer"},
+		{"week mute line", got.YourWeek.Learned[0].Text, "Open it on your computer."},
+		{"week memory title", got.YourWeek.Learned[1].Text, "Your Mac setup"},
+		{"week ask", got.YourWeek.Ask.Text, "Open it on your computer?"},
+		{"week ask message", got.YourWeek.Ask.Message, "Open it on your phone."},
+		{"week ask hold", got.YourWeek.Ask.Hold.Label, "Open on your computer"},
+		{"weekly lead", got.WeeklyRecap[0].Text, "Open it on your computer."},
+		{"weekly lead hold", got.WeeklyRecap[0].Hold.Label, "Open on your computer"},
+		{"weekly mute line", got.WeeklyRecap[1].Text, "Open it on your computer."},
+		{"weekly learned title", got.WeeklyRecap[2].Text, "Your Mac setup"},
+		{"weekly ask", got.WeeklyRecap[3].Text, "Open it on your computer?"},
+		{"item title", item.Title, "Your Mac setup"},
+		{"item detail", item.Detail, "Open it on your computer."},
+		{"item next step", item.NextStep, "Open it on your phone."},
+		{"item attention", item.AttentionReason, "Open it on your computer."},
+		{"outcome summary", item.Outcome.Summary, "Open it on your computer."},
+		{"outcome next step", item.Outcome.NextStep, "Open it on your phone."},
+		{"outcome question", item.Outcome.Question, "Open it on your computer?"},
+		{"outcome user action", item.Outcome.UserActed, "Open it on your computer."},
+		{"attendance reason", got.MeetingAttendance[0].Reason, "Open it on your computer."},
+		{"generation message", got.Generation.Message, "Open it on your computer."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.got != tc.want {
+				t.Fatalf("got %q, want %q", tc.got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMobileBriefAssemblyUsesOwnVoiceAndKeepsWorkNames(t *testing.T) {
+	asOf := time.Date(2026, 10, 9, 9, 0, 0, 0, time.UTC)
+	brief := buildMobileBriefV1(mobileBriefInput{
+		Slot: mobileBriefSlotOnRequest, WindowStart: asOf.Add(-time.Hour), AsOf: asOf, Location: time.UTC,
+		Moved: []mobileBriefCandidate{{
+			SourceKind: "history", SourceID: "voice-work", Title: "Your Mac setup",
+			Detail: "Open it on your Mac.", NextStep: "Open it on your iPhone.",
+			Status: "needs_review", At: asOf.Add(-time.Hour),
+		}},
+	})
+	refs := []string{brief.Evidence[0].Ref}
+	brief.Narrative = []MobileBriefPara{
+		{Text: "Open it on your Mac. Mac 1.0.41 is public. Review Your Mac setup.", Refs: refs},
+		{Text: "Want to review Your Mac setup on your Mac?", Refs: refs},
+	}
+	brief.NarrativeStatus = "unavailable"
+	_, brief.Offers = mobileBriefClosing(brief, "English")
+	brief.Cards = mobileBriefApplyCardWords(brief, mobileBriefPatternCards(brief, "English"), []mobileBriefCardWords{{
+		ID: mobileBriefOpenerCardID, Message: "I'd start with Your Mac setup on your Mac. Want to begin there?",
+	}}, "English")
+
+	assembled := mobileBriefWithOwnVoice(brief)
+	if len(assembled.Narrative) != 2 {
+		t.Fatalf("assembled brief narrative = %+v", assembled.Narrative)
+	}
+	if got, want := assembled.Narrative[0].Text, "Open it on your computer. Mac 1.0.41 is public. Review Your Mac setup."; got != want {
+		t.Fatalf("narrative = %q, want %q", got, want)
+	}
+	if got, want := assembled.Narrative[1].Text, "Want to review Your Mac setup on your computer?"; got != want {
+		t.Fatalf("closing = %q, want %q", got, want)
+	}
+	if len(assembled.Sections.Moved) != 1 {
+		t.Fatalf("section rows = %+v", assembled.Sections.Moved)
+	}
+	item := assembled.Sections.Moved[0]
+	if item.Title != "Your Mac setup" || item.Detail != "Open it on your computer." || item.NextStep != "Open it on your phone." {
+		t.Fatalf("section row was not rewritten safely: %+v", item)
+	}
+	if len(assembled.Evidence) != 1 || assembled.Evidence[0].Label != "Your Mac setup" {
+		t.Fatalf("source evidence changed: %+v", assembled.Evidence)
+	}
+	foundOpener := false
+	for _, card := range assembled.Cards {
+		if card.ID != mobileBriefOpenerCardID {
+			continue
+		}
+		foundOpener = true
+		want := "I'd start with Your Mac setup on your computer. Want to begin there?"
+		if card.Message != want {
+			t.Fatalf("opener = %q, want %q", card.Message, want)
+		}
+	}
+	if !foundOpener {
+		t.Fatal("the assembled brief lost its opener")
+	}
+	if len(assembled.Offers) == 0 {
+		t.Fatal("the assembled brief lost its offers")
+	}
+	protected := mobileBriefQuotedContent(assembled)
+	for _, offer := range assembled.Offers {
+		text := offer.Label + "\n" + offer.Prompt + "\n" + offer.Text
+		if rewritten, clean := rewriteMobileBriefOwnVoice(text, protected...); !clean || rewritten != text {
+			t.Fatalf("offer needs voice repair: clean=%v before=%q after=%q", clean, text, rewritten)
+		}
+	}
+	spoken := mobileBriefSpokenText(assembled, "en")
+	for _, want := range []string{"on your computer", "Mac 1.0.41 is public", "Your Mac setup"} {
+		if !strings.Contains(spoken, want) {
+			t.Errorf("spoken brief does not contain %q: %q", want, spoken)
+		}
+	}
+	if rewritten, clean := rewriteMobileBriefOwnVoice(spoken, protected...); !clean || rewritten != spoken {
+		t.Fatalf("spoken brief needs voice repair: clean=%v before=%q after=%q", clean, spoken, rewritten)
+	}
+}
+
 func TestMobileBriefNarrativeTemplateQualifiesAttendance(t *testing.T) {
 	for _, tc := range []struct{ state, want string }{
 		{"attended", "Team sync"},

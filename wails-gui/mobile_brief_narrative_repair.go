@@ -166,6 +166,12 @@ func mobileBriefWrittenClosing(brief MobileBriefV1, closing *mobileBriefNarrativ
 		return MobileBriefPara{}, mobileBriefNarrativeRuleErr(mobileBriefRuleClosing, "the reply has no closing question")
 	}
 	text := normalizeBriefText(strings.TrimSpace(closing.Text), languageName, mobileBriefTextReference(brief), false)
+	protected := mobileBriefQuotedContent(brief)
+	rewritten, clean := rewriteMobileBriefOwnVoice(text, protected...)
+	if !clean {
+		return MobileBriefPara{}, mobileBriefNarrativeRuleErr(mobileBriefRuleClosing, "the closing breaks the voice rules")
+	}
+	text = rewritten
 	if strings.Count(text, "?")+strings.Count(text, "？") != 1 || !strings.HasSuffix(text, "?") && !strings.HasSuffix(text, "？") {
 		return MobileBriefPara{}, mobileBriefNarrativeRuleErr(mobileBriefRuleClosing, "the closing must be exactly one question, ending the brief")
 	}
@@ -197,7 +203,7 @@ func mobileBriefWrittenClosing(brief MobileBriefV1, closing *mobileBriefNarrativ
 	if err != nil {
 		return MobileBriefPara{}, mobileBriefNarrativeRuleErr(mobileBriefRuleClosing, err.Error())
 	}
-	if !mobileBriefCopySafe(text) || len(text) > mobileBriefNarrativeMaxBytes || mobileBriefBannedOutcomePhrase(text) || mobileBriefVoiceBroken(text) ||
+	if !mobileBriefCopySafe(text) || len(text) > mobileBriefNarrativeMaxBytes || mobileBriefBannedOutcomePhrase(text) || mobileBriefVoiceBroken(text, protected...) ||
 		!mobileBriefClosingClocksSupported(text, offer.Refs, mobileBriefPickClocks(brief, languageName), hold, mobileBriefNarrativeLocation(brief)) || mobileBriefInterfaceSentence.MatchString(text) {
 		return MobileBriefPara{}, mobileBriefNarrativeRuleErr(mobileBriefRuleClosing, "the closing breaks the voice rules")
 	}
@@ -271,13 +277,12 @@ func checkMobileBriefNarrative(brief MobileBriefV1, paragraphs []MobileBriefPara
 }
 
 // repairMobileBriefNarrative brings a reply within the voice rules where that
-// loses little, so one stray sentence no longer costs the whole text: a
-// sentence with uncertainty copy ("I saw", "I can't tell"), an emoji, a
-// device name, a clock time its refs do not give, or a question (the closing
-// asks the brief's only one) is dropped, and an exclamation mark becomes a
-// full stop. A sentence right after a dropped one that opens with a pronoun
-// ("It", "They", "这") goes too, since its noun went with the sentence before.
-// It returns the rules it repaired.
+// loses little, so one stray sentence no longer costs the whole text. A clean
+// own-device reference is rewritten. Uncertainty copy, an emoji, an ambiguous
+// quoted reference, an unsupported clock, or a question is dropped; an
+// exclamation mark becomes a full stop. A sentence right after a dropped one
+// that opens with a pronoun goes too, since its noun went with the sentence
+// before. It returns the rules it repaired.
 func repairMobileBriefNarrative(brief MobileBriefV1, paragraphs []MobileBriefPara, languageName string) ([]MobileBriefPara, []string) {
 	var repaired []string
 	note := func(rule string) {
@@ -287,12 +292,18 @@ func repairMobileBriefNarrative(brief MobileBriefV1, paragraphs []MobileBriefPar
 	}
 	reference := mobileBriefTextReference(brief)
 	clocks := mobileBriefPickClocks(brief, languageName)
+	protected := mobileBriefQuotedContent(brief)
 	dropped := false
 	var body []MobileBriefPara
 	for _, paragraph := range paragraphs {
 		text := normalizeBriefText(strings.TrimSpace(paragraph.Text), languageName, reference, false)
 		var kept strings.Builder
-		for _, sentence := range splitIntoSentences(text) {
+		for _, sentence := range splitMobileBriefOwnVoiceSentences(text, protected) {
+			rewritten, clean := rewriteMobileBriefOwnVoice(sentence, protected...)
+			deviceRewritten := clean && rewritten != sentence
+			if clean {
+				sentence = rewritten
+			}
 			rule := ""
 			switch true {
 			case strings.TrimSpace(sentence) == "":
@@ -301,7 +312,7 @@ func repairMobileBriefNarrative(brief MobileBriefV1, paragraphs []MobileBriefPar
 				rule = mobileBriefRuleInterface
 			case mobileBriefBannedOutcomePhrase(sentence):
 				rule = mobileBriefRuleBanned
-			case reEmoji.MatchString(sentence) || mobileBriefDeviceName.MatchString(sentence):
+			case reEmoji.MatchString(sentence) || !clean:
 				rule = mobileBriefRuleVoice
 			case !mobileBriefClocksSupported(sentence, paragraph.Refs, clocks):
 				rule = mobileBriefRuleClock
@@ -316,6 +327,9 @@ func repairMobileBriefNarrative(brief MobileBriefV1, paragraphs []MobileBriefPar
 				continue
 			}
 			dropped = false
+			if deviceRewritten {
+				note(mobileBriefRuleVoice)
+			}
 			if strings.ContainsAny(sentence, "!！") {
 				sentence = strings.NewReplacer("!", ".", "！", "。").Replace(sentence)
 				note(mobileBriefRuleVoice)

@@ -325,6 +325,7 @@ func buildMobileBriefV1(in mobileBriefInput) MobileBriefV1 {
 		sections.WaitingOnYou = nil
 	}
 	brief := MobileBriefV1{
+		ownVoiceFacts:     true,
 		Version:           1,
 		BriefID:           mobileBriefID(localDate, slot, localAsOf),
 		Slot:              slot,

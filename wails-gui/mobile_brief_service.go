@@ -1226,6 +1226,7 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 	// A greeting never stands as a paragraph of its own (PROTOCOL.md 8.1).
 	// Join it before the synthesis is bound and the voice reads it.
 	brief = mobileBriefWithJoinedGreeting(brief)
+	brief = mobileBriefWithOwnVoice(brief)
 	s.app.finishMobileBriefModelBindingFrom(ctx, &brief, modelBinding, sources)
 	brief = mobileBriefForPublication(brief)
 	if s.app != nil && !mobileBriefStaticEmpty(brief) {

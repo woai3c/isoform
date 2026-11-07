@@ -8,6 +8,7 @@ type MobileBriefV1 struct {
 	modelBinding  *mobileBriefModelBinding
 	rankedEdition bool
 	rankedEmpty   bool
+	ownVoiceFacts bool
 
 	DisplaySlot string `json:"displaySlot,omitempty"`
 	// Kind names the card title (morning, evening, week, on_request) and

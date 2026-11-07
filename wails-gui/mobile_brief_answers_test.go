@@ -22,6 +22,121 @@ func closingAnswerFixture(t *testing.T, answers []mobileBriefCardWords) MobileBr
 	return brief
 }
 
+func legacyOwnVoiceBriefFixture() MobileBriefV1 {
+	return MobileBriefV1{
+		LocalDate: "2026-10-09", NarrativeStatus: "ok",
+		Evidence: []MobileBriefRef{{Ref: "e1", SourceKind: "history", SourceID: "legacy", Label: "Launch plan"}},
+		Sections: MobileBriefSections{Moved: []MobileBriefItem{{
+			Key: "legacy-launch", Title: "Launch plan", Status: "needs_review", Kind: "one_time_work",
+			AttentionReason: "Your Mac needs attention.", NextStep: "Review it on your Mac.", AttentionRank: 2, Refs: []string{"e1"},
+		}}},
+		Narrative: []MobileBriefPara{
+			{Text: "Review the launch plan on your Mac.", Refs: []string{"e1"}},
+			{Text: "Want to review the launch plan on your Mac?", Refs: []string{"e1"}},
+		},
+	}
+}
+
+func TestMobileBriefPrePROwnVoiceDigestGolden(t *testing.T) {
+	t.Run("digests", func(t *testing.T) {
+		brief := legacyOwnVoiceBriefFixture()
+		item := brief.Sections.Moved[0]
+		for _, tc := range []struct{ name, got, want string }{
+			{"closing item", mobileBriefCardFacts(brief, item, "closing"), "0193a796996567a65480383b2ec918bd1ba7682b7ecd1cd1a71540fd60c06815"},
+			{"written item", mobileBriefCardFacts(brief, item, "moved"), "d58a121e0caf5d01006ac6df3f6e766d78c7416b62c2156391ae9e6205a3a0c5"},
+			{"paragraph", mobileBriefCardFacts(brief, MobileBriefItem{Title: brief.Narrative[0].Text, Refs: []string{"e1"}}, "paragraph"), "01c8f49a43cf98981c94566097f809dc0b2b02d67a52c41c321a128f00d564ef"},
+			{"closing", mobileBriefClosingDigest(brief), "e2075d0ae95a48c6ab1d002c3d5cd3e90da3ae551c691d2aafe50ed6066567dc"},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				if tc.got != tc.want {
+					t.Fatalf("legacy digest = %q, want pre-PR golden %q", tc.got, tc.want)
+				}
+			})
+		}
+	})
+
+	t.Run("answer survives hygiene", func(t *testing.T) {
+		brief := legacyOwnVoiceBriefFixture()
+		digest := "e2075d0ae95a48c6ab1d002c3d5cd3e90da3ae551c691d2aafe50ed6066567dc"
+		answer := MobileBriefCard{ID: "legacy-answer", Kind: mobileBriefCardAction, Mode: mobileBriefCardSend,
+			Label: "Leave it", Message: "No, leave it.", Refs: []string{"e1"}, Writer: mobileBriefCardWriterModel, Facts: digest, AnswerTo: digest}
+		if !mobileBriefAnswerMatches(brief, answer) {
+			t.Fatal("pre-PR answer no longer matches its closing")
+		}
+		brief.Cards = []MobileBriefCard{answer}
+		if got := mobileBriefHygiene(brief); len(got.Cards) != 1 || got.Cards[0].ID != answer.ID {
+			t.Fatalf("pre-PR answer was dropped: %+v", got.Cards)
+		}
+	})
+
+	t.Run("written card words remain reusable", func(t *testing.T) {
+		brief := legacyOwnVoiceBriefFixture()
+		patterns := mobileBriefPatternCards(brief, "English")
+		var stored MobileBriefCard
+		for _, card := range patterns {
+			if card.ID == "item:legacy-launch" {
+				stored = card
+			}
+		}
+		if stored.ID == "" || stored.Facts != "d58a121e0caf5d01006ac6df3f6e766d78c7416b62c2156391ae9e6205a3a0c5" {
+			t.Fatalf("legacy item card facts changed: %+v", stored)
+		}
+		stored.Writer, stored.Message = mobileBriefCardWriterModel, "Keep the legacy written words."
+		got := mobileBriefCardsWithWritten(patterns, []MobileBriefCard{stored})
+		for _, card := range got {
+			if card.ID == stored.ID {
+				if card.Writer != mobileBriefCardWriterModel || card.Message != stored.Message {
+					t.Fatalf("written words were not reused: %+v", card)
+				}
+				return
+			}
+		}
+		t.Fatal("legacy item card disappeared")
+	})
+}
+
+func TestMobileBriefNewOwnVoiceDigestSurvivesReload(t *testing.T) {
+	asOf := time.Date(2026, 10, 9, 9, 0, 0, 0, time.UTC)
+	brief := buildMobileBriefV1(mobileBriefInput{
+		Slot: mobileBriefSlotOnRequest, WindowStart: asOf.Add(-time.Hour), AsOf: asOf, Location: time.UTC,
+		Moved: []mobileBriefCandidate{{
+			SourceKind: "history", SourceID: "new-voice", Title: "Launch plan", Kind: "one_time_work", Status: "needs_review", At: asOf,
+		}},
+	})
+	if !brief.ownVoiceFacts {
+		t.Fatal("new brief was not marked before card creation")
+	}
+	brief.Sections.Moved[0].AttentionReason = "Your Mac needs attention."
+	brief.Sections.Moved[0].NextStep = "Review it on your Mac."
+	refs := []string{brief.Evidence[0].Ref}
+	brief.Narrative = []MobileBriefPara{
+		{Text: "Review the launch plan on your Mac.", Refs: refs},
+		{Text: "Want to review the launch plan on your Mac?", Refs: refs},
+	}
+	digest := mobileBriefClosingDigest(brief)
+	brief.Cards = []MobileBriefCard{{ID: "new-answer", Kind: mobileBriefCardAction, Mode: mobileBriefCardSend,
+		Label: "Leave it", Message: "No, leave it.", Refs: refs, Writer: mobileBriefCardWriterModel, Facts: digest, AnswerTo: digest}}
+	assembled := mobileBriefWithOwnVoice(brief)
+	if got := assembled.Narrative[len(assembled.Narrative)-1].Text; got != "Want to review the launch plan on your computer?" {
+		t.Fatalf("new closing = %q", got)
+	}
+	data, err := marshalStoredMobileBrief(assembled)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var reloaded MobileBriefV1
+	if err := unmarshalStoredMobileBrief(data, &reloaded); err != nil {
+		t.Fatal(err)
+	}
+	if !reloaded.ownVoiceFacts {
+		t.Fatal("new brief lost its digest marker on reload")
+	}
+	answers := cardsByKind(reloaded.Cards, mobileBriefCardAction)
+	if len(answers) != 1 || !mobileBriefAnswerMatches(reloaded, answers[0]) {
+		t.Fatalf("new answer did not survive storage: %+v", answers)
+	}
+}
+
 func TestMobileBriefClosingAnswersMatchQuestion(t *testing.T) {
 	brief := closingAnswerFixture(t, []mobileBriefCardWords{
 		{Label: "Draft the note to Sam", Message: "Yes, draft the note to Sam about the shoe insert follow-up."},

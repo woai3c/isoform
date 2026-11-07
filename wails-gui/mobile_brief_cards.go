@@ -129,12 +129,22 @@ func mobileBriefCardFacts(brief MobileBriefV1, item MobileBriefItem, extra strin
 	}
 	// Since is filled in when the brief is read (the time since the item was
 	// seen), so it is display-time text and is not part of the facts.
+	var protected []string
+	ownVoice := func(value string) string {
+		if !brief.ownVoiceFacts || !mobileBriefDeviceName.MatchString(value) {
+			return value
+		}
+		if protected == nil {
+			protected = mobileBriefQuotedContent(brief)
+		}
+		return mobileBriefOwnVoiceText(value, protected...)
+	}
 	raw, _ := json.Marshal(struct {
 		Title, Status, Kind, DueAt, At, Reason, NextStep, Extra string
 		Rank                                                    int
 		Sources                                                 []string
 		Day                                                     string
-	}{item.Title, item.Status, item.Kind, item.DueAt, item.At, item.AttentionReason, item.NextStep, extra,
+	}{ownVoice(item.Title), item.Status, item.Kind, item.DueAt, item.At, ownVoice(item.AttentionReason), ownVoice(item.NextStep), ownVoice(extra),
 		item.AttentionRank, sources, brief.LocalDate})
 	return agencyPayloadHash(raw)
 }

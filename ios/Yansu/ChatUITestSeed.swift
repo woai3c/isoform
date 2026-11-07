@@ -178,7 +178,7 @@ enum ChatUITestSeed {
             ("Who is waiting on me?", "Dana, since Tuesday, about the Q3 deck."),
             ("Remind me about Dana after lunch.", "I will remind you at 1:30."),
             ("What changed in the Wails release?", "Drag regions are read from the CSS property now, not the attribute."),
-            ("Open the launch plan.", "It is open in Keynote on your Mac."),
+            ("Open the launch plan.", "It is open in Keynote on your computer."),
             ("Any new comments on the roadmap?", "Two, both from Sam, on the March milestones."),
             ("Reply that March still works.", "Sent to Sam in the roadmap thread."),
             ("How long was I in meetings yesterday?", "Three hours and twenty minutes."),
@@ -287,7 +287,7 @@ actor ChatUITestHub: ChatHubAPI, FirstReadHubAPI {
         try await Task.sleep(nanoseconds: 300_000_000)
         let isMain = id == ChatUITestSeed.mainChatID
         guard isMain || id == Self.otherChatID else {
-            throw HubRequestError.rejected(status: 404, message: "That chat is not on your Mac.")
+            throw HubRequestError.rejected(status: 404, message: "That chat is not on your computer.")
         }
         let rows = isMain ? main : other
         let page = after.map { cursor in rows.filter { $0.seq > cursor } } ?? Array(rows.suffix(limit))
