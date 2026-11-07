@@ -289,7 +289,7 @@ struct FeedView: View {
                                         .font(.headline).foregroundStyle(YansuTheme.ink)
                                         .accessibilityIdentifier("today.connection.status")
                                 } else if cause == .sleeping, let sleptAt {
-                                    Text(String.localizedStringWithFormat(String(localized: "connection.sleepingSince"), cause.title, todayTime(sleptAt)))
+                                    Text(String.localizedStringWithFormat(String(localized: "connection.sleepingSince"), todayTime(sleptAt)))
                                         .font(.headline).foregroundStyle(YansuTheme.ink)
                                 } else if let asOf = todayStore.asOf {
                                     Text("\(cause.title) · as of \(todayTime(asOf))")

@@ -140,7 +140,7 @@ final class ChatAwayUITests: XCTestCase {
     /// offer shows because the seeded setting is off.
     func testTheComputerSheetSaysWhyItSlept() throws {
         let statuses = [
-            "battery_floor": ("It went to sleep to save its battery (below 20%).", "为了省电（电量低于 20%）进入了睡眠。"),
+            "battery_floor": ("It went to sleep to save its battery (below 20%).", "为了省电（电量低于20%）进入了睡眠。"),
             "low_power": ("Low Power Mode is on.", "低电量模式已开启。"),
             "lid_closed": ("Its lid is closed.", "盖子合上了。"),
         ]
