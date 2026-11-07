@@ -34,9 +34,12 @@ type MobileTodayV1 struct {
 	BriefRequest  *mobileTodayBriefRequest `json:"briefRequest,omitempty"`
 	Schedule      MobileBriefSchedule      `json:"schedule"`
 	NoticePacing  *mobileTodayNoticePacing `json:"noticePacing,omitempty"`
-	KeepAwake     bool                     `json:"keepAwake"`
-	InstantPush   bool                     `json:"instantPush"`
-	BriefSchedule []mobileBriefSlotTime    `json:"briefSchedule"`
+	// AssistantSignOut is additive (R75): present only when the chosen
+	// assistant is confirmed signed out on the computer.
+	AssistantSignOut *mobileTodayAssistantSignOut `json:"assistantSignOut,omitempty"`
+	KeepAwake        bool                         `json:"keepAwake"`
+	InstantPush      bool                         `json:"instantPush"`
+	BriefSchedule    []mobileBriefSlotTime        `json:"briefSchedule"`
 }
 
 type mobileTodayNoticePacing struct {
@@ -403,6 +406,7 @@ func (bridge *mobileBridge) buildToday() (MobileTodayV1, error) {
 		return view, nil
 	}
 	view.NoticePacing = mobileTodayPacing(app.engagement, now)
+	view.AssistantSignOut = app.mobileTodaySignOut(routeOrder(loadAIProviderConfig()))
 	seen := map[string]bool{}
 	if app.storeForMobile() != nil {
 		cursor := ""

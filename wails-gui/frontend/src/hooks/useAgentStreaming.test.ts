@@ -197,6 +197,17 @@ describe("useAgentStreaming", () => {
         r.unmount();
     });
 
+    // R75: a signed-out answer adds its error row and leaves the person's message alone:
+    // nothing is removed, rewritten or marked failed, so the message stays to be sent again.
+    it("keeps the person's message when a signed-out answer fails (R75)", async () => {
+        const r = mountRenderer();
+        send([{ type: "error", tag: "main", run_id: "r-r75", error: "anthropic: HTTP 401", code: "signed_out", assistant: "Claude Code", event_id: "r75-err" }]);
+        await settle(r);
+        expect(writes.inserted.map((row) => row.kind)).toEqual(["error"]);
+        expect(writes.updated).toEqual([]);
+        r.unmount();
+    });
+
     it("stores each row under the backend's id, so two renderers write the same rows", async () => {
         const appWindow = mountRenderer();
         const browserPreview = mountRenderer();

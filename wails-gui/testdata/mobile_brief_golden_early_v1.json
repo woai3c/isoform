@@ -1,0 +1,390 @@
+{
+  "version": 1,
+  "briefId": "2026-10-10-morning",
+  "slot": "morning",
+  "localDate": "2026-10-10",
+  "timezone": "America/Los_Angeles",
+  "windowStart": "2026-10-08T01:00:00Z",
+  "asOf": "2026-10-10T06:20:00Z",
+  "hubName": "Alex's MacBook Pro",
+  "coldStart": false,
+  "fromHistory": false,
+  "narrativeStatus": "unavailable",
+  "narrative": [],
+  "needsYouCount": 0,
+  "sections": {
+    "decide": [
+      {
+        "id": "decide-1",
+        "key": "decide.76ceae4dd6eebeca",
+        "title": "Book the offsite room",
+        "detail": "",
+        "status": "waiting",
+        "at": "2026-10-08T20:00:00Z",
+        "kind": "commitment",
+        "refs": [
+          "e2"
+        ]
+      },
+      {
+        "id": "decide-2",
+        "key": "decide.c37e19b06a161555",
+        "title": "Send the pricing draft",
+        "detail": "Dana is waiting on the numbers",
+        "status": "active",
+        "at": "2026-10-09T07:00:00Z",
+        "kind": "commitment",
+        "refs": [
+          "e3"
+        ]
+      }
+    ],
+    "plan": [
+      {
+        "id": "plan-1",
+        "key": "plan.36274ac67dd38838",
+        "title": "Check the vendor invoice",
+        "detail": "",
+        "status": "active",
+        "at": "2026-10-07T20:00:00Z",
+        "kind": "follow_up",
+        "refs": [
+          "e1"
+        ]
+      }
+    ],
+    "highlights": [
+      {
+        "id": "highlights-1",
+        "key": "highlights.0e4021db1056423d",
+        "title": "Filed the expense report",
+        "detail": "",
+        "status": "",
+        "at": "2026-10-08T22:40:00Z",
+        "kind": "initiative_completed",
+        "refs": [
+          "e4"
+        ]
+      },
+      {
+        "id": "highlights-2",
+        "key": "highlights.4be9aa0bd17c0bf0",
+        "title": "Sent the Q3 deck to Dana",
+        "detail": "",
+        "status": "verified",
+        "at": "2026-10-08T19:05:00Z",
+        "kind": "initiative_completed",
+        "refs": [
+          "e5"
+        ]
+      },
+      {
+        "id": "highlights-3",
+        "key": "highlights.ee9321458c642e0a",
+        "title": "Q3 deck v3",
+        "detail": "",
+        "status": "completed",
+        "at": "2026-10-08T18:00:00Z",
+        "kind": "chat",
+        "refs": [
+          "e12"
+        ]
+      }
+    ],
+    "moved": [
+      {
+        "id": "moved-1",
+        "key": "moved.0e4021db1056423d",
+        "title": "Filed the expense report",
+        "detail": "Receipts attached for September",
+        "status": "",
+        "at": "2026-10-08T22:40:00Z",
+        "kind": "initiative_completed",
+        "refs": [
+          "e4"
+        ]
+      },
+      {
+        "id": "moved-2",
+        "key": "moved.4be9aa0bd17c0bf0",
+        "title": "Sent the Q3 deck to Dana",
+        "detail": "Dana replied within the hour",
+        "status": "verified",
+        "at": "2026-10-08T19:05:00Z",
+        "kind": "initiative_completed",
+        "refs": [
+          "e5"
+        ]
+      }
+    ],
+    "doing": [
+      {
+        "id": "doing-1",
+        "key": "doing.92bf3c1a9a969ec7",
+        "title": "Draft the launch note",
+        "detail": "Waiting on legal review",
+        "status": "waiting",
+        "at": "2026-10-09T09:15:00Z",
+        "kind": "initiative",
+        "refs": [
+          "e6"
+        ]
+      }
+    ],
+    "watching": [
+      {
+        "id": "watching-1",
+        "key": "watching.a2221b417b5c1eb5",
+        "title": "Vendor quote",
+        "detail": "Waiting for a revised quote",
+        "status": "watching",
+        "at": "2026-10-09T08:00:00Z",
+        "kind": "gmail",
+        "refs": [
+          "e7"
+        ]
+      }
+    ],
+    "meetings": [
+      {
+        "id": "meetings-1",
+        "key": "meetings.c881ad1f8fc2e3f3",
+        "title": "Zoom",
+        "detail": "",
+        "status": "",
+        "at": "2026-10-09T16:30:00Z",
+        "kind": "meeting",
+        "refs": [
+          "e8"
+        ]
+      }
+    ],
+    "people": [
+      {
+        "id": "people-1",
+        "key": "people.2e8f01c498b6e041",
+        "title": "Dana Lee",
+        "detail": "Slack",
+        "status": "seen",
+        "at": "2026-10-09T13:10:00Z",
+        "kind": "contact",
+        "refs": [
+          "e9"
+        ]
+      }
+    ],
+    "openLoops": [
+      {
+        "id": "openLoops-1",
+        "key": "openLoops.36274ac67dd38838",
+        "title": "Check the vendor invoice",
+        "detail": "",
+        "status": "active",
+        "at": "2026-10-07T20:00:00Z",
+        "kind": "follow_up",
+        "refs": [
+          "e1"
+        ]
+      },
+      {
+        "id": "openLoops-2",
+        "key": "openLoops.76ceae4dd6eebeca",
+        "title": "Book the offsite room",
+        "detail": "",
+        "status": "waiting",
+        "at": "2026-10-08T20:00:00Z",
+        "kind": "commitment",
+        "refs": [
+          "e2"
+        ]
+      },
+      {
+        "id": "openLoops-3",
+        "key": "openLoops.c37e19b06a161555",
+        "title": "Send the pricing draft",
+        "detail": "Dana is waiting on the numbers",
+        "status": "active",
+        "at": "2026-10-09T07:00:00Z",
+        "kind": "commitment",
+        "refs": [
+          "e3"
+        ]
+      }
+    ],
+    "learned": [
+      {
+        "id": "learned-1",
+        "key": "learned.6b8a24eccd44ad51",
+        "title": "Prefers short status updates",
+        "detail": "Slack",
+        "status": "updated",
+        "at": "2026-10-08T10:00:00Z",
+        "kind": "memory",
+        "refs": [
+          "e10"
+        ]
+      },
+      {
+        "id": "learned-2",
+        "key": "learned.fb974c2ecea2918c",
+        "title": "Design review replies usually arrive in the afternoon",
+        "detail": "Three weeks of evidence",
+        "status": "supported",
+        "at": "2026-10-06T12:00:00Z",
+        "kind": "supported",
+        "refs": [
+          "e11"
+        ]
+      }
+    ],
+    "deliverables": [
+      {
+        "id": "deliverables-1",
+        "key": "deliverables.ee9321458c642e0a",
+        "title": "Q3 deck v3",
+        "detail": "",
+        "status": "completed",
+        "at": "2026-10-08T18:00:00Z",
+        "kind": "chat",
+        "refs": [
+          "e12"
+        ]
+      }
+    ],
+    "schedules": [
+      {
+        "id": "schedules-1",
+        "key": "schedules.93aeeb226d131226",
+        "title": "Inbox summary",
+        "detail": "",
+        "status": "ok",
+        "at": "2026-10-09T14:00:00Z",
+        "kind": "schedule",
+        "refs": [
+          "e13"
+        ]
+      }
+    ]
+  },
+  "dayShape": {
+    "activeMinutes": 312,
+    "hours": [
+      {
+        "hour": 9,
+        "activeMinutes": 42
+      },
+      {
+        "hour": 10,
+        "activeMinutes": 55
+      }
+    ],
+    "topApps": []
+  },
+  "counts": {
+    "openLoopsByKind": {
+      "commitment": 2,
+      "follow_up": 1
+    },
+    "selfUpdatesPending": 0,
+    "learningItems": 1,
+    "needsYou": 0
+  },
+  "evidence": [
+    {
+      "ref": "e1",
+      "sourceKind": "purpose",
+      "sourceId": "o-3",
+      "label": "Check the vendor invoice",
+      "observedAt": "2026-10-07T20:00:00Z"
+    },
+    {
+      "ref": "e2",
+      "sourceKind": "purpose",
+      "sourceId": "o-2",
+      "label": "Book the offsite room",
+      "observedAt": "2026-10-08T20:00:00Z"
+    },
+    {
+      "ref": "e3",
+      "sourceKind": "purpose",
+      "sourceId": "o-1",
+      "label": "Send the pricing draft",
+      "observedAt": "2026-10-09T07:00:00Z"
+    },
+    {
+      "ref": "e4",
+      "sourceKind": "history",
+      "sourceId": "h-2",
+      "label": "Filed the expense report",
+      "observedAt": "2026-10-08T22:40:00Z"
+    },
+    {
+      "ref": "e5",
+      "sourceKind": "history",
+      "sourceId": "h-1",
+      "label": "Sent the Q3 deck to Dana",
+      "observedAt": "2026-10-08T19:05:00Z"
+    },
+    {
+      "ref": "e6",
+      "sourceKind": "initiative",
+      "sourceId": "i-1",
+      "label": "Draft the launch note",
+      "observedAt": "2026-10-09T09:15:00Z"
+    },
+    {
+      "ref": "e7",
+      "sourceKind": "watching",
+      "sourceId": "w-1",
+      "label": "Vendor quote",
+      "observedAt": "2026-10-09T08:00:00Z"
+    },
+    {
+      "ref": "e8",
+      "sourceKind": "meeting",
+      "sourceId": "m-1",
+      "label": "Zoom",
+      "observedAt": "2026-10-09T16:30:00Z"
+    },
+    {
+      "ref": "e9",
+      "sourceKind": "principal",
+      "sourceId": "p-1",
+      "label": "Dana Lee",
+      "observedAt": "2026-10-09T13:10:00Z"
+    },
+    {
+      "ref": "e10",
+      "sourceKind": "memory",
+      "sourceId": "mem-1",
+      "label": "Prefers short status updates",
+      "observedAt": "2026-10-08T10:00:00Z"
+    },
+    {
+      "ref": "e11",
+      "sourceKind": "learning",
+      "sourceId": "l-1",
+      "label": "Design review replies usually arrive in the afternoon",
+      "observedAt": "2026-10-06T12:00:00Z"
+    },
+    {
+      "ref": "e12",
+      "sourceKind": "deliverable",
+      "sourceId": "chat:d-1",
+      "label": "Q3 deck v3",
+      "observedAt": "2026-10-08T18:00:00Z"
+    },
+    {
+      "ref": "e13",
+      "sourceKind": "schedule_run",
+      "sourceId": "r-1",
+      "label": "Inbox summary",
+      "observedAt": "2026-10-09T14:00:00Z"
+    }
+  ],
+  "limits": {
+    "itemsPerSection": 8,
+    "evidenceRefs": 60,
+    "truncatedSections": []
+  }
+}

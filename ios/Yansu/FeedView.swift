@@ -507,6 +507,13 @@ struct FeedView: View {
         } else {
             todaySummary(now: now)
             let _ = brief.logFetchOutcomes(at: "render")
+            if let signOut = todayStore.snapshot?.assistantSignOut {
+                // R75: one line under the date. The sign-in happens on the computer, so there is no button.
+                Text(String(localized: "\(signOut.displayName) is signed out on your computer. Briefs are shorter until you sign in there."))
+                    .font(.subheadline)
+                    .foregroundStyle(YansuTheme.secondary)
+                    .accessibilityIdentifier("today.assistantSignedOut")
+            }
             if let current = todayStore.newestBrief(), let hubID = pairing.paired?.hubID {
                 if !Calendar.current.isDate(current.asOfDate ?? .distantPast, inSameDayAs: now) {
                     todayFetchLine(state: brief.todayFetchState(localDate: FeedAssembly.localDate(for: now)))

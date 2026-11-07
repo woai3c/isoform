@@ -266,6 +266,18 @@ func productTelemetryProperties(event string, in map[string]any) (posthog.Proper
 			return nil, false
 		}
 		out["section"], out["rows"] = section, in["rows"]
+	case "assistant.signed_out", "assistant.signed_out_fixed":
+		assistant, _ := in["assistant"].(string)
+		if assistant != "claude-code" && assistant != "codex" {
+			return nil, false
+		}
+		out["assistant"] = assistant
+		if event == "assistant.signed_out_fixed" {
+			if !todayTelemetryNumber(in["seconds"]) {
+				return nil, false
+			}
+			out["seconds"] = in["seconds"]
+		}
 	case "phone_chat.queued":
 	case "phone_chat.sent_after_wait":
 		if !todayTelemetryNumber(in["wait_minutes"]) {

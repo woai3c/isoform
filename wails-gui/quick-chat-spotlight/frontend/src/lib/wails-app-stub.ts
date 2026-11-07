@@ -48,6 +48,7 @@ function makeNoop(name: string): (...args: unknown[]) => Promise<unknown> {
 }
 
 export const ParseBrainDump = makeNoop("ParseBrainDump");
+export const GetAssistantSignOut = makeNoop("GetAssistantSignOut");
 export const AddBrainDump = makeNoop("AddBrainDump");
 
 // Optimistic-value stubs for bindings that the reused main UI hooks

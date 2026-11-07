@@ -33,7 +33,7 @@ func collectMobileBriefCalendarContext(ctx context.Context, a *App, in *mobileBr
 	if loc == nil {
 		loc = time.Local
 	}
-	from, to := mobileBriefCalendarWindow(in.Slot, in.AsOf, loc)
+	from, to := mobileBriefCalendarWindow(in.Slot, in.briefDayRef(loc), loc)
 	rankedReadAllowed := in.Slot == mobileBriefSlotMorning && a.morningBriefCalendarReadAllowed(ctx)
 	if rankedReadAllowed {
 		to = to.AddDate(0, 0, 1)

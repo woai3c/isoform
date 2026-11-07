@@ -5,6 +5,7 @@ import type { TFunction } from "i18next";
 import { GetAssistantHealth, RetryAssistantHealth, type AssistantHealthView } from "@/lib/wails-shim-app";
 import { EventsOn } from "../../../wailsjs/runtime/runtime";
 import { Button } from "../ui/button";
+import { BriefSignIn } from "../today/BriefSignIn";
 
 // Emitted by the desktop whenever an assistant is paused, checked or resumed.
 const HEALTH_CHANGED_EVENT = "assistant-health:changed";
@@ -113,7 +114,10 @@ export function AssistantHealthLines() {
                         >
                             <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
                                 <span className="font-medium text-ink">{assistantName(line.assistant, t)}</span>
+                                {line.code === "signed_out" && <span aria-hidden="true" className="text-muted">·</span>}
                                 <span className="text-muted">{healthStatusText(line, t)}</span>
+                                {line.code === "signed_out" && <span aria-hidden="true" className="text-muted">·</span>}
+                                {line.code === "signed_out" && <BriefSignIn assistant={line.assistant} size="12px" />}
                                 {when && <span className="text-muted">{when}</span>}
                             </span>
                             {canRetryHealth(line.code) && (

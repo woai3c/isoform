@@ -13,5 +13,5 @@ regexes = ['''^(?:_BBXiUdgk_Eq8hxiyXKOW3S7DdJo4sUZeN0Ig9sS3Z8|hdbYOWQH17yQN4GPV0
 [[rules.allowlists]]
 condition = "AND"
 regexTarget = "secret"
-paths = ['''^wails-gui/testdata/mobile_brief_golden_v1\.json$''']
+paths = ['''^wails-gui/testdata/mobile_brief_golden_(early_)?v1\.json$''']
 regexes = ['''^(?:plan\.36274ac67dd38838|doing\.92bf3c1a9a969ec7|meetings\.c881ad1f8fc2e3f3)$''']

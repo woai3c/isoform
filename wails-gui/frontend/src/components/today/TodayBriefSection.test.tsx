@@ -550,7 +550,7 @@ describe("TodayBriefSection while today's brief is on its way", () => {
         await i18n.changeLanguage("en");
     });
 
-    it.each([["en", "Tried 3 times. Your AI is signed out.", "Sign in", "Make my brief now"], ["zh-CN", "已尝试 3 次。你的 AI 已退出登录。", "登录", "现在生成简报"]])("offers sign in without a retry promise in %s", async (language, line, action, make) => {
+    it.each([["en", "Tried 3 times. Codex is signed out.", "Sign in", "Make my brief now"], ["zh-CN", "已尝试 3 次。Codex 已退出登录。", "登录", "现在生成简报"]])("offers sign in without a retry promise in %s", async (language, line, action, make) => {
         await i18n.changeLanguage(language);
         mocks.signIn.mockClear();
         renderSection({ view: view({ pendingSlot: "morning", pendingAt: new Date(2026, 9, 15, 7).toISOString(), pendingAttempts: 3, pendingCause: "signed_out", pendingAssistant: "codex", retryAt: "" }) });

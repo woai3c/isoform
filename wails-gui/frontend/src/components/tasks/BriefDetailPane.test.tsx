@@ -55,7 +55,7 @@ describe("BriefDetailPane (K3)", () => {
         mocks.detail.mockResolvedValue(detail({ runs: [{ briefId: "blocked", status: "failed", scheduledAt: at(0).toISOString(), at: at(0).toISOString(), attempts: 3, failureCause: "signed_out", failureAssistant: "codex", waitingForSignIn: true }] }));
         render(<BriefDetailPane slot="morning" onClose={vi.fn()} />);
         const signIn = await screen.findByRole("button", { name: "Sign in" });
-        expect(screen.getByText(/Tried 3 times. Your AI is signed out./)).toBeInTheDocument();
+        expect(screen.getByText(/Tried 3 times. Codex is signed out./)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Make it now" })).toBeNull();
         fireEvent.click(signIn);
         expect(mocks.signIn).toHaveBeenCalledWith("codex");

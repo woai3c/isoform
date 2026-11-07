@@ -193,3 +193,35 @@ it.each(['en', 'zh-CN'])('shows the current missed slot in %s without historical
     expect(status).not.toHaveTextContent(/DATE|Last brief|7 days/);
     expect(screen.queryByRole('button', { name: language === 'en' ? 'Make it now' : '现在生成' })).not.toBeInTheDocument();
 });
+
+describe("TodayStatus assistant sign-out (R75)", () => {
+    const quietBrief = { enabled: false, lastRunAt: "", lastSlot: "", nextRunAt: "", nextSlot: "", missedRuns: 0, failingSlot: "", failedAttempts: 0, latestBriefId: "", currentBriefId: "", pendingSlot: "", pendingAt: "", retryAt: "", pendingAttempts: 0, pendingCause: "" };
+
+    it("says one line under the date when the chosen assistant is signed out", async () => {
+        await i18n.changeLanguage("en");
+        render(<TodayStatus brief={quietBrief} date="Friday, November 7" signOut={{ assistant: "claude-code", signedOut: true }} />);
+        const line = screen.getByTestId("today-signed-out");
+        expect(line).toHaveTextContent("Claude Code is signed out, so briefs are shorter and Chat can't answer.");
+        expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    });
+
+    it("names the assistant the person chose, in zh-CN", async () => {
+        await i18n.changeLanguage("zh-CN");
+        render(<TodayStatus brief={quietBrief} date="11月7日星期五" signOut={{ assistant: "codex", signedOut: true }} />);
+        expect(screen.getByTestId("today-signed-out")).toHaveTextContent("Codex 已退出登录，所以简报会更简短，聊天也无法回答。");
+        await i18n.changeLanguage("en");
+    });
+
+    it("shows nothing when no sign-out is confirmed", () => {
+        render(<TodayStatus brief={quietBrief} date="Friday, November 7" signOut={null} />);
+        expect(screen.queryByTestId("today-signed-out")).toBeNull();
+    });
+
+    it("does not repeat the line when the pending brief already says it is signed out", async () => {
+        await i18n.changeLanguage("en");
+        const pendingAt = new Date(2026, 10, 7, 5).toISOString();
+        const retryAt = new Date(2026, 10, 7, 23).toISOString();
+        render(<TodayStatus brief={{ ...quietBrief, enabled: true, pendingSlot: "morning", pendingAt, retryAt, pendingAttempts: 2, pendingCause: "signed_out", pendingAssistant: "claude-code" }} date="Friday, November 7" signOut={{ assistant: "claude-code", signedOut: true }} />);
+        expect(screen.queryByTestId("today-signed-out")).toBeNull();
+    });
+});

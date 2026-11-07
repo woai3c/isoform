@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback, type SetStateAction } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, type SetStateAction } from 'react';
+import { chatErrorCauseOf } from '@/lib/chat-error';
 import {
     SendPrompt,
     SendPromptWithImages,
@@ -662,6 +663,24 @@ export function useComposerInput({
 
     const failedSendsRef = useRef(new Map<string, { tag: string; prompt: string; inFlight: boolean; retry: () => Promise<void> }>());
     const forgottenSessionsRef = useRef(new Set<string>());
+    // R75: the most recent normal send in a chat. A signed-out answer can send
+    // it again with one tap, with no retyping (the message row is not resent).
+    const lastSendRef = useRef<{ tag: string; retry: () => Promise<void> } | null>(null);
+    // The one row that offers Send again: the chat's last item, when it is a
+    // signed-out answer. An older row never offers it (it would resend a message
+    // a later turn already sent).
+    const resendItemId = useMemo(() => {
+        const items = activeSession?.items ?? [];
+        const latest = items[items.length - 1];
+        if (!latest || latest.kind !== 'error') return null;
+        return chatErrorCauseOf(latest).code === 'signed_out' ? latest.id : null;
+    }, [activeSession]);
+    const resendLastSend = useCallback(() => {
+        const last = lastSendRef.current;
+        if (!last || !activeSession || activeSession.localId !== last.tag || activeSession.streaming) return;
+        if (!resendItemId) return;
+        void last.retry();
+    }, [activeSession, resendItemId]);
     const retryFailedSend = useCallback((itemId: string) => {
         const failed = failedSendsRef.current.get(itemId);
         if (!failed || failed.inFlight) return;
@@ -999,6 +1018,9 @@ export function useComposerInput({
                 userItem: toStreamItemData(userItem),
             });
             if (retryTurn) failedSendsRef.current.delete(userItem.id);
+            if (!todayContext) {
+                lastSendRef.current = { tag, retry: () => executeSend(sendPromptText, sendImages, sendFiles, undefined, undefined, undefined, { item: userItem, traceID }, displayText) };
+            }
             // An admitted Today row stays in history even if Stop arrives
             // while Go returns its sort order, just like any sent message.
             if (todayContext && typeof assignedSortOrder === 'number') assignUserSortOrder(assignedSortOrder);
@@ -1328,6 +1350,8 @@ export function useComposerInput({
         editQueuedMessage,
         retryFailedSend,
         editFailedSend,
+        resendLastSend,
+        resendItemId,
         forgetFailedSends,
     };
 }

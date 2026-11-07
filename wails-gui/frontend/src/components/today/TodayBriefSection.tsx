@@ -1,4 +1,5 @@
 import { measureToday, recordTodayAction } from "@/lib/today-telemetry";
+import { assistantLabel } from "@/lib/brief-assistant";
 import { useTodaySectionSeen } from "@/hooks/useTodaySectionSeen";
 import { isCommitmentItemKey, isFindTimeLabel } from "./commitment-key";
 import { findTimeRangeFor } from "@/lib/find-time-range";
@@ -918,11 +919,11 @@ function PendingBrief({ slot, building, retryAt, attempts, cause, assistant, las
                 </p>
             ) : signedOut ? (
                 <p className="text-[14px] text-copper" role="status" data-testid="brief-pending-line">
-                    {tr("todayBrief.pending.signedOut", { count: attempts })}{" "}<BriefSignIn assistant={assistant!} size="14px" />
+                    {tr("todayBrief.pending.signedOut", { count: attempts, ai: assistantLabel(assistant, { claudeCode: tr("status.assistantClaudeCode"), codex: tr("status.assistantCodex"), yourAI: tr("todayBrief.pending.yourAI") }) })}{" "}<BriefSignIn assistant={assistant!} size="14px" />
                 </p>
             ) : retry ? (
                 <p className="text-[14px] text-ink" role="status" data-testid="brief-pending-line">
-                    {attempts > 0 ? tr(cause === "timeout" ? "todayBrief.pending.triedTimeout" : cause === "signed_out" ? "todayBrief.pending.triedSignedOut" : "todayBrief.pending.tried", { count: attempts, time: retry }) : tr("todayBrief.pending.retry", { time: retry })}
+                    {attempts > 0 ? tr(cause === "timeout" ? "todayBrief.pending.triedTimeout" : cause === "signed_out" ? "todayBrief.pending.triedSignedOut" : "todayBrief.pending.tried", { count: attempts, time: retry, ai: assistantLabel(assistant, { claudeCode: tr("status.assistantClaudeCode"), codex: tr("status.assistantCodex"), yourAI: tr("todayBrief.pending.yourAI") }) }) : tr("todayBrief.pending.retry", { time: retry })}
                 </p>
             ) : null}
             {strip}

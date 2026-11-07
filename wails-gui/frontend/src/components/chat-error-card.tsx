@@ -2,7 +2,9 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { EventsEmit } from '../../wailsjs/runtime/runtime';
+import { OpenAssistantSignIn } from '@/lib/wails-shim-app';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { ChatError } from '@/lib/chat-error';
 
 interface ChatErrorCardProps {
@@ -31,6 +33,25 @@ export function openYourAI() {
     EventsEmit('settings:open', 'ai-provider');
 }
 
+/** The assistant's id for the sign-in command, from the name the cause line shows; undefined for other AIs. */
+export function signInAssistantID(name?: string): string | undefined {
+    switch (name?.trim()) {
+        case 'Claude Code': return 'claude-code';
+        case 'Codex': return 'codex';
+        default: return undefined;
+    }
+}
+
+/** R75: Sign in opens the assistant's own sign-in in Terminal; Settings is the fallback for other AIs. */
+function openAssistantSignIn(name?: string) {
+    const id = signInAssistantID(name);
+    if (!id) {
+        openYourAI();
+        return;
+    }
+    void OpenAssistantSignIn(id).catch(() => openYourAI());
+}
+
 export function chatCauseLine(error: ChatError, assistant: string | undefined, t: TFunction<'chat'>): ChatCauseLine {
     const named = assistant?.trim();
     const ai = named || t('errors.cause.yourAI');
@@ -39,7 +60,7 @@ export function chatCauseLine(error: ChatError, assistant: string | undefined, t
         case 'no_assistant':
             return { line: t('errors.cause.noAssistantKept'), tone: 'copper', link: 'set_up', details: false };
         case 'signed_out':
-            return { line: t('errors.cause.signedOut', { ai }), tone: 'copper', link: 'sign_in', details: false };
+            return { line: t('errors.cause.signedOut', { ai: leadAI }), tone: 'copper', link: 'sign_in', details: false };
         case 'quota_period': {
             const line = error.period === 'daily'
                 ? t('errors.cause.usageDaily', { ai: leadAI })
@@ -93,13 +114,27 @@ export const ChatErrorCard = memo(function ChatErrorCard({ error, assistant, onR
     const cause = chatCauseLine(error, assistant, t);
     const link = cause.link === 'try_again' && !onRetry ? undefined : cause.link;
     const showDetails = cause.details && Boolean(error.detail);
-    const onLink = link === 'try_again' ? onRetry : openYourAI;
+    const onLink = link === 'try_again' ? onRetry : link === 'sign_in' ? () => openAssistantSignIn(assistant) : openYourAI;
 
     return (
         <div className="animate-rise-in max-w-md" data-chat-cause={error.kind}>
             <p role="status" className={cn('m-0 text-xs leading-relaxed', cause.tone === 'copper' ? 'text-warning' : 'text-subtle')}>
                 <span>{cause.line}</span>
-                {link && (
+                {/* R75: a signed-out answer's actions follow the sentence with a space, and a separator
+                    only between two actions, so a wrapped line never leaves a dangling separator. */}
+                {error.kind === 'signed_out' && link === 'sign_in' ? (
+                    <>
+                        {' '}
+                        {/* The design system's link Button (text-accent): Sign in and Send again. */}
+                        <Button type="button" variant="link" size="sm" className="h-auto p-0 align-baseline text-xs font-medium" onClick={onLink}>{linkLabel(link, t)}</Button>
+                        {onRetry && (
+                            <>
+                                <span aria-hidden="true">{t('errors.cause.separator')}</span>
+                                <Button type="button" variant="link" size="sm" className="h-auto p-0 align-baseline text-xs font-medium" onClick={onRetry}>{t('errors.actions.sendAgain')}</Button>
+                            </>
+                        )}
+                    </>
+                ) : link && (
                     <>
                         <span aria-hidden="true">{t('errors.cause.separator')}</span>
                         <button type="button" className={LINK_CLASS} onClick={onLink}>{linkLabel(link, t)}</button>

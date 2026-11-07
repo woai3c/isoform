@@ -2747,6 +2747,12 @@ and may contain `lastQuietBreak` (RFC 3339), reflecting the Mac's current local-
 budget and quiet-hours break. Phones also count their own local deliveries.
 `keepAwake`, `instantPush`, and `briefSchedule` use the same values as
 `GET /status`; `briefSchedule` contains the next 24 hours of slot times.
+`assistantSignOut` is additive (R75). It is present only while the chosen
+assistant is confirmed signed out on the computer: one re-check must agree before
+it appears, and it goes away on the next sign-in check. It is `{"assistant":
+"claude-code"}` or `{"assistant":"codex"}`. The phone shows one line under the
+date and has no button, because the sign-in happens on the computer. Older
+phones ignore the field, and older computers omit it.
 Only current waiting items are included. A device without `chat:read` receives
 the task entries only and no topics. `day` contains `calendarConnected`, an
 optional `next` calendar event and `free` ranges, each with `start` and `end`.

@@ -6,6 +6,7 @@ import { MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTodayStatus } from "@/hooks/useTodayStatus";
+import { useAssistantSignOut } from "@/hooks/useAssistantSignOut";
 import { useTodayDayShape } from "@/hooks/useTodayDayShape";
 import { useLatestBrief } from "@/hooks/useLatestBrief";
 import { useGoalCheckIn } from "@/hooks/useGoalCheckIn";
@@ -117,6 +118,7 @@ export function TodayPage({
     const { t, i18n } = useTranslation("today");
     const { t: tChat } = useTranslation("chat");
     const status = useTodayStatus(true);
+    const assistantSignOut = useAssistantSignOut();
     const latest = useLatestBrief(true, briefRequest?.briefId, briefRequest?.nonce);
     const answeredBriefCards = useBriefSavedAnswers(latest.view?.brief, active);
     // "Last brief: … · Read it" opens an earlier brief in the panel, with its
@@ -759,6 +761,7 @@ export function TodayPage({
                             brief={status.brief && latest.view ? { ...status.brief, pendingSlot: latest.view.pendingSlot, pendingAt: latest.view.pendingAt, retryAt: latest.view.retryAt, pendingAttempts: latest.view.pendingAttempts, pendingCause: latest.view.pendingCause } : status.brief}
                             building={!!latest.view?.building || latest.make === "making"}
                             onMissedWhy={handlers.onOpenBriefDetail}
+                            signOut={assistantSignOut}
                         />
                     </header>
 

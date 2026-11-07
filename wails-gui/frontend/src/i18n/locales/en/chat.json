@@ -92,6 +92,7 @@
             "seeUsage": "See usage",
             "setUp": "Set up",
             "signIn": "Sign in",
+            "sendAgain": "Send again",
             "tryAgain": "Try again",
             "details": "Details",
             "hide": "Hide"
@@ -100,7 +101,7 @@
         "cause": {
             "noAssistantBox": "Isoform needs an AI to answer.",
             "noAssistantKept": "Didn't send: no AI is signed in.",
-            "signedOut": "Sign in to {{ai}} again.",
+            "signedOut": "{{ai}} is signed out, so Isoform can't answer. Sign in, then send again.",
             "usageDaily": "{{ai}}'s daily limit is used up.",
             "usageWeekly": "{{ai}}'s weekly limit is used up.",
             "usageMonthly": "{{ai}}'s monthly limit is used up.",

@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import type { MobileBriefHealth } from "@/lib/wails-shim-app";
+import type { AssistantSignOutView, MobileBriefHealth } from "@/lib/wails-shim-app";
+import { assistantLabel } from "@/lib/brief-assistant";
 import { clockTime } from "@/lib/brief-time";
 import { Button } from "@/components/ui/button";
 import { RecordTodayAction } from "@/lib/wails-shim-app";
@@ -53,9 +54,12 @@ export function TodayStatus({
     date,
     onMissedWhy,
     building = false,
+    signOut = null,
 }: {
     brief: MobileBriefHealth | null;
     building?: boolean;
+    /** R75: the chosen assistant is confirmed signed out. */
+    signOut?: AssistantSignOutView | null;
     date?: string;
     /** Opens the missed brief's own detail (Tasks › Scheduled). */
     onMissedWhy?: (slot: "morning" | "evening") => void;
@@ -81,7 +85,7 @@ export function TodayStatus({
     const signedOut = !!pending && brief?.pendingCause === "signed_out" && !!brief.pendingAssistant && (brief.pendingAttempts ?? 0) > 0;
     const retryDate = pending && brief?.retryAt ? new Date(brief.retryAt) : null;
     const tries = retryDate && !Number.isNaN(retryDate.getTime()) && retryDate.getTime() > now.getTime() && (brief?.pendingAttempts ?? 0) > 0
-        ? t(brief?.pendingCause === "timeout" ? "todayBrief.pending.triedTimeout" : brief?.pendingCause === "signed_out" ? "todayBrief.pending.triedSignedOut" : "todayBrief.pending.tried", { count: brief?.pendingAttempts ?? 0, time: clockTime(retryDate, i18n.language, tr) })
+        ? t(brief?.pendingCause === "timeout" ? "todayBrief.pending.triedTimeout" : brief?.pendingCause === "signed_out" ? "todayBrief.pending.triedSignedOut" : "todayBrief.pending.tried", { count: brief?.pendingAttempts ?? 0, ai: assistantLabel(brief?.pendingAssistant, { claudeCode: t("status.assistantClaudeCode"), codex: t("status.assistantCodex"), yourAI: t("todayBrief.pending.yourAI") }), time: clockTime(retryDate, i18n.language, tr) })
         : "";
     const nextDate = brief?.enabled && brief.nextRunAt ? new Date(brief.nextRunAt) : null;
     const next = nextDate && !Number.isNaN(nextDate.getTime()) ? clockTime(nextDate, i18n.language, tr) : null;
@@ -94,7 +98,12 @@ export function TodayStatus({
     const nextSlot = brief?.nextSlot === "morning" || brief?.nextSlot === "evening" ? brief.nextSlot : nextDate && nextDate.getHours() < 12 ? "morning" : "evening";
 
     const quietLines = quiet.filter((line) => line.text.trim());
-    if (!date && !next && !pending && !capture && quietLines.length === 0) return null;
+    // R75: one line says the assistant is signed out. A pending brief that
+    // already says so (with its tries) keeps its own line instead of a second.
+    const signedOutLine = !!signOut && !signedOut;
+    const signedOutName = signOut?.assistant === "codex" ? t("status.assistantCodex") : t("status.assistantClaudeCode");
+
+    if (!date && !next && !pending && !capture && quietLines.length === 0 && !signedOutLine) return null;
 
     return (
         <div
@@ -103,6 +112,12 @@ export function TodayStatus({
         >
             {building && pending ? <span>{t(pending.slot === "morning" ? "todayBrief.pending.makingMorning" : "todayBrief.pending.makingEvening")}</span> : signedOut ? <span className="text-copper">{t("todayBrief.pending.signedOut", { count: brief?.pendingAttempts ?? 0 })}{" "}<BriefSignIn assistant={brief!.pendingAssistant!} size="12.5px" /></span> : tries ? <span>{tries}</span> : givenWay && pending ? <span>{t(pending.slot === "morning" ? "status.missedMorning" : "status.missedEvening", { time: pending.time })}{givenWay && next && <span data-testid="today-status-next">{i18n.language.startsWith("zh") ? "" : " "}{t(nextSlot === "morning" ? nextTomorrow ? "status.nextMorningTomorrowAt" : "status.nextMorningAt" : nextTomorrow ? "status.nextEveningTomorrowAt" : "status.nextEveningAt", { time: next })}</span>}{onMissedWhy && <> · <Button variant="link" size="sm" className="h-auto p-0 text-[12.5px] font-medium hover:no-underline" onClick={() => openWhy(pending.slot as "morning" | "evening")}>{t("status.why")}</Button></>}</span> : null}
             {(!givenWay || building || tries) && (date || next) && <span data-testid="today-status-date">{date}{date && next && " · "}{next && t(nextTomorrow ? "status.nextBriefTomorrowAt" : "status.nextBriefAt", { time: next })}</span>}
+            {signedOutLine && (
+                <span data-testid="today-signed-out" className="basis-full text-copper">
+                    {t("status.signedOutLine", { assistant: signedOutName })}{" "}
+                    <BriefSignIn assistant={signOut!.assistant} size="12.5px" />
+                </span>
+            )}
             {capture && <TodayCaptureLine text={capture.text} onOpen={capture.onOpen} />}
             {quietLines.map((line) => (
                 <p key={line.id} data-testid="today-quiet-line">{line.text}</p>

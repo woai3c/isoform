@@ -913,7 +913,9 @@ export const StreamCard = memo(function StreamCard({
     // streams so users see a typed error card instead of the raw JSON.
     if (item.kind === 'error' || isJsonRpcError(item.content)) {
         const cause = chatErrorCauseOf(item);
-        return <ChatErrorCard error={parseChatError(item.content, cause.code)} assistant={cause.assistant} compact={compact} />;
+        // R75: only the chat's latest signed-out answer offers Send again.
+        const resend = cause.code === 'signed_out' && failedSend && failedSend.resendItemId === item.id ? failedSend.resendLast : undefined;
+        return <ChatErrorCard error={parseChatError(item.content, cause.code)} assistant={cause.assistant} compact={compact} onRetry={resend} />;
     }
 
     // ── Main-chat report line / side-chat origin: quiet cards with one action ──

@@ -11,15 +11,25 @@ import (
 // not a claim that any unobserved work did or did not happen. The same readable
 // projection as Your week must be used before the snapshot reaches a model.
 func (a *App) mobileBriefYesterdayActivity(ctx context.Context, asOf time.Time, loc *time.Location) *yourWeekSnapshot {
-	if a == nil || a.activity == nil || a.activity.store == nil || a.IsClosedEyesModeEnabled() || asOf.IsZero() {
+	return a.mobileBriefYesterdayActivityFor(ctx, asOf, asOf, loc)
+}
+
+// mobileBriefYesterdayActivityFor is the day before day, the brief's day. The
+// window never runs past madeAt, the time the brief is made, so an early brief
+// claims nothing after it was made.
+func (a *App) mobileBriefYesterdayActivityFor(ctx context.Context, madeAt, day time.Time, loc *time.Location) *yourWeekSnapshot {
+	if a == nil || a.activity == nil || a.activity.store == nil || a.IsClosedEyesModeEnabled() || madeAt.IsZero() || day.IsZero() {
 		return nil
 	}
 	if loc == nil {
 		loc = time.Local
 	}
-	local := asOf.In(loc)
+	local := day.In(loc)
 	end := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc)
 	start := end.AddDate(0, 0, -1)
+	if end.After(madeAt) {
+		end = madeAt
+	}
 	spent, _, err := a.activityMomentTimeMs(ctx, start.UnixMilli(), end.UnixMilli())
 	if err != nil || ctx.Err() != nil {
 		return nil

@@ -9,11 +9,13 @@ const mocks = vi.hoisted(() => ({
     retry: vi.fn(),
     eventsOn: vi.fn(),
     unsubscribe: vi.fn(),
+    signIn: vi.fn(),
 }));
 
 vi.mock("@/lib/wails-shim-app", () => ({
     GetAssistantHealth: mocks.getHealth,
     RetryAssistantHealth: mocks.retry,
+    OpenAssistantSignIn: mocks.signIn,
 }));
 
 vi.mock("../../../wailsjs/runtime/runtime", () => ({
@@ -33,11 +35,21 @@ function line(assistant: string): HTMLElement {
 }
 
 describe("AssistantHealthLines", () => {
+    it("signed out beside the name, with Sign in that opens the assistant's own sign-in (R75)", async () => {
+        mocks.getHealth.mockResolvedValue([{ assistant: "claude-code", code: "signed_out", checking: false }]);
+        mocks.signIn.mockResolvedValue(undefined);
+        render(<AssistantHealthLines />);
+        await screen.findByText("Signed out");
+        fireEvent.click(within(line("claude-code")).getByRole("button", { name: "Sign in" }));
+        expect(mocks.signIn).toHaveBeenCalledWith("claude-code");
+    });
+
+
     it.each<[string, Partial<AssistantHealthView>, string, boolean]>([
         ["ready", {}, "Ready", false],
         ["check_failed", {}, "Paused after a failed check. Isoform answers until it passes.", true],
         ["repeated_errors", {}, "Paused after repeated errors. Isoform answers until it passes a check.", true],
-        ["signed_out", {}, "Signed out. Sign in on this computer, then try again.", true],
+        ["signed_out", {}, "Signed out", true],
         ["not_installed", {}, "Not installed on this computer.", true],
         ["unsupported_version", {}, "Needs an update to work with Isoform's tools.", true],
         ["tools_unverified", {}, "Cannot use Isoform's tools yet, so Isoform answers instead.", false],

@@ -112,6 +112,9 @@ type App struct {
 	pluginMu                  sync.Mutex
 	runner                    agent.AgentRunner
 	assistantProbes           *assistantProbeCache
+	signOut                   signOutTracker
+	signOutTimers             map[string]*time.Timer
+	signOutTimersMu           sync.Mutex
 	agentChoices              agentChoiceCache
 	backgroundUsesChoice      atomic.Bool
 	httpPort                  int

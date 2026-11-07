@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { briefAssistantName } from "@/lib/brief-assistant";
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -183,7 +184,7 @@ function BriefRunRow({ run, dayName, clock, onOpenToday }: {
     const nextTry = run.status === "failed" && run.nextTryAt ? new Date(run.nextTryAt) : null;
     const next = nextTry && !Number.isNaN(nextTry.getTime()) ? clock(nextTry) : "";
     const blocked = run.waitingForSignIn && !!run.failureAssistant;
-    const recordedFailure = attempts > 0 && run.failureCause === "timeout" ? t(next ? "briefDetail.triedTimeoutNext" : "briefDetail.triedTimeout", { count: attempts, time: next }) : attempts > 0 && run.failureCause === "signed_out" ? t(!blocked && next ? "briefDetail.triedSignedOutNext" : "briefDetail.triedSignedOut", { count: attempts, time: next }) : "";
+    const recordedFailure = attempts > 0 && run.failureCause === "timeout" ? t(next ? "briefDetail.triedTimeoutNext" : "briefDetail.triedTimeout", { count: attempts, time: next }) : attempts > 0 && run.failureCause === "signed_out" ? t(!blocked && next ? "briefDetail.triedSignedOutNext" : "briefDetail.triedSignedOut", { count: attempts, time: next, ai: briefAssistantName(run.failureAssistant, t) }) : "";
     const line = recordedFailure || (run.status === "failed"
         ? attempts > 0 ? t(next ? "briefDetail.triedNext" : "briefDetail.tried", { count: attempts, time: next }) : t(next ? "briefDetail.didntFinishNext" : "briefDetail.didntFinish", { time: next })
         : run.reason === "asleep" ? t("briefDetail.missedAsleep", { time })

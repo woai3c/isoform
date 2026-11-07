@@ -351,7 +351,12 @@ func briefSpokenDuration(minutes int, language string, activity bool) string {
 
 func mobileBriefTextReference(brief MobileBriefV1) time.Time {
 	if at, err := time.Parse(time.RFC3339, brief.AsOf); err == nil {
-		return at.In(mobileBriefNarrativeLocation(brief))
+		loc := mobileBriefNarrativeLocation(brief)
+		// An early brief is written for its slot's day, not the day it was made.
+		if day, err := time.ParseInLocation("2006-01-02", brief.LocalDate, loc); err == nil && day.Format("2006-01-02") != at.In(loc).Format("2006-01-02") {
+			return day
+		}
+		return at.In(loc)
 	}
 	at, _ := time.ParseInLocation("2006-01-02", brief.LocalDate, mobileBriefNarrativeLocation(brief))
 	return at

@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ is signed out on your computer. Briefs are shorter until you sign in there." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"%@ is signed out on your computer. Briefs are shorter until you sign in there."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"%@ 在你的电脑上已退出登录。在电脑上登录之前，简报会更简短。"}}}},
     "brief.stamp.dayAndTime" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"%1$@ at %2$@"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"%1$@ %2$@"}}}},
     "Couldn't reach your computer." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Couldn't reach your computer."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"无法连接你的电脑。"}}}},
     "Ask Isoform anything. It answers from your computer." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Ask Isoform anything. It answers from your computer."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"向 Isoform 提出任何问题。它会在你的电脑上回答。"}}}},

@@ -109,7 +109,7 @@ enum LaunchDemoUITestSeed {
         let entry = TodayBriefIndex(id: brief.identifier, slot: "morning", localDate: brief.localDate ?? "",
                                     scheduledAt: brief.asOf, madeAt: brief.asOf ?? stamp(now()), catchUp: false,
                                     durationSeconds: duration, lead: paragraphs[0])
-        return MobileTodaySnapshot(
+        var snapshot = MobileTodaySnapshot(
             generatedAt: stamp(now()), latestBrief: entry, briefs: [entry],
             needsYou: [TodayNeed(id: priyaMomentID, chatId: chatID, card: TodayNeed.Card(proactive: card), task: nil)],
             needsYouCount: 1,
@@ -118,6 +118,11 @@ enum LaunchDemoUITestSeed {
                           free: [TodayDay.Range(start: stamp(at(hour: 10, minute: 0)), end: stamp(at(hour: 12, minute: 30)))],
                           calendarConnected: true),
             topics: try topics(), briefRequest: nil, schedule: MobileBriefSchedule(morning: "07:00", evening: "17:00"))
+        // R75: YANSU_UITEST_ASSISTANT_SIGNOUT=claude-code shows the computer's signed-out line on Today.
+        if let assistant = ProcessInfo.processInfo.environment["YANSU_UITEST_ASSISTANT_SIGNOUT"], !assistant.isEmpty {
+            snapshot.assistantSignOut = TodayAssistantSignOut(assistant: assistant)
+        }
+        return snapshot
     }
 
     static func stamp(_ date: Date) -> String { ISO8601DateFormatter().string(from: date) }

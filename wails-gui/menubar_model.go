@@ -82,8 +82,8 @@ var menuBarCopy = map[string]map[string]string{
 		"read":    "Read your brief",
 		"dayTime": "{day}, {time}", "today": "Today", "yesterday": "Yesterday",
 		"tried": "Tried {n} times without finishing. Isoform tries again at {time}.", "triedOnce": "Tried once without finishing. Isoform tries again at {time}.",
-		"triedSignedOut": "Tried {n} times. Your AI is signed out. Isoform tries again at {time}.", "triedSignedOutOnce": "Tried 1 time. Your AI is signed out. Isoform tries again at {time}.",
-		"signIn": "Sign in", "signedOut": "Tried {n} times. Your AI is signed out.", "signedOutOnce": "Tried 1 time. Your AI is signed out.",
+		"triedSignedOut": "Tried {n} times. {ai} is signed out. Isoform tries again at {time}.", "triedSignedOutOnce": "Tried 1 time. {ai} is signed out. Isoform tries again at {time}.",
+		"signIn": "Sign in", "signedOut": "Tried {n} times. {ai} is signed out.", "signedOutOnce": "Tried 1 time. {ai} is signed out.", "yourAI": "Your AI",
 		"retry": "Isoform tries again at {time}.", "none": "No brief yet today", "next": "Next brief tomorrow at {time}", "nextToday": "Next brief today at {time}",
 		"making": "Making your brief now.", "makingMorning": "Making your morning brief now.", "makingEvening": "Making your evening brief now.", "triedTimeout": "Tried {n} times. It timed out. Isoform tries again at {time}.", "triedTimeoutOnce": "Tried once. It timed out. Isoform tries again at {time}.", "playing": "{elapsed} of {length}",
 		"waiting": "Waiting on you", "seeAll": "See all {n} in Chat", "empty": "Nothing is waiting on you.",
@@ -92,10 +92,12 @@ var menuBarCopy = map[string]map[string]string{
 		"models":   "Downloading models · {percent}%",
 		"settings": "Settings", "footerQuit": "Quit", "onThisMac": "What Isoform sees", "openShortcut": "⌘⇧I",
 		"label": "Isoform, {state}, {n} waiting on you", "labelNone": "Isoform, {state}",
-		"actionFailed": "Could not complete that action. Open Isoform to try again.",
+		"actionFailed":  "Could not complete that action. Open Isoform to try again.",
+		"signedOutLine": "{assistant} is signed out, so briefs are shorter and Chat can't answer.",
 	},
 	"zh-CN": {
-		"open": "打开 Isoform", "make": "立即生成简报", "pause15": "暂停 15 分钟", "resumeMenu": "恢复观察",
+		"signedOutLine": "{assistant} 已退出登录，所以简报会更简短，聊天也无法回答。",
+		"open":          "打开 Isoform", "make": "立即生成简报", "pause15": "暂停 15 分钟", "resumeMenu": "恢复观察",
 		"settingsMenu": "设置…", "quit": "退出 Isoform",
 		"observing": "观察中", "paused": "观察已暂停", "pausedUntil": "已暂停至 {time}", "off": "观察已关闭", "starting": "正在启动…",
 		"pause": "暂停 15 分钟", "resume": "恢复", "turnOn": "打开",
@@ -103,8 +105,8 @@ var menuBarCopy = map[string]map[string]string{
 		"read":    "阅读简报",
 		"dayTime": "{day} {time}", "today": "今天", "yesterday": "昨天",
 		"tried": "试了 {n} 次都没完成。Isoform 会在{time}再试。", "triedOnce": "试了 1 次都没完成。Isoform 会在{time}再试。",
-		"triedSignedOut": "已尝试 {n} 次。你的 AI 已退出登录。Isoform 会在 {time} 再试一次。", "triedSignedOutOnce": "已尝试 1 次。你的 AI 已退出登录。Isoform 会在 {time} 再试一次。",
-		"signIn": "登录", "signedOut": "已尝试 {n} 次。你的 AI 已退出登录。", "signedOutOnce": "已尝试 1 次。你的 AI 已退出登录。",
+		"triedSignedOut": "已尝试 {n} 次。{ai} 已退出登录。Isoform 会在 {time} 再试一次。", "triedSignedOutOnce": "已尝试 1 次。{ai} 已退出登录。Isoform 会在 {time} 再试一次。",
+		"signIn": "登录", "signedOut": "已尝试 {n} 次。{ai} 已退出登录。", "signedOutOnce": "已尝试 1 次。{ai} 已退出登录。", "yourAI": "你的 AI",
 		"retry": "Isoform 会在{time}再试。", "none": "今天还没有简报", "next": "下一份在明天 {time}", "nextToday": "下一份在今天 {time}",
 		"making": "正在生成简报。", "makingMorning": "正在生成你的早间简报。", "makingEvening": "正在生成你的晚间简报。", "triedTimeout": "试了 {n} 次。超时了。Isoform 会在{time}再试。", "triedTimeoutOnce": "试了 1 次。超时了。Isoform 会在{time}再试。", "playing": "{elapsed} / {length}",
 		"waiting": "等你处理", "seeAll": "在聊天中查看全部 {n} 项", "empty": "没有等你处理的事。",
@@ -118,6 +120,15 @@ var menuBarCopy = map[string]map[string]string{
 }
 
 func menuBarWords(lang string) map[string]string { return menuBarCopy[normalizeUILanguage(lang)] }
+
+// menuBarAssistantName is the chosen assistant's name for the signed-out lines;
+// "Your AI" only when the run does not say which assistant it was.
+func menuBarAssistantName(w map[string]string, assistant string) string {
+	if assistant == "" {
+		return w["yourAI"]
+	}
+	return assistantSignOutDisplayName(assistant)
+}
 
 func menuBarFill(template string, values ...string) string {
 	for i := 0; i+1 < len(values); i += 2 {
@@ -178,6 +189,8 @@ type menuBarView struct {
 	Brief      menuBarBrief         `json:"brief"`
 	// Update is the downloaded update's version, shown only then.
 	Update string `json:"update,omitempty"`
+	// SignOut is R75's first row: the chosen assistant is confirmed signed out.
+	SignOut *menuBarSignOut `json:"signOut,omitempty"`
 	// UpdateRestart is set when the staged update needs Restart now to install.
 	UpdateRestart bool `json:"updateRestart,omitempty"`
 	// Models is "Downloading models · 64%" while the local models setup
@@ -401,7 +414,7 @@ func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, has
 		if health.PendingAttempts == 1 {
 			key = "signedOutOnce"
 		}
-		return menuBarBrief{Kind: "sign_in", ID: health.PendingAssistant, Title: menuBarFill(w[key], "n", fmt.Sprint(health.PendingAttempts))}
+		return menuBarBrief{Kind: "sign_in", ID: health.PendingAssistant, Title: menuBarFill(w[key], "n", fmt.Sprint(health.PendingAttempts), "ai", menuBarAssistantName(w, health.PendingAssistant))}
 	}
 	today := now.Local().Format("2006-01-02")
 	if retry, err := time.Parse(time.RFC3339, health.RetryAt); health.PendingSlot != "" && err == nil && retry.After(now) {
@@ -428,7 +441,7 @@ func menuBarBriefRow(w map[string]string, lang string, latest MobileBriefV1, has
 				if attempts == 1 {
 					key += "Once"
 				}
-				title = menuBarFill(w[key], "n", fmt.Sprint(attempts), "time", at)
+				title = menuBarFill(w[key], "n", fmt.Sprint(attempts), "time", at, "ai", menuBarAssistantName(w, health.PendingAssistant))
 			}
 		}
 		return menuBarBrief{Kind: "trying", Title: title}
@@ -500,6 +513,7 @@ func (a *App) menuBarView(lang string, readWaiting bool) (perfValue menuBarView,
 		view.UpdateRestart = status.RestartNeeded
 	}
 	view.Models = a.menuBarModels(w)
+	view.SignOut = a.menuBarSignOutRow(routeOrder(loadAIProviderConfig()), w)
 	// The launch preload can run before startup starts the brief service.
 	if svc := a.ensureMobileBriefService(); svc != nil {
 		latest, ok := a.menuBarLatestBrief(svc)
@@ -698,4 +712,26 @@ func (a *App) menuBarBriefKey(service *mobileBriefService) string {
 	}
 	return fmt.Sprintf("%p|%d|%d|%d|%p|%t|%s", service, info.ModTime().UnixNano(), mobileBriefReadEpoch.Load(),
 		a.memoryExternalReads.revision.Load(), snapshot, a.IsClosedEyesModeEnabled(), service.now().In(loc).Format("2006-01-02"))
+}
+
+// menuBarSignOut is the popover's first row when the chosen assistant is
+// confirmed signed out (R75). SignIn opens that assistant's own sign-in.
+type menuBarSignOut struct {
+	Assistant string `json:"assistant"`
+	Line      string `json:"line"`
+	SignIn    string `json:"signIn"`
+}
+
+// menuBarSignOutRow names the first confirmed signed-out assistant in order,
+// or returns nil. The line is the same as Today's.
+func (a *App) menuBarSignOutRow(order []string, w map[string]string) *menuBarSignOut {
+	assistant, ok := a.signOut.firstConfirmed(order)
+	if !ok {
+		return nil
+	}
+	return &menuBarSignOut{
+		Assistant: assistant,
+		Line:      menuBarFill(w["signedOutLine"], "assistant", assistantSignOutDisplayName(assistant)),
+		SignIn:    w["signIn"],
+	}
 }

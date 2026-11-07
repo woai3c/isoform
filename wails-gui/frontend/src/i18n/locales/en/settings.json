@@ -3679,7 +3679,7 @@
         "codex": "Codex",
         "ready": "Ready",
         "checking": "Checking now",
-        "signedOut": "Signed out. Sign in on this computer, then try again.",
+        "signedOut": "Signed out",
         "signInCheckFailed": "Isoform could not check the sign-in.",
         "notInstalled": "Not installed on this computer.",
         "unsupportedVersion": "Needs an update to work with Isoform's tools.",

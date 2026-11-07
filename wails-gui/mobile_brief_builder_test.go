@@ -169,6 +169,38 @@ func TestBuildMobileBriefGoldenV1(t *testing.T) {
 	}
 }
 
+// An early brief made at 11:20 PM on October 9 (Pacific) for the next morning's
+// slot takes that morning's day for its ID and date, and gathers nothing after
+// it was made. Its output is locked by its own golden file.
+func TestBuildMobileBriefGoldenEarlyV1(t *testing.T) {
+	in := mobileBriefGoldenInput()
+	in.AsOf = time.Date(2026, 10, 10, 6, 20, 0, 0, time.UTC)
+	in.BriefDay = time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
+	brief := buildMobileBriefV1(in)
+	if brief.BriefID != "2026-10-10-morning" || brief.LocalDate != "2026-10-10" {
+		t.Fatalf("early brief %q for %q, want the next morning's slot", brief.BriefID, brief.LocalDate)
+	}
+	got, err := json.MarshalIndent(brief, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got = append(got, '\n')
+
+	path := filepath.Join("testdata", "mobile_brief_golden_early_v1.json")
+	if *updateMobileBriefGolden {
+		if err := os.WriteFile(path, got, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden file (create it with -update-mobile-brief-golden): %v", err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("early brief differs from %s; rerun with -update-mobile-brief-golden after reviewing:\n%s", path, got)
+	}
+}
+
 func TestBuildMobileBriefRefsResolve(t *testing.T) {
 	brief := buildMobileBriefV1(mobileBriefGoldenInput())
 	if len(brief.Evidence) == 0 {

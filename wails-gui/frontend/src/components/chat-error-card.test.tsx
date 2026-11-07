@@ -9,10 +9,15 @@ import { ChatErrorCard } from "./chat-error-card";
 
 const mocks = vi.hoisted(() => ({
     emit: vi.fn(),
+    signIn: vi.fn(async () => undefined),
 }));
 
 vi.mock("../../wailsjs/runtime/runtime", () => ({
     EventsEmit: mocks.emit,
+}));
+
+vi.mock("@/lib/wails-shim-app", () => ({
+    OpenAssistantSignIn: mocks.signIn,
 }));
 
 const quotaPeriod: ChatError = { kind: "quota_period", period: "weekly", detail: "HTTP 429" };
@@ -41,14 +46,28 @@ describe("ChatErrorCard", () => {
     // K1 box 4: a 401 shows Sign in; the same words in a 500's body are the AI's error.
     it("names signed out only from the code, and a 500 with auth words as the AI's error", () => {
         const { unmount } = render(<ChatErrorCard error={parseChatError("anthropic: HTTP 401: nope", "signed_out")} assistant="Claude Code" />);
-        expect(screen.getByRole("status")).toHaveTextContent("Sign in to Claude Code again. · Sign in");
+        expect(screen.getByRole("status")).toHaveTextContent("Claude Code is signed out, so Isoform can't answer. Sign in, then send again. Sign in");
         fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-        expect(mocks.emit).toHaveBeenCalledWith("settings:open", "ai-provider");
+        expect(mocks.signIn).toHaveBeenCalledWith("claude-code");
+        expect(mocks.emit).not.toHaveBeenCalledWith("settings:open", "ai-provider");
         unmount();
 
         render(<ChatErrorCard error={parseChatError(authWords500, "assistant_error")} assistant="Claude Code" onRetry={() => {}} />);
         expect(screen.getByRole("status")).toHaveTextContent("Claude Code stopped with an error. · Try again · Details");
         expect(screen.queryByText(/Sign in/)).not.toBeInTheDocument();
+    });
+
+    // R75: after Sign in, Send again resends the same message with no retyping.
+    it("offers Send again on a signed-out answer only when a resend is wired, and calls it", () => {
+        const onRetry = vi.fn();
+        const { unmount } = render(<ChatErrorCard error={parseChatError("x", "signed_out")} assistant="Claude Code" onRetry={onRetry} />);
+        expect(screen.getByRole("status")).toHaveTextContent("Sign in, then send again. Sign in · Send again");
+        fireEvent.click(screen.getByRole("button", { name: "Send again" }));
+        expect(onRetry).toHaveBeenCalledTimes(1);
+        unmount();
+
+        render(<ChatErrorCard error={parseChatError("x", "signed_out")} assistant="Claude Code" />);
+        expect(screen.queryByRole("button", { name: "Send again" })).toBeNull();
     });
 
     it("never claims sign-in from words when no code proves it", () => {
@@ -109,7 +128,7 @@ describe("ChatErrorCard", () => {
     it("renders the Chinese lines in the zh-CN locale", async () => {
         await inChinese(() => {
             render(<ChatErrorCard error={parseChatError("x", "signed_out")} assistant="Claude Code" />);
-            expect(screen.getByRole("status")).toHaveTextContent("需要重新登录 Claude Code。· 登录");
+            expect(screen.getByRole("status")).toHaveTextContent("Claude Code 已退出登录，所以 Isoform 无法回答。登录后再发送。 登录");
         });
     });
 

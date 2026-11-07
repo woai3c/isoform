@@ -58,7 +58,12 @@ const (
 type mobileBriefInput struct {
 	Slot        string
 	WindowStart time.Time
-	AsOf        time.Time
+	// BriefDay is the day the brief is about (an early brief for the next
+	// morning's slot). Zero means the as-of time's own day, which every existing
+	// call relies on. Day words, the calendar and the day's sessions use it;
+	// the gather still stops at AsOf, the time the brief is made.
+	BriefDay time.Time
+	AsOf     time.Time
 	// ClockLayout is how the brief writes a time of day, the way the app
 	// shows times in the user's language ("3:04 PM", or "15:04").
 	ClockLayout string
@@ -172,6 +177,21 @@ type mobileBriefCandidate struct {
 	FollowUp bool
 }
 
+// briefDayRef is midnight of the day the brief is about, in loc: the slot's
+// day when BriefDay is set, otherwise the day of AsOf. Every day-word and
+// calendar-day comparison uses only the civil date, so for a brief with no
+// BriefDay this is the same date the brief always used.
+func (in mobileBriefInput) briefDayRef(loc *time.Location) time.Time {
+	if loc == nil {
+		loc = time.Local
+	}
+	day := in.AsOf.In(loc)
+	if !in.BriefDay.IsZero() {
+		day = in.BriefDay.In(loc)
+	}
+	return time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc)
+}
+
 // buildMobileBriefV1 composes one brief from plain input. Given the same input
 // it always returns the same document. Sections are bounded to eight items, the
 // whole document to sixty evidence refs, and every string to its byte limit.
@@ -186,11 +206,13 @@ func buildMobileBriefV1(in mobileBriefInput) MobileBriefV1 {
 		loc = time.Local
 	}
 	localAsOf := in.AsOf.In(loc)
-	localDate := localAsOf.Format("2006-01-02")
+	dayRef := in.briefDayRef(loc)
+	localDate := dayRef.Format("2006-01-02")
 	slot := mobileBriefSlot(in.Slot)
 
 	builder := &mobileBriefBuilder{
 		asOf:     in.AsOf,
+		dayRef:   dayRef,
 		loc:      loc,
 		lang:     mobileBriefVoiceLang(in.Language),
 		evidence: []MobileBriefRef{},
@@ -383,6 +405,7 @@ func buildMobileBriefV1(in mobileBriefInput) MobileBriefV1 {
 // items are dropped and their section is recorded as truncated.
 type mobileBriefBuilder struct {
 	asOf      time.Time
+	dayRef    time.Time
 	loc       *time.Location
 	lang      string
 	evidence  []MobileBriefRef
@@ -439,7 +462,13 @@ func (b *mobileBriefBuilder) sectionLimit(name string, items []mobileBriefCandid
 				b.truncated = append(b.truncated, name)
 			}
 		}
-		reason, rank := mobileBriefAttention(item, b.asOf, b.loc, b.lang)
+		// Civil-day comparisons only, so the brief's day is the reference. A
+		// zero as-of time keeps its old meaning: no attention reason.
+		dayAnchor := b.dayRef
+		if b.asOf.IsZero() {
+			dayAnchor = time.Time{}
+		}
+		reason, rank := mobileBriefAttention(item, dayAnchor, b.loc, b.lang)
 		out = append(out, MobileBriefItem{
 			Outcome:             item.Outcome,
 			ID:                  name + "-" + strconv.Itoa(len(out)+1),
@@ -1046,10 +1075,7 @@ func collectMobileBriefSessions(a *App, in *mobileBriefInput) {
 	// Recorded calls are available in Library. Their existence is never a
 	// Today/phone item; calendar meetings are collected independently.
 
-	localAsOf := in.AsOf.In(loc)
-	dayStart := time.Date(
-		localAsOf.Year(), localAsOf.Month(), localAsOf.Day(), 0, 0, 0, 0, loc,
-	)
+	dayStart := in.briefDayRef(loc)
 	dayRows, err := store.modelSessionsOverlapping(dayStart.UnixMilli(), in.AsOf.UnixMilli())
 	if err != nil {
 		log.Printf("[mobile-brief] day shape unavailable: %v", err)

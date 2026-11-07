@@ -18,8 +18,18 @@ struct MobileTodaySnapshot: Codable, Equatable, Sendable {
     /// The one current brief, by id and version (PROTOCOL.md 20.7a). Nil on a Mac before 1.0.
     var currentBrief: TodayBriefRef? = nil
     var tasksVersion: String? = nil
+    /// Set only while the Mac confirms the chosen assistant is signed out (R75). No button on the phone.
+    var assistantSignOut: TodayAssistantSignOut? = nil
 
     var generatedDate: Date? { RelayTime.parse(generatedAt) }
+}
+
+/// The Mac's confirmed sign-out for the chosen assistant (PROTOCOL.md 20.7a).
+struct TodayAssistantSignOut: Codable, Equatable, Sendable {
+    var assistant: String
+
+    /// The assistant's product name, as the Mac words it.
+    var displayName: String { assistant == "codex" ? "Codex" : "Claude Code" }
 }
 
 struct TodayNoticePacing: Codable, Equatable, Sendable {

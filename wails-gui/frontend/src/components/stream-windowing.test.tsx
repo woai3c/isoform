@@ -386,3 +386,21 @@ it('keeps a no-AI send dimmed, then shows ordinary failed-send controls once an 
     expect(view.getByRole('status')).toHaveTextContent("Didn't send · Try again · Edit");
     expect(retry).not.toHaveBeenCalled();
 });
+
+// R75: only the chat's latest signed-out row offers Send again; an older row does not.
+it('offers Send again only on the latest signed-out answer', () => {
+    const resendLast = vi.fn();
+    const items = [
+        { id: 'old-err', kind: 'error' as const, content: 'anthropic: HTTP 401', toolInput: { code: 'signed_out', assistant: 'Claude Code' } },
+        { id: 'msg-2', kind: 'user' as const, content: 'Second try' },
+        { id: 'new-err', kind: 'error' as const, content: 'anthropic: HTTP 401', toolInput: { code: 'signed_out', assistant: 'Claude Code' } },
+    ];
+    const view = render(
+        <FailedSendContext.Provider value={{ retry: vi.fn(), edit: vi.fn(), resendLast, resendItemId: 'new-err', aiReady: true }}>
+            <GroupedStreamList items={items} streaming={false} />
+        </FailedSendContext.Provider>,
+    );
+    expect(view.getAllByRole('button', { name: 'Send again' })).toHaveLength(1);
+    fireEvent.click(view.getByRole('button', { name: 'Send again' }));
+    expect(resendLast).toHaveBeenCalledTimes(1);
+});

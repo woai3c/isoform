@@ -1096,7 +1096,7 @@ func (s *mobileBriefService) generateWithMetadataOnStored(ctx context.Context, s
 		input.Timezone = mobileBriefTimezoneName(s.location)
 	}
 	if slot == mobileBriefSlotMorning {
-		input.YesterdayActivity = s.app.mobileBriefYesterdayActivity(ctx, input.AsOf, input.Location)
+		input.YesterdayActivity = s.app.mobileBriefYesterdayActivityFor(ctx, input.AsOf, input.briefDayRef(input.Location), input.Location)
 	}
 	input.PreviousBriefs = s.store.briefs()
 	input = mobileBriefWithoutExcluded(input, s.app.mobileBriefExclusions())

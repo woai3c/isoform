@@ -366,6 +366,14 @@ export interface AssistantHealthView {
 }
 
 export const GetAssistantHealth = appBinding<[], AssistantHealthView[]>("GetAssistantHealth");
+
+/** R75: the chosen assistant whose sign-in is confirmed gone; `signedOut` false when none. */
+export interface AssistantSignOutView {
+    assistant: string;
+    signedOut: boolean;
+}
+
+export const GetAssistantSignOut = appBinding<[], AssistantSignOutView>("GetAssistantSignOut");
 export const RetryAssistantHealth = appBinding<[string], AssistantHealthView[]>("RetryAssistantHealth");
 
 /**
@@ -1402,6 +1410,8 @@ export interface UpcomingItem {
     /** While Isoform is still trying that run: its failed tries and the cause, when known. */
     triedAttempts?: number;
     triedCause?: string;
+    /** The assistant the failed run named, for a sign-in failure. */
+    triedAssistant?: string;
 }
 
 export const GetUpcoming = appBinding<[], UpcomingItem[]>("GetUpcoming");

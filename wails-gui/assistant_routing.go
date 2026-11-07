@@ -132,6 +132,8 @@ func (a *App) buildAssistantRoutingRunner(native *agent.NativeAgentRunner, allow
 			}(format, cfg)
 		}
 		wg.Wait()
+		// R75: every probe reading also feeds the signed-out debounce.
+		a.observeAssistantSignIn(states)
 		return states
 	}}
 	policy := func(ctx context.Context) agent.RoutingPolicy {

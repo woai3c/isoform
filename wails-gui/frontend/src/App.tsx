@@ -577,8 +577,8 @@ export default function App() {
     });
     const aiReady = useAIReady();
     const failedSendActions = useMemo(
-        () => ({ retry: composer.retryFailedSend, edit: composer.editFailedSend, aiReady }),
-        [composer.retryFailedSend, composer.editFailedSend, aiReady],
+        () => ({ retry: composer.retryFailedSend, edit: composer.editFailedSend, resendLast: composer.resendLastSend, resendItemId: composer.resendItemId, aiReady }),
+        [composer.retryFailedSend, composer.editFailedSend, composer.resendLastSend, composer.resendItemId, aiReady],
     );
 
     // Drive the composer's welcome -> chat slide animation. `isEmptySession`

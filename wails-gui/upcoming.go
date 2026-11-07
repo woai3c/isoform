@@ -97,6 +97,9 @@ type UpcomingItem struct {
 	// is still trying: its failed tries and why, when known (e.g. "timeout").
 	TriedAttempts int    `json:"triedAttempts,omitempty"`
 	TriedCause    string `json:"triedCause,omitempty"`
+	// TriedAssistant is the assistant the failed run named (for a sign-in failure), so
+	// Tasks can say which one is signed out.
+	TriedAssistant string `json:"triedAssistant,omitempty"`
 }
 
 // upcomingBriefState is what the brief service tells Upcoming: whether the
@@ -431,7 +434,7 @@ func upcomingBriefItem(now time.Time, loc *time.Location, brief upcomingBriefSta
 		!upcomingBriefStoodIn(loc, brief, mobileBriefSlotOccurrence{BriefID: latest.BriefID, Slot: slot, ScheduledAt: latestAt}) {
 		item.DidntRunAt = latestAt.UnixMilli()
 		if latest.Status == mobileBriefRunFailed && latest.Attempts > 0 && ((latest.FailureCause == "signed_out" && latest.FailureAssistant != "" && now.Before(mobileBriefSlotCloses(mobileBriefSlotOccurrence{BriefID: latest.BriefID, Slot: slot, ScheduledAt: latestAt}, loc, brief.Settings))) || (latest.FailureCause != "signed_out" && item.NextRunAt > now.UnixMilli())) {
-			item.TriedAttempts, item.TriedCause = latest.Attempts, latest.FailureCause
+			item.TriedAttempts, item.TriedCause, item.TriedAssistant = latest.Attempts, latest.FailureCause, latest.FailureAssistant
 		}
 	}
 	item.LastRunAt = latestAt.UnixMilli()

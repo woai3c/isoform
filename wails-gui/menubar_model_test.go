@@ -629,3 +629,21 @@ func TestMenuBarBriefRunChangesUpdateRetryWithoutStampingBrief(t *testing.T) {
 		t.Fatalf("run changes and ticks stamped the brief %d times", stamps)
 	}
 }
+
+// R75 review: the signed-out lines name the chosen assistant; "Your AI" only when none is known.
+func TestMenuBarSignedOutLinesNameTheChosenAssistant(t *testing.T) {
+	now := time.Date(2026, 11, 3, 12, 0, 0, 0, time.Local)
+	retry := time.Date(2026, 11, 3, 16, 35, 0, 0, time.Local).UTC().Format(time.RFC3339)
+	for _, tc := range []struct{ lang, assistant, want string }{
+		{"en", "codex", "Tried 13 times. Codex is signed out."},
+		{"en", "claude-code", "Tried 13 times. Claude Code is signed out."},
+		{"en", "", "Tried 13 times. Your AI is signed out. Isoform tries again at 4:35 PM."},
+		{"zh-CN", "claude-code", "已尝试 13 次。Claude Code 已退出登录。"},
+		{"zh-CN", "", "已尝试 13 次。你的 AI 已退出登录。Isoform 会在 16:35 再试一次。"},
+	} {
+		health := MobileBriefHealth{PendingSlot: mobileBriefSlotMorning, PendingAttempts: 13, RetryAt: retry, PendingCause: "signed_out", PendingAssistant: tc.assistant}
+		if got := menuBarBriefRow(menuBarWords(tc.lang), tc.lang, MobileBriefV1{}, false, false, health, now); got.Title != tc.want {
+			t.Errorf("%s %q: %q, want %q", tc.lang, tc.assistant, got.Title, tc.want)
+		}
+	}
+}

@@ -1217,3 +1217,33 @@ describe('brief cards in the composer', () => {
         expect(calls.today.mock.calls[0].at(-1)).toEqual({ ...brief, generatedTitle: '2026-10-19', generatedFingerprint: 'brief-facts' });
     });
 });
+
+// R75: after a signed-out answer, Send again resends the chat's last message
+// with no retyping, on the same message row and with the same prompt.
+describe('Send again after a signed-out answer (R75)', () => {
+    it('resends the last message on the same row, only while a signed-out answer ends the chat', async () => {
+        const { hook, main } = mount();
+        act(() => hook.result.current.resendLastSend());
+        expect(calls.plain).not.toHaveBeenCalled();
+
+        act(() => hook.result.current.setPrompt('Plan the launch'));
+        await act(async () => hook.result.current.sendPrompt());
+        await waitFor(() => expect(calls.plain).toHaveBeenCalledTimes(1));
+
+        // The signed-out answer is the chat's last item, so Send again is live.
+        hook.rerender({ session: { ...main, items: [{ id: 'err-1', kind: 'error', content: 'signed out', toolInput: { code: 'signed_out' } }] } as never });
+        expect(hook.result.current.resendItemId).toBe('err-1');
+        act(() => hook.result.current.resendLastSend());
+        await waitFor(() => expect(calls.plain).toHaveBeenCalledTimes(2));
+        expect(calls.plain.mock.calls[1][0]).toBe(calls.plain.mock.calls[0][0]);
+        const rowIds = calls.persist.mock.calls.map((call) => call[1].id);
+        expect(rowIds.length).toBeGreaterThanOrEqual(2);
+        expect(new Set(rowIds).size).toBe(1);
+
+        // A later answer that is not an error does not resend the message again.
+        hook.rerender({ session: { ...main, items: [{ id: 'ans-1', kind: 'assistant', content: 'Done.' }] } as never });
+        expect(hook.result.current.resendItemId).toBeNull();
+        act(() => hook.result.current.resendLastSend());
+        expect(calls.plain).toHaveBeenCalledTimes(2);
+    });
+});

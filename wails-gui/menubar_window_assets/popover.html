@@ -68,12 +68,17 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
 .ro .k { margin-left:auto; font-size:12px; color:var(--color-subtle); letter-spacing:.04em; }
 .ro:disabled { opacity:.4; }
 .upd { height:32px; display:flex; align-items:center; gap:10px; padding:0 8px; }
+.sgn { display:block; height:auto; min-height:32px; padding:6px 8px; color:var(--color-warning); font-size:12px; line-height:1.4; }
+/* The design system link (Button link: text-accent), inline after the sentence. */
+.upd.sgn button { display:inline; height:auto; margin:0 0 0 4px; padding:0; border-radius:0; background:none; color:var(--color-accent); font:inherit; font-size:12px; font-weight:500; }
+.upd.sgn button:hover { text-decoration:underline; text-underline-offset:4px; }
 .upd button { margin-left:auto; height:24px; padding:0 10px; border-radius:99px; background:var(--color-solid-btn-bg); color:var(--color-solid-btn-fg); font-size:12px; font-weight:600; }
 .ft { height:36px; display:flex; align-items:center; justify-content:space-between; padding:0 6px; border-top:1px solid var(--color-border-light); }
 .ft button { height:26px; padding:0 8px; border-radius:6px; font-size:12px; font-weight:500; color:var(--color-muted); }
 .ft button:hover, .ft button:focus-visible { background:var(--color-panel-warm); color:var(--color-ink); }
 </style></head><body>
 <div class="pop" id="pop" role="dialog">
+<div class="upd sgn" id="sgn" hidden><span id="sgnText"></span><button id="sgnBtn" type="button"></button></div>
 <header class="hd" id="hd"><span class="mark" aria-hidden="true"></span><span class="dot" aria-hidden="true"></span><span id="state"></span><button id="hb" type="button"></button></header>
 <button class="br" id="br" type="button">
   <span class="pl" id="pl"></span>
@@ -208,6 +213,10 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         el('shortcut').textContent = w.openShortcut;
         el('mdl').hidden = !model.models;
         el('mdlText').textContent = model.models || '';
+        el('sgn').hidden = !model.signOut;
+        el('sgnText').textContent = model.signOut ? model.signOut.line : '';
+        el('sgnBtn').textContent = model.signOut ? model.signOut.signIn : '';
+        el('sgnBtn').dataset.command = model.signOut ? 'signIn:' + model.signOut.assistant : '';
         el('upd').hidden = !model.update;
         el('updText').textContent = fill(model.updateRestart ? w.updateRestart : w.update, {version: model.update || ''});
         el('restart').textContent = w.restart;
@@ -237,6 +246,7 @@ button:focus-visible { outline:2px solid var(--color-border-focus); outline-offs
         return h + ':' + m;
     }
     // Pause and Resume change the header at once; Go's read confirms it.
+    el('sgnBtn').onclick = () => send(el('sgnBtn').dataset.command);
     el('hb').onclick = () => {
         const command = el('hb').dataset.command;
         send(command);

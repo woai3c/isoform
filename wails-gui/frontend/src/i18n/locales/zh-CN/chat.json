@@ -92,6 +92,7 @@
             "seeUsage": "查看用量",
             "setUp": "去设置",
             "signIn": "登录",
+            "sendAgain": "重新发送",
             "tryAgain": "重试",
             "details": "详情",
             "hide": "收起"
@@ -100,7 +101,7 @@
         "cause": {
             "noAssistantBox": "Isoform 需要一个 AI 才能回答。",
             "noAssistantKept": "没有发送：还没有登录 AI。",
-            "signedOut": "需要重新登录 {{ai}}。",
+            "signedOut": "{{ai}} 已退出登录，所以 Isoform 无法回答。登录后再发送。",
             "usageDaily": "{{ai}} 今天的额度用完了。",
             "usageWeekly": "{{ai}} 本周的额度用完了。",
             "usageMonthly": "{{ai}} 本月的额度用完了。",

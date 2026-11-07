@@ -122,6 +122,7 @@ const pauseMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/wails-shim-app", () => ({
+    GetAssistantSignOut: vi.fn().mockResolvedValue({ assistant: "", signedOut: false }),
     GetTodayYourWeekDeclined: vi.fn(async () => false),
     DeclineTodayYourWeek: vi.fn(async () => undefined),
     GetTodayTopics: pauseMocks.todayTopics,
