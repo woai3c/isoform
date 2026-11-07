@@ -419,6 +419,21 @@ final class BriefConversationTests: XCTestCase {
         XCTAssertFalse(BriefCardsView.talkReplacedByLine(knownAway: false, tapLine: BriefConversationCopy.computerTooOld))
     }
 
+    /// P155: a brief the phone knows without an opener card offers no Talk button; a brief with one does. The
+    /// opener's words must be non-empty, or the sheet has nothing to open on.
+    func testABriefWithoutAnOpenerOffersNoTalk() {
+        XCTAssertTrue(BriefCardsView.offersTalk(brief()), "the fixture brief carries an opener")
+        var noOpener = brief()
+        noOpener.cards = [plan]
+        XCTAssertFalse(BriefCardsView.offersTalk(noOpener))
+        var emptyOpener = brief()
+        emptyOpener.cards = [MobileBriefCard(id: "opener", kind: "opener", mode: "speak_first", message: "")]
+        XCTAssertFalse(BriefCardsView.offersTalk(emptyOpener))
+        var noCards = brief()
+        noCards.cards = []
+        XCTAssertFalse(BriefCardsView.offersTalk(noCards))
+    }
+
     func testSheetOpenerRetriesItsReceiptWithoutChangingChatDraft() async throws {
         let hub = BriefConversationHub()
         let (cache, journal) = try resources()

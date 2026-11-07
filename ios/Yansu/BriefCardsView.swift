@@ -248,9 +248,9 @@ struct BriefCardsView: View {
                         }
                     }
                 }
-                if canTalk, talkReplaced {
+                if canTalk, Self.offersTalk(brief), talkReplaced {
                     talkLineText(BriefConversationCopy.unavailable)
-                } else if canTalk {
+                } else if canTalk, Self.offersTalk(brief) {
                     Button { talk() } label: {
                         HStack(spacing: 6) {
                             if opening {
@@ -319,9 +319,9 @@ struct BriefCardsView: View {
                     }
                 }
             }
-            if talkReplaced {
+            if Self.offersTalk(brief), talkReplaced {
                 talkLineText(BriefConversationCopy.unavailable)
-            } else {
+            } else if Self.offersTalk(brief) {
                 Button { talk() } label: {
                     Label("Talk about this brief", systemImage: "bubble.left.and.bubble.right")
                 }
@@ -440,6 +440,12 @@ struct BriefCardsView: View {
 
     static func talkReplacedByLine(knownAway: Bool, tapLine: String?) -> Bool {
         knownAway || tapLine == BriefConversationCopy.unavailable
+    }
+
+    /// Talk needs the computer's opener (the sheet opens on it). Until the computer can start a conversation from any
+    /// brief, a brief the phone knows without an opener card offers no Talk button, rather than one it would refuse.
+    static func offersTalk(_ brief: MobileBriefV1) -> Bool {
+        brief.cards.contains { $0.kind == "opener" && !$0.message.isEmpty }
     }
 
     private func talkLineText(_ line: String) -> some View {
