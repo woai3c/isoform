@@ -39,8 +39,9 @@ const (
 	MaxEvents = 50
 	// KeptBriefs is how many briefs each device retains.
 	KeptBriefs = 7
-	// RequestTTL is how long a queued request remains deliverable.
-	RequestTTL = time.Hour
+	// RequestTTL is how long a queued request remains deliverable. A phone request
+	// waits this long for a sleeping computer (PROTOCOL.md section 23).
+	RequestTTL = 24 * time.Hour
 )
 
 const schema = `

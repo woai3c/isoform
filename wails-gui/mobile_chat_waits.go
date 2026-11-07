@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -22,16 +21,39 @@ const (
 	// mobileChatAnswerBatchWindow ends a batch the phone never read.
 	mobileChatAnswerBatchWindow = 12 * time.Hour
 	mobileChatAnswerNoticeKind  = "chat_answer"
-	mobileChatAnswerPreviewMax  = 160
 )
+
+// mobileSendWaitWindow is how long a send that waited for the computer may still
+// run without asking again (PROTOCOL.md section 23).
+const mobileSendWaitWindow = time.Hour
+
+// mobileConfirmSendCode is the 409 code for a send that waited too long.
+const mobileConfirmSendCode = "confirm_send"
+
+// mobileSendNeedsConfirmation reports whether a send queued at queuedAt is past the
+// window. A send without a queue time is never late.
+func mobileSendNeedsConfirmation(queuedAt, now time.Time) bool {
+	return !queuedAt.IsZero() && now.Sub(queuedAt) > mobileSendWaitWindow
+}
+
+// mobileSendRecipientName is the person a held reply is for, so the prompt can name them. Only a drafted reply
+// has one on the computer; any other send returns "" and the phone says "the reply".
+func (bridge *mobileBridge) mobileSendRecipientName(id string) string {
+	if !strings.HasPrefix(id, mobileDraftTaskPrefix) {
+		return ""
+	}
+	task, found, err := bridge.app.mobileDraftTask(bridge.ctx, id)
+	if err != nil || !found {
+		return ""
+	}
+	return task.person(bridge.app)
+}
 
 // mobileChatAnswerBatch is the answers to waited messages one notification counts.
 type mobileChatAnswerBatch struct {
-	collapse  string
-	count     int
-	firstID   string
-	firstText string
-	at        time.Time
+	collapse string
+	firstID  string
+	at       time.Time
 }
 
 // mobileChatAnswerPublishOverride replaces publishing in tests.
@@ -110,10 +132,9 @@ func (bridge *mobileBridge) noticeWaitedChatAnswer(chatID string, reply *mobileC
 	chat.mu.Lock()
 	batch := chat.answers[chatID]
 	if batch == nil || now.Sub(batch.at) > mobileChatAnswerBatchWindow {
-		batch = &mobileChatAnswerBatch{collapse: "chat-answers-" + uuid.NewString(), firstID: answer.ID, firstText: answer.Content}
+		batch = &mobileChatAnswerBatch{collapse: "chat-answers-" + uuid.NewString(), firstID: answer.ID}
 		chat.answers[chatID] = batch
 	}
-	batch.count++
 	batch.at = now
 	current := *batch
 	chat.mu.Unlock()
@@ -146,17 +167,13 @@ func (bridge *mobileBridge) waitedChatAnswer(chatID string, reply *mobileChatRep
 	return storage.StreamItemRow{}, false
 }
 
-// mobileChatAnswerNotice is the sealed notification: the answer's start for
-// one answer, one count line for several. It opens Chat at the first answer.
+// mobileChatAnswerNotice is the sealed notification. It carries no answer text and
+// no count, only "Isoform answered." (PROTOCOL.md section 23), and it opens Chat at
+// the first answer.
 func mobileChatAnswerNotice(chatID string, batch mobileChatAnswerBatch, language string, now time.Time) mobileNotice {
-	body := mobileChatClip(strings.Join(strings.Fields(batch.firstText), " "), mobileChatAnswerPreviewMax)
-	if batch.count > 1 {
-		switch language {
-		case "zh-CN":
-			body = fmt.Sprintf("你在电脑离开时发的 %d 条消息，Isoform 都回答了。", batch.count)
-		default:
-			body = fmt.Sprintf("Isoform answered the %d messages you sent while your computer was away.", batch.count)
-		}
+	body := "Isoform answered."
+	if language == "zh-CN" {
+		body = "Isoform 已回复。"
 	}
 	return mobileNotice{
 		ID: uuid.NewString(), Kind: mobileChatAnswerNoticeKind, Title: "Isoform", Body: body,

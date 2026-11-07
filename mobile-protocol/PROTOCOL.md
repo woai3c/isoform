@@ -213,7 +213,7 @@ routes require `Authorization: Bearer <deviceBearer>`; unknown, expired or revok
 | `GET /v1/presence` | bearer | `presence:read` | `{"hubOnline":true,"lastSeenAt":"..."}` |
 | `GET /v1/brief/latest` | bearer | `brief:read` | the latest stored brief: `{"version":<seq>,"asOf":"...","env":{...envelope...}}`; 404 when none |
 | `GET /v1/briefs?limit=7` | bearer | `brief:read` | `{"briefs":[{"version","asOf","env"}]}` newest first, at most 7 |
-| `POST /v1/requests` | bearer | per request (see hub routes) | body is a `d2h` envelope of kind `req` → 202 `{"accepted":true}`; queued if the hub is offline (1 hour TTL) |
+| `POST /v1/requests` | bearer | per request (see hub routes) | body is a `d2h` envelope of kind `req` → 202 `{"accepted":true}`; queued if the hub is offline (24 hour TTL, section 23) |
 | `GET /v1/responses?after=<seq>&wait=25` | bearer | `brief:read` | long-poll; `{"envelopes":[...h2d envelopes with seq > after...]}` (kinds `res` and `event`) |
 | `POST /v1/responses/ack` | bearer | `brief:read` | `{"upTo":<seq>}` → deletes delivered h2d envelopes (not briefs) |
 | `PUT /v1/push/token` | bearer | `push` | `{"deviceToken":"<hex>","environment":"development"\|"production"}` → `{"enabled":true,"registeredAt":"..."}`; 503 when the relay has no APNs configuration for that environment |
@@ -228,7 +228,7 @@ per 10 minutes per device (429 with `Retry-After`).
 Retention: at most 200 queued envelopes per (hub, device, direction) for request and response
 envelopes, and at most 50 `event` envelopes per device to the phone, trimmed separately so an
 event burst never evicts a response; the oldest of each kind go first. Request envelopes
-expire after 1 hour; the latest 7 briefs per device are kept; approvals are deleted after
+expire after 24 hours (section 23); the latest 7 briefs per device are kept; approvals are deleted after
 delivery; a pairing row is deleted at expiry.
 
 Status codes (decided in the relay implementation):
@@ -326,7 +326,7 @@ Relay behaviours the hub must expect (decided in the relay implementation):
   device bearer, claim token).
 - The relay enforces 60 requests per device per minute; the 10-minute `/brief/refresh`
   cooldown is enforced by the hub (the path is inside the ciphertext).
-- The janitor deletes expired pairings, request envelopes older than 1 hour, briefs beyond
+- The janitor deletes expired pairings, request envelopes older than 24 hours, briefs beyond
   the latest 7, exhausted pushes older than 24 hours, and devices whose bearer expired
   (cascading to their envelopes, briefs and push rows).
 
@@ -3206,3 +3206,36 @@ semantics alongside the phone UI. A queued hold must preserve its Undo window,
 recheck calendar availability on the computer, and fail when its proposed time
 has passed while the computer was away. Removing a hold must only target an
 event recorded as created by Isoform and requires the person's action.
+
+## 23. The computer asleep: waits and answers (v1.0.0, 2026-11-07)
+
+A sleeping computer means "later", not "no". Everything the person does on the phone
+still works while the computer sleeps; it waits and happens when the computer wakes.
+
+- **Queue.** A phone request sent while the hub is offline is stored by the relay as a `d2h`
+  request envelope (section 5, `POST /v1/requests`, which answers 202) and replayed once when the
+  hub reconnects (section 6). This is the only queue; the phone and the computer add none. The
+  relay holds a request for 24 hours (`RequestTTL`), then drops it unanswered.
+- **Once.** Every waiting write carries its `idempotencyKey` (section 15.2). The key is inside the
+  sealed request, so the relay never sees it. A retry after wake reuses the key; the stored receipt
+  replays the first outcome, so the action runs once. A refused answer (4xx, 5xx) is not stored,
+  so the retry runs only if the first did not.
+- **Stale sends to other people.** A task action `send` (a drafted reply, or the linked-list send)
+  may carry `queuedAt` (RFC 3339 UTC, as for chat in 15.3). If the computer receives it more than
+  one hour after `queuedAt`, it does not run the action. It answers `409` with
+  `data: {"code":"confirm_send"}`, stores no receipt, and sends nothing. The phone then asks
+  "Your computer is awake. Send the reply to Sam now?" with Send and Not now. On Send the phone
+  posts a new request with a new key and no `queuedAt`, which runs at once. A `queuedAt` more than
+  5 minutes ahead of the computer's clock is refused with 400, as in 15.3.
+- **Expired.** A request the computer has not received within 24 hours is gone from the relay.
+  The phone notices at its next open, from its own journal time (it uses no timer), and shows
+  "Your computer didn't wake, so this wasn't sent." with Send again. Messages stay as drafts until
+  the person sends them.
+- **Answers.** The answer to a chat message that waited is an `chat_answer` notification with the
+  body "Isoform answered." (zh-CN "Isoform 已回复。"). It carries no answer text and no count. The
+  phone opens Chat for the answer, which is read through the normal chat route.
+- **Waiting state.** A row that waits shows "Waits for your computer" (zh-CN "等待电脑唤醒") until
+  the computer answers. The phone decides this from its journal and the relay's presence; nothing
+  new is sent to the phone for it.
+- **Not changed.** Chat, brief-opener and "Talk about this brief" routes, the brief made ahead
+  (a later version), keep-awake settings and the relay's ciphertext-only rule.

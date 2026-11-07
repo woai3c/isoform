@@ -646,3 +646,34 @@ func TestCheckpointTruncatesTheWriteAheadLog(t *testing.T) {
 		t.Fatalf("write-ahead log after checkpoint: size %d, want 0 (%v)", after.Size(), err)
 	}
 }
+
+// A phone request waits for a sleeping computer for a day (PROTOCOL.md section 23):
+// it is still deliverable after two hours and gone after RequestTTL.
+func TestRequestWaitsForASleepingComputerForADay(t *testing.T) {
+	s := openTest(t)
+	now := time.Now()
+	dev := seedDevice(t, s, newHub(t, s), now.Add(3*RequestTTL))
+	env := wire.Envelope{V: 1, Hub: dev.HubID, Dev: dev.ID, Dir: "d2h", Seq: 1, Kind: "req", CT: ct(t, 60)}
+	body, err := env.Canonical()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AddRequest(context.Background(), dev, env, body, now); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := s.UnsentRequests(context.Background(), dev.ID, 0, now.Add(2*time.Hour), MaxQueued)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("a request was not kept for two hours: %d %v", len(entries), err)
+	}
+	if RequestTTL != 24*time.Hour {
+		t.Fatalf("RequestTTL = %s, want 24h", RequestTTL)
+	}
+	entries, err = s.UnsentRequests(context.Background(), dev.ID, 0, now.Add(RequestTTL-time.Minute), MaxQueued)
+	if err != nil || len(entries) != 1 {
+		t.Fatalf("a request was dropped before a day: %d %v", len(entries), err)
+	}
+	entries, err = s.UnsentRequests(context.Background(), dev.ID, 0, now.Add(RequestTTL+time.Minute), MaxQueued)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("a request older than a day was still deliverable: %d %v", len(entries), err)
+	}
+}

@@ -424,6 +424,14 @@ func (p *mobileE2EPhone) request(t *testing.T, method, path, body string) (int, 
 // encrypted request, as PROTOCOL.md section 7 requires for every hub route.
 func (p *mobileE2EPhone) requestWithQuery(t *testing.T, method, path, query, body string) (int, string) {
 	t.Helper()
+	id := p.postRequest(t, method, path, query, body)
+	return p.awaitResponse(t, id)
+}
+
+// postRequest seals and queues one request on the relay and returns its id. The
+// relay answers 202 whether or not the hub is connected (PROTOCOL.md section 23).
+func (p *mobileE2EPhone) postRequest(t *testing.T, method, path, query, body string) string {
+	t.Helper()
 	id := uuid.NewString()
 	plaintext, err := json.Marshal(map[string]string{"id": id, "method": method, "path": path, "query": query, "body": body})
 	if err != nil {
@@ -437,6 +445,12 @@ func (p *mobileE2EPhone) requestWithQuery(t *testing.T, method, path, query, bod
 	if status, reply := p.call(t, "POST", "/v1/requests", env, p.authed()); status != http.StatusAccepted {
 		t.Fatalf("send request: %d %s", status, reply.Error)
 	}
+	return id
+}
+
+// awaitResponse long-polls until the hub answers the request id.
+func (p *mobileE2EPhone) awaitResponse(t *testing.T, id string) (int, string) {
+	t.Helper()
 	deadline := time.Now().Add(60 * time.Second)
 	for time.Now().Before(deadline) {
 		for _, item := range p.poll(t, 10) {
@@ -457,7 +471,7 @@ func (p *mobileE2EPhone) requestWithQuery(t *testing.T, method, path, query, bod
 			}
 		}
 	}
-	t.Fatalf("no response for %s %s", method, path)
+	t.Fatalf("no response for request %s", id)
 	return 0, ""
 }
 

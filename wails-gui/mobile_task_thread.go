@@ -468,6 +468,9 @@ type taskActionInput struct {
 	// Text is the person's edit of a draft, sent in its place.
 	Text          string `json:"text,omitempty"`
 	DraftRevision string `json:"draftRevision,omitempty"`
+	// QueuedAt is when the phone queued a send that waited for a sleeping computer
+	// (PROTOCOL.md section 23). Only a send reads it.
+	QueuedAt string `json:"queuedAt,omitempty"`
 }
 
 func (bridge *mobileBridge) serveTaskAction(w http.ResponseWriter, r *http.Request, device mobileDeviceRecord, id string) {
@@ -483,7 +486,22 @@ func (bridge *mobileBridge) serveTaskAction(w http.ResponseWriter, r *http.Reque
 	if !validateTaskAction(w, id, input) {
 		return
 	}
+	queuedAt, ok := mobileChatQueuedAt(input.QueuedAt, time.Now())
+	if !ok {
+		mobileJSON(w, http.StatusBadRequest, nil, "the waiting fields are not valid")
+		return
+	}
 	bridge.runReceipted(w, device, key, r.Method+" "+r.URL.Path, func(w http.ResponseWriter) {
+		// A send that waited too long needs a fresh yes (PROTOCOL.md section 23). The
+		// refusal is not stored, so the phone's new request with a new key can run.
+		if input.Action == "send" && mobileSendNeedsConfirmation(queuedAt, time.Now()) {
+			data := map[string]string{"code": mobileConfirmSendCode}
+			if name := bridge.mobileSendRecipientName(id); name != "" {
+				data["person"] = name
+			}
+			mobileJSON(w, http.StatusConflict, data, mobileConfirmSendCode)
+			return
+		}
 		bridge.performTaskAction(w, device, id, input, engagement.ChannelPush)
 	})
 }

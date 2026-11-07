@@ -117,10 +117,10 @@ func TestMobileChatWaitedAnswersShareOneNotification(t *testing.T) {
 	send("q2", true)
 	both := published(2)
 	second := both[1]
-	if first.Kind != "chat_answer" || first.Body != "Canned reply." || first.DestinationKind != "chat" || first.DestinationID != mobileTestChatID {
+	if first.Kind != "chat_answer" || first.Body != "Isoform answered." || first.DestinationKind != "chat" || first.DestinationID != mobileTestChatID {
 		t.Fatalf("first notification %+v", first)
 	}
-	if second.Body != "Isoform answered the 2 messages you sent while your computer was away." ||
+	if second.Body != "Isoform answered." ||
 		second.Collapse != first.Collapse || second.MomentID != first.MomentID || second.ID == first.ID {
 		t.Fatalf("second notification %+v, first %+v", second, first)
 	}
@@ -155,17 +155,17 @@ func TestMobileChatWaitedAnswersShareOneNotification(t *testing.T) {
 	}
 	send("q4", true)
 	third := published(3)[2]
-	if third.Collapse == first.Collapse || third.Body != "Canned reply." {
+	if third.Collapse == first.Collapse || third.Body != "Isoform answered." {
 		t.Fatalf("a read batch was continued: %+v", third)
 	}
 }
 
 func TestMobileChatAnswerNoticeCopy(t *testing.T) {
 	now := time.Now()
-	batch := mobileChatAnswerBatch{collapse: "chat-answers-" + uuid.NewString(), count: 3, firstID: uuid.NewString(), firstText: "Yes.", at: now}
+	batch := mobileChatAnswerBatch{collapse: "chat-answers-" + uuid.NewString(), firstID: uuid.NewString(), at: now}
 	for language, want := range map[string]string{
-		"en":    "Isoform answered the 3 messages you sent while your computer was away.",
-		"zh-CN": "你在电脑离开时发的 3 条消息，Isoform 都回答了。",
+		"en":    "Isoform answered.",
+		"zh-CN": "Isoform 已回复。",
 	} {
 		n := mobileChatAnswerNotice(mobileTestChatID, batch, language, now)
 		if n.Body != want {
@@ -174,10 +174,6 @@ func TestMobileChatAnswerNoticeCopy(t *testing.T) {
 		if err := n.validate(); err != nil {
 			t.Fatalf("%s: %v", language, err)
 		}
-	}
-	batch.count, batch.firstText = 1, strings.Repeat("word ", 100)
-	if n := mobileChatAnswerNotice(mobileTestChatID, batch, "en", now); len(n.Body) > mobileChatAnswerPreviewMax+3 || n.validate() != nil {
-		t.Fatalf("one answer's preview is not bounded: %d bytes", len(n.Body))
 	}
 }
 
