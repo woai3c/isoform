@@ -90,7 +90,9 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead:
     const held = !!current && paragraphs.length === 0 && wordsWithheld === 'store_unavailable' && !readError;
     // A failed read (Try again) or a gate that says the brief can't be shown (no Try again).
     const failedRead = readError && paragraphs.length === 0;
-    const gateWithheld = !!current && paragraphs.length === 0 && !held && !readError;
+    // A gate says the brief can't be shown only when the read names a reason. A loaded brief
+    // with no words and no reason shows its title and time only (design R74).
+    const gateWithheld = !!current && paragraphs.length === 0 && !held && !readError && wordsWithheld !== '';
     const unreadable = failedRead || gateWithheld;
     const lead = current ? (paragraphs[0] ?? '') : (leadWithCard ?? '');
     // Read it opens the brief in the card (§5), not on Today.
@@ -107,7 +109,11 @@ export function MainChatBriefCard({ briefId, weeklyRecap = false, display, lead:
     // The rows the opened recap would draw: the same hygiene pass and row filters as Today's week view.
     const shownWeek = week && current ? weekRowsShown(briefForDisplay(current).yourWeek, true) : null;
     const weekRows = !!shownWeek && (shownWeek.time.length > 0 || shownWeek.done.length > 0 || shownWeek.open.length > 0 || shownWeek.learned.length > 0);
-    const canRead = !reading && (paragraphs.length > 0 || (week && weekRows));
+    // A loaded brief that holds items shows Read it too, so the panel is never empty (design R74).
+    // Not on a held, gated or failed card.
+    const holdsItems = !!current && wordsWithheld === '' && !readError && Object.values(current.sections ?? {})
+        .some((list) => Array.isArray(list) && list.length > 0);
+    const canRead = !reading && (paragraphs.length > 0 || (week && weekRows) || holdsItems);
 
     return (
         <div className="flex flex-col gap-2" data-testid="main-chat-brief-card" aria-busy={!current}>

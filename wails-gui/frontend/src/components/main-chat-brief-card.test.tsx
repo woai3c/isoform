@@ -220,4 +220,30 @@ describe("MainChatBriefCard", () => {
         expect(screen.getByText('Quiet day. Priya is waiting on your review.')).toBeInTheDocument();
     });
 
+
+    it('a loaded brief with no words and no withheld reason shows its title and time only, with no line, Try again, Read it or Hear it (design R74)', async () => {
+        getByID.mockResolvedValue(view({ ...withWords, narrative: [], audio: undefined }));
+        render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'evening', asOf: '2026-10-28T18:00:00Z', timezone: 'UTC' }} onOpenBrief={vi.fn()} meta={() => <span>From brief</span>} />);
+        expect(await screen.findByRole('heading', { name: 'Evening brief · 6:00 PM' })).toBeInTheDocument();
+        await waitFor(() => expect(getByID).toHaveBeenCalled());
+        await act(async () => {});
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(screen.queryByRole('button', { name: en.mainChat.view.retry })).toBeNull();
+        expect(screen.queryByRole('button', { name: en.mainChat.card.button.readIt })).toBeNull();
+        expect(screen.queryByRole('button', { name: en.mainChat.card.button.hearIt })).toBeNull();
+        expect(screen.getByText('From brief')).toBeInTheDocument();
+    });
+
+
+    it('a loaded brief with no words but items shows Read it and no Hear it, so its panel is not empty (design R74)', async () => {
+        getByID.mockResolvedValue(view({ ...withWords, narrative: [], audio: undefined, sections: { moved: [{ id: 'm1', title: 'Moved item' }] } }));
+        const open = vi.fn();
+        render(<MainChatBriefCard briefId="brief-1" display={{ slot: 'evening', asOf: '2026-10-28T18:00:00Z', timezone: 'UTC' }} onOpenBrief={open} />);
+        expect(await screen.findByRole('button', { name: en.mainChat.card.button.readIt })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: en.mainChat.card.button.hearIt })).toBeNull();
+        expect(screen.queryByRole('alert')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: en.mainChat.card.button.readIt }));
+        expect(open).toHaveBeenCalledTimes(1);
+    });
+
 });
