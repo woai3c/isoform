@@ -10,7 +10,7 @@ afterEach(async () => {
 
 const userItem = (toolInput: unknown): Pick<StreamItem, 'toolInput'> => ({ toolInput: toolInput as StreamItem['toolInput'] });
 
-describe('From your iPhone marker (#635)', () => {
+describe('From your iPhone marker (issue 635)', () => {
     it('recognises only a phone origin in the user row', () => {
         expect(isFromPhone(userItem({ origin: 'phone' }))).toBe(true);
         expect(isFromPhone(userItem(undefined))).toBe(false);

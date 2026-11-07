@@ -26,6 +26,10 @@ const technical = new Set([
 // Setup pairs Apple's iPhone, so its product name is allowed there.
 const namesTheDevices = (key: string) => key.startsWith('onboarding.v2.');
 
+// "From your iPhone" is design's exact caption for a message sent from the phone (handoff
+// 2026-11-06-1744-ios-pr-batch-review-v1.0.5, #635). The caption names the phone on purpose, in English and zh-CN.
+const namesThePhone = new Set(['chat.fromPhone']);
+
 for (const [language, namespaces] of Object.entries(resources)) {
     it('keeps release copy free of emoji and generic device brands (' + language + ')', () => {
         function check(value: unknown, key: string) {
@@ -35,7 +39,7 @@ for (const [language, namespaces] of Object.entries(resources)) {
                 if (key === 'app.tasks.claudeCode') {
                     expect(value).toBe(language === 'en' ? 'Claude Code on this computer' : '此电脑上的 Claude Code');
                 }
-                if (!namesTheDevices(key)) {
+                if (!namesTheDevices(key) && !namesThePhone.has(key)) {
                     expect(value, key).not.toMatch(/\b(?:iPhone|iOS)\b/);
                 }
                 if (/\bmacOS\b/.test(value)) expect(technical.has(key), key).toBe(true);
