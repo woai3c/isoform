@@ -61,7 +61,7 @@ vi.mock("@/lib/notify", () => ({
 }));
 
 const QR_NAME = "Pairing code for Isoform on your phone";
-const KEEP_AWAKE_NAME = "Keep this computer awake for your phone";
+const KEEP_AWAKE_NAME = "Keep awake while plugged in";
 const INVITATION = "isoform://pair#component-test-invitation";
 
 const phone: MobileDeviceView = {
@@ -985,11 +985,11 @@ describe("MobileConnectionSettings component", () => {
         expect(zhKeys).toEqual(enKeys);
     });
 
-    it("shows the keep-awake switch under Your phones once a phone is paired, on by default", async () => {
+    it("shows the keep-awake switch under Your phones once a phone is paired, off until turned on", async () => {
         mocks.getStatus.mockResolvedValue(connectedStatus);
-        mocks.getKeepAwake.mockResolvedValue({ on: true, pairedPhones: 1, onPower: true, hasBattery: true });
+        mocks.getKeepAwake.mockResolvedValue({ on: false, pairedPhones: 1, onPower: true, hasBattery: true });
         await renderReady();
-        expect(await screen.findByRole("switch", { name: KEEP_AWAKE_NAME })).toBeChecked();
+        expect(await screen.findByRole("switch", { name: KEEP_AWAKE_NAME })).not.toBeChecked();
     });
 
     it.each(["en", "zh-CN"])("chooses the laptop or desktop keep-awake copy from battery status in %s", async (language) => {

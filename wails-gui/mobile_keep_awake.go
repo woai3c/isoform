@@ -10,11 +10,12 @@ import (
 	"time"
 )
 
-// The computer holds a system idle-sleep assertion while the setting is on and
-// at least one phone is paired, except when battery charge is too low or Low
-// Power Mode is on. Power is watched through events, never polled. The state
-// machine takes the power source and the assertion as interfaces so tests can
-// drive them without touching IOKit.
+// The computer holds a system idle-sleep assertion only while the setting is on,
+// at least one phone is paired, Low Power Mode is off, and the computer is
+// plugged in. On battery it never holds the computer awake. The setting is off
+// until the owner turns it on. Power is watched through events, never polled.
+// The state machine takes the power source and the assertion as interfaces so
+// tests can drive them without touching IOKit.
 
 const (
 	mobileKeepAwakeFileName = "keep-awake.json"
@@ -22,16 +23,15 @@ const (
 )
 
 type mobileKeepAwakePowerState struct {
-	onAC           bool
-	batteryPercent float64
-	hasBattery     bool
-	lowPowerMode   bool
-	lidClosed      bool
+	onAC         bool
+	hasBattery   bool
+	lowPowerMode bool
+	lidClosed    bool
 }
 
 // mobileKeepAwakePower reads the power source and reports changes.
 type mobileKeepAwakePower interface {
-	// State reads the current power inputs; battery percentage is -1 when unavailable.
+	// State reads the current power inputs.
 	State() mobileKeepAwakePowerState
 	// Watch calls changed on each power-source or Low Power Mode change. It is called at most once.
 	Watch(changed func()) error
@@ -59,34 +59,31 @@ type MobileKeepAwakeStatus struct {
 }
 
 // mobileKeepAwakeFile is the on-disk shape of keep-awake.json. A missing "on"
-// means the owner has not chosen yet, so the setting is on once a phone is paired.
+// means the owner has not chosen yet, which is off.
 type mobileKeepAwakeFile struct {
 	Version int   `json:"version"`
 	On      *bool `json:"on,omitempty"`
 }
 
 type mobileKeepAwake struct {
-	mu             sync.Mutex
-	path           string
-	chosen         *bool
-	phones         int
-	onPower        bool
-	batteryPercent float64
-	hasBattery     bool
-	lowBattery     bool
-	batteryKnown   bool
-	lowPowerMode   bool
-	lidClosed      bool
-	watchFailed    bool
-	held           bool
-	watching       bool
-	stopped        bool
-	power          mobileKeepAwakePower
-	assertion      mobileKeepAwakeAssertion
+	mu           sync.Mutex
+	path         string
+	chosen       *bool
+	phones       int
+	onPower      bool
+	hasBattery   bool
+	lowPowerMode bool
+	lidClosed    bool
+	watchFailed  bool
+	held         bool
+	watching     bool
+	stopped      bool
+	power        mobileKeepAwakePower
+	assertion    mobileKeepAwakeAssertion
 }
 
 // newMobileKeepAwake reads keep-awake.json from stateDir. A missing or unreadable
-// file leaves the setting unchosen.
+// file leaves the setting unchosen, which is off.
 func newMobileKeepAwake(stateDir string, power mobileKeepAwakePower, assertion mobileKeepAwakeAssertion) *mobileKeepAwake {
 	k := &mobileKeepAwake{power: power, assertion: assertion}
 	if stateDir != "" {
@@ -108,9 +105,9 @@ func newMobileKeepAwake(stateDir string, power mobileKeepAwakePower, assertion m
 	return k
 }
 
-// on reports the setting. Before the owner chooses, it is on. The caller holds mu.
+// on reports the setting. Before the owner chooses, it is off. The caller holds mu.
 func (k *mobileKeepAwake) on() bool {
-	return k.chosen == nil || *k.chosen
+	return k.chosen != nil && *k.chosen
 }
 
 func (k *mobileKeepAwake) statusLocked() MobileKeepAwakeStatus {
@@ -147,20 +144,14 @@ func (k *mobileKeepAwake) initPairedPhones(count int) {
 	k.reconcileLocked()
 }
 
-// SetPairedPhones records how many phones are paired. The first phone turns the
-// default back on. The last one removed turns the setting off, saved, so a phone
-// paired again starts from the default.
+// SetPairedPhones records how many phones are paired. The last one removed turns
+// the setting off, saved, so pairing a phone again never turns it on by itself.
 func (k *mobileKeepAwake) SetPairedPhones(count int) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	previous := k.phones
 	k.phones = count
 	switch {
-	case previous == 0 && count > 0 && k.chosen != nil:
-		k.chosen = nil
-		if err := k.saveLocked(nil); err != nil {
-			log.Printf("[mobile-keep-awake] could not save the default for a new phone: %v", err)
-		}
 	case previous > 0 && count == 0:
 		off := false
 		k.chosen = &off
@@ -182,24 +173,18 @@ func (k *mobileKeepAwake) observePower() {
 	k.reconcileLocked()
 }
 
-// At exactly 20%, retain the previous low-battery state. A fresh reading at
-// 20% is allowed; after falling below 20%, charging must exceed it to resume.
+// readPowerLocked copies the power inputs. Battery charge is not read here: on
+// battery the computer never holds itself awake, whatever the charge.
 func (k *mobileKeepAwake) readPowerLocked() {
 	state := k.power.State()
 	k.onPower = state.onAC
-	k.batteryPercent = state.batteryPercent
 	k.hasBattery = state.hasBattery
 	k.lowPowerMode = state.lowPowerMode
 	k.lidClosed = state.lidClosed
-	k.batteryKnown = state.batteryPercent >= 0 && state.batteryPercent <= 100
-	if !k.batteryKnown || state.batteryPercent < 20 {
-		k.lowBattery = true
-	} else if state.batteryPercent > 20 {
-		k.lowBattery = false
-	}
 }
 
 // SleepReason reads the current inputs once without taking or releasing an assertion.
+// A sleep on battery is not something Isoform chose, so it reports "unknown".
 func (k *mobileKeepAwake) SleepReason() string {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -207,8 +192,6 @@ func (k *mobileKeepAwake) SleepReason() string {
 		k.readPowerLocked()
 	}
 	switch {
-	case !k.onPower && k.batteryKnown && k.batteryPercent <= 20:
-		return "battery_floor"
 	case k.lowPowerMode:
 		return "low_power"
 	case k.lidClosed:
@@ -228,10 +211,10 @@ func (k *mobileKeepAwake) Stop() {
 	k.releaseLocked()
 }
 
-// reconcileLocked holds the assertion when enabled with a paired phone, Low
-// Power Mode off, and either on AC or above the low-battery cutoff. A paired
-// phone starts the event watch even when the setting is off, so hardware status
-// stays current. The caller holds mu.
+// reconcileLocked holds the assertion only when enabled with a paired phone, Low
+// Power Mode off, and the computer plugged in. A paired phone starts the event
+// watch even when the setting is off, so hardware status stays current. The
+// assertion is released as soon as the computer goes to battery. The caller holds mu.
 func (k *mobileKeepAwake) reconcileLocked() {
 	if k.stopped {
 		return
@@ -245,7 +228,7 @@ func (k *mobileKeepAwake) reconcileLocked() {
 		k.readPowerLocked()
 	}
 	want := k.phones > 0 && k.on() && !k.lowPowerMode
-	if want && !k.watchFailed && (k.onPower || (k.batteryKnown && !k.lowBattery)) {
+	if want && !k.watchFailed && k.onPower {
 		k.holdLocked()
 	} else {
 		k.releaseLocked()

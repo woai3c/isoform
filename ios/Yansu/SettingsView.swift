@@ -155,7 +155,7 @@ struct SettingsView: View {
                             })) { Text("Keep your computer awake while it's plugged in") }
                                 .tint(YansuTheme.accent)
                                 .accessibilityIdentifier("settings.keepAwake")
-                            Text("So this phone can reach it any time.")
+                            Text("So this phone can reach it while it's plugged in. The screen still turns off. A closed laptop still sleeps.")
                                 .font(.footnote)
                                 .foregroundStyle(YansuTheme.secondary)
                             if keepAwake.saveFailed {

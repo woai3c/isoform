@@ -37,11 +37,10 @@ void isoKeepAwakeRelease(void) {
 	isoKeepAwakeAssertionID = kIOPMNullAssertionID;
 }
 
-// Reads one snapshot. A missing or invalid battery charge is -1, so battery
-// operation fails safely; battery presence remains known independently.
-void isoKeepAwakePowerState(int *onAC, double *batteryPercent, int *hasBattery, int *lowPowerMode, int *lidClosed) {
+// Reads one snapshot: whether the computer is on AC power, whether it has a
+// battery, Low Power Mode and the lid state.
+void isoKeepAwakePowerState(int *onAC, int *hasBattery, int *lowPowerMode, int *lidClosed) {
 	*onAC = 0;
-	*batteryPercent = -1;
 	*hasBattery = 0;
 	*lowPowerMode = 0;
 	*lidClosed = 0;
@@ -61,15 +60,6 @@ void isoKeepAwakePowerState(int *onAC, double *batteryPercent, int *hasBattery, 
 					CFTypeRef type = CFDictionaryGetValue(description, CFSTR(kIOPSTypeKey));
 					if (type == NULL || !CFEqual(type, CFSTR(kIOPSInternalBatteryType))) continue;
 					*hasBattery = 1;
-					CFTypeRef current = CFDictionaryGetValue(description, CFSTR(kIOPSCurrentCapacityKey));
-					CFTypeRef maximum = CFDictionaryGetValue(description, CFSTR(kIOPSMaxCapacityKey));
-					double capacity = 0, maxCapacity = 0;
-					if (current != NULL && maximum != NULL && CFGetTypeID(current) == CFNumberGetTypeID() &&
-						CFGetTypeID(maximum) == CFNumberGetTypeID() &&
-						CFNumberGetValue(current, kCFNumberDoubleType, &capacity) &&
-						CFNumberGetValue(maximum, kCFNumberDoubleType, &maxCapacity) && maxCapacity > 0) {
-						*batteryPercent = 100.0 * capacity / maxCapacity;
-					}
 					break;
 				}
 				CFRelease(sources);

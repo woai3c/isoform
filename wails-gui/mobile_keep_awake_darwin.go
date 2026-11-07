@@ -5,7 +5,7 @@ package main
 #cgo LDFLAGS: -framework IOKit -framework CoreFoundation -framework Foundation
 int isoKeepAwakeHold(void);
 void isoKeepAwakeRelease(void);
-void isoKeepAwakePowerState(int *onAC, double *batteryPercent, int *hasBattery, int *lowPowerMode, int *lidClosed);
+void isoKeepAwakePowerState(int *onAC, int *hasBattery, int *lowPowerMode, int *lidClosed);
 int isoWatchPowerSource(void);
 */
 import "C"
@@ -33,10 +33,9 @@ func newMobileKeepAwakeOSPower() mobileKeepAwakePower {
 // State reads the current power inputs without polling for changes.
 func (darwinKeepAwakePower) State() mobileKeepAwakePowerState {
 	var onAC, hasBattery, lowPowerMode, lidClosed C.int
-	var percent C.double
-	C.isoKeepAwakePowerState(&onAC, &percent, &hasBattery, &lowPowerMode, &lidClosed)
+	C.isoKeepAwakePowerState(&onAC, &hasBattery, &lowPowerMode, &lidClosed)
 	return mobileKeepAwakePowerState{
-		onAC: onAC == 1, batteryPercent: float64(percent), hasBattery: hasBattery == 1,
+		onAC: onAC == 1, hasBattery: hasBattery == 1,
 		lowPowerMode: lowPowerMode == 1, lidClosed: lidClosed == 1,
 	}
 }
@@ -69,8 +68,9 @@ func newMobileKeepAwakeOSAssertion() mobileKeepAwakeAssertion {
 	return darwinKeepAwakeAssertion{}
 }
 
-// Hold takes PreventUserIdleSystemSleep. The display may still sleep on its own
-// schedule; the assertion does not keep it on.
+// Hold takes PreventUserIdleSystemSleep while the computer is plugged in. The
+// display may still sleep on its own schedule; the assertion does not keep it on.
+// Release runs on battery, when the setting or the last phone goes, and on quit.
 func (darwinKeepAwakeAssertion) Hold() error {
 	if C.isoKeepAwakeHold() == 0 {
 		return errors.New("the system did not accept the keep-awake assertion")

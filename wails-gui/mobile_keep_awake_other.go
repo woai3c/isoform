@@ -16,7 +16,7 @@ func newMobileKeepAwakeOSAssertion() mobileKeepAwakeAssertion {
 type unsupportedKeepAwakePower struct{}
 
 func (unsupportedKeepAwakePower) State() mobileKeepAwakePowerState {
-	return mobileKeepAwakePowerState{batteryPercent: -1}
+	return mobileKeepAwakePowerState{}
 }
 
 func (unsupportedKeepAwakePower) Watch(func()) error { return nil }

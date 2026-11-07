@@ -25,7 +25,6 @@ func init() {
 type fakeKeepAwakePower struct {
 	mu           sync.Mutex
 	onAC         bool
-	percent      float64
 	hasBattery   bool
 	lowPowerMode bool
 	lidClosed    bool
@@ -38,8 +37,7 @@ func (p *fakeKeepAwakePower) State() mobileKeepAwakePowerState {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return mobileKeepAwakePowerState{
-		onAC: p.onAC, batteryPercent: p.percent, hasBattery: p.hasBattery,
-		lowPowerMode: p.lowPowerMode, lidClosed: p.lidClosed,
+		onAC: p.onAC, hasBattery: p.hasBattery, lowPowerMode: p.lowPowerMode, lidClosed: p.lidClosed,
 	}
 }
 
@@ -52,10 +50,9 @@ func (p *fakeKeepAwakePower) Watch(changed func()) error {
 }
 
 // set changes the power source and delivers the event the way the run loop does.
-func (p *fakeKeepAwakePower) set(onAC bool, percent float64) {
+func (p *fakeKeepAwakePower) set(onAC bool) {
 	p.mu.Lock()
 	p.onAC = onAC
-	p.percent = percent
 	changed := p.changed
 	p.mu.Unlock()
 	if changed != nil {
@@ -113,14 +110,50 @@ func (a *fakeKeepAwakeAssertion) isHeld() bool {
 
 func newTestKeepAwake(t *testing.T, dir string, onAC bool) (*mobileKeepAwake, *fakeKeepAwakePower, *fakeKeepAwakeAssertion) {
 	t.Helper()
-	power := &fakeKeepAwakePower{onAC: onAC, percent: 80, hasBattery: true}
+	power := &fakeKeepAwakePower{onAC: onAC, hasBattery: true}
 	assertion := &fakeKeepAwakeAssertion{}
 	keepAwake := newMobileKeepAwake(dir, power, assertion)
 	t.Cleanup(keepAwake.Stop)
 	return keepAwake, power, assertion
 }
 
-func TestKeepAwakePowerAndPairingTransitions(t *testing.T) {
+// writeKeepAwakeFile saves a choice the way an earlier build did; on nil writes no "on" key.
+func writeKeepAwakeFile(t *testing.T, dir string, on *bool) {
+	t.Helper()
+	raw := `{"version":1}`
+	if on != nil {
+		raw = fmt.Sprintf(`{"version":1,"on":%t}`, *on)
+	}
+	if err := os.WriteFile(filepath.Join(dir, mobileKeepAwakeFileName), []byte(raw), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestKeepAwakeDefaultsOff(t *testing.T) {
+	keepAwake, power, assertion := newTestKeepAwake(t, t.TempDir(), true)
+	keepAwake.SetPairedPhones(1)
+	if assertion.isHeld() {
+		t.Fatal("a new phone on AC power must not hold the computer awake until the owner turns it on")
+	}
+	if status := keepAwake.Status(); status.On || status.PairedPhones != 1 {
+		t.Fatalf("status = %+v, want off with one phone", status)
+	}
+	if power.watchCount() != 1 {
+		t.Fatalf("a paired phone should start the power watch even while off, watched %d", power.watchCount())
+	}
+}
+
+func TestKeepAwakeMissingChoiceFileIsOff(t *testing.T) {
+	dir := t.TempDir()
+	writeKeepAwakeFile(t, dir, nil)
+	keepAwake, _, assertion := newTestKeepAwake(t, dir, true)
+	keepAwake.initPairedPhones(1)
+	if keepAwake.Status().On || assertion.isHeld() {
+		t.Fatalf("a file with no on key must be off: status %+v, held %v", keepAwake.Status(), assertion.isHeld())
+	}
+}
+
+func TestKeepAwakeHoldsOnlyWhilePluggedIn(t *testing.T) {
 	keepAwake, power, assertion := newTestKeepAwake(t, t.TempDir(), true)
 	steps := []struct {
 		name    string
@@ -128,38 +161,33 @@ func TestKeepAwakePowerAndPairingTransitions(t *testing.T) {
 		held    bool
 		onPower bool
 	}{
-		{"no phone", func() {}, false, false},
-		{"pair on AC", func() { keepAwake.SetPairedPhones(1) }, true, true},
+		{"no phone, off", func() {}, false, false},
+		{"pair while off on AC", func() { keepAwake.SetPairedPhones(1) }, false, true},
+		{"owner turns on on AC", func() {
+			if _, err := keepAwake.SetOn(true); err != nil {
+				t.Fatal(err)
+			}
+		}, true, true},
 		{"Low Power Mode on AC", func() { power.setLowPowerMode(true) }, false, true},
 		{"Low Power Mode off on AC", func() { power.setLowPowerMode(false) }, true, true},
-		{"battery above cutoff", func() { power.set(false, 50) }, true, false},
-		{"Low Power Mode on battery", func() { power.setLowPowerMode(true) }, false, false},
-		{"Low Power Mode off on battery", func() { power.setLowPowerMode(false) }, true, false},
-		{"battery exactly 20 while discharging", func() { power.set(false, 20) }, true, false},
-		{"battery below cutoff", func() { power.set(false, 19) }, false, false},
-		{"battery exactly 20 while charging", func() { power.set(false, 20) }, false, false},
-		{"charged above cutoff", func() { power.set(false, 21) }, true, false},
-		{"unknown battery", func() { power.set(false, -1) }, false, false},
-		{"AC with low battery", func() { power.set(true, 10) }, true, true},
-		{"unplug at low battery", func() { power.set(false, 10) }, false, false},
-		{"back to AC", func() { power.set(true, 10) }, true, true},
+		{"unplug to battery", func() { power.set(false) }, false, false},
+		{"plug back in", func() { power.set(true) }, true, true},
+		{"unplug again", func() { power.set(false) }, false, false},
 		{"owner off", func() {
 			if _, err := keepAwake.SetOn(false); err != nil {
 				t.Fatal(err)
 			}
-		}, false, true},
-		{"Low Power Mode on while owner off", func() { power.setLowPowerMode(true) }, false, true},
-		{"Low Power Mode off while owner off", func() { power.setLowPowerMode(false) }, false, true},
-		{"battery change while off", func() { power.set(false, 80) }, false, false},
-		{"owner on", func() {
+		}, false, false},
+		{"owner on while on battery", func() {
 			if _, err := keepAwake.SetOn(true); err != nil {
 				t.Fatal(err)
 			}
-		}, true, false},
-		{"another phone paired", func() { keepAwake.SetPairedPhones(2) }, true, false},
-		{"one phone remains", func() { keepAwake.SetPairedPhones(1) }, true, false},
-		{"last phone unpaired", func() { keepAwake.SetPairedPhones(0) }, false, false},
-		{"phone paired again", func() { keepAwake.SetPairedPhones(1) }, true, false},
+		}, false, false},
+		{"plug in with setting on", func() { power.set(true) }, true, true},
+		{"another phone paired", func() { keepAwake.SetPairedPhones(2) }, true, true},
+		{"one phone remains", func() { keepAwake.SetPairedPhones(1) }, true, true},
+		{"last phone unpaired", func() { keepAwake.SetPairedPhones(0) }, false, true},
+		{"phone paired again stays off", func() { keepAwake.SetPairedPhones(1) }, false, true},
 	}
 	for _, step := range steps {
 		t.Run(step.name, func(t *testing.T) {
@@ -177,27 +205,45 @@ func TestKeepAwakePowerAndPairingTransitions(t *testing.T) {
 	}
 }
 
+func TestKeepAwakeBatteryNeverHolds(t *testing.T) {
+	keepAwake, power, assertion := newTestKeepAwake(t, t.TempDir(), false)
+	if _, err := keepAwake.SetOn(true); err != nil {
+		t.Fatal(err)
+	}
+	keepAwake.SetPairedPhones(1)
+	if assertion.isHeld() {
+		t.Fatal("on battery with the setting on, the computer must not be held awake")
+	}
+	power.set(true)
+	if !assertion.isHeld() {
+		t.Fatal("plugged in, the setting on and a phone paired should hold")
+	}
+	power.set(false)
+	if assertion.isHeld() {
+		t.Fatal("unplugged, the assertion must be released")
+	}
+}
+
 func TestKeepAwakeInitialPowerState(t *testing.T) {
+	on := true
 	tests := []struct {
 		name         string
 		onAC         bool
-		percent      float64
 		lowPowerMode bool
 		held         bool
 	}{
-		{"AC with low battery", true, 5, false, true},
-		{"AC with Low Power Mode", true, 80, true, false},
-		{"battery above 20", false, 21, false, true},
-		{"battery above 20 with Low Power Mode", false, 80, true, false},
-		{"battery at 20", false, 20, false, true},
-		{"battery below 20", false, 19, false, false},
-		{"battery unavailable", false, -1, false, false},
+		{"AC", true, false, true},
+		{"AC with Low Power Mode", true, true, false},
+		{"battery", false, false, false},
+		{"battery with Low Power Mode", false, true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			power := &fakeKeepAwakePower{onAC: tt.onAC, percent: tt.percent, hasBattery: true, lowPowerMode: tt.lowPowerMode}
+			dir := t.TempDir()
+			writeKeepAwakeFile(t, dir, &on)
+			power := &fakeKeepAwakePower{onAC: tt.onAC, hasBattery: true, lowPowerMode: tt.lowPowerMode}
 			assertion := &fakeKeepAwakeAssertion{}
-			keepAwake := newMobileKeepAwake(t.TempDir(), power, assertion)
+			keepAwake := newMobileKeepAwake(dir, power, assertion)
 			t.Cleanup(keepAwake.Stop)
 			keepAwake.initPairedPhones(1)
 			if got := assertion.isHeld(); got != tt.held {
@@ -215,7 +261,7 @@ func TestKeepAwakeExistingChoiceIsPreserved(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(dir, mobileKeepAwakeFileName), []byte(original), 0600); err != nil {
 				t.Fatal(err)
 			}
-			keepAwake, _, assertion := newTestKeepAwake(t, dir, false)
+			keepAwake, _, assertion := newTestKeepAwake(t, dir, true)
 			keepAwake.initPairedPhones(1)
 			if keepAwake.Status().On != on || assertion.isHeld() != on {
 				t.Fatalf("choice or assertion changed: status %+v, held %v", keepAwake.Status(), assertion.isHeld())
@@ -229,10 +275,13 @@ func TestKeepAwakeExistingChoiceIsPreserved(t *testing.T) {
 }
 
 func TestKeepAwakeDoesNotHoldWithoutPowerEvents(t *testing.T) {
-	power := &fakeKeepAwakePower{onAC: true, percent: 80, watchErr: errors.New("watch failed")}
+	power := &fakeKeepAwakePower{onAC: true, watchErr: errors.New("watch failed")}
 	assertion := &fakeKeepAwakeAssertion{}
 	keepAwake := newMobileKeepAwake(t.TempDir(), power, assertion)
 	t.Cleanup(keepAwake.Stop)
+	if _, err := keepAwake.SetOn(true); err != nil {
+		t.Fatal(err)
+	}
 	keepAwake.SetPairedPhones(1)
 	if assertion.isHeld() {
 		t.Fatal("assertion held without power events")
@@ -242,15 +291,15 @@ func TestKeepAwakeDoesNotHoldWithoutPowerEvents(t *testing.T) {
 func TestKeepAwakeSettingOffReleasesAndOnTakesItBack(t *testing.T) {
 	keepAwake, power, assertion := newTestKeepAwake(t, t.TempDir(), true)
 	keepAwake.SetPairedPhones(1)
-	if !assertion.isHeld() {
-		t.Fatal("on AC power with a phone paired, the assertion should be held")
+	if _, err := keepAwake.SetOn(true); err != nil || !assertion.isHeld() {
+		t.Fatalf("switching on with a phone on AC: err %v, held %v", err, assertion.isHeld())
 	}
 	status, err := keepAwake.SetOn(false)
 	if err != nil || status.On || assertion.isHeld() {
 		t.Fatalf("switching off: status %+v, err %v, held %v", status, err, assertion.isHeld())
 	}
-	power.set(false, 80)
-	power.set(true, 80)
+	power.set(false)
+	power.set(true)
 	if assertion.isHeld() {
 		t.Fatal("a setting that is off must not take the assertion on power changes")
 	}
@@ -261,6 +310,9 @@ func TestKeepAwakeSettingOffReleasesAndOnTakesItBack(t *testing.T) {
 
 func TestKeepAwakeWithoutPhoneTakesNothing(t *testing.T) {
 	keepAwake, power, assertion := newTestKeepAwake(t, t.TempDir(), true)
+	if _, err := keepAwake.SetOn(true); err != nil {
+		t.Fatal(err)
+	}
 	if assertion.isHeld() || power.watchCount() != 0 {
 		t.Fatalf("no phone paired: held %v, watched %d", assertion.isHeld(), power.watchCount())
 	}
@@ -272,6 +324,9 @@ func TestKeepAwakeWithoutPhoneTakesNothing(t *testing.T) {
 func TestKeepAwakeLastPhoneUnpairedTurnsSettingOff(t *testing.T) {
 	dir := t.TempDir()
 	keepAwake, _, assertion := newTestKeepAwake(t, dir, true)
+	if _, err := keepAwake.SetOn(true); err != nil {
+		t.Fatal(err)
+	}
 	keepAwake.SetPairedPhones(1)
 	keepAwake.SetPairedPhones(0)
 	if assertion.isHeld() {
@@ -286,21 +341,24 @@ func TestKeepAwakeLastPhoneUnpairedTurnsSettingOff(t *testing.T) {
 	}
 }
 
-func TestKeepAwakeFirstPhoneAgainTurnsDefaultOn(t *testing.T) {
+func TestKeepAwakePairingAgainStaysOff(t *testing.T) {
 	dir := t.TempDir()
 	keepAwake, _, assertion := newTestKeepAwake(t, dir, true)
+	if _, err := keepAwake.SetOn(true); err != nil {
+		t.Fatal(err)
+	}
 	keepAwake.SetPairedPhones(1)
 	keepAwake.SetPairedPhones(0)
 	keepAwake.SetPairedPhones(1)
-	if status := keepAwake.Status(); !status.On {
-		t.Fatalf("setting after pairing again = %+v, want on by default", status)
+	if status := keepAwake.Status(); status.On {
+		t.Fatalf("setting after pairing again = %+v, want off until the owner turns it on", status)
 	}
-	if !assertion.isHeld() {
-		t.Fatal("pairing again on AC power should take the assertion")
+	if assertion.isHeld() {
+		t.Fatal("pairing again must not take the assertion without the owner turning it on")
 	}
 	reloaded := newMobileKeepAwake(dir, &fakeKeepAwakePower{}, &fakeKeepAwakeAssertion{})
-	if status := reloaded.Status(); !status.On {
-		t.Fatalf("reloaded default = %+v, want on", status)
+	if status := reloaded.Status(); status.On {
+		t.Fatalf("reloaded setting = %+v, want off", status)
 	}
 }
 
@@ -325,12 +383,18 @@ func TestKeepAwakeSettingPersistsAcrossReload(t *testing.T) {
 
 func TestKeepAwakeStopReleasesAndIgnoresLaterPowerEvents(t *testing.T) {
 	keepAwake, power, assertion := newTestKeepAwake(t, t.TempDir(), true)
+	if _, err := keepAwake.SetOn(true); err != nil {
+		t.Fatal(err)
+	}
 	keepAwake.SetPairedPhones(1)
+	if !assertion.isHeld() {
+		t.Fatal("setup: on AC with a phone and the setting on should hold")
+	}
 	keepAwake.Stop()
 	if assertion.isHeld() {
-		t.Fatal("stopping must release the assertion")
+		t.Fatal("stopping (quit) must release the assertion")
 	}
-	power.set(true, 80)
+	power.set(true)
 	if assertion.isHeld() {
 		t.Fatal("a stopped controller must not take the assertion again")
 	}
@@ -343,21 +407,17 @@ func TestKeepAwakeSleepReason(t *testing.T) {
 		held     bool
 		expected string
 	}{
-		{"battery at 20 takes priority", mobileKeepAwakePowerState{batteryPercent: 20, lowPowerMode: true, lidClosed: true}, true, "battery_floor"},
-		{"battery below 20 without an assertion", mobileKeepAwakePowerState{batteryPercent: 19}, false, "battery_floor"},
-		{"Low Power Mode on AC", mobileKeepAwakePowerState{onAC: true, batteryPercent: 80, lowPowerMode: true}, false, "low_power"},
-		{"Low Power Mode takes priority over lid", mobileKeepAwakePowerState{batteryPercent: 80, lowPowerMode: true, lidClosed: true}, true, "low_power"},
-		{"lid closed", mobileKeepAwakePowerState{onAC: true, batteryPercent: 80, lidClosed: true}, true, "lid_closed"},
-		{"chosen sleep on AC", mobileKeepAwakePowerState{onAC: true, batteryPercent: 80}, true, "user_sleep"},
-		{"chosen sleep above the battery floor", mobileKeepAwakePowerState{batteryPercent: 80}, true, "user_sleep"},
-		{"no assertion and no known cause", mobileKeepAwakePowerState{onAC: true, batteryPercent: 80}, false, "unknown"},
-		{"unknown battery without an assertion", mobileKeepAwakePowerState{batteryPercent: -1}, false, "unknown"},
+		{"Low Power Mode on AC", mobileKeepAwakePowerState{onAC: true, lowPowerMode: true}, false, "low_power"},
+		{"Low Power Mode takes priority over lid", mobileKeepAwakePowerState{lowPowerMode: true, lidClosed: true}, true, "low_power"},
+		{"lid closed", mobileKeepAwakePowerState{onAC: true, lidClosed: true}, true, "lid_closed"},
+		{"chosen sleep on AC", mobileKeepAwakePowerState{onAC: true}, true, "user_sleep"},
+		{"sleep on battery is not Isoform's choice", mobileKeepAwakePowerState{hasBattery: true}, false, "unknown"},
+		{"no assertion and no known cause", mobileKeepAwakePowerState{onAC: true}, false, "unknown"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			keepAwake := &mobileKeepAwake{
-				onPower: tt.state.onAC, batteryPercent: tt.state.batteryPercent,
-				batteryKnown: tt.state.batteryPercent >= 0 && tt.state.batteryPercent <= 100,
+				onPower: tt.state.onAC, hasBattery: tt.state.hasBattery,
 				lowPowerMode: tt.state.lowPowerMode, lidClosed: tt.state.lidClosed, held: tt.held,
 			}
 			if got := keepAwake.SleepReason(); got != tt.expected {
@@ -379,6 +439,9 @@ func TestKeepAwakeStatusJSONShape(t *testing.T) {
 
 func TestKeepAwakeRoutesNeedPushScopeAndAnswerShape(t *testing.T) {
 	keepAwake, _, _ := newTestKeepAwake(t, t.TempDir(), true)
+	if _, err := keepAwake.SetOn(true); err != nil {
+		t.Fatal(err)
+	}
 	keepAwake.SetPairedPhones(1)
 	bridge := &mobileBridge{keepAwake: keepAwake}
 	withPush := mobileDeviceRecord{MobileDeviceView: MobileDeviceView{Scopes: []string{mobileScopePush}}}
@@ -416,6 +479,9 @@ func TestKeepAwakeRoutesNeedPushScopeAndAnswerShape(t *testing.T) {
 
 func TestStatusCarriesKeepAwakeAndInstantPush(t *testing.T) {
 	keepAwake, _, _ := newTestKeepAwake(t, t.TempDir(), true)
+	if _, err := keepAwake.SetOn(true); err != nil {
+		t.Fatal(err)
+	}
 	keepAwake.SetPairedPhones(1)
 	bridge := &mobileBridge{keepAwake: keepAwake}
 	recorder := httptest.NewRecorder()

@@ -16,7 +16,7 @@ final class LocalNotificationUITests: XCTestCase {
         openSettings(app)
         let toggle = app.switches["settings.keepAwake"].firstMatch
         XCTAssertTrue(toggle.waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["So your phone can reach it any time. The screen still turns off. On battery, it sleeps below 20%. A closed laptop still sleeps."].exists)
+        XCTAssertTrue(app.staticTexts["So your phone can reach it while it's plugged in. The screen still turns off. A closed laptop still sleeps."].exists)
         XCTAssertTrue(app.staticTexts["Changes apply when your computer is back."].exists)
         attachScreenshot(app, named: "settings-keep-awake-offline")
         let footer = app.staticTexts["settings.notifications.lateFooter"]

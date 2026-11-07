@@ -618,7 +618,7 @@ struct FeedView: View {
                     .foregroundStyle(YansuTheme.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if cause == .sleeping && keepAwake.on == false && !keepAwakeOfferDismissed {
-                    Text("To reach it while it's plugged in, keep it awake.")
+                    Text("To reach it while it's plugged in, keep it awake for your phone.")
                         .font(.footnote)
                         .foregroundStyle(YansuTheme.secondary)
                     HStack {
