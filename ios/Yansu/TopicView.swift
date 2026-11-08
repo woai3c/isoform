@@ -36,10 +36,12 @@ struct TopicView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 14) {
                         rows
-                        Color.clear.frame(height: 1).id(Self.bottom)
+                        // No space after the scroll target: the end of the topic sits one row spacing above the composer,
+                        // as two messages sit apart (P161).
+                        Color.clear.frame(height: 0).id(Self.bottom)
                     }
                     .padding(.horizontal, YansuTheme.gutter)
-                    .padding(.vertical, 14)
+                    .padding(.top, 14)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .refreshable { await thread.load() }

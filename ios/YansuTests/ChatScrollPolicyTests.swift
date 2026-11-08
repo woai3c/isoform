@@ -38,12 +38,28 @@ final class ChatScrollPolicyTests: XCTestCase {
         XCTAssertTrue(policy.pinned)
     }
 
+    func testAnOpeningScrollThatStopsShortOfTheNewestMessageKeepsFollowingIt() {
+        var policy = ChatScrollPolicy()
+        _ = policy.appeared()
+        // The first layout has the content at its top, so the chat scrolls to its end.
+        XCTAssertEqual(policy.layout(contentTop: 0, contentHeight: 2000, visibleBottom: viewport),
+                       .scrollToBottom(animated: false))
+        // The scroll stopped 17 pt short of the newest message: still pinned, and the next layout corrects it.
+        XCTAssertEqual(policy.layout(contentTop: -1383, contentHeight: 2000, visibleBottom: viewport),
+                       .scrollToBottom(animated: false))
+        XCTAssertTrue(policy.pinned)
+        XCTAssertEqual(atBottom(&policy), .none)
+        XCTAssertTrue(policy.pinned)
+    }
+
     func testInitialProgrammaticScrollDoesNotLookLikeTheReaderScrolledUp() {
         var policy = ChatScrollPolicy()
         _ = policy.appeared()
         XCTAssertEqual(policy.layout(contentTop: 0, contentHeight: 2000, visibleBottom: viewport),
                        .scrollToBottom(animated: false))
-        XCTAssertEqual(policy.layout(contentTop: -500, contentHeight: 2000, visibleBottom: viewport), .none)
+        // The opening scroll is still on its way down: it keeps following the bottom rather than reading as a scroll away.
+        XCTAssertEqual(policy.layout(contentTop: -500, contentHeight: 2000, visibleBottom: viewport),
+                       .scrollToBottom(animated: false))
         XCTAssertTrue(policy.pinned)
         policy.newContentArrived()
         XCTAssertFalse(policy.hasNewBelow)
@@ -171,6 +187,31 @@ final class ChatScrollPolicyTests: XCTestCase {
 
         XCTAssertEqual(policy.layout(contentTop: viewport - 2000, contentHeight: 2000, visibleBottom: 300),
                        .scrollToBottom(animated: false))
+    }
+
+    func testTheKeyboardRisingWhileTheReaderIsAtTheBottomKeepsItThereEvenWhenTheContentMoved() {
+        var policy = ChatScrollPolicy()
+        _ = policy.appeared()
+        _ = atBottom(&policy)
+
+        // The keyboard shortens the visible area and SwiftUI shifts the content with it.
+        XCTAssertEqual(policy.layout(contentTop: viewport - 2000 + 150, contentHeight: 2000, visibleBottom: 450),
+                       .scrollToBottom(animated: false))
+        XCTAssertTrue(policy.pinned)
+        XCTAssertFalse(policy.hasNewBelow)
+    }
+
+    func testTheKeyboardFinishingItsRiseKeepsAReaderAtTheBottomAndLeavesOneWhoScrolledUpAlone() {
+        var policy = ChatScrollPolicy()
+        _ = policy.appeared()
+        _ = atBottom(&policy)
+        XCTAssertEqual(policy.keyboardRose(), .scrollToBottom(animated: false))
+        XCTAssertTrue(policy.pinned)
+
+        // The reader pulls back up, so the content moves down, away from the bottom.
+        _ = policy.layout(contentTop: viewport - 2000 + 200, contentHeight: 2000, visibleBottom: viewport)
+        XCTAssertFalse(policy.pinned, "a reader who scrolled away is not pulled back by the keyboard")
+        XCTAssertEqual(policy.keyboardRose(), .none)
     }
 
     func testAShortChatNeedsNoScroll() {

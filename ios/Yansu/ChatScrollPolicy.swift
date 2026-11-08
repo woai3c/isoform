@@ -16,6 +16,7 @@ struct ChatScrollPolicy: Equatable {
     /// Newer rows arrived below while the reader was further up.
     private(set) var hasNewBelow = false
     private var lastContentTop: CGFloat?
+    private var lastVisibleBottom: CGFloat?
     /// An animated scroll to the bottom is moving the content; its frames are not the reader scrolling away.
     private var followingDown = false
     private(set) var holdingFirstRead = false
@@ -47,6 +48,14 @@ struct ChatScrollPolicy: Equatable {
         followingDown = false
     }
 
+    /// The keyboard finished rising. A reader at the bottom is put back at the newest message, now that the visible
+    /// area has its final height (P161).
+    mutating func keyboardRose() -> Action {
+        guard pinned else { return .none }
+        followingDown = true
+        return .scrollToBottom(animated: false)
+    }
+
     /// A real drag gives scrolling back to the reader.
     mutating func readerDragged() {
         holdingFirstRead = false
@@ -65,7 +74,15 @@ struct ChatScrollPolicy: Equatable {
         let distance = contentTop + contentHeight - visibleBottom
         let last = lastContentTop
         lastContentTop = contentTop
+        // The visible area changed, as when the keyboard rises or the composer grows. A reader at the bottom stays
+        // there, even when the same layout moved the content: the move is the area changing, not the reader (P161).
+        let areaChanged = lastVisibleBottom.map { abs($0 - visibleBottom) > 0.5 } ?? false
+        lastVisibleBottom = visibleBottom
         if holdingFirstRead { return .none }
+        if areaChanged, pinned, distance > 0.5 {
+            followingDown = true
+            return .scrollToBottom(animated: false)
+        }
         guard let last else {
             return pinned && distance > 0.5 ? .scrollToBottom(animated: false) : .none
         }
@@ -73,9 +90,14 @@ struct ChatScrollPolicy: Equatable {
         if abs(moved) > 0.5 {
             // The content moved: the reader scrolled, or a scroll to the bottom is on its way.
             if followingDown {
-                if distance <= Self.pinMargin {
+                if distance <= 0.5 {
                     followingDown = false
-                } else if moved > 0 {
+                } else if distance <= Self.pinMargin || moved < 0 {
+                    // The bottom is still on its way, or stopped short of the newest message: keep following it.
+                    // A scroll that stopped short inside the margin is not the reader's, and must not leave the
+                    // newest message under the composer (P161).
+                    return .scrollToBottom(animated: false)
+                } else {
                     // The reader pulled back up while the chat was moving down.
                     followingDown = false
                     pinned = false

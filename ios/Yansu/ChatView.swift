@@ -74,13 +74,12 @@ struct ChatView: View {
         chat.transcript?.items.last(where: { $0.role == .user })?.seq
     }
 
-    /// P153: the empty chat at the largest text size. Its card is taller than the visible area, so the chat opens at
-    /// the card's top and, scrolled to its end, the copy's last line sits just above the composer. Nothing follows the card.
-    private var endsOnEmptyCard: Bool {
-        guard dynamicTypeSize >= .accessibility5, chat.openChatID == chatID, let transcript = chat.transcript else {
-            return false
+    /// Nothing is in the chat yet, so the empty card is the last thing on screen and has no space after it (P153).
+    private var showsEmptyCardOnly: Bool {
+        if let transcript = chat.transcript, chat.openChatID == chatID {
+            return Self.showsEmptyChat(transcript, outgoing: outgoing)
         }
-        return Self.showsEmptyChat(transcript, outgoing: outgoing)
+        return chatID == ChatStore.mainChatAlias
     }
 
     /// Changes when a row or a message is added at the bottom.
@@ -91,89 +90,98 @@ struct ChatView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    if chat.repairNeeded {
-                        ChatRepairCard(message: ChatRepairCard.refusedMessage)
-                    } else {
-                        banners
-                        transcriptContent
-                        outgoingContent
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        if chat.repairNeeded {
+                            ChatRepairCard(message: ChatRepairCard.refusedMessage)
+                        } else {
+                            banners
+                            transcriptContent
+                            outgoingContent
+                        }
+                        // The scroll target sits one row spacing below the last row, so the end of a transcript is as far above
+                        // the composer as two messages are from each other (P161). The empty card has no space after it.
+                        if !showsEmptyCardOnly {
+                            Color.clear
+                                .frame(height: 0)
+                                .id(Self.bottomID)
+                        }
                     }
-                    // The bottom margin is the scroll target itself, so scrolling to it shows the true bottom. The empty
-                    // chat at the largest size ends on its card, so it has no margin there (P153).
-                    if !endsOnEmptyCard {
-                        Color.clear
-                            .frame(height: 17)
-                            .id(Self.bottomID)
+                    .padding(.horizontal, YansuTheme.gutter)
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background {
+                        GeometryReader { geometry in
+                            Color.clear.preference(key: ChatContentFrameKey.self, value: geometry.frame(in: .global))
+                        }
                     }
                 }
-                .padding(.horizontal, YansuTheme.gutter)
-                .padding(.top, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .scrollDismissesKeyboard(.interactively)
+                .simultaneousGesture(DragGesture().onChanged { _ in scroll.policy.readerDragged() })
+                // The composer already lifts itself above the tab bar, so the bar's margin would count that space twice (P161).
+                .tabBarScrollVisibility(bottomMargin: 0)
+                .refreshable {
+                    await chat.open(chatID: chatID)
+                }
                 .background {
                     GeometryReader { geometry in
-                        Color.clear.preference(key: ChatContentFrameKey.self, value: geometry.frame(in: .global))
+                        // The background is laid out inside the safe area, so its bottom is the composer's top. Both
+                        // frames are global: this reader is not inside the scroll view, so a named space would not match.
+                        Color.clear.preference(key: ChatVisibleBottomKey.self, value: geometry.frame(in: .global).maxY)
                     }
                 }
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .simultaneousGesture(DragGesture().onChanged { _ in scroll.policy.readerDragged() })
-            // The empty card at the largest size ends on the composer, which already lifts above the tab bar (P153).
-            .tabBarScrollVisibility(bottomMargin: endsOnEmptyCard ? 0 : 88)
-            .refreshable {
-                await chat.open(chatID: chatID)
-            }
-            .background {
-                GeometryReader { geometry in
-                    // The background is laid out inside the safe area, so its bottom is the composer's top. Both
-                    // frames are global: this reader is not inside the scroll view, so a named space would not match.
-                    Color.clear.preference(key: ChatVisibleBottomKey.self, value: geometry.frame(in: .global).maxY)
+                .onPreferenceChange(ChatContentFrameKey.self) { frame in
+                    scroll.contentFrame = frame
+                    follow(scroll.layout(), proxy)
                 }
-            }
-            .onPreferenceChange(ChatContentFrameKey.self) { frame in
-                scroll.contentFrame = frame
-                follow(scroll.layout(), proxy)
-            }
-            .onPreferenceChange(ChatVisibleBottomKey.self) { bottom in
-                scroll.visibleBottom = bottom
-                follow(scroll.layout(), proxy)
-            }
-            .onChange(of: bottomMarker) { _, _ in
-                scroll.policy.newContentArrived()
-                showLatestControl()
-            }
-            .onAppear {
-                // Opening the chat, or coming back to it, starts at the newest message.
-                follow(scroll.policy.appeared(), proxy)
-                FirstLoadTrace.record(header == nil ? "chat.view.skeleton" : "chat.view.cached")
-                openPendingProactiveItem()
-            }
-            .onChange(of: router.pendingMomentID) { _, _ in openPendingProactiveItem() }
-            .onChange(of: chat.transcript?.newestSeq, initial: true) { _, _ in
-                openPendingProactiveItem()
-                revealFirstReadIfNeeded(proxy)
-            }
-            .onChange(of: firstReadFocusSignal) { _, _ in
-                guard let id = firstReadFocusID else { return }
-                focusFirstRead(id, proxy)
-            }
-            .onChange(of: firstReadCorrectionSignal) { _, _ in
-                follow(scroll.policy.jumpToLatest(), proxy)
-            }
-            // Today's Show for a send the computer did not take: Chat scrolls to that message (PROTOCOL.md section 23).
-            .task(id: router.chatMessageRequest) {
-                guard let id = router.chatMessageRequest else { return }
-                try? await Task.sleep(for: .milliseconds(300))
-                proxy.scrollTo(id, anchor: .center)
-                router.consumeChatMessage(id)
-            }
-            .overlay(alignment: .bottom) {
-                if latest != .hidden {
-                    latestButton(proxy)
+                // The keyboard's rise moves the visible area in steps; once it has finished, a reader at the bottom is put
+                // back at the newest message (P161).
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                    follow(scroll.policy.keyboardRose(), proxy)
                 }
-            }
-            .safeAreaInset(edge: .bottom) {
+                // The keyboard's frame also changes when it resizes, for example when the keyboard type changes while typing.
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidChangeFrameNotification)) { _ in
+                    follow(scroll.policy.keyboardRose(), proxy)
+                }
+                .onPreferenceChange(ChatVisibleBottomKey.self) { bottom in
+                    scroll.visibleBottom = bottom
+                    follow(scroll.layout(), proxy)
+                }
+                .onChange(of: bottomMarker) { _, _ in
+                    scroll.policy.newContentArrived()
+                    showLatestControl()
+                }
+                .onAppear {
+                    // Opening the chat, or coming back to it, starts at the newest message.
+                    follow(scroll.policy.appeared(), proxy)
+                    FirstLoadTrace.record(header == nil ? "chat.view.skeleton" : "chat.view.cached")
+                    openPendingProactiveItem()
+                }
+                .onChange(of: router.pendingMomentID) { _, _ in openPendingProactiveItem() }
+                .onChange(of: chat.transcript?.newestSeq, initial: true) { _, _ in
+                    openPendingProactiveItem()
+                    revealFirstReadIfNeeded(proxy)
+                }
+                .onChange(of: firstReadFocusSignal) { _, _ in
+                    guard let id = firstReadFocusID else { return }
+                    focusFirstRead(id, proxy)
+                }
+                .onChange(of: firstReadCorrectionSignal) { _, _ in
+                    follow(scroll.policy.jumpToLatest(), proxy)
+                }
+                // Today's Show for a send the computer did not take: Chat scrolls to that message (PROTOCOL.md section 23).
+                .task(id: router.chatMessageRequest) {
+                    guard let id = router.chatMessageRequest else { return }
+                    try? await Task.sleep(for: .milliseconds(300))
+                    proxy.scrollTo(id, anchor: .center)
+                    router.consumeChatMessage(id)
+                }
+                .overlay(alignment: .bottom) {
+                    if latest != .hidden {
+                        latestButton(proxy)
+                    }
+                }
                 if !chat.repairNeeded {
                     composer(proxy)
                 }
@@ -363,7 +371,6 @@ struct ChatView: View {
                                detail: "Write below to start. Isoform answers on your computer.")
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 16)
-                    .padding(.bottom, endsOnEmptyCard ? 0 : 16)
                     .accessibilityIdentifier("chat.emptyState")
             } else {
                 ForEach(transcript.items) { item in
@@ -822,11 +829,12 @@ struct ChatView: View {
             }
         }
         .padding(.horizontal, YansuTheme.gutter)
-        .padding(.top, 10)
-        // The floating tab bar covers the bottom of a tab page, so the composer stands above it. While the field
-        // has focus the bar steps aside (RootView), and the composer sits on the keyboard.
+        // The floating tab bar covers the bottom of a tab page, so the composer stands above it. The bar stays while
+        // the field has focus (P159), so the composer sits above the bar and the keyboard.
         .padding(.bottom, 10 + tabChromeHeight)
         .background(YansuTheme.background)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("chat.composerBar")
     }
 
     private var composerField: some View {
@@ -850,7 +858,8 @@ struct ChatView: View {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        // 22 pt of text plus 11 pt each side makes the box 44 pt, the same as Send, so the box's top is the row's top.
+        .padding(.vertical, 11)
         .background(YansuTheme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
