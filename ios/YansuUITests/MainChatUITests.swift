@@ -82,6 +82,9 @@ final class MainChatUITests: XCTestCase {
         }
         app.launch()
         XCTAssertTrue(app.buttons["tab.chat"].waitForExistence(timeout: 15))
+        // The app opens on Today, the first tab, since the three-tab companion (e54502db7). These tests are about
+        // the Chat tab, so they pick it the way a person does.
+        app.buttons["tab.chat"].tap()
         return app
     }
 
