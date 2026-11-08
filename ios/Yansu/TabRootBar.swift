@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum PairingLineCopy {
     /// `lastHeard` is the time of the newest computer data the phone holds. With it, an unknown status says when the
@@ -49,18 +50,102 @@ extension View {
     }
 }
 
+/// Whether a page has scrolled under its title bar, from its scroll position (P160). Nil means the page does not
+/// report it, and its bar keeps the system background.
+private struct TitleBarScrolledKey: EnvironmentKey {
+    static let defaultValue: Bool? = nil
+}
+
+extension EnvironmentValues {
+    var titleBarScrolled: Bool? {
+        get { self[TitleBarScrolledKey.self] }
+        set { self[TitleBarScrolledKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Reports whether the scroll view has moved from its top, on iOS 18 and later.
+    @ViewBuilder
+    func titleBarScrollTracking(_ scrolled: Binding<Bool>) -> some View {
+        if #available(iOS 18.0, *) {
+            // At rest the offset sits at minus the top inset (the bar and the safe area), so compare with that inset.
+            onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 1 } action: { _, value in
+                scrolled.wrappedValue = value
+            }
+        } else {
+            self
+        }
+    }
+}
+
 private struct HardTitleEdge: ViewModifier {
+    @Environment(\.titleBarScrolled) private var scrolled
+
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content
-                .scrollEdgeEffectStyle(.hard, for: .top)
-                .toolbarBackground(YansuTheme.background, for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
+            if let scrolled {
+                // P160: at rest the bar is transparent, so the large title draws on the page's color. Once the
+                // content scrolls under the bar, the bar is opaque in that same color (P137).
+                content
+                    .scrollEdgeEffectStyle(scrolled ? .hard : nil, for: .top)
+                    .background(PageColorNavigationBar(scrolled: scrolled))
+            } else {
+                content
+                    .scrollEdgeEffectStyle(.hard, for: .top)
+                    .toolbarBackground(YansuTheme.background, for: .navigationBar)
+            }
         } else {
             content
                 .toolbarBackground(YansuTheme.background, for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
+        }
+    }
+}
+
+/// P160: paints the navigation bar that encloses it through UIKit's appearance (iOS 26 and later).
+@available(iOS 26.0, *)
+private struct PageColorNavigationBar: UIViewRepresentable {
+    let scrolled: Bool
+
+    func makeUIView(context: Context) -> PageColorNavigationBarView {
+        PageColorNavigationBarView()
+    }
+
+    func updateUIView(_ uiView: PageColorNavigationBarView, context: Context) {
+        uiView.paintNavigationBar(scrolled: scrolled)
+    }
+}
+
+@available(iOS 26.0, *)
+private final class PageColorNavigationBarView: UIView {
+    private var scrolled = false
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        paintNavigationBar(scrolled: scrolled)
+    }
+
+    func paintNavigationBar(scrolled: Bool) {
+        self.scrolled = scrolled
+        var responder: UIResponder? = self
+        while let current = responder {
+            if let bar = (current as? UIViewController)?.navigationController?.navigationBar {
+                let appearance = UINavigationBarAppearance()
+                if scrolled {
+                    appearance.configureWithOpaqueBackground()
+                    appearance.backgroundColor = UIColor(YansuTheme.background)
+                } else {
+                    appearance.configureWithTransparentBackground()
+                }
+                appearance.shadowColor = nil
+                bar.standardAppearance = appearance
+                bar.scrollEdgeAppearance = appearance
+                bar.compactAppearance = appearance
+                bar.compactScrollEdgeAppearance = appearance
+                return
+            }
+            responder = current.next
         }
     }
 }

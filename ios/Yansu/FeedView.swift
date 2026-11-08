@@ -211,6 +211,8 @@ struct FeedView: View {
     @Environment(\.tabChromeHeight) private var tabChromeHeight
     @State private var evidence: EvidenceRequest?
     @State private var showingPastBriefs = false
+    /// Whether the Today page has scrolled under its title bar (P160).
+    @State private var pageScrolled = false
     @State private var reviewTask: MobileTask?
     @State private var showingMeeting = false
     @State private var correcting: FeedCardModel?
@@ -257,6 +259,7 @@ struct FeedView: View {
         .navigationTitle(String(localized: "Today"))
         .navigationBarTitleDisplayMode(.large)
         .tabRootBar()
+        .environment(\.titleBarScrolled, pageScrolled)
         .navigationDestination(isPresented: $showingPastBriefs) {
             PastBriefsView()
         }
@@ -470,6 +473,7 @@ struct FeedView: View {
                 }
             }
             .tabBarScrollVisibility()
+            .titleBarScrollTracking($pageScrolled)
             .animation(reduceMotion ? .easeOut(duration: 0.18) : .easeOut(duration: 0.25), value: todayStore.snapshot == nil)
             .animation(reduceMotion ? .easeOut(duration: 0.18) : .easeOut(duration: 0.25), value: brief.current?.identifier)
             }
