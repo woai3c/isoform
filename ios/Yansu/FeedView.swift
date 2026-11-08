@@ -554,8 +554,10 @@ struct FeedView: View {
             }
     }
 
+    /// Today's away times use Chat's day wording, so one goodbye time reads the same on both screens: the time alone
+    /// today, "yesterday at" the day before, the date after that.
     private func todayTime(_ date: Date) -> String {
-        BriefClock.text(date, locale: locale)
+        ChatAwayCopy.since(date, now: Date(), locale: locale, calendar: .current).trimmingCharacters(in: .whitespaces)
     }
 
     /// The Computer sheet's first line, also Today's away line (P133). One function, so the two can't drift.
@@ -565,22 +567,22 @@ struct FeedView: View {
                         fallbackLead: todayStore.snapshot?.briefs.first { $0.id == entry.id }?.lead)
     }
 
-    /// One line for the sends that went a day unanswered: in Chat (Show opens Chat) or in Tasks (Show opens Tasks).
+    /// One line for the sends that went a day unanswered, in Chat or Tasks. Show opens the oldest of them.
     private var expiredNotice: (text: String, open: () -> Void)? {
-        let chatIDs = environment.chat.expiredWaitingMessages(now: Date()).map(\.id)
-        let taskIDs = tasks.expiredDraftSends.compactMap { $0.todayDraftSend?.taskID }
-        let total = chatIDs.count + taskIDs.count
-        guard total > 0 else { return nil }
-        let text = total == 1
-            ? String(localized: "Your computer didn't wake, so your message wasn't sent.")
-            : String.localizedStringWithFormat(String(localized: "Your computer didn't wake, so %lld messages weren't sent."), total)
-        if let messageID = chatIDs.first {
-            return (text, { router.showChatMessage(messageID) })
+        var items = environment.chat.expiredWaitingMessages(now: Date()).map {
+            HeldSendNotice.Item(place: .chat(messageID: $0.id), sentAt: $0.sentAt, person: nil)
         }
-        if let taskID = taskIDs.first {
-            return (text, { router.showHeldTaskRow(taskID) })
+        items += tasks.expiredDraftSends.compactMap { write in
+            guard let draft = write.todayDraftSend else { return nil }
+            return HeldSendNotice.Item(place: .task(taskID: draft.taskID), sentAt: write.createdAt, person: draft.person)
         }
-        return (text, { router.selectedTab = .tasks })
+        guard let notice = HeldSendNotice.make(items) else { return nil }
+        return (notice.text, {
+            switch notice.oldest {
+            case .chat(let messageID): router.showChatMessage(messageID)
+            case .task(let taskID): router.showHeldTaskRow(taskID)
+            }
+        })
     }
 
     /// The write the phone holds for this Needs you card, if any.

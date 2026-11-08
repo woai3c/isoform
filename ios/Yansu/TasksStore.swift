@@ -570,14 +570,14 @@ final class TasksStore: ObservableObject {
                                                 draftRevision: nil, person: person)
     }
     /// A drafted reply the relay held a day with no answer, written through the journal as the app writes one.
-    func seedExpiredDraftForUITest() async {
+    func seedExpiredDraftForUITest(person: String? = nil) async {
         guard let journal, let device = deviceID() else { return }
         let made = Date().addingTimeInterval(-(TaskSendWait.relayRetention + 3600))
         // The relay took this send a day ago and never answered. Written with its dispatch time in one insert, so the
         // launch replay never sees it undispatched and sends it again: the same state a real held send is in.
         _ = try? await journal.reserveTodayDraft(taskID: "draft.ui-sow", revision: "r1", text: "Yes, Thursday works.",
                                                  deviceID: device, makeKey: { "ui-expired-draft" }, createdAt: made,
-                                                 dispatchedAt: made)
+                                                 dispatchedAt: made, person: person)
         await loadPendingDraftSends()
     }
     #endif

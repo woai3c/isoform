@@ -121,6 +121,49 @@ final class P156QueueUITests: XCTestCase {
         app.terminate()
     }
 
+    /// Today names a single held reply in Tasks; Show opens Tasks at it (PROTOCOL.md section 23).
+    func testTodayNamesTheHeldReply() throws {
+        for appearance in ["light", "dark"] {
+            let app = launch(state: "feed-review", appearance: appearance, extra: [
+                "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off",
+                "YANSU_UITEST_HELD_SEND": "expired", "YANSU_UITEST_HELD_PERSON": "Sam",
+            ])
+            let line = app.staticTexts["Your computer didn't wake, so your reply to Sam wasn't sent."].firstMatch
+            XCTAssertTrue(line.waitForExistence(timeout: 20), "Today does not name the reply (\(appearance))")
+            try capture(app, named: "today-named-reply-\(appearance)")
+            app.buttons["today.expired.show"].firstMatch.tap()
+            let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier CONTAINS %@", "draft.ui-sow")).firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 10), "Show did not open Tasks at the reply (\(appearance))")
+            app.terminate()
+        }
+    }
+
+    /// Chat's away line and Today's line name the same sleep time, because both read one goodbye time.
+    func testChatAndTodayNameTheSameSleepTime() throws {
+        // One goodbye time for both lines: the app reads it from here, as Chat's stretch start and as Today's goodbye.
+        let slept = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-26 * 3600))
+        let app = launch(state: "feed-review", appearance: "light", extra: [
+            "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off",
+            "YANSU_UITEST_CHAT_EXPIRED": "1", "YANSU_UITEST_GOODBYE_AT": slept,
+        ])
+        let todayLine = app.buttons["today.connection.line"].firstMatch
+        XCTAssertTrue(todayLine.waitForExistence(timeout: 20))
+        let today = todayLine.label
+        app.buttons["today.expired.show"].firstMatch.tap()
+        let chatLine = app.buttons["chat.away.line"].firstMatch
+        XCTAssertTrue(chatLine.waitForExistence(timeout: 10), "Chat did not open")
+        let chat = chatLine.label
+        // The clock digits: the formatter's space before AM/PM is a narrow no-break space.
+        let pattern = "yesterday at [0-9]+:[0-9]+"
+        func when(_ text: String) -> String? {
+            guard let range = text.range(of: pattern, options: .regularExpression) else { return nil }
+            return String(text[range])
+        }
+        XCTAssertNotNil(when(today), "Today does not say since when: \(today)")
+        XCTAssertEqual(when(today), when(chat), "Chat and Today name different sleep times: \(today) / \(chat)")
+        app.terminate()
+    }
+
     /// The ask-again prompt: "Your computer is awake. Send the reply to Sam now?"
     func testAskAgainPrompt() throws {
         for appearance in ["light", "dark"] {

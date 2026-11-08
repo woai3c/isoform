@@ -47,6 +47,8 @@ struct PendingWrite: Codable, Equatable, Sendable {
         let text: String?
         var dispatchedAt: Date? = nil
         var failed: Bool? = nil
+        /// The person the reply is to, when the phone knows it. Optional so older journals still decode.
+        var person: String? = nil
     }
     enum Operation: String, Codable, Sendable {
         // Retired with the Desk. Kept so a journal written by an older build still decodes;
@@ -314,7 +316,7 @@ actor PendingWriteJournal {
     /// `dispatchedAt` is set only by the UI-test seed for a send the relay already took; the app never passes it.
     func reserveTodayDraft(taskID: String, revision: String, text: String?, deviceID: String,
                            makeKey: @Sendable () -> String, createdAt: Date,
-                           dispatchedAt: Date? = nil) throws -> PendingWrite {
+                           dispatchedAt: Date? = nil, person: String? = nil) throws -> PendingWrite {
         loadIfNeeded()
         guard let hub = hubID() else { throw HubRequestError.notPaired }
         try removeStaleToday(for: hub, deviceID: deviceID)
@@ -325,7 +327,7 @@ actor PendingWriteJournal {
         }
         var write = PendingWrite(key: makeKey(), operation: .todayDraftSend, target: taskID, choice: "send",
                                  fingerprint: fingerprint, createdAt: createdAt, hubID: hub)
-        write.todayDraftSend = PendingWrite.TodayDraftSend(taskID: taskID, revision: revision, text: text, dispatchedAt: dispatchedAt)
+        write.todayDraftSend = PendingWrite.TodayDraftSend(taskID: taskID, revision: revision, text: text, dispatchedAt: dispatchedAt, person: person)
         write.todayDeviceID = deviceID
         try insert(write)
         return write

@@ -205,10 +205,10 @@ enum ChatUITestSeed {
 
     /// Chat while the computer is away (YANSU_UITEST_AWAY_CAUSE and YANSU_UITEST_AWAY_PHASE): two messages
     /// waiting under one thread line, the same a day later, or back with send times and the answers.
-    static func seedAway(_ cache: ChatCache, cause: ChatAwayCause, phase: String, now: Date) throws {
+    static func seedAway(_ cache: ChatCache, cause: ChatAwayCause, phase: String, startedAt: Date? = nil, now: Date) throws {
         try cache.rememberMainChat(mainSummary(now: now))
         var items = transcript(answered: true, now: now.addingTimeInterval(phase == "long" ? -27 * 3600 : -9 * 3600))
-        let start = phase == "long" ? now.addingTimeInterval(-26 * 3600) : now.addingTimeInterval(-8 * 3600)
+        let start = startedAt ?? (phase == "long" ? now.addingTimeInterval(-26 * 3600) : now.addingTimeInterval(-8 * 3600))
         let ids = ["ui-away-1", "ui-away-2"]
         let typed = [start.addingTimeInterval(120), start.addingTimeInterval(180)]
         var period = ChatAwayPeriod(id: "ui-away-period", cause: cause, startedAt: start, messageIDs: ids)

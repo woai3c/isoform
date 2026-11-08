@@ -3236,9 +3236,10 @@ still works while the computer sleeps; it waits and happens when the computer wa
   - On the Tasks row of a held reply: the same line under the row, with Send again as a text link. Send
     again takes the reply back out of the journal and sends it as a new send, once the relay has let the
     first one go (a day after it was sent).
-  - On Today, under the away block: one line, "Your computer didn't wake, so your message wasn't sent."
-    (two or more: "so 2 messages weren't sent.") with Show. Show opens the first held message in Chat and
-    scrolls to it; with no held message in Chat, it opens Tasks at the held reply's row.
+  - On Today, under the away block: one line with Show. When the only held send is one reply in Tasks, it
+    names the person it is to, "Your computer didn't wake, so your reply to Sam wasn't sent." (without a name:
+    "your reply"). Otherwise it counts them: "your message" for one, "so 2 messages weren't sent." for several.
+    Show opens the oldest held send: a Chat message in Chat, scrolled to it, or a reply in Tasks, at its row.
   Nothing is sent again until the person says so; the words stay in the phone's journal until then.
 - **Answers.** The answer to a chat message that waited is an `chat_answer` notification with the
   body "Isoform answered." (zh-CN "Isoform 已回复。"). It carries no answer text and no count. The

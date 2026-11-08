@@ -980,8 +980,12 @@ extension AppEnvironment {
             }
             // Today's line for a send the computer never answered, with that send in Chat (the feed's Today frame).
             if isFirstLaunch && state == "feed-review" && ProcessInfo.processInfo.environment["YANSU_UITEST_CHAT_EXPIRED"] == "1" {
+                // One sleep time for both away lines: Chat's stretch starts there, and Today reads it as its goodbye time.
+                // The test passes the goodbye time (YANSU_UITEST_GOODBYE_AT), which Today reads as well.
+                let sleptAt = ProcessInfo.processInfo.environment["YANSU_UITEST_GOODBYE_AT"].flatMap(RelayTime.parse)
+                    ?? Date().addingTimeInterval(-26 * 3600)
                 try ChatUITestSeed.seedAway(ChatCache(directory: directory.appendingPathComponent("chat", isDirectory: true)),
-                                            cause: .asleep, phase: "long", now: Date())
+                                            cause: .asleep, phase: "long", startedAt: sleptAt, now: Date())
                 environment.chat.reloadAwayPeriodsForUITest()
             }
             if isFirstLaunch, let presentationItems {
@@ -992,7 +996,8 @@ extension AppEnvironment {
             #if DEBUG && targetEnvironment(simulator)
             // A paired Today with a drafted reply the relay held a day (the 24-hour line).
             if isFirstLaunch && state == "feed-review", ProcessInfo.processInfo.environment["YANSU_UITEST_HELD_SEND"] == "expired" {
-                Task { await environment.tasks.seedExpiredDraftForUITest() }
+                let person = ProcessInfo.processInfo.environment["YANSU_UITEST_HELD_PERSON"]
+                Task { await environment.tasks.seedExpiredDraftForUITest(person: person) }
             }
             // A proactive card queued while the computer sleeps (the Needs-you "Waits for your computer" section).
             if isFirstLaunch && state == "feed-review", ProcessInfo.processInfo.environment["YANSU_UITEST_TODAY_WAITS"] == "1",
