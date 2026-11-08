@@ -25,8 +25,11 @@ final class AgentOfYouWordsUITests: XCTestCase {
 
             XCTAssertTrue(app.staticTexts["Agent of You"].firstMatch.waitForExistence(timeout: 10), "the page is named Agent of You")
             XCTAssertFalse(app.staticTexts["Rent out an agent of you"].exists, "the old title is gone")
-            XCTAssertTrue(app.staticTexts["What it would specialize in"].firstMatch.waitForExistence(timeout: 10),
+            // A specialties section with nothing to list is left out (cf216d870, P146), so the heading is absent here.
+            XCTAssertFalse(app.staticTexts["What it would specialize in"].exists, "an empty section is left out")
+            XCTAssertTrue(app.staticTexts["Coming soon"].firstMatch.waitForExistence(timeout: 10),
                           "headings are sentence case")
+            XCTAssertFalse(app.staticTexts["COMING SOON"].exists, "no all-caps heading")
             XCTAssertFalse(app.staticTexts["WHAT IT WOULD SPECIALIZE IN"].exists, "no all-caps heading")
             attach(app, named: "A1-agent-of-you-\(appearance)")
             app.terminate()
