@@ -1,6 +1,12 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Your phone checks your computer every so often, so a notice can come a little late. While your computer is asleep, most notices wait until it wakes." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Your phone checks your computer every so often, so a notice can come a little late. While your computer is asleep, most notices wait until it wakes."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"你的手机会不时检查你的电脑，所以通知可能会稍晚一些到。电脑睡眠时，大多数通知会等它唤醒后再到。"}}}},
+    "Can't tell right now" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Can't tell right now"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"暂时无法确定"}}}},
+    "Can't tell right now · last heard %@" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Can't tell right now · last heard %@"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"暂时无法确定 · 上次联系于 %@"}}}},
+    "Remove saved briefs" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Remove saved briefs"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"移除已保存的简报"}}}},
+    "Remove saved briefs?" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Remove saved briefs?"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"移除已保存的简报？"}}}},
+    "Briefs, chats, tasks and ideas you have opened are saved on this iPhone." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Briefs, chats, tasks and ideas you have opened are saved on this iPhone."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"你打开过的简报、聊天、任务和想法会保存在这部 iPhone 上。"}}}},
     "Send again" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Send again"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"再次发送"}}}},
     "Show" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Show"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"查看"}}}},
     "Waits for your computer" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Waits for your computer"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"等待电脑连接"}}}},
@@ -312,7 +318,6 @@
     "Your computer stops sending briefs to this phone, and briefs stored on this phone are deleted.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Your computer stops sending briefs to this phone, and briefs stored on this phone are deleted."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"电脑将停止向这部手机发送简报，这部手机上保存的简报也会被删除。"}}}},
     "Remove saved pairing": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Remove saved pairing"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"移除已保存的配对"}}}},
     "This removes the saved pairing and cached briefs and chats from this phone. The old phone may still be listed in Isoform on your computer under Settings > Phone. Then choose Show pairing code on your computer to pair this phone again.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"This removes the saved pairing and cached briefs and chats from this phone. The old phone may still be listed in Isoform on your computer under Settings > Phone. Then choose Show pairing code on your computer to pair this phone again."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"这会从这部手机上移除已保存的配对，以及缓存的简报和聊天。旧手机可能仍列在电脑上 Isoform 的“设置 > 手机”中。之后在电脑上选择“显示配对码”，即可重新配对这部手机。"}}}},
-    "Delete cached briefs": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Delete cached briefs"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"删除缓存的简报"}}}},
     "Briefs stay on your computer. This phone downloads them again when it is paired and online.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Briefs stay on your computer. This phone downloads them again when it is paired and online."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"简报仍保存在电脑上。这部手机配对并联网后会重新下载。"}}}},
     "Remove from this phone": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Remove from this phone"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"从这部手机移除"}}}},
     "Keep pairing": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Keep pairing"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"保留配对"}}}},
@@ -325,7 +330,6 @@
     "Alerts on this phone show a short line only. Pair this phone again in Settings to restore the details.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Alerts on this phone show a short line only. Pair this phone again in Settings to restore the details."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"这部手机上的提醒只显示简短一行。请在设置中重新配对这部手机，以恢复详细内容。"}}}},
     "This phone is not paired with a computer.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"This phone is not paired with a computer."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"这部手机尚未与电脑配对。"}}}},
     "Pairing needs the Isoform app on your computer. Isoform shows a six-digit code on both devices. Compare them, then approve on the computer.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Pairing needs the Isoform app on your computer. Isoform shows a six-digit code on both devices. Compare them, then approve on the computer."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"配对需要电脑上的 Isoform 应用。Isoform 会在两台设备上显示六位数字码。请比对两边的码，然后在电脑上批准。"}}}},
-    "Briefs, chats, tasks and ideas you have opened are cached on this iPhone.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Briefs, chats, tasks and ideas you have opened are cached on this iPhone."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"你打开过的简报、聊天、任务和想法会缓存在这部 iPhone 上。"}}}},
     "Isoform does this once on your computer. Check Tasks for its status.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Isoform does this once on your computer. Check Tasks for its status."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"Isoform 会在电脑上完成这件事一次。可在“任务”中查看状态。"}}}},
     "Start one-time work": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Start one-time work"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"开始一次性任务"}}}},
     "Briefs and deliverables saved on this phone.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Briefs and deliverables saved on this phone."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"保存在这部手机上的简报和交付物。"}}}},
@@ -392,7 +396,6 @@
     "today.keepAwake.notNow": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Not now"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"暂不"}}}},
     "Turns on when your computer is back.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Turns on when your computer is back."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"电脑恢复连接后打开。"}}}},
     "Your phone checks your computer every so often, so a notice can come a little late.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Your phone checks your computer every so often, so a notice can come a little late."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"你的手机会不时检查你的电脑，所以通知可能会稍晚一些到。"}}}},
-    "Your phone checks your computer every so often, so a notice can come a little late. While your computer is asleep, nothing new arrives.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Your phone checks your computer every so often, so a notice can come a little late. While your computer is asleep, nothing new arrives."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"你的手机会不时检查你的电脑，所以通知可能会稍晚一些到。电脑睡眠时不会有新通知。"}}}},
     "Agent of You": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Agent of You"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"出租智能体"}}}},
     "Soon": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Soon"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"即将推出"}}}},
     "Coming soon": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Coming soon"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"即将推出"}}}},
@@ -1832,23 +1835,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的电脑正在休眠，唤醒后会发送。"
-          }
-        }
-      }
-    },
-    "Connection status unavailable": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connection status unavailable"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "连接状态不可用"
           }
         }
       }

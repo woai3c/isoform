@@ -132,10 +132,10 @@ final class LocalNotificationUITests: XCTestCase {
         app.launchEnvironment["YANSU_UITEST_FAIL_BRIEF_DELETE"] = "1"
         app.launch()
         openSettings(app)
-        let delete = app.descendants(matching: .any)["settings.group.privacy"].buttons["Delete cached briefs"].firstMatch
+        let delete = app.descendants(matching: .any)["settings.group.privacy"].buttons["Remove saved briefs"].firstMatch
         reveal(delete, in: app)
         delete.tap()
-        app.sheets.buttons["Delete cached briefs"].firstMatch.tap()
+        app.sheets.buttons["Remove saved briefs"].firstMatch.tap()
         let notice = app.descendants(matching: .any)["settings.briefNotice"].firstMatch
         for _ in 0..<8 where !notice.isHittable { app.swipeDown() }
         XCTAssertTrue(notice.waitForExistence(timeout: 10))

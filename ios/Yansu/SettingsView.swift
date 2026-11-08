@@ -10,6 +10,7 @@ struct SettingsView: View {
     @EnvironmentObject private var push: PushRegistration
     @EnvironmentObject private var notifications: NotificationSettingsStore
     @EnvironmentObject private var keepAwake: KeepAwakeStore
+    @EnvironmentObject private var todayStore: TodayStore
     @Environment(\.locale) private var locale
 
     @State private var showPairing = false
@@ -88,8 +89,8 @@ struct SettingsView: View {
         } message: {
             Text("This removes the saved pairing and cached briefs and chats from this phone. The old phone may still be listed in Isoform on your computer under Settings > Phone. Then choose Show pairing code on your computer to pair this phone again.")
         }
-        .confirmationDialog("Delete cached briefs?", isPresented: $confirmDeleteCache, titleVisibility: .visible) {
-            Button("Delete cached briefs", role: .destructive) {
+        .confirmationDialog("Remove saved briefs?", isPresented: $confirmDeleteCache, titleVisibility: .visible) {
+            Button("Remove saved briefs", role: .destructive) {
                 brief.deleteCachedBriefs()
             }
             Button("Cancel", role: .cancel) {}
@@ -219,7 +220,7 @@ struct SettingsView: View {
                                         .foregroundStyle(YansuTheme.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
-                                Button("Delete cached briefs") {
+                                Button("Remove saved briefs") {
                                     confirmDeleteCache = true
                                 }
                                 .buttonStyle(YansuSecondaryButtonStyle())
@@ -289,6 +290,14 @@ struct SettingsView: View {
                 if let status = push.statusMessage {
                     Text(status).font(.footnote).foregroundStyle(YansuTheme.secondary)
                 }
+                // Declined in iOS: the switch cannot turn alerts on again from here, so the button opens iOS Settings (P145).
+                if push.state == .denied {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    }
+                    .buttonStyle(YansuSecondaryButtonStyle())
+                    .accessibilityIdentifier("settings.notifications.openSettings")
+                }
                 if notifications.hasPendingChanges {
                     Text("notifications.pending").font(.footnote).foregroundStyle(YansuTheme.secondary)
                         .accessibilityIdentifier("settings.notifications.pending")
@@ -331,7 +340,7 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.notifications.preferences")
                 if !keepAwake.instantPush {
-                    Text("Your phone checks your computer every so often, so a notice can come a little late. While your computer is asleep, nothing new arrives.")
+                    Text("Your phone checks your computer every so often, so a notice can come a little late. While your computer is asleep, most notices wait until it wakes.")
                         .font(.footnote)
                         .foregroundStyle(YansuTheme.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -410,13 +419,13 @@ struct SettingsView: View {
                     Text("Keep on this phone")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(YansuTheme.ink)
-                    Text("Briefs, chats, tasks and ideas you have opened are cached on this iPhone.")
+                    Text("Briefs, chats, tasks and ideas you have opened are saved on this iPhone.")
                         .font(.footnote)
                         .foregroundStyle(YansuTheme.secondary)
                 }
                 Link("Privacy Policy", destination: URL(string: "https://www.isoform.ai/privacy")!)
                     .accessibilityIdentifier("settings.privacyPolicy")
-                Button("Delete cached briefs") { confirmDeleteCache = true }
+                Button("Remove saved briefs") { confirmDeleteCache = true }
                     .buttonStyle(YansuSecondaryButtonStyle())
                     .accessibilityIdentifier("settings.deleteCachedBriefs")
                 Button(role: .destructive) {
@@ -450,7 +459,8 @@ struct SettingsView: View {
     }
 
     private var connectionDescription: String {
-        PairingLineCopy.connection(remote: pairing.isRemote, online: brief.hubOnline)
+        PairingLineCopy.connection(remote: pairing.isRemote, online: brief.hubOnline,
+                                   lastHeard: todayStore.snapshot?.generatedDate)
     }
 
     private func loadStatus() async {

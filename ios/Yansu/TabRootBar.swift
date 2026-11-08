@@ -1,13 +1,20 @@
 import SwiftUI
 
 enum PairingLineCopy {
-    static func connection(remote: Bool, online: Bool?) -> String {
+    /// `lastHeard` is the time of the newest computer data the phone holds. With it, an unknown status says when the
+    /// phone last heard from the computer (P144); without it, the unknown status says only that it cannot tell.
+    static func connection(remote: Bool, online: Bool?, lastHeard: Date? = nil) -> String {
         switch online {
         case .some(true): String(localized: "Online")
         case .some(false):
             remote ? String(localized: "Your computer is asleep; this will send when it wakes.")
                 : String(localized: "Offline")
-        case .none: String(localized: "Connection status unavailable")
+        case .none:
+            if let lastHeard {
+                String(format: String(localized: "Can't tell right now · last heard %@"), BriefClock.text(lastHeard))
+            } else {
+                String(localized: "Can't tell right now")
+            }
         }
     }
 }

@@ -27,10 +27,15 @@ enum NoticeDelivery {
 
     /// Sets the sealed title, body and category, and attaches the JSON under `yansu.notice` for the app.
     /// The thread identifier stays the hub id the relay already set.
+    /// The Notification Center group for a notice kind: "isoform.notice.<kind>".
+    static func threadIdentifier(kind: String) -> String { "isoform.notice." + kind }
+
     static func apply(_ notice: OpenedNotice, to content: UNMutableNotificationContent) {
         content.title = notice.plaintext.title
         content.body = notice.plaintext.body ?? ""
         content.categoryIdentifier = notice.plaintext.category
+        // Notices of one kind stack together in Notification Center, so several read as one group (P145).
+        content.threadIdentifier = NoticeDelivery.threadIdentifier(kind: notice.plaintext.kind)
         var userInfo = content.userInfo
         userInfo[NoticePush.noticeUserInfoKey] = notice.json
         content.userInfo = userInfo

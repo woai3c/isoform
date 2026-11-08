@@ -91,7 +91,9 @@ final class NoticeDeliveryTests: XCTestCase {
         XCTAssertEqual(content.title, "Q3 outline is waiting on you.")
         XCTAssertEqual(content.body, "It needs to be picked up again.")
         XCTAssertEqual(content.categoryIdentifier, NoticeCategory.moment.rawValue)
-        XCTAssertEqual(content.threadIdentifier, hub)
+        XCTAssertEqual(content.threadIdentifier, "isoform.notice.\(opened.plaintext.kind)",
+                       "notices of one kind stack in one Notification Center group (P145)")
+        XCTAssertNotEqual(content.threadIdentifier, hub)
         let attached = NoticePush.plaintext(in: content.userInfo)
         XCTAssertEqual(attached?.subjectID, "hf_42")
         XCTAssertEqual(attached?.id, noticeID)

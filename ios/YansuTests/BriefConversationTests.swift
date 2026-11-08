@@ -154,7 +154,10 @@ final class BriefConversationTests: XCTestCase {
                        "Your computer is asleep; this will send when it wakes.")
         XCTAssertEqual(PairingLineCopy.connection(remote: true, online: true), "Online")
         XCTAssertEqual(PairingLineCopy.connection(remote: false, online: false), "Offline")
-        XCTAssertEqual(PairingLineCopy.connection(remote: false, online: nil), "Connection status unavailable")
+        XCTAssertEqual(PairingLineCopy.connection(remote: false, online: nil), "Can't tell right now")
+        let heard = Date(timeIntervalSince1970: 1_793_000_000)
+        XCTAssertEqual(PairingLineCopy.connection(remote: false, online: nil, lastHeard: heard),
+                       "Can't tell right now · last heard \(BriefClock.text(heard))")
     }
 
     func testACardTapPutsItsWordsInTheBoxAndOnlySendCarriesTheCard() async throws {
