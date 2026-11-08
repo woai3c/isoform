@@ -73,6 +73,13 @@ enum TodayBriefCard {
         !hasBrief && !placeholderShown
     }
 
+    /// "Recording on its way" in the player's place: the brief has words, Play is not shown, and the computer says its
+    /// recording is still being made (audio status `downloading`, PROTOCOL.md section 8). The computer sends no time,
+    /// so the line names none. A brief with no audio status, such as the template sentence, shows nothing there (P138).
+    static func showsRecordingLine(hasWords: Bool, playShown: Bool, audio: BriefAudio?) -> Bool {
+        hasWords && !playShown && audio?.isRecording == true
+    }
+
     /// "Making a new brief · ready around 8:43 AM", while a requested brief is being made. Nil for any other state.
     static func makingLine(_ request: TodayBriefRequest?, time: (Date) -> String) -> String? {
         guard let request, ["queued", "making"].contains(request.state), let ready = request.readyDate else { return nil }
@@ -163,119 +170,137 @@ struct TodayBriefCardView: View {
         let asleep = todayStore.hubUnreachable || brief.hubOnline == false
         let schedule = todayStore.snapshot?.schedule ?? MobileBriefSchedule(morning: nil, evening: nil)
         let due = TodayBriefCard.dueWhileAsleep(schedule, current: shown, asleep: asleep, now: now)
+        let weekShown = shown.yourWeek != nil
         let entry = HistoryEntry(id: shown.identifier, slot: shown.slot, localDate: shown.localDate,
                                  asOf: shown.asOfDate, narrativeStatus: shown.narrativeStatus, isCached: true,
                                  displaySlot: shown.displaySlot, timezone: shown.timezone,
                                  kind: shown.kind, dueAt: shown.dueAt)
-        YansuCard {
-            VStack(alignment: .leading, spacing: 14) {
-                if let making = TodayBriefCard.makingLine(todayStore.snapshot?.briefRequest, time: time) {
-                    Text(making)
-                        .font(.footnote)
-                        .foregroundStyle(YansuTheme.secondary)
-                        .accessibilityIdentifier("feed.brief.making")
-                }
-                HStack(alignment: .top, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(verbatim: TodayAwaitingBrief.cardTitle(shown, now: now, locale: locale))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(YansuTheme.secondary)
-                            .accessibilityIdentifier("feed.brief.title")
-                        if let late = shown.lateLineText {
-                            Text(late)
+        VStack(alignment: .leading, spacing: 12) {
+            YansuCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    if weekShown {
+                        // One card for a week brief (P139): Your week's title and ··· menu, its Play or recording line,
+                        // its words and sections, then the links at the bottom.
+                        BriefCardsView(brief: shown, showsAttention: false, showsParagraphs: true, topics: topics,
+                                       onPrepareInTopic: onPrepareInTopic, preview: true, weekEmbedded: true,
+                                       weekBelowTitle: weekPlayLine(shown, holdsBrief: holdsBrief, asleep: asleep),
+                                       weekMakeNow: { Task { await todayStore.requestFresh() } }, weekCanMakeNow: canMakeBrief)
+                    } else {
+                        if let making = TodayBriefCard.makingLine(todayStore.snapshot?.briefRequest, time: time) {
+                            Text(making)
                                 .font(.footnote)
                                 .foregroundStyle(YansuTheme.secondary)
-                                .accessibilityIdentifier("feed.brief.late")
+                                .accessibilityIdentifier("feed.brief.making")
                         }
-                    }
-                    Spacer(minLength: 0)
-                    Menu {
-                        Button("Make my brief now") { Task { await todayStore.requestFresh() } }
-                            .disabled(!canMakeBrief)
-                    } label: {
-                        // P134: the 44 pt tap target stays, but its height no longer adds a band under the title row.
-                        Image(systemName: "ellipsis").frame(width: 44, height: 44)
-                            .padding(.vertical, -12)
-                    }
-                    .accessibilityLabel("More options")
-                }
-                if TodayBriefCard.showsPlay(hasWords: shown.hasWords, hasAudio: hasAudio, holdsBrief: holdsBrief,
-                                            audioOnComputer: shown.audio?.isFinished == true && !shown.audioIsWithdrawn,
-                                            computerOnline: asleep ? false : brief.hubOnline) {
-                    HStack(spacing: 10) {
-                        TodayBriefPlayButton(brief: shown, hubID: hubID, player: player, hasAudio: hasAudio)
-                        if let length = shown.audio?.durationLabel {
-                            Text(verbatim: length)
-                                .font(.footnote.weight(.medium))
+                        HStack(alignment: .top, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(verbatim: TodayAwaitingBrief.cardTitle(shown, now: now, locale: locale))
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(YansuTheme.secondary)
+                                    .accessibilityIdentifier("feed.brief.title")
+                                if let late = shown.lateLineText {
+                                    Text(late)
+                                        .font(.footnote)
+                                        .foregroundStyle(YansuTheme.secondary)
+                                        .accessibilityIdentifier("feed.brief.late")
+                                }
+                            }
+                            Spacer(minLength: 0)
+                            Menu {
+                                Button("Make my brief now") { Task { await todayStore.requestFresh() } }
+                                    .disabled(!canMakeBrief)
+                            } label: {
+                                // P134: the 44 pt tap target stays, but its height no longer adds a band under the title row.
+                                Image(systemName: "ellipsis").frame(width: 44, height: 44)
+                                    .padding(.vertical, -12)
+                            }
+                            .accessibilityLabel("More options")
+                        }
+                        let playShown = TodayBriefCard.showsPlay(hasWords: shown.hasWords, hasAudio: hasAudio, holdsBrief: holdsBrief,
+                                                                 audioOnComputer: shown.audio?.isFinished == true && !shown.audioIsWithdrawn,
+                                                                 computerOnline: asleep ? false : brief.hubOnline)
+                        if playShown {
+                            HStack(spacing: 10) {
+                                TodayBriefPlayButton(brief: shown, hubID: hubID, player: player, hasAudio: hasAudio)
+                                if let length = shown.audio?.durationLabel {
+                                    Text(verbatim: length)
+                                        .font(.footnote.weight(.medium))
+                                        .foregroundStyle(YansuTheme.secondary)
+                                        .accessibilityIdentifier("feed.brief.length")
+                                }
+                            }
+                        } else if TodayBriefCard.showsRecordingLine(hasWords: shown.hasWords, playShown: playShown, audio: shown.audio) {
+                            Text("Recording on its way")
+                                .font(.footnote)
                                 .foregroundStyle(YansuTheme.secondary)
-                                .accessibilityIdentifier("feed.brief.length")
+                                .accessibilityIdentifier("feed.brief.recording")
                         }
+                        BriefCardsView(brief: shown, showsAttention: false, showsParagraphs: true, topics: topics,
+                                       onPrepareInTopic: onPrepareInTopic, preview: true)
                     }
-                }
-                BriefCardsView(brief: shown, showsAttention: false, showsParagraphs: true, topics: topics,
-                               onPrepareInTopic: onPrepareInTopic, preview: true)
-                if let due {
-                    Text(TodayBriefCard.waitingLine(due, time: time))
-                        .font(.footnote)
-                        .foregroundStyle(YansuTheme.secondary)
-                        .accessibilityIdentifier("feed.brief.waiting")
-                }
-                if todayStore.freshFailed {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("Couldn't make the new brief.")
+                    if let due {
+                        Text(TodayBriefCard.waitingLine(due, time: time))
                             .font(.footnote)
                             .foregroundStyle(YansuTheme.secondary)
-                        Spacer(minLength: 0)
-                        Button("Make it now") { Task { await todayStore.requestFresh() } }
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(YansuTheme.accent)
-                            .disabled(!canMakeBrief)
-                            .accessibilityIdentifier("feed.brief.makeNow")
+                            .accessibilityIdentifier("feed.brief.waiting")
                     }
-                    .accessibilityIdentifier("feed.brief.failed")
-                }
-                if let notice = brief.notice {
-                    NoticeBanner(message: notice, dismiss: brief.dismissNotice)
-                }
-                if let newer = choice.newer {
-                    Button {
-                        held = nil
-                    } label: {
-                        HStack {
-                            Text(TodayBriefCard.newerLine(newer, time: time))
+                    if todayStore.freshFailed {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("Couldn't make the new brief.")
+                                .font(.footnote)
+                                .foregroundStyle(YansuTheme.secondary)
                             Spacer(minLength: 0)
+                            Button("Make it now") { Task { await todayStore.requestFresh() } }
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(YansuTheme.accent)
+                                .disabled(!canMakeBrief)
+                                .accessibilityIdentifier("feed.brief.makeNow")
                         }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(YansuTheme.accent)
-                        .contentShape(Rectangle())
+                        .accessibilityIdentifier("feed.brief.failed")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("feed.brief.newer")
-                }
-                // Side-by-side links stack at accessibility sizes, so their labels never run into each other.
-                let readAll = NavigationLink {
-                    BriefDetailView(entry: entry, player: player,
-                                    fallbackLead: todayStore.snapshot?.briefs.first { $0.id == shown.identifier }?.lead)
-                } label: {
-                    Text("Read all")
-                }
-                .accessibilityIdentifier("feed.readAll")
-                let pastBriefs = Button(action: onPastBriefs) {
-                    HStack(spacing: 4) {
-                        Text("Past briefs")
-                        Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                    if let notice = brief.notice {
+                        NoticeBanner(message: notice, dismiss: brief.dismissNotice)
                     }
-                }
-                .accessibilityIdentifier("feed.pastBriefs")
-                // The two links sit at the card's two ends at the default size, and stack at accessibility sizes (P149).
-                if dynamicTypeSize.isAccessibilitySize {
-                    VStack(alignment: .leading, spacing: 10) { readAll; pastBriefs }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(YansuTheme.accent)
-                } else {
-                    HStack { readAll; Spacer(minLength: 12); pastBriefs }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(YansuTheme.accent)
+                    if let newer = choice.newer {
+                        Button {
+                            held = nil
+                        } label: {
+                            HStack {
+                                Text(TodayBriefCard.newerLine(newer, time: time))
+                                Spacer(minLength: 0)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(YansuTheme.accent)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("feed.brief.newer")
+                    }
+                    // Side-by-side links stack at accessibility sizes, so their labels never run into each other.
+                    let readAll = NavigationLink {
+                        BriefDetailView(entry: entry, player: player,
+                                        fallbackLead: todayStore.snapshot?.briefs.first { $0.id == shown.identifier }?.lead)
+                    } label: {
+                        Text("Read all")
+                    }
+                    .accessibilityIdentifier("feed.readAll")
+                    let pastBriefs = Button(action: onPastBriefs) {
+                        HStack(spacing: 4) {
+                            Text("Past briefs")
+                            Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                        }
+                    }
+                    .accessibilityIdentifier("feed.pastBriefs")
+                    // The two links sit at the card's two ends at the default size, and stack at accessibility sizes (P149).
+                    if dynamicTypeSize.isAccessibilitySize {
+                        VStack(alignment: .leading, spacing: 10) { readAll; pastBriefs }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(YansuTheme.accent)
+                    } else {
+                        HStack { readAll; Spacer(minLength: 12); pastBriefs }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(YansuTheme.accent)
+                    }
                 }
             }
         }
@@ -295,6 +320,41 @@ struct TodayBriefCardView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("feed.brief")
+    }
+
+    /// A week brief's making line and its Play or "Recording on its way" line, which sit under the week's title (P139).
+    /// Nil when there is neither, so the card adds no gap.
+    private func weekPlayLine(_ shown: MobileBriefV1, holdsBrief: Bool, asleep: Bool) -> AnyView? {
+        let making = TodayBriefCard.makingLine(todayStore.snapshot?.briefRequest, time: time)
+        let playShown = TodayBriefCard.showsPlay(hasWords: shown.hasWords, hasAudio: hasAudio, holdsBrief: holdsBrief,
+                                                 audioOnComputer: shown.audio?.isFinished == true && !shown.audioIsWithdrawn,
+                                                 computerOnline: asleep ? false : brief.hubOnline)
+        let recording = !playShown && TodayBriefCard.showsRecordingLine(hasWords: shown.hasWords, playShown: playShown, audio: shown.audio)
+        guard making != nil || playShown || recording else { return nil }
+        return AnyView(VStack(alignment: .leading, spacing: 10) {
+            if let making {
+                Text(making)
+                    .font(.footnote)
+                    .foregroundStyle(YansuTheme.secondary)
+                    .accessibilityIdentifier("feed.brief.making")
+            }
+            if playShown {
+                HStack(spacing: 10) {
+                    TodayBriefPlayButton(brief: shown, hubID: hubID, player: player, hasAudio: hasAudio)
+                    if let length = shown.audio?.durationLabel {
+                        Text(verbatim: length)
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(YansuTheme.secondary)
+                            .accessibilityIdentifier("feed.brief.length")
+                    }
+                }
+            } else if recording {
+                Text("Recording on its way")
+                    .font(.footnote)
+                    .foregroundStyle(YansuTheme.secondary)
+                    .accessibilityIdentifier("feed.brief.recording")
+            }
+        })
     }
 
     /// The brief is busy while the person plays it (the player holds it and has started it, until it ends) or reads it.

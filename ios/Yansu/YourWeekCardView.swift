@@ -9,6 +9,12 @@ struct YourWeekCardView: View {
     let onPrepareInTopic: ((String, String) -> Bool)?
     let onFindTime: () -> Void
     let onAskTopic: (String, String) -> Void
+    /// Inside the brief's own card (P139): no surface of its own, and the brief's Play or recording line sits under the title.
+    var embedded = false
+    var belowTitle: AnyView? = nil
+    /// "Make my brief now" in the same ··· menu, so a week brief keeps the action the brief card had.
+    var makeNow: (() -> Void)? = nil
+    var canMakeNow = false
 
     @EnvironmentObject private var pairing: PairingStore
     @EnvironmentObject private var actions: ActionStore
@@ -38,6 +44,7 @@ struct YourWeekCardView: View {
                 !notifications.pendingToday.contains(where: { $0.kind == "weekly_recap" && $0.enabled == false }) {
                 VStack(alignment: .leading, spacing: 20) {
                     title
+                    if let belowTitle { belowTitle }
                     if let lead = week.lead {
                         Text(verbatim: lead)
                             .font(.body.weight(.medium))
@@ -56,13 +63,8 @@ struct YourWeekCardView: View {
                             .accessibilityIdentifier("brief.yourWeek.notice")
                     }
                 }
-                .padding(16)
+                .modifier(WeekSurface(framed: !embedded))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(YansuTheme.surface, in: RoundedRectangle(cornerRadius: YansuTheme.cornerRadius, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: YansuTheme.cornerRadius, style: .continuous)
-                        .strokeBorder(YansuTheme.border, lineWidth: 1)
-                }
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("brief.yourWeek")
             }
@@ -83,12 +85,18 @@ struct YourWeekCardView: View {
                     .accessibilityIdentifier("brief.yourWeek.title")
             }
             Spacer(minLength: 4)
-            if canMute {
+            if canMute || makeNow != nil {
                 Menu {
-                    Button {
-                        Task { await turnOff() }
-                    } label: {
-                        Label("Turn off Your week", systemImage: "bell.slash")
+                    if let makeNow {
+                        Button("Make my brief now") { makeNow() }
+                            .disabled(!canMakeNow)
+                    }
+                    if canMute {
+                        Button {
+                            Task { await turnOff() }
+                        } label: {
+                            Label("Turn off Your week", systemImage: "bell.slash")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -437,4 +445,23 @@ private struct WeekAskSection: View {
 
 private struct WeekCorrectionTarget: Identifiable {
     let id: String
+}
+
+/// The week's own card surface (P139). Inside the brief's card it has none, because that card is the surface.
+private struct WeekSurface: ViewModifier {
+    let framed: Bool
+
+    func body(content: Content) -> some View {
+        if framed {
+            content
+                .padding(16)
+                .background(YansuTheme.surface, in: RoundedRectangle(cornerRadius: YansuTheme.cornerRadius, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: YansuTheme.cornerRadius, style: .continuous)
+                        .strokeBorder(YansuTheme.border, lineWidth: 1)
+                }
+        } else {
+            content
+        }
+    }
 }

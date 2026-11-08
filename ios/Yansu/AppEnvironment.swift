@@ -1024,8 +1024,12 @@ extension AppEnvironment {
                     if state.hasPrefix("feed-audio"), let index = seeded.indices.last {
                         seeded[index].audio = BriefAudio(mime: "audio/wav", bytes: BriefAudioUITestSeed.wav().count,
                                                          durationSeconds: BriefAudioUITestSeed.duration)
-                        // Still rendering: the computer says so, and the Today card keeps Play hidden.
-                        if state == "feed-audio-rendering" { seeded[index].audio?.status = "downloading" }
+                        // Still rendering: the brief has its text, the computer says the recording is being made, and the
+                        // Today card keeps Play hidden and shows "Recording on its way" (P138).
+                        if state == "feed-audio-rendering" {
+                            seeded[index].audio?.status = "rendering"
+                            seeded[index].narrative = FeedUITestSeed.wordsParagraphs.map { BriefParagraph(text: $0) }
+                        }
                     }
                     for brief in seeded { try environment.cache.save(brief) }
                 }

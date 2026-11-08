@@ -117,6 +117,28 @@ final class TodayBriefCardTests: XCTestCase {
 
     // MARK: Play
 
+    /// P138: "Recording on its way" fills the player's place only while the computer is still making the recording.
+    func testRecordingLineShowsOnlyWhileTheComputerIsMakingTheRecording() throws {
+        // The computer's own payload, as the phone decodes it from a brief.
+        let decoded = try JSONDecoder().decode(BriefAudio.self, from: Data(
+            #"{"status":"rendering","mime":"","bytes":0,"durationSeconds":0}"#.utf8))
+        XCTAssertEqual(decoded.status, "rendering")
+        XCTAssertTrue(decoded.isRecording)
+        XCTAssertTrue(TodayBriefCard.showsRecordingLine(hasWords: true, playShown: false, audio: decoded))
+        let recording = BriefAudio(status: "rendering")
+        XCTAssertTrue(TodayBriefCard.showsRecordingLine(hasWords: true, playShown: false, audio: recording))
+        XCTAssertFalse(TodayBriefCard.showsRecordingLine(hasWords: true, playShown: true, audio: recording),
+                       "Play takes the place when it is shown")
+        XCTAssertFalse(TodayBriefCard.showsRecordingLine(hasWords: false, playShown: false, audio: recording),
+                       "no words, no line")
+        XCTAssertFalse(TodayBriefCard.showsRecordingLine(hasWords: true, playShown: false, audio: nil),
+                       "a brief with no audio, such as the template sentence, shows nothing in that place")
+        XCTAssertFalse(TodayBriefCard.showsRecordingLine(hasWords: true, playShown: false, audio: BriefAudio(status: "ok")),
+                       "a finished status is not a recording on its way")
+        XCTAssertFalse(TodayBriefCard.showsRecordingLine(hasWords: true, playShown: false, audio: BriefAudio(status: "downloading")),
+                       "a voice still installing is not a recording being made")
+    }
+
     func testPlayAppearsOnlyWithWordsAndAudioOrPlayback() {
         func play(words: Bool = true, phone: Bool = false, holds: Bool = false, computer: Bool = false,
                   online: Bool? = true) -> Bool {

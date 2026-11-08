@@ -1,6 +1,7 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Recording on its way" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Recording on its way"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"录音即将就绪"}}}},
     "Pair this phone with the Isoform app on your computer. Everything is encrypted between this phone and your computer." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Pair this phone with the Isoform app on your computer. Everything is encrypted between this phone and your computer."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"将这部手机与电脑上的 Isoform 应用配对。这部手机和你的电脑之间的所有内容都经过加密。"}}}},
     "This phone's pairing couldn't be read. Pair again." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"This phone's pairing couldn't be read. Pair again."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"无法读取这部手机的配对信息。请重新配对。"}}}},
     "Your phone checks your computer every so often, so a notice can come a little late. While your computer is asleep, most notices wait until it wakes." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Your phone checks your computer every so often, so a notice can come a little late. While your computer is asleep, most notices wait until it wakes."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"你的手机会不时检查你的电脑，所以通知可能会稍晚一些到。电脑睡眠时，大多数通知会等它唤醒后再到。"}}}},

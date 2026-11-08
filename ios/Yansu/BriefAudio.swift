@@ -21,6 +21,12 @@ struct BriefAudio: Codable, Equatable, Sendable {
     /// Where each spoken paragraph starts (PROTOCOL.md 8.1). Nil for a reading that is not the written paragraphs.
     var paragraphs: [BriefAudioParagraph]? = nil
 
+    /// The computer is making this brief's recording right now (audio status `rendering`, PROTOCOL.md section 8). A
+    /// voice that is still installing is `downloading` and is not a recording being made.
+    var isRecording: Bool {
+        status == "rendering"
+    }
+
     /// A finished recording the computer can hand over. An unknown status never means there is something to play.
     var isFinished: Bool {
         (status == nil || status == "ok") && !(mime ?? "").isEmpty && (bytes ?? 0) > 0 && (durationSeconds ?? 0) > 0

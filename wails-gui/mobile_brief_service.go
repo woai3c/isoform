@@ -1423,6 +1423,15 @@ func (s *mobileBriefService) addAudioWithLatestGuard(ctx context.Context, brief 
 	if s.app != nil && input != mobileBriefAudioBinding(s.app.mobileBriefForDelivery(brief), lang) {
 		return
 	}
+	// Until the recording is saved, the stored brief says it is being made. Any path that does not save the
+	// final audio clears that mark again (P138).
+	saved := false
+	marked := s.markAudioRendering(brief.BriefID, input, lang, asOf)
+	defer func() {
+		if marked && !saved {
+			s.clearAudioRendering(brief.BriefID, asOf)
+		}
+	}()
 	var audio mobileBriefAudioFile
 	var ok bool
 	for attempt := 0; ; attempt++ {
@@ -1506,6 +1515,7 @@ func (s *mobileBriefService) addAudioWithLatestGuard(ctx context.Context, brief 
 		log.Printf("[mobile-brief] the spoken %s brief could not be recorded", brief.Slot)
 		return
 	}
+	saved = true
 	s.patchMu.Unlock()
 	s.saveFinishedRead(stored)
 	if s.app != nil {
@@ -1541,6 +1551,50 @@ func (s *mobileBriefService) addAudioWithLatestGuard(ctx context.Context, brief 
 // refresh adds are not part of it: they change on every refresh, and binding
 // them kept every recording made from 2026-10-19 to 2026-10-21 from being
 // attached although its file was written.
+// markAudioRendering saves the stored brief with a rendering status before the voice speaks it, so a phone that
+// reads the brief now shows "Recording on its way" instead of nothing. Audio that is already playable stays until
+// the new recording replaces it. The mark is skipped when the brief changed since the audio was asked for.
+func (s *mobileBriefService) markAudioRendering(briefID, input, lang string, asOf time.Time) bool {
+	// Only a brief the voice can speak now is being made; a missing voice waits as "downloading".
+	if s.speaker.voiceReady == nil || !s.speaker.voiceReady(lang) {
+		return false
+	}
+	s.patchMu.Lock()
+	defer s.patchMu.Unlock()
+	stored, found := s.store.load(briefID)
+	if !found || (stored.Audio != nil && stored.Audio.Status == mobileBriefAudioStatusOK) {
+		return false
+	}
+	current := stored
+	if s.app != nil {
+		current = s.app.mobileBriefForDelivery(stored)
+	}
+	if input != mobileBriefAudioBinding(current, lang) {
+		return false
+	}
+	stored.Audio = &MobileBriefAudio{Status: mobileBriefAudioStatusRendering}
+	if err := s.store.saveDocument(stored, asOf); err != nil {
+		log.Printf("[mobile-brief] the %s brief could not record that its audio is being made", stored.Slot)
+		return false
+	}
+	return true
+}
+
+// clearAudioRendering removes a rendering mark that no finished recording replaced, so the brief never says a
+// recording is being made after the attempt has ended.
+func (s *mobileBriefService) clearAudioRendering(briefID string, asOf time.Time) {
+	s.patchMu.Lock()
+	defer s.patchMu.Unlock()
+	stored, found := s.store.load(briefID)
+	if !found || stored.Audio == nil || stored.Audio.Status != mobileBriefAudioStatusRendering {
+		return
+	}
+	stored.Audio = nil
+	if err := s.store.saveDocument(stored, asOf); err != nil {
+		log.Printf("[mobile-brief] the %s brief could not clear its audio mark", stored.Slot)
+	}
+}
+
 func mobileBriefAudioBinding(brief MobileBriefV1, lang string) string {
 	evidence := mobileBriefEvidenceByRef(brief)
 	said := func(paragraphs []MobileBriefPara) [][]string {

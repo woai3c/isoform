@@ -959,3 +959,50 @@ func TestMobileBriefAudioPreparationStopsWithService(t *testing.T) {
 		t.Fatalf("a stopped service accepted new work: %v", err)
 	}
 }
+
+// P138: while the voice speaks a brief, the stored brief says its recording is being made, so a phone that reads it
+// shows "Recording on its way". A failed attempt clears that mark, so the brief never says so after the attempt ends.
+func TestMobileBriefAudioRenderingMarkWhileSpokenAndClearedWhenItFails(t *testing.T) {
+	asOf := time.Date(2026, 11, 7, 7, 0, 0, 0, time.UTC)
+	newBrief := func(id string) MobileBriefV1 {
+		return MobileBriefV1{BriefID: id, Slot: "morning", AsOf: mobileTimestamp(asOf), NarrativeStatus: "ok",
+			Narrative: []MobileBriefPara{{Text: "Three meetings today, and Priya is waiting on you."}}}
+	}
+	svc := &mobileBriefService{store: newMobileBriefStore(t.TempDir())}
+
+	spoken := newBrief("2026-11-07-morning")
+	if err := svc.store.save(spoken, asOf); err != nil {
+		t.Fatal(err)
+	}
+	var seen string
+	speaker := fakeSpeaker("en", testWAV(1), nil)
+	speaker.synthesize = func(_ context.Context, _ string, _ string) ([]byte, error) {
+		if stored, found := svc.store.load(spoken.BriefID); found && stored.Audio != nil {
+			seen = stored.Audio.Status
+		}
+		return testWAV(1), nil
+	}
+	svc.speaker = speaker
+	svc.addAudio(context.Background(), spoken, asOf)
+	if seen != mobileBriefAudioStatusRendering {
+		t.Fatalf("while the voice spoke, the brief said audio status %q, want %q", seen, mobileBriefAudioStatusRendering)
+	}
+	stored, _ := svc.store.load(spoken.BriefID)
+	if stored.Audio == nil || stored.Audio.Status != mobileBriefAudioStatusOK || stored.Audio.Bytes == 0 {
+		t.Fatalf("a finished recording must replace the mark, got %+v", stored.Audio)
+	}
+
+	failed := newBrief("2026-11-06-evening")
+	if err := svc.store.save(failed, asOf); err != nil {
+		t.Fatal(err)
+	}
+	svc.speaker = fakeSpeaker("en", nil, errors.New("voice unavailable"))
+	svc.addAudio(context.Background(), failed, asOf)
+	stored, found := svc.store.load(failed.BriefID)
+	if !found {
+		t.Fatal("the brief disappeared")
+	}
+	if stored.Audio != nil && stored.Audio.Status == mobileBriefAudioStatusRendering {
+		t.Fatalf("a failed attempt left the rendering mark on the brief: %+v", stored.Audio)
+	}
+}

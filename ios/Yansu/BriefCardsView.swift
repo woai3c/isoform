@@ -16,6 +16,11 @@ struct BriefCardsView: View {
     var onPrepareInTopic: ((String, String) -> Bool)? = nil
     /// Today shows a short preview; the complete brief retains the other actions.
     var preview = false
+    /// Today's week brief sits inside the brief's own card: see YourWeekCardView.embedded.
+    var weekEmbedded = false
+    var weekBelowTitle: AnyView? = nil
+    var weekMakeNow: (() -> Void)? = nil
+    var weekCanMakeNow = false
     @EnvironmentObject private var chat: ChatStore
     @EnvironmentObject private var briefs: BriefStore
     @EnvironmentObject private var pairing: PairingStore
@@ -40,7 +45,8 @@ struct BriefCardsView: View {
             if let week = brief.yourWeek {
                 YourWeekCardView(brief: brief, week: week, topics: topics, canTalk: canTalk,
                                  onPut: put, onPrepareInTopic: onPrepareInTopic, onFindTime: { showingFindTime = true },
-                                 onAskTopic: askWeekTopic)
+                                 onAskTopic: askWeekTopic, embedded: weekEmbedded, belowTitle: weekBelowTitle,
+                                 makeNow: weekMakeNow, canMakeNow: weekCanMakeNow)
             } else {
                 if showsParagraphs {
                     paragraphs

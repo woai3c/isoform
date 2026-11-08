@@ -142,7 +142,7 @@ func (bridge *mobileBridge) serveBriefAudio(w http.ResponseWriter, r *http.Reque
 		mobileBriefAudioFailure(w, http.StatusConflict, "version_changed")
 		return
 	}
-	if brief.Audio == nil || brief.Audio.Status == mobileBriefAudioStatusDownloading {
+	if brief.Audio == nil || brief.Audio.Status == mobileBriefAudioStatusDownloading || brief.Audio.Status == mobileBriefAudioStatusRendering {
 		reason := "audio_rendering"
 		if brief.Audio != nil && brief.Audio.Status == mobileBriefAudioStatusDownloading {
 			reason = "voice_not_installed"

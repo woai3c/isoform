@@ -37,8 +37,11 @@ const (
 	mobileBriefAudioEncode            = 90 * time.Second
 	mobileBriefAudioStatusOK          = "ok"
 	mobileBriefAudioStatusDownloading = "downloading"
-	yourWeekSpokenMaxWords            = 110
-	yourWeekSpokenMaxHan              = 180
+	// mobileBriefAudioStatusRendering marks a brief whose recording is being made right now: the computer
+	// is speaking it. It carries no file, and the phone shows "Recording on its way" for it (P138).
+	mobileBriefAudioStatusRendering = "rendering"
+	yourWeekSpokenMaxWords          = 110
+	yourWeekSpokenMaxHan            = 180
 )
 
 // MobileBriefAudio describes the spoken brief stored beside the document.
