@@ -85,10 +85,18 @@ enum ChatAwayCause: String, Codable, CaseIterable, Sendable, Identifiable {
 struct ChatAwayPeriod: Codable, Equatable, Sendable, Identifiable {
     static let longAway: TimeInterval = 24 * 60 * 60
 
+    /// The away line for this stretch. "Since" only with the goodbye time, after 24 hours; otherwise the timeless line.
+    func lineText(now: Date, locale: Locale = .current, calendar: Calendar = .current) -> String {
+        cause.line(since: sinceKnown == true ? startedAt : nil, now: now, locale: locale, calendar: calendar)
+    }
+
     let id: String
     var cause: ChatAwayCause
     let startedAt: Date
     var endedAt: Date? = nil
+    /// True when `startedAt` is the relay's goodbye time. Without it, Chat never says "since": it uses the timeless
+    /// line, as Today uses "as of" (PROTOCOL.md section 23). Optional so older saved periods still decode.
+    var sinceKnown: Bool? = nil
     /// The waiting messages, in the order they were typed.
     var messageIDs: [String] = []
     /// When each message went out, by message id.

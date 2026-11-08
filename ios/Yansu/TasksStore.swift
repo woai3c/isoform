@@ -144,7 +144,7 @@ final class TasksStore: ObservableObject {
         pendingDraftSends = entries
     }
 
-    func queueDraftSend(taskID: String, revision: String, text: String?) async -> Bool {
+    func queueDraftSend(taskID: String, revision: String, text: String?, person: String? = nil) async -> Bool {
         guard let journal, let device = deviceID(), isPaired(), Identifiers.isSafePathID(taskID),
               !revision.isEmpty else { return false }
         do {
@@ -153,7 +153,8 @@ final class TasksStore: ObservableObject {
                 if await journal.entries().contains(where: { $0.key == failed.key }) { return false }
             }
             _ = try await journal.reserveTodayDraft(taskID: taskID, revision: revision, text: text, deviceID: device,
-                                                    makeKey: { UUID().uuidString.lowercased() }, createdAt: Date())
+                                                    makeKey: { UUID().uuidString.lowercased() }, createdAt: Date(),
+                                                    person: RecipientName.name(person))
             await loadPendingDraftSends()
             scheduleDraftReplay(after: 5)
             return true
@@ -192,7 +193,7 @@ final class TasksStore: ObservableObject {
     func sendExpiredAgain(_ pending: PendingWrite) async {
         guard let draft = pending.todayDraftSend else { return }
         await undoDraftSend(pending.key)
-        _ = await queueDraftSend(taskID: draft.taskID, revision: draft.revision, text: draft.text)
+        _ = await queueDraftSend(taskID: draft.taskID, revision: draft.revision, text: draft.text, person: draft.person)
     }
 
     private func scheduleDraftReplay(after delay: TimeInterval) {

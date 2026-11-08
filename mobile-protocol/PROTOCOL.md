@@ -2897,6 +2897,7 @@ for each declared deliverable and, when the closing message's first sentence fit
   - `state`: `ready`, `sent` or `not_sent`. `sentAt` is set when sent.
   - `why` `{text, textLocalized, source: "mail", at}`: who is waiting, and when their message arrived.
   - `recipients` `{to, notIncluded}`. `notIncluded` lists the addresses on that message's To and Cc that the reply does not go to: not the person and not the user's own. It is empty until the Mac has read Mail once since it started.
+  - `name`: the recipient's display name as the mail shows it, for example "Sam Lee" (the contact's name, else the sender's, else the name in the To header). Absent when the mail has no name. It is never an address: the phone shows "your reply" and "the reply" where it is absent, and nothing in Today's line or the ask-again prompt shows an address.
   - There is no `voice` yet. The Mac does not keep the person's past replies.
 - `actions` is `send` and `not_now` while ready.
 - `POST /tasks/draft.*/actions` with `send` needs `chat:write`.
@@ -3244,6 +3245,8 @@ still works while the computer sleeps; it waits and happens when the computer wa
 - **Answers.** The answer to a chat message that waited is an `chat_answer` notification with the
   body "Isoform answered." (zh-CN "Isoform 已回复。"). It carries no answer text and no count. The
   phone opens Chat for the answer, which is read through the normal chat route.
+- **Away line.** Chat says "since" only with the relay's goodbye time, the same rule Today follows (P133). Without one, Chat's line has no time: "Your computer is asleep. Isoform answers when it wakes." (zh-CN "你的电脑在睡眠。它醒来后 Isoform 就会回答。"). Today keeps "as of" with its snapshot time.
+- **A reply's name.** A held reply is named by the draft's `name` (above) in Today's line ("Your computer didn't wake, so your reply to Sam Lee wasn't sent.") and in the ask-again prompt ("Your computer is awake. Send the reply to Sam Lee now?"). Without a name the words say "your reply" or "the reply".
 - **Waiting state.** Every message or row that waits for the computer reads "Waits for your computer ·
   Undo" (zh-CN "等待电脑连接 · 撤销"), with Undo as the accent link. A message from a brief carries the same
   line. A Needs you row keeps its place and shows the line in place of its buttons, and the date line's

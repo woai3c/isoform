@@ -61,10 +61,10 @@ func TestMobileDraftTaskWaitsInNeedsYouWithItsCard(t *testing.T) {
 	detail := mobileTestDecodeThread(t, body)
 	draft := detail.Draft
 	if draft == nil || draft.Channel != "mail" || draft.Body != "Yes, that works." || draft.State != "ready" ||
-		draft.Revision == "" || draft.Recipients == nil || draft.Recipients.To[0] != "Dana" {
+		draft.Revision == "" || draft.Recipients == nil || draft.Recipients.To[0] != "Dana Ruiz" || draft.Name != "Dana Ruiz" {
 		t.Fatalf("draft = %+v", draft)
 	}
-	if draft.Why == nil || draft.Why.Source != "mail" || draft.Why.Text != "Dana is waiting on your reply." ||
+	if draft.Why == nil || draft.Why.Source != "mail" || draft.Why.Text != "Dana Ruiz is waiting on your reply." ||
 		draft.Why.At != time.UnixMilli(mobileTestDraftInboundAt(t, bridge)).UTC().Format(time.RFC3339) {
 		t.Fatalf("why = %+v", draft.Why)
 	}
@@ -146,7 +146,7 @@ func TestMobileDraftTaskSendsYourEditOnceAndEndsWithItsOutcome(t *testing.T) {
 	}
 	detail := mobileTestDecodeThread(t, response)
 	if detail.Draft == nil || detail.Draft.State != "sent" || detail.Draft.Body != "Yes, Thursday works. Talk then." ||
-		detail.Outcome == nil || detail.Outcome.Kind != "replied" || detail.Outcome.Params["person"] != "Dana" {
+		detail.Outcome == nil || detail.Outcome.Kind != "replied" || detail.Outcome.Params["person"] != "Dana Ruiz" {
 		t.Fatalf("after send = %+v", detail)
 	}
 	if replay, again := mobileTestGoalCall(t, bridge, device, http.MethodPost, "/tasks/"+id+"/actions", body); replay != code || again != response || fake.count() != 1 {
@@ -181,7 +181,44 @@ func TestMobileDraftTaskChecksFirstWhenYouAlreadyReplied(t *testing.T) {
 		detail.Draft.State != "not_sent" || len(detail.Actions) != 0 {
 		t.Fatalf("closed as yours = %+v", detail)
 	}
-	if last := detail.Events[len(detail.Events)-1]; !strings.Contains(last.Text, "You replied to Dana yourself from Mail") {
+	if last := detail.Events[len(detail.Events)-1]; !strings.Contains(last.Text, "You replied to Dana Ruiz yourself from Mail") {
 		t.Fatalf("events = %+v", detail.Events)
+	}
+}
+
+// The phone shows a reply's recipient by name only (PROTOCOL.md section 23): the display name as the mail shows it,
+// never an address.
+func TestMobileDraftRecipientNameIsTheDisplayNameNeverAnAddress(t *testing.T) {
+	cases := map[string]string{
+		"Sam Lee <sam.lee@example.com>":   "Sam Lee",
+		`"Sam Lee" <sam.lee@example.com>`: "Sam Lee",
+		"Sam Lee":                         "Sam Lee",
+		"sam.lee@example.com":             "",
+		"<sam.lee@example.com>":           "",
+		"":                                "",
+		"   ":                             "",
+	}
+	for raw, want := range cases {
+		if got := mobileNameOnly(raw); got != want {
+			t.Errorf("mobileNameOnly(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
+// With no name, the words about the reply say so instead of leaving a gap or an address.
+func TestMobileDraftCopyWithNoNameSaysSomeoneOrYourReply(t *testing.T) {
+	if got := mobileDraftCopy("en", "why", ""); got != "Someone is waiting on your reply." {
+		t.Fatalf("why = %q", got)
+	}
+	if got := mobileDraftCopy("en", "replied", ""); got != "You replied yourself from Mail, so I closed this." {
+		t.Fatalf("replied = %q", got)
+	}
+	if got := mobileDraftCopy("en", "why", "Sam Lee"); got != "Sam Lee is waiting on your reply." {
+		t.Fatalf("named why = %q", got)
+	}
+	for _, text := range []string{mobileDraftCopy("zh-CN", "why", ""), mobileDraftCopy("zh-CN", "replied", "")} {
+		if strings.Contains(text, "@") || strings.HasPrefix(text, " ") {
+			t.Fatalf("zh-CN no-name copy = %q", text)
+		}
 	}
 }

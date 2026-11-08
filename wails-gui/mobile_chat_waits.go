@@ -46,7 +46,7 @@ func (bridge *mobileBridge) mobileSendRecipientName(id string) string {
 	if err != nil || !found {
 		return ""
 	}
-	return task.person(bridge.app)
+	return task.recipientName(bridge.app)
 }
 
 // mobileChatAnswerBatch is the answers to waited messages one notification counts.

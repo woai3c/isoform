@@ -2,6 +2,17 @@ import Foundation
 
 /// The one line on Today for sends the computer did not take in a day (PROTOCOL.md section 23). It names a single
 /// held reply in Tasks, counts several, and Show opens the oldest of them wherever it is.
+/// The name the phone may show for a person: the display name as the mail shows it ("Sam Lee"). A bare address is
+/// never shown, so a name the computer could not read reads as no name (PROTOCOL.md section 23).
+enum RecipientName {
+    static func name(_ raw: String?) -> String? {
+        guard let text = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty, !text.contains("@") else {
+            return nil
+        }
+        return text
+    }
+}
+
 struct HeldSendNotice: Equatable {
     enum Place: Equatable {
         case chat(messageID: String)
@@ -11,7 +22,7 @@ struct HeldSendNotice: Equatable {
     struct Item: Equatable {
         let place: Place
         let sentAt: Date
-        /// The person a reply is to, when the phone knows it. Replies do not carry one yet, so usually nil.
+        /// The person a reply is to: the display name the computer sent with it, when there is one.
         let person: String?
     }
 
@@ -23,7 +34,7 @@ struct HeldSendNotice: Equatable {
         guard let oldest = items.min(by: { $0.sentAt < $1.sentAt }) else { return nil }
         let text: String
         if items.count == 1, case .task = oldest.place {
-            if let person = oldest.person, !person.isEmpty {
+            if let person = RecipientName.name(oldest.person) {
                 text = String.localizedStringWithFormat(
                     String(localized: "Your computer didn't wake, so your reply to %@ wasn't sent."), person)
             } else {

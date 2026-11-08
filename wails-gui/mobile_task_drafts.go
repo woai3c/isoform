@@ -42,9 +42,12 @@ type MobileTaskDraft struct {
 	Subject    string                `json:"subject,omitempty"`
 	Body       string                `json:"body"`
 	Recipients *MobileTaskRecipients `json:"recipients,omitempty"`
-	State      string                `json:"state"`
-	SentAt     string                `json:"sentAt,omitempty"`
-	Revision   string                `json:"revision,omitempty"`
+	// Name is the recipient's display name as the mail shows it ("Sam Lee"). Empty when the mail has none; it is
+	// never an address, so the phone can say "your reply" (PROTOCOL.md section 23).
+	Name     string `json:"name,omitempty"`
+	State    string `json:"state"`
+	SentAt   string `json:"sentAt,omitempty"`
+	Revision string `json:"revision,omitempty"`
 }
 
 // mobileDraftTask is one reply draft and what is known about its thread.
@@ -236,18 +239,35 @@ func mobileDraftSameThread(row storage.MailMessageRow, key string) bool {
 	return row.ThreadKey == key || mailThreadKey(row.Subject) == key
 }
 
-func (t mobileDraftTask) person(a *App) string {
+// recipientName is the recipient's display name as the mail shows it: the contact's name, else the sender's, else
+// the name in the draft's To header. It is "" when none of them has a name. A bare address is never returned.
+func (t mobileDraftTask) recipientName(a *App) string {
 	if store := a.storeForMobile(); store != nil && t.Card.DraftContent.PrincipalID != "" {
 		if principal, err := store.GetPrincipal(context.Background(), t.Card.DraftContent.PrincipalID); err == nil {
-			if name := strings.TrimSpace(principal.DisplayName); name != "" {
-				return strings.Fields(name)[0]
+			if name := mobileNameOnly(principal.DisplayName); name != "" {
+				return name
 			}
 		}
 	}
-	if t.Inbound != nil && strings.TrimSpace(t.Inbound.SenderName) != "" {
-		return strings.Fields(t.Inbound.SenderName)[0]
+	if t.Inbound != nil {
+		if name := mobileNameOnly(t.Inbound.SenderName); name != "" {
+			return name
+		}
 	}
-	return mobileOfferText(t.Card.DraftContent.To, 80)
+	return mobileNameOnly(t.Card.DraftContent.To)
+}
+
+// mobileNameOnly is the display name in "Name <address>" or a name alone, and "" for a bare address.
+func mobileNameOnly(raw string) string {
+	name := strings.TrimSpace(raw)
+	if i := strings.Index(name, "<"); i >= 0 {
+		name = strings.TrimSpace(name[:i])
+	}
+	name = strings.TrimSpace(strings.Trim(name, `"'`))
+	if name == "" || strings.Contains(name, "@") {
+		return ""
+	}
+	return mobileOfferText(name, 80)
 }
 
 func (t mobileDraftTask) done() bool { return t.Sent != nil || t.RepliedAt > 0 }
@@ -269,7 +289,7 @@ func (t mobileDraftTask) view(a *App) MobileTaskView {
 		view.Status, view.Group = string(storageCompleted), mobileTaskGroupDone
 		view.UpdatedAt = mobileTaskTime(t.Sent.SentAt)
 		view.Outcome = &MobileTaskOutcome{Kind: "replied", By: "isoform", At: view.UpdatedAt,
-			Params: map[string]string{"person": t.person(a)}}
+			Params: map[string]string{"person": t.recipientName(a)}}
 		view.Unread = false
 	case t.RepliedAt > 0:
 		view.Status, view.Group = string(storageCompleted), mobileTaskGroupDone
@@ -297,12 +317,13 @@ func (t mobileDraftTask) detail(a *App) MobileTaskDetail {
 		Channel: firstNonEmpty(draft.Channel, "mail"), To: mobileOfferText(draft.To, 200),
 		Subject: mobileOfferText(draft.Subject, 300), Body: mobileTaskThreadText(draft.Text, mobileTaskThreadTextMax), Revision: mainChatDraftRevision(*draft),
 		State:      "ready",
-		Recipients: &MobileTaskRecipients{To: []string{t.person(a)}, NotIncluded: t.Others},
+		Recipients: &MobileTaskRecipients{To: []string{firstNonEmpty(t.recipientName(a), mobileOfferText(draft.To, 200))}, NotIncluded: t.Others},
+		Name:       t.recipientName(a),
 	}
 	if t.Inbound != nil {
-		text := mobileDraftCopy("en", "why", t.person(a))
+		text := mobileDraftCopy("en", "why", t.recipientName(a))
 		card.Why = &mobileOfferEvidence{
-			Text: text, TextLocalized: map[string]string{"en": text, "zh-CN": mobileDraftCopy("zh-CN", "why", t.person(a))},
+			Text: text, TextLocalized: map[string]string{"en": text, "zh-CN": mobileDraftCopy("zh-CN", "why", t.recipientName(a))},
 			Source: "mail", At: mobileTaskTime(t.Inbound.At),
 		}
 	}
@@ -316,7 +337,7 @@ func (t mobileDraftTask) detail(a *App) MobileTaskDetail {
 	case t.RepliedAt > 0:
 		card.State = "not_sent"
 		events = append(events, MobileTaskEvent{ID: "replied", Kind: "isoform", At: mobileTaskTime(t.RepliedAt),
-			Text: mobileDraftCopy(lang, "replied", t.person(a))})
+			Text: mobileDraftCopy(lang, "replied", t.recipientName(a))})
 	default:
 		for _, action := range t.Card.ActionIDs {
 			switch action {
@@ -340,11 +361,23 @@ func mobileDraftCopy(lang, key, person string) string {
 		}
 		return "Here's the reply. Nothing goes until you tap Send."
 	case "why":
+		if person == "" {
+			if zh {
+				return "有人在等你的回复。"
+			}
+			return "Someone is waiting on your reply."
+		}
 		if zh {
 			return person + " 在等你的回复。"
 		}
 		return person + " is waiting on your reply."
 	case "replied":
+		if person == "" {
+			if zh {
+				return "你已经自己从邮件回复了，所以我把这件事关了。"
+			}
+			return "You replied yourself from Mail, so I closed this."
+		}
 		if zh {
 			return "你已经自己从邮件回复了 " + person + "，所以我把这件事关了。"
 		}

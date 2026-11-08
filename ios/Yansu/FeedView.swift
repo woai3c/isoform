@@ -45,7 +45,7 @@ private struct TodayDraftReviewSheet: View {
                                           pendingSince: pending?.todayDraftSend?.failed == true ? nil : (pending?.createdAt ?? sendingSince),
                                           failed: failed || pending?.todayDraftSend?.failed == true,
                                           canSend: detail?.actions?.contains("send") == true && sendingSince == nil,
-                                          send: { body in sendDraft(body, revision: draft.revision) }, undo: undoSend,
+                                          send: { body in sendDraft(body, revision: draft.revision, name: draft.name) }, undo: undoSend,
                                           notNow: nil, failedText: pending?.todayDraftSend?.text ?? pendingBody)
                         }
                         if draft.channel == "mail" { PhoneSourceLink(kind: .mail) }
@@ -71,14 +71,14 @@ private struct TodayDraftReviewSheet: View {
         .task { _ = await tasks.loadDetail(id: task.id) }
     }
 
-    private func sendDraft(_ body: String?, revision: String?) {
+    private func sendDraft(_ body: String?, revision: String?, name: String?) {
         pendingBody = body
         guard let revision, !revision.isEmpty else {
             if brief.hubOnline == false { failed = true; return }
             holdSend(body)
             return
         }
-        Task { failed = !(await tasks.queueDraftSend(taskID: task.id, revision: revision, text: body)) }
+        Task { failed = !(await tasks.queueDraftSend(taskID: task.id, revision: revision, text: body, person: name)) }
     }
 
     private func holdSend(_ body: String?) {

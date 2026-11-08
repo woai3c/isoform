@@ -11,6 +11,8 @@ struct MobileTaskDraft: Codable, Equatable, Hashable, Sendable {
     let body: String
     var attachment: MobileTaskAttachment? = nil
     var recipients: MobileTaskRecipients? = nil
+    /// The recipient's display name as the mail shows it. Nil when the mail has none; never an address.
+    var name: String? = nil
     var voice: MobileTaskVoice? = nil
     /// ready, sent or not_sent.
     let state: String

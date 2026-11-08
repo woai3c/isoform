@@ -126,9 +126,9 @@ final class P156QueueUITests: XCTestCase {
         for appearance in ["light", "dark"] {
             let app = launch(state: "feed-review", appearance: appearance, extra: [
                 "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off",
-                "YANSU_UITEST_HELD_SEND": "expired", "YANSU_UITEST_HELD_PERSON": "Sam",
+                "YANSU_UITEST_HELD_SEND": "expired", "YANSU_UITEST_HELD_PERSON": "Sam Lee",
             ])
-            let line = app.staticTexts["Your computer didn't wake, so your reply to Sam wasn't sent."].firstMatch
+            let line = app.staticTexts["Your computer didn't wake, so your reply to Sam Lee wasn't sent."].firstMatch
             XCTAssertTrue(line.waitForExistence(timeout: 20), "Today does not name the reply (\(appearance))")
             try capture(app, named: "today-named-reply-\(appearance)")
             app.buttons["today.expired.show"].firstMatch.tap()
@@ -162,6 +162,21 @@ final class P156QueueUITests: XCTestCase {
         XCTAssertNotNil(when(today), "Today does not say since when: \(today)")
         XCTAssertEqual(when(today), when(chat), "Chat and Today name different sleep times: \(today) / \(chat)")
         app.terminate()
+    }
+
+    /// Chat's away line without the goodbye time is the timeless line, never "since" with the phone's own time.
+    func testChatTimelessLineWithoutTheGoodbyeTime() throws {
+        for appearance in ["light", "dark"] {
+            let app = launch(state: "chat-away", appearance: appearance, extra: [
+                "YANSU_UITEST_AWAY_CAUSE": "asleep", "YANSU_UITEST_AWAY_PHASE": "untimed", "YANSU_UITEST_TAB": "chat",
+            ])
+            let line = app.buttons["chat.away.line"].firstMatch
+            XCTAssertTrue(line.waitForExistence(timeout: 20), "no away line (\(appearance))")
+            XCTAssertTrue(line.label.hasPrefix("Your computer is asleep. Isoform answers when it wakes."), line.label)
+            XCTAssertFalse(line.label.contains("since"), line.label)
+            try capture(app, named: "chat-timeless-line-\(appearance)")
+            app.terminate()
+        }
     }
 
     /// The ask-again prompt: "Your computer is awake. Send the reply to Sam now?"

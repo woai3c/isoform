@@ -36,7 +36,7 @@ func (a *App) GetTodayNeedResolution(momentID string) (TodayNeedResolution, erro
 		if task.Card.MomentID != momentID || task.RepliedAt <= 0 || a.validateMainChatSend(ctx, &task.Card) != nil {
 			continue
 		}
-		person := mobileOfferText(task.person(a), 80)
+		person := mobileOfferText(task.recipientName(a), 80)
 		if person == "" {
 			return empty, nil
 		}

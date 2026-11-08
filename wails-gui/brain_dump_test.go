@@ -160,7 +160,7 @@ func TestBrainDumpLateDraftLinksWithoutSending(t *testing.T) {
 	if err != nil || len(drafts) != 1 {
 		t.Fatalf("drafts = %+v, %v", drafts, err)
 	}
-	name := drafts[0].person(bridge.app)
+	name := drafts[0].recipientName(bridge.app)
 	item := BrainDumpItem{ID: "draft", Title: "Reply to " + name, Who: "draft", Person: name}
 	entry := prepareBrainDumpEntry(item, "hf_late", handoff.SourceMobile, time.Now())
 	entry.ListItem.BatchID = strings.Repeat("a", 64)
@@ -199,7 +199,7 @@ func TestMobileBrainDumpAddUsesExistingCheckedDraftAndReminder(t *testing.T) {
 	if err != nil || len(drafts) != 1 {
 		t.Fatalf("drafts = %+v, err=%v", drafts, err)
 	}
-	name := drafts[0].person(bridge.app)
+	name := drafts[0].recipientName(bridge.app)
 	subject := mailheaders.NormalizeSubject(drafts[0].Card.DraftContent.Subject)
 	items := []BrainDumpItem{
 		{ID: "one", Title: "Reply to " + name + " about " + subject, Who: "draft", Person: name},
@@ -436,7 +436,7 @@ func TestBrainDumpStageLinksOnlyCheckedReadyDraft(t *testing.T) {
 	if err != nil || len(drafts) != 1 || drafts[0].Inbound == nil {
 		t.Fatalf("drafts = %+v, err=%v", drafts, err)
 	}
-	name := drafts[0].person(bridge.app)
+	name := drafts[0].recipientName(bridge.app)
 	subject := mailheaders.NormalizeSubject(drafts[0].Card.DraftContent.Subject)
 	item := BrainDumpItem{ID: "draft-one", Title: "Reply to " + name + " about " + subject, Who: "draft", Person: name}
 	entries, err := bridge.app.persistBrainDumpSelection(context.Background(), "phone:draft", []BrainDumpItem{item}, handoff.SourceMobile, now)

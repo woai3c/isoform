@@ -47,6 +47,23 @@ final class ChatAwayTests: XCTestCase {
                        "Your computer is asleep. Isoform answers when it wakes.")
     }
 
+    /// Chat says "since" only with the goodbye time (PROTOCOL.md section 23). Without one, a day-long stretch still
+    /// reads as the timeless line, never with the phone's own time.
+    func testWithoutTheGoodbyeTimeADayAwayIsTheTimelessLine() {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let now = start.addingTimeInterval(26 * 60 * 60)
+        let english = Locale(identifier: "en_US")
+        var untimed = ChatAwayPeriod(id: "p", cause: .asleep, startedAt: start, sinceKnown: false, messageIDs: ["m"])
+        XCTAssertEqual(untimed.lineText(now: now, locale: english), "Your computer is asleep. Isoform answers when it wakes.")
+        XCTAssertFalse(untimed.lineText(now: now, locale: english).contains("since"))
+        // The same stretch with the goodbye time says since.
+        untimed.sinceKnown = true
+        XCTAssertTrue(untimed.lineText(now: now, locale: english).contains("since "), untimed.lineText(now: now, locale: english))
+        // A saved stretch from before the flag existed has no goodbye time, so it reads timeless too.
+        let legacy = ChatAwayPeriod(id: "old", cause: .asleep, startedAt: start, messageIDs: ["m"])
+        XCTAssertEqual(legacy.lineText(now: now, locale: english), "Your computer is asleep. Isoform answers when it wakes.")
+    }
+
     func testTheBackLineCountsTheMessages() {
         let at = Date(timeIntervalSince1970: 1_800_000_000)
         var period = ChatAwayPeriod(id: "p", cause: .asleep, startedAt: at, messageIDs: ["a"])

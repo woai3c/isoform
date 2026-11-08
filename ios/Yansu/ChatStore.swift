@@ -1317,6 +1317,7 @@ final class ChatStore: ObservableObject {
         } else {
             let started = min(awaySince ?? now(), now())
             list.append(ChatAwayPeriod(id: makeMessageID(), cause: awayCause ?? .notAnswering, startedAt: started,
+                                       sinceKnown: awaySince != nil,
                                        messageIDs: fresh))
         }
         var periods = awayPeriods

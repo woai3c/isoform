@@ -579,7 +579,7 @@ struct ChatView: View {
                 .accessibilityIdentifier("chat.away.back")
         } else if !period.isOver {
             Button { awayMore = period.cause } label: {
-                Text("\(period.cause.line(since: period.startedAt, now: Date(), locale: locale)) \(Text(String(localized: "More")).fontWeight(.semibold).foregroundStyle(YansuTheme.accent))")
+                Text("\(period.lineText(now: Date(), locale: locale)) \(Text(String(localized: "More")).fontWeight(.semibold).foregroundStyle(YansuTheme.accent))")
                     .font(.footnote)
                     .foregroundStyle(YansuTheme.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
