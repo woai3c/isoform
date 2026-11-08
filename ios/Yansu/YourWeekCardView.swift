@@ -39,9 +39,10 @@ struct YourWeekCardView: View {
     }
 
     var body: some View {
+        // The week keeps coming when its notification is off; only the notification stops (design v1.0.18). The card stays,
+        // and its ··· menu offers "Turn on Your week notifications" (P139, P160).
         Group {
-            if !turnedOff && notifications.settings?.kinds.first(where: { $0.kind == "weekly_recap" })?.enabled != false &&
-                !notifications.pendingToday.contains(where: { $0.kind == "weekly_recap" && $0.enabled == false }) {
+            do {
                 VStack(alignment: .leading, spacing: 20) {
                     title
                     if let belowTitle { belowTitle }
@@ -92,10 +93,12 @@ struct YourWeekCardView: View {
                             .disabled(!canMakeNow)
                     }
                     if canMute {
+                        // The same item reads "Turn on" once the week's notifications are off (P139, design v1.0.17).
                         Button {
-                            Task { await turnOff() }
+                            Task { weekNotificationsOn ? await turnOff() : await turnOn() }
                         } label: {
-                            Label("Turn off Your week", systemImage: "bell.slash")
+                            Label(weekNotificationsOn ? "Turn off Your week notifications" : "Turn on Your week notifications",
+                                  systemImage: weekNotificationsOn ? "bell.slash" : "bell")
                         }
                     }
                 } label: {
@@ -374,6 +377,21 @@ struct YourWeekCardView: View {
         String(format: NSLocalizedString(key, comment: ""), locale: locale, arguments: arguments)
     }
 
+    private var weekNotificationsOn: Bool {
+        !turnedOff && notifications.settings?.kinds.first(where: { $0.kind == "weekly_recap" })?.enabled != false &&
+            !notifications.pendingToday.contains(where: { $0.kind == "weekly_recap" && $0.enabled == false })
+    }
+
+    private func turnOn() async {
+        let offline = environment.today.hubUnreachable || environment.brief.hubOnline == false
+        await environment.notifications.setEnabled("weekly_recap", true, deferForToday: offline)
+        if let failure = environment.notifications.failure {
+            notice = failure
+        } else {
+            turnedOff = false
+        }
+    }
+
     private func turnOff() async {
         let offline = environment.today.hubUnreachable || environment.brief.hubOnline == false
         await environment.notifications.setEnabled("weekly_recap", false, deferForToday: offline)
@@ -409,7 +427,8 @@ private struct WeekAskSection: View {
                     Text(verbatim: ask.text).font(.body.weight(.medium)).foregroundStyle(YansuTheme.ink)
                         .fixedSize(horizontal: false, vertical: true)
                     if let hold = ask.hold, let start = RelayTime.parse(hold.start), let end = RelayTime.parse(hold.end) {
-                        (Text("Proposed time") + Text(verbatim: " · \(start.formatted(date: .abbreviated, time: .shortened)) – \(end.formatted(date: .omitted, time: .shortened))"))
+                        // The dates follow the brief rule (P136): no year for this year, the year for an earlier one.
+                        (Text("Proposed time") + Text(verbatim: " · \(BriefClock.stamp(start)) – \(BriefClock.text(end))"))
                             .font(.footnote).foregroundStyle(YansuTheme.secondary)
                             .accessibilityIdentifier("brief.yourWeek.holdReadOnly")
                     }

@@ -63,6 +63,48 @@ final class TodayRecordingWeekUITests: XCTestCase {
         }
     }
 
+    /// The week card's ··· menu carries the ordinary brief card's item, "Make my brief now", with the same enabled state,
+    /// and adds only the week's own "Turn off Your week notifications" (P139).
+    func testWeekMenuKeepsTheBriefCardsItem() throws {
+        let week = launch(state: "feed-your-week", appearance: "light")
+        let weekMore = week.buttons["More options for Your week"].firstMatch
+        XCTAssertTrue(weekMore.waitForExistence(timeout: 15), "the week card has its ··· menu")
+        weekMore.tap()
+        XCTAssertTrue(week.buttons["Make my brief now"].firstMatch.waitForExistence(timeout: 5), "the week menu has Make my brief now")
+        XCTAssertTrue(week.buttons["Turn off Your week notifications"].firstMatch.exists, "the week menu has its own notification item")
+        week.terminate()
+
+        let ordinary = launch(state: "feed-words", appearance: "light")
+        let more = ordinary.buttons["More options"].firstMatch
+        XCTAssertTrue(more.waitForExistence(timeout: 15))
+        more.tap()
+        XCTAssertTrue(ordinary.buttons["Make my brief now"].firstMatch.waitForExistence(timeout: 5), "the brief card's menu has Make my brief now")
+        ordinary.terminate()
+    }
+
+    /// design v1.0.18: the week keeps coming when its notification is off. Turning the notification off keeps the card,
+    /// and its ··· menu then offers "Turn on Your week notifications" (P160).
+    func testTurningWeekNotificationsOffKeepsTheCardAndOffersTurnOn() throws {
+        let app = launch(state: "feed-your-week", appearance: "light")
+        let more = app.buttons["More options for Your week"].firstMatch
+        XCTAssertTrue(more.waitForExistence(timeout: 15))
+        more.tap()
+        let off = app.buttons["Turn off Your week notifications"].firstMatch
+        XCTAssertTrue(off.waitForExistence(timeout: 5))
+        off.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["brief.yourWeek"].firstMatch.waitForExistence(timeout: 10),
+                      "the week card stays when its notification is off")
+        app.buttons["More options for Your week"].firstMatch.tap()
+        let on = app.buttons["Turn on Your week notifications"].firstMatch.waitForExistence(timeout: 5)
+        if !on {
+            let notice = app.descendants(matching: .any)["brief.yourWeek.notice"].firstMatch
+            print("WEEK-OFF-NOTICE exists=\(notice.exists) label=\(notice.exists ? notice.label : "-")")
+        }
+        XCTAssertTrue(on, "the same item now turns the notification back on")
+        capture(app, row: "P160", named: "week-off-card-kept-light")
+        app.terminate()
+    }
+
     private func launch(state: String, appearance: String) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["YANSU_UITEST_SETTINGS_STATE"] = state

@@ -1,6 +1,8 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Turn off Your week notifications" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Turn off Your week notifications"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"关闭“你的一周”通知"}}}},
+    "Turn on Your week notifications" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Turn on Your week notifications"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"打开“你的一周”通知"}}}},
     "Recording on its way" : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Recording on its way"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"录音即将就绪"}}}},
     "Pair this phone with the Isoform app on your computer. Everything is encrypted between this phone and your computer." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Pair this phone with the Isoform app on your computer. Everything is encrypted between this phone and your computer."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"将这部手机与电脑上的 Isoform 应用配对。这部手机和你的电脑之间的所有内容都经过加密。"}}}},
     "This phone's pairing couldn't be read. Pair again." : {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"This phone's pairing couldn't be read. Pair again."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"无法读取这部手机的配对信息。请重新配对。"}}}},
@@ -541,7 +543,6 @@
     "Hold %@ morning": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Hold %@ morning"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"留出%@上午"}}}},
     "Plan %@": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Plan %@"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"规划%@"}}}},
     "More options for Your week": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"More options for Your week"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"“你的一周”的更多选项"}}}},
-    "Turn off Your week": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Turn off Your week"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"关闭“你的一周”"}}}},
     "Your week is ready.": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Your week is ready."}},"zh-Hans":{"stringUnit":{"state":"translated","value":"你的一周已准备好。"}}}},
     "Voice": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Voice"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"语音"}}}},
     "Set on your computer": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Set on your computer"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"在电脑上设置"}}}},

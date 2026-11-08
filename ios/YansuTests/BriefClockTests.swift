@@ -58,4 +58,21 @@ final class BriefClockTests: XCTestCase {
         XCTAssertTrue(BriefClock.isChinese(zh))
         XCTAssertFalse(BriefClock.isChinese(Locale(identifier: "en_US")))
     }
+
+    /// P136: a week's proposed time reads as the brief reads: no year for this year, the year for an earlier one.
+    func testProposedTimeDatesOmitTheYearForThisYearOnly() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let locale = Locale(identifier: "en_US")
+        let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 10))!
+        let thisYear = calendar.date(from: DateComponents(year: 2026, month: 10, day: 19, hour: 9))!
+        let earlier = calendar.date(from: DateComponents(year: 2025, month: 10, day: 19, hour: 9))!
+        let zone = calendar.timeZone
+        // The system puts a narrow no-break space before AM; compare with plain spaces.
+        func plain(_ text: String) -> String {
+            text.replacingOccurrences(of: "\u{202F}", with: " ").replacingOccurrences(of: "\u{00A0}", with: " ")
+        }
+        XCTAssertEqual(plain(BriefClock.stamp(thisYear, now: now, locale: locale, timeZone: zone)), "Oct 19 at 9:00 AM")
+        XCTAssertEqual(plain(BriefClock.stamp(earlier, now: now, locale: locale, timeZone: zone)), "Oct 19, 2025 at 9:00 AM")
+    }
 }
