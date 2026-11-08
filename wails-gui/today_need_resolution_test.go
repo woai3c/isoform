@@ -23,7 +23,8 @@ func TestTodayNeedResolutionReportsOnlyProvenReply(t *testing.T) {
 		t.Fatal(err)
 	}
 	result, err := app.GetTodayNeedResolution(moment.ID)
-	if err != nil || result.Kind != "you_replied" || result.Person != "Dana" || result.At != at {
+	// The name is the recipient's full display name as the mail shows it (ea3237c6e).
+	if err != nil || result.Kind != "you_replied" || result.Person != "Dana Ruiz" || result.At != at {
 		t.Fatalf("replied: %+v %v", result, err)
 	}
 	app.closedEyes.enabled.Store(true)
