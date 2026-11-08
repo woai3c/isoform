@@ -18,14 +18,17 @@ struct YourAgentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 header
-                // A section with nothing to list is left out (P146): specialties show once there are some.
-                if store.copy == nil || store.isStillLearning || !(store.copy?.specialties ?? []).isEmpty {
+                // Gray bars and headings show only while the copy is being read. A copy that cannot be read leaves both
+                // sections out, and they appear when it arrives (P146). A section with nothing to list is left out too.
+                if store.copy == nil ? store.reading : (store.isStillLearning || !(store.copy?.specialties ?? []).isEmpty) {
                     specialties
                 }
                 if store.copy == nil {
-                    VStack(alignment: .leading, spacing: 7) {
-                        heading("A taste of what it knows")
-                        placeholders(taste: true)
+                    if store.reading {
+                        VStack(alignment: .leading, spacing: 7) {
+                            heading("A taste of what it knows")
+                            placeholders(taste: true)
+                        }
                     }
                 } else if store.copy?.stillLearning == false, let taste = store.copy?.taste, !taste.isEmpty {
                     tasteSection(taste)

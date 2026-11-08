@@ -31,10 +31,12 @@ final class YourAgentUITests: XCTestCase {
         XCTAssertFalse(app.buttons["yourAgent.reserve"].isEnabled)
     }
 
-    func testPlaceholderHasHeadingsWithoutLearningOrLoading() {
+    /// P146: a copy that cannot be read leaves both sections out, with no headings and no gray bars.
+    func testUnreadableCopyLeavesBothSectionsOut() {
         let app = launch("placeholder")
-        XCTAssertTrue(app.staticTexts["What it would specialize in"].exists)
-        XCTAssertTrue(app.staticTexts["A taste of what it knows"].exists)
+        XCTAssertFalse(app.staticTexts["What it would specialize in"].exists, "no heading without a copy")
+        XCTAssertFalse(app.staticTexts["A taste of what it knows"].exists, "no heading without a copy")
+        XCTAssertFalse(app.descendants(matching: .any)["yourAgent.specialties"].firstMatch.exists)
         XCTAssertFalse(app.staticTexts["Weekly updates"].exists)
         XCTAssertFalse(app.staticTexts["yourAgent.stillLearning"].exists)
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'loading'")).firstMatch.exists)
@@ -191,7 +193,7 @@ final class YourAgentUITests: XCTestCase {
         XCTAssertTrue(row.label.contains("Agent of You"))
         reveal(row, in: app); row.tap()
         XCTAssertTrue(app.staticTexts["Agent of You"].waitForExistence(timeout: 5))
-        let ready = state == "placeholder" ? app.staticTexts["What it would specialize in"] : state == "learning"
+        let ready = state == "placeholder" ? app.staticTexts["Request your page"] : state == "learning"
             ? app.staticTexts["Isoform is still learning how you work. Your specialties show here once it has seen you do something a few times."]
             : app.staticTexts["Weekly updates"]
         XCTAssertTrue(ready.waitForExistence(timeout: 5))

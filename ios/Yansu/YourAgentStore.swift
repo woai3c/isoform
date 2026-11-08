@@ -33,6 +33,8 @@ final class YourAgentStore: ObservableObject {
     }
     @Published private(set) var emailInvalid = false
     @Published private(set) var copy: YourAgentCopy?
+    /// True only while the copy is being read. With no copy and no read in progress, the copy could not be read (P146).
+    @Published private(set) var reading = false
     @Published private(set) var reservation: AgentReservation?
     @Published private(set) var status: Status = .clear
     @Published private(set) var codeStatus: CodeStatus?
@@ -98,6 +100,8 @@ final class YourAgentStore: ObservableObject {
     func open() async {
         setReachable(networkAvailable?() ?? monitor.map { $0.currentPath.status == .satisfied } ?? true)
         guard let id = hubID() else { return }
+        reading = true
+        defer { reading = false }
         let session = sessionGeneration
         if let cached = try? cache.load(hubID: id) { apply(cached) }
         else if let reservation { setReservation(reservation, persist: false) }

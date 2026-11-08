@@ -2,7 +2,7 @@
 import Foundation
 
 enum YourAgentUITestSeed {
-    static let states = ["opened", "learning", "taken", "sent", "offline", "placeholder", "failed", "rate",
+    static let states = ["opened", "learning", "taken", "sent", "offline", "placeholder", "late", "failed", "rate",
                          "code", "wrongCode", "yours", "choice", "ranOut", "older"]
 
     @MainActor
@@ -43,7 +43,7 @@ enum YourAgentUITestSeed {
         configuration.protocolClasses = [YourAgentUITestProtocol.self]
         let api = AgentsClient(session: URLSession(configuration: configuration),
                                baseURL: URL(string: "https://your-agent-ui.invalid/\(state)")!)
-        return YourAgentStore(hub: YourAgentUITestHub(copy: copy, placeholder: state == "placeholder"), api: api,
+        return YourAgentStore(hub: YourAgentUITestHub(copy: copy, placeholder: state == "placeholder", delayed: state == "late"), api: api,
             cache: YourAgentCache(directory: directory.appendingPathComponent("your-agent"), secrets: secrets),
             hubID: hubID, canRead: { true }, monitorNetwork: false)
     }
@@ -52,7 +52,10 @@ enum YourAgentUITestSeed {
 private struct YourAgentUITestHub: YourAgentHubAPI {
     let copy: YourAgentCopy
     let placeholder: Bool
+    /// The copy arrives a few seconds after the page opens (P146: the sections appear when it does).
+    var delayed = false
     func yourAgent() async throws -> YourAgentCopy {
+        if delayed { try? await Task.sleep(for: .seconds(4)) }
         if placeholder { throw HubRequestError.noAnswer }
         return copy
     }
