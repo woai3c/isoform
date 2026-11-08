@@ -147,9 +147,10 @@ final class FeedUITests: XCTestCase {
         XCTAssertTrue(read.exists)
         read.tap()
         XCTAssertTrue(app.descendants(matching: .any)["brief.view"].firstMatch.waitForExistence(timeout: 10))
-        let card = app.descendants(matching: .any).matching(identifier: "feed.card").firstMatch
-        reveal(card, in: app)
-        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        // Each item is its own row with its actions (2873aa234, P152), so the brief page has no Cards section.
+        let row = app.descendants(matching: .any).matching(identifier: "brief.item").firstMatch
+        reveal(row, in: app)
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["feed.like"].firstMatch.exists)
         XCTAssertTrue(app.buttons["feed.notRight"].firstMatch.exists)
     }
