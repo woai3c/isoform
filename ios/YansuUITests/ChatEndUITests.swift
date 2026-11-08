@@ -52,12 +52,20 @@ final class ChatEndUITests: XCTestCase {
                 RunLoop.current.run(until: Date().addingTimeInterval(3.0))
                 let endUp = box.frame.minY - reply.frame.maxY
                 let upMeasure = Measure(label: "P161 \(size.name) \(appearance) keyboard-up", between: between, boxGap: endUp,
-                                        scrollBottom: scrollBottom(app), box: box.frame, bar: tabBar.frame, barTop: composerBarTop(app))
+                                        scrollBottom: scrollBottom(app), box: box.frame,
+                                        bar: tabBar.exists ? tabBar.frame : .zero, barTop: composerBarTop(app))
                 report(app, upMeasure)
                 attach(app, named: "P161-end-\(size.name)-keyboard-up-\(appearance)")
-                XCTAssertTrue(tabBar.exists && tabBar.isHittable, "the tab bar stays while the keyboard is up (P159)")
-                XCTAssertLessThanOrEqual(tabBar.frame.maxY, keyboard.frame.minY + 1, "the tab bar sits above the keyboard")
-                XCTAssertLessThanOrEqual(box.frame.maxY, tabBar.frame.minY, "the composer sits above the tab bar")
+                if size.name == "default" {
+                    // The bar stays while the keyboard is up at default sizes (P159).
+                    XCTAssertTrue(tabBar.exists && tabBar.isHittable, "the tab bar stays while the keyboard is up (P159)")
+                    XCTAssertLessThanOrEqual(tabBar.frame.maxY, keyboard.frame.minY + 1, "the tab bar sits above the keyboard")
+                    XCTAssertLessThanOrEqual(box.frame.maxY, tabBar.frame.minY, "the composer sits above the tab bar")
+                } else {
+                    // At accessibility sizes the bar steps aside while the keyboard is up (P162).
+                    XCTAssertFalse(tabBar.isHittable, "the tab bar steps aside at the largest size while the keyboard is up (P162)")
+                    XCTAssertLessThanOrEqual(box.frame.maxY, keyboard.frame.minY + 1, "the composer sits above the keyboard")
+                }
                 XCTAssertLessThanOrEqual(reply.frame.maxY, box.frame.minY, "the last message stays above the composer")
                 XCTAssertEqual(endUp, between, accuracy: tolerance,
                                "with the keyboard up the gap to the box still equals the gap between senders (\(size.name), \(appearance))")

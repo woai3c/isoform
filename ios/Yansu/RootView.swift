@@ -13,11 +13,14 @@ struct RootView: View {
     @Environment(\.locale) private var locale
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("faceIDToOpen") private var faceIDToOpen = false
     @State private var isLocked = false
     @StateObject private var duoNavigation = DuoNavigation()
     /// Whether the mini player is shown: Play started a brief and that brief is not on screen.
     @State private var showsMiniPlayer = false
+    /// The keyboard is on screen. Only the Chat tab reads it: at accessibility sizes the bar steps aside there (P162).
+    @State private var keyboardShown = false
 
     static func tabTitle(_ tab: NotificationRouter.Tab, locale: Locale) -> String {
         let copy = ChatPresentationLanguage(locale: locale)
@@ -259,7 +262,7 @@ struct RootView: View {
                         .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 }
                 // The bar stays while the Chat composer has focus, so the other tabs are always one tap away.
-                if !router.isCorrecting && router.openThreads.isEmpty && onScreen.readingCounts.isEmpty {
+                if !router.isCorrecting && router.openThreads.isEmpty && onScreen.readingCounts.isEmpty && !barStepsAside {
                     FloatingTabBar(router: router, chat: environment.chat, tasks: environment.tasks)
                         .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 }
@@ -272,6 +275,18 @@ struct RootView: View {
                        value: router.openThreads)
         }
         .environment(\.tabChromeHeight, tabChromeHeight)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            keyboardShown = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardShown = false
+        }
+    }
+
+    /// P162: at accessibility text sizes the Chat tab (and the topics pushed from it) gives the bar's room to the
+    /// keyboard while it is up; the keyboard's Done brings the bar back. Default sizes keep the bar while typing (P159).
+    private var barStepsAside: Bool {
+        keyboardShown && dynamicTypeSize.isAccessibilitySize && router.selectedTab == .chat
     }
 
     /// The bottom chrome drawn over the tab pages, computed from state rather than measured: a measured height
@@ -279,7 +294,7 @@ struct RootView: View {
     /// The bar is 72 pt (56 pt compact) and stays while the Chat composer has focus, but steps aside for an open
     /// brief correction. The mini player is about 56 pt, with 7 pt between it and the bar.
     private var tabChromeHeight: CGFloat {
-        let bar: CGFloat = router.isCorrecting || !router.openThreads.isEmpty || !onScreen.readingCounts.isEmpty ? 0 : (router.isTabBarCompact ? 56 : 72)
+        let bar: CGFloat = router.isCorrecting || !router.openThreads.isEmpty || !onScreen.readingCounts.isEmpty || barStepsAside ? 0 : (router.isTabBarCompact ? 56 : 72)
         let player: CGFloat = showsMiniPlayer ? 56 + (bar > 0 ? 7 : 0) : 0
         return bar + player
     }

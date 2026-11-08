@@ -20,6 +20,9 @@ struct ChatScrollPolicy: Equatable {
     /// An animated scroll to the bottom is moving the content; its frames are not the reader scrolling away.
     private var followingDown = false
     private(set) var holdingFirstRead = false
+    /// The last scroll was issued because the visible area changed. The content moves once more while that scroll
+    /// settles, and that move is the layout's, not the reader's (P162).
+    private var settlingAreaChange = false
 
     /// The chat came on screen, the first time or on returning to it: start at the newest message.
     mutating func appeared() -> Action {
@@ -81,6 +84,7 @@ struct ChatScrollPolicy: Equatable {
         if holdingFirstRead { return .none }
         if areaChanged, pinned, distance > 0.5 {
             followingDown = true
+            settlingAreaChange = true
             return .scrollToBottom(animated: false)
         }
         guard let last else {
@@ -89,10 +93,12 @@ struct ChatScrollPolicy: Equatable {
         let moved = contentTop - last
         if abs(moved) > 0.5 {
             // The content moved: the reader scrolled, or a scroll to the bottom is on its way.
+            let settling = settlingAreaChange
+            settlingAreaChange = false
             if followingDown {
                 if distance <= 0.5 {
                     followingDown = false
-                } else if distance <= Self.pinMargin || moved < 0 {
+                } else if distance <= Self.pinMargin || moved < 0 || settling {
                     // The bottom is still on its way, or stopped short of the newest message: keep following it.
                     // A scroll that stopped short inside the margin is not the reader's, and must not leave the
                     // newest message under the composer (P161).

@@ -1,8 +1,8 @@
 import SwiftUI
 
 extension View {
-    /// The keyboard's Done button for a composer field. Chat and Topic share it: Done puts the keyboard away and
-    /// keeps the tab bar where it is.
+    /// The keyboard's Done button for a composer field. Chat and Topic share it: Done puts the keyboard away, and at
+    /// accessibility sizes the tab bar that stepped aside for the keyboard comes back (P162).
     func composerKeyboardDone(_ dismiss: @escaping () -> Void) -> some View {
         toolbar {
             ToolbarItemGroup(placement: .keyboard) {

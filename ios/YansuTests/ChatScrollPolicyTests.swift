@@ -52,6 +52,19 @@ final class ChatScrollPolicyTests: XCTestCase {
         XCTAssertTrue(policy.pinned)
     }
 
+    func testTheMoveThatSettlesAnAreaChangeScrollIsNotTheReaderPullingBack() {
+        var policy = ChatScrollPolicy()
+        _ = policy.appeared()
+        _ = atBottom(&policy)
+        // The visible area ends 72 pt higher (the composer rose with the bar gone): the chat scrolls to its newest message.
+        XCTAssertEqual(policy.layout(contentTop: viewport - 2000, contentHeight: 2000, visibleBottom: viewport - 72),
+                       .scrollToBottom(animated: false))
+        // The content settles 72 pt lower while that scroll finishes. That move is not the reader pulling back.
+        XCTAssertEqual(policy.layout(contentTop: viewport - 2000 + 72, contentHeight: 2000, visibleBottom: viewport - 72),
+                       .scrollToBottom(animated: false))
+        XCTAssertTrue(policy.pinned, "the settling move does not unpin a reader at the bottom")
+    }
+
     func testInitialProgrammaticScrollDoesNotLookLikeTheReaderScrolledUp() {
         var policy = ChatScrollPolicy()
         _ = policy.appeared()
