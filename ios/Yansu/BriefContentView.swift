@@ -180,6 +180,7 @@ struct BriefContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("brief.item")
     }
 
     // MARK: Open loops grouped by kind

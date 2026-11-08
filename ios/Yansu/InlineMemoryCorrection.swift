@@ -48,8 +48,8 @@ struct InlineMemoryCorrection: View {
                     .accessibilityIdentifier("brief.correction.cancel")
             }
         }
-        .onAppear { router.isComposing = true; focused = true }
-        .onDisappear { router.isComposing = false }
+        .onAppear { router.isCorrecting = true; focused = true }
+        .onDisappear { router.isCorrecting = false }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("brief.correction.inline")
     }

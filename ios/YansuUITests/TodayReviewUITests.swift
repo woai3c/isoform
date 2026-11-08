@@ -324,7 +324,9 @@ final class TodayReviewUITests: XCTestCase {
             XCTAssertTrue(read.waitForExistence(timeout: 15))
             read.tap()
             XCTAssertFalse(app.buttons["tab.today"].exists, "the floating tab bar must not cover the brief")
-            let card = app.descendants(matching: .any).matching(identifier: "feed.card").firstMatch
+            // Each brief item is one row with its own actions (brief.item, BriefContentView.itemRow).
+            let card = app.descendants(matching: .any).matching(identifier: "brief.item")
+                .containing(.button, identifier: "feed.notRight").firstMatch
             for _ in 0..<12 where !card.isHittable { app.swipeUp() }
             XCTAssertTrue(card.isHittable)
             let useful = card.buttons["feed.like"]
@@ -339,12 +341,12 @@ final class TodayReviewUITests: XCTestCase {
             attachScreenshot(app, named: "today-brief-feedback-undo-\(language)-\(appearance)")
             undo.tap()
             XCTAssertTrue(notForMe.waitForExistence(timeout: 5))
-            let learned = app.descendants(matching: .any).matching(identifier: "feed.card")
+            let learned = app.descendants(matching: .any).matching(identifier: "brief.item")
                 .containing(.staticText, identifier: "You prefer short replies in the morning").firstMatch
             for _ in 0..<8 where !learned.isHittable { app.swipeUp() }
             XCTAssertTrue(learned.isHittable)
-            XCTAssertTrue(learned.buttons["feed.sources"].exists)
-            let notQuite = learned.buttons["feed.notRight"]
+            XCTAssertTrue(learned.buttons.matching(NSPredicate(format: "label ENDSWITH 'sources' OR label ENDSWITH 'source'")).firstMatch.exists)
+            let notQuite = learned.buttons["brief.notRight"]
             for _ in 0..<5 where !notQuite.isHittable { app.swipeUp() }
             XCTAssertEqual(notQuite.label, language == "en" ? "Not quite" : "不太对")
             XCTAssertFalse(learned.buttons["feed.like"].exists)
@@ -426,11 +428,11 @@ final class TodayReviewUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["feed.readAll"].waitForExistence(timeout: 15))
         app.buttons["feed.readAll"].tap()
-        let learned = app.descendants(matching: .any).matching(identifier: "feed.card")
+        let learned = app.descendants(matching: .any).matching(identifier: "brief.item")
             .containing(.staticText, identifier: "You prefer short replies in the morning").firstMatch
         for _ in 0..<15 where !learned.isHittable { app.swipeUp() }
         XCTAssertTrue(learned.isHittable)
-        let notQuite = learned.buttons["feed.notRight"]
+        let notQuite = learned.buttons["brief.notRight"]
         for _ in 0..<5 where !notQuite.isHittable { app.swipeUp() }
         XCTAssertTrue(notQuite.isHittable)
         notQuite.tap()
@@ -441,7 +443,7 @@ final class TodayReviewUITests: XCTestCase {
         let send = app.buttons["brief.correction.send"].firstMatch
         for _ in 0..<5 where !send.isHittable { app.swipeUp() }
         send.tap()
-        XCTAssertTrue(app.buttons["brief.feedback.undo"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["brief.correction.undo"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(field.waitForExistence(timeout: 15))
         XCTAssertEqual(field.value as? String, "This was a one-time exception")
         XCTAssertTrue(app.staticTexts["Didn't save. Try again."].exists)
@@ -463,7 +465,7 @@ final class TodayReviewUITests: XCTestCase {
         }
     }
 
-    func testNotificationDiagnosticNamesLocalAndDeliveryTests() {
+    func testNotificationDiagnosticHasOneDeliveryTest() {
         for (language, appearance) in [("en", "Light"), ("zh-Hans", "Dark")] {
             let app = XCUIApplication()
             app.launchEnvironment["YANSU_UITEST_SETTINGS_STATE"] = "paired"
@@ -476,10 +478,10 @@ final class TodayReviewUITests: XCTestCase {
             for _ in 0..<6 where !preferences.isHittable { app.swipeUp() }
             XCTAssertTrue(preferences.waitForExistence(timeout: 10))
             preferences.tap()
-            let local = app.buttons["settings.testNotification"]
+            // One test since d876a1174 (P132): the delivery test goes through the computer; the local test is gone.
             let delivery = app.buttons["notifications.deliveryTest"]
-            XCTAssertTrue(local.waitForExistence(timeout: 10))
             XCTAssertTrue(delivery.waitForExistence(timeout: 10))
+            XCTAssertFalse(app.buttons["settings.testNotification"].exists)
             attachScreenshot(app, named: "notification-diagnostic-\(language)-\(appearance)")
             delivery.tap()
             XCTAssertTrue(app.staticTexts["notifications.deliveryResult"].waitForExistence(timeout: 10))

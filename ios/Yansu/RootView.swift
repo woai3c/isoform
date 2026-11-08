@@ -258,8 +258,8 @@ struct RootView: View {
                     BriefMiniPlayer(player: environment.audioPlayer, open: openPlayingBrief)
                         .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 }
-                // The bar stays while the composer has focus, so the other tabs are always one tap away.
-                if router.openThreads.isEmpty && onScreen.readingCounts.isEmpty {
+                // The bar stays while the Chat composer has focus, so the other tabs are always one tap away.
+                if !router.isCorrecting && router.openThreads.isEmpty && onScreen.readingCounts.isEmpty {
                     FloatingTabBar(router: router, chat: environment.chat, tasks: environment.tasks)
                         .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 }
@@ -267,7 +267,7 @@ struct RootView: View {
             .animation(reduceMotion ? .easeOut(duration: 0.25) : .spring(duration: 0.45),
                        value: showsMiniPlayer)
             .animation(reduceMotion ? .easeOut(duration: 0.25) : .spring(duration: 0.45),
-                       value: router.isComposing)
+                       value: router.isCorrecting)
             .animation(reduceMotion ? .easeOut(duration: 0.25) : .spring(duration: 0.45),
                        value: router.openThreads)
         }
@@ -276,10 +276,10 @@ struct RootView: View {
 
     /// The bottom chrome drawn over the tab pages, computed from state rather than measured: a measured height
     /// written back into this view's state fed its own layout, which overflowed the main-thread stack in UI tests.
-    /// The bar is 72 pt (56 pt compact) and stays while the Chat composer has focus. The mini player is
-    /// about 56 pt, with 7 pt between it and the bar.
+    /// The bar is 72 pt (56 pt compact) and stays while the Chat composer has focus, but steps aside for an open
+    /// brief correction. The mini player is about 56 pt, with 7 pt between it and the bar.
     private var tabChromeHeight: CGFloat {
-        let bar: CGFloat = !router.openThreads.isEmpty || !onScreen.readingCounts.isEmpty ? 0 : (router.isTabBarCompact ? 56 : 72)
+        let bar: CGFloat = router.isCorrecting || !router.openThreads.isEmpty || !onScreen.readingCounts.isEmpty ? 0 : (router.isTabBarCompact ? 56 : 72)
         let player: CGFloat = showsMiniPlayer ? 56 + (bar > 0 ? 7 : 0) : 0
         return bar + player
     }
