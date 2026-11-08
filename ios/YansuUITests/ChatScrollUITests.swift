@@ -108,7 +108,8 @@ final class ChatScrollUITests: XCTestCase {
         attach(app, named: "chat-composer-above-tab-bar")
 
         composer.tap()
-        XCTAssertTrue(waitUntilGone(chatTab), "the tab bar steps aside while the field has focus")
+        // The bar stays while the keyboard is up, with Done on the keyboard (211a16fad).
+        XCTAssertTrue(chatTab.exists, "the tab bar stays while the keyboard is up")
         XCTAssertTrue(composer.isHittable, "the field stays reachable while typing")
         let keyboard = app.keyboards.firstMatch
         XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "typing opens the keyboard")
@@ -124,9 +125,9 @@ final class ChatScrollUITests: XCTestCase {
             XCTAssertTrue(waitUntilInView(card, in: cardApp), "the whole proactive card fits above the composer")
             XCTAssertTrue(message("A quick review of the launch plan", in: cardApp).exists)
             XCTAssertTrue(message("Waiting on you", in: cardApp).exists)
-            let actions = cardApp.buttons.matching(identifier: "chat.proactive.action")
+            let actions = cardApp.buttons.matching(proactiveActionPredicate)
             XCTAssertEqual(actions.count, 2)
-            XCTAssertTrue(proactiveAction("Do once", in: cardApp).isHittable)
+            XCTAssertTrue(proactiveAction("Do it", in: cardApp).isHittable)
             XCTAssertTrue(proactiveAction("Not now", in: cardApp).isHittable)
             try attachPresentation(cardApp, named: "chat-proactive-card-\(appearance)")
             cardApp.terminate()
@@ -153,7 +154,7 @@ final class ChatScrollUITests: XCTestCase {
         let state = cardApp.staticTexts["chat.proactive.state"].firstMatch
         XCTAssertTrue(state.waitForExistence(timeout: 15))
         XCTAssertEqual(state.label, "状态：等待你回应")
-        proactiveAction("Not now", in: cardApp).tap()
+        proactiveAction("暂不", in: cardApp).tap()
         let result = cardApp.staticTexts["chat.proactive.result"].firstMatch
         XCTAssertTrue(result.waitForExistence(timeout: 10))
         XCTAssertEqual(result.label, "已留待稍后处理")
@@ -249,7 +250,7 @@ final class ChatScrollUITests: XCTestCase {
 
     func testDecliningOwnerCheckStillBlocksStartingProactiveWork() throws {
         let app = launch(state: "chat-proactive", ownerCheck: "decline")
-        let action = proactiveAction("Do once", in: app)
+        let action = proactiveAction("Do it", in: app)
         XCTAssertTrue(action.waitForExistence(timeout: 15))
         action.tap()
 
@@ -364,8 +365,13 @@ final class ChatScrollUITests: XCTestCase {
     }
 
     private func proactiveAction(_ label: String, in app: XCUIApplication) -> XCUIElement {
-        app.buttons.matching(identifier: "chat.proactive.action")
+        app.buttons.matching(proactiveActionPredicate)
             .matching(NSPredicate(format: "label BEGINSWITH %@", label)).firstMatch
+    }
+
+    /// Each card button is chat.proactive.button.<action id> (ChatView.actionButtons), so match the prefix.
+    private var proactiveActionPredicate: NSPredicate {
+        NSPredicate(format: "identifier BEGINSWITH %@", "chat.proactive.button.")
     }
 
     private func message(_ text: String, in app: XCUIApplication) -> XCUIElement {

@@ -1235,9 +1235,17 @@ struct ChatProactiveCard: View {
                                          excludingPanelButtons: showsDetails)
         // The brief card has its own Play and Read all, so the card's Play and read buttons step aside for it.
         let hasBriefCard = briefCardBrief != nil && pairing.paired?.hubID != nil
-        let choices = [slots.main, slots.second].compactMap { $0 }.filter {
-            !(hasBriefCard && ($0.behavior == .play || $0.behavior == .expand))
-        }
+        let choices: [ChatCardButton] = {
+            var list = [slots.main, slots.second].compactMap { $0 }.filter {
+                !(hasBriefCard && ($0.behavior == .play || $0.behavior == .expand))
+            }
+            // Once the draft is read, its reply goes out from the card (the send is the filled button).
+            if showsDraft, item.readableDraft != nil {
+                list.insert(ChatCardButton(id: "send", labelKey: "sendReply", labelValue: nil, behavior: .answer,
+                                           actionID: "send"), at: 0)
+            }
+            return list
+        }()
         if !choices.isEmpty {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 10) { actionButtons(choices) }
@@ -1318,7 +1326,8 @@ struct ChatProactiveCard: View {
                 result = current.statusLabel(language: language)
             }
         case .refused(let message):
-            result = message
+            // A send the computer refused keeps the words on the card to send again.
+            result = actionID == "send" ? String(localized: "Not sent. Try again.") : message
         case .pending(let message):
             result = message
         case .cancelled:

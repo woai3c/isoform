@@ -214,7 +214,8 @@ final class NotificationSettingsTests: XCTestCase {
         XCTAssertEqual(chinese, "23:00 – 8:00")
         let chinese12 = try XCTUnwrap(NotificationSettings.quietHoursRange(start: "23:00", end: "08:00",
                                                                               locale: Locale(identifier: "zh_Hans-u-hc-h12")))
-        XCTAssertEqual(chinese12, "晚上11:00 – 上午8:00")
+        // The day period for 23:00 is the OS's: iOS 27 says 晚上, iOS 17 says 下午. The clock itself must not move.
+        XCTAssertTrue(["晚上11:00 – 上午8:00", "下午11:00 – 上午8:00"].contains(chinese12), chinese12)
         XCTAssertNil(NotificationSettings.quietHoursRange(start: "00:00", end: "00:00", locale: Locale(identifier: "en_US")))
         XCTAssertNil(NotificationSettings.quietHoursRange(start: "24:00", end: "08:00", locale: Locale(identifier: "en_US")))
     }

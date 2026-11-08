@@ -455,6 +455,7 @@
     "mainChat.card.button.takeMeThere": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Take me there"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"带我过去"}}}},
     "mainChat.card.button.showThread": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Show the thread"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"查看这条工作主线"}}}},
     "mainChat.card.button.review": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Review"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"查看"}}}},
+    "mainChat.card.button.sendReply": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Send the reply"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"发送回复"}}}},
     "mainChat.card.button.notNow": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Not now"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"暂不"}}}},
     "mainChat.card.button.openFile": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Open %@"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"打开%@"}}}},
     "mainChat.card.button.answer": {"extractionState":"manual","localizations":{"en":{"stringUnit":{"state":"translated","value":"Answer"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"回答"}}}},
