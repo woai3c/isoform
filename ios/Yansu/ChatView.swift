@@ -74,6 +74,15 @@ struct ChatView: View {
         chat.transcript?.items.last(where: { $0.role == .user })?.seq
     }
 
+    /// P153: the empty chat at the largest text size. Its card is taller than the visible area, so the chat opens at
+    /// the card's top and, scrolled to its end, the copy's last line sits just above the composer. Nothing follows the card.
+    private var endsOnEmptyCard: Bool {
+        guard dynamicTypeSize >= .accessibility5, chat.openChatID == chatID, let transcript = chat.transcript else {
+            return false
+        }
+        return Self.showsEmptyChat(transcript, outgoing: outgoing)
+    }
+
     /// Changes when a row or a message is added at the bottom.
     private var bottomMarker: String {
         let newest = chat.openChatID == chatID ? (chat.transcript?.newestSeq ?? 0) : 0
@@ -91,10 +100,13 @@ struct ChatView: View {
                         transcriptContent
                         outgoingContent
                     }
-                    // The bottom margin is the scroll target itself, so scrolling to it shows the true bottom.
-                    Color.clear
-                        .frame(height: 17)
-                        .id(Self.bottomID)
+                    // The bottom margin is the scroll target itself, so scrolling to it shows the true bottom. The empty
+                    // chat at the largest size ends on its card, so it has no margin there (P153).
+                    if !endsOnEmptyCard {
+                        Color.clear
+                            .frame(height: 17)
+                            .id(Self.bottomID)
+                    }
                 }
                 .padding(.horizontal, YansuTheme.gutter)
                 .padding(.top, 8)
@@ -107,7 +119,8 @@ struct ChatView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .simultaneousGesture(DragGesture().onChanged { _ in scroll.policy.readerDragged() })
-            .tabBarScrollVisibility()
+            // The empty card at the largest size ends on the composer, which already lifts above the tab bar (P153).
+            .tabBarScrollVisibility(bottomMargin: endsOnEmptyCard ? 0 : 88)
             .refreshable {
                 await chat.open(chatID: chatID)
             }
@@ -245,8 +258,9 @@ struct ChatView: View {
     }
 
     private func follow(_ action: ChatScrollPolicy.Action, _ proxy: ScrollViewProxy) {
-        // The empty chat has no transcript to follow: it opens at its top (#635).
-        guard chatID != ChatStore.mainChatAlias else { return }
+        // The empty chat has no transcript to follow: it opens at its top (#635, P153). A chat with no rows never scrolls
+        // to its bottom, so its card is not cut off under the title bar.
+        guard chatID != ChatStore.mainChatAlias, chat.transcript?.items.isEmpty == false else { return }
         showLatestControl()
         guard case .scrollToBottom(let animated) = action else { return }
         if animated {
@@ -343,8 +357,14 @@ struct ChatView: View {
     private var transcriptContent: some View {
         if let transcript = chat.transcript, chat.openChatID == chatID {
             if Self.showsEmptyChat(transcript, outgoing: outgoing) {
+                // The empty chat opens at its top, under the banner, and its last line clears the composer (P153). The
+                // card takes its natural height so its copy wraps whole at the largest text size.
                 EmptyStateCard(title: "No messages yet.",
                                detail: "Write below to start. Isoform answers on your computer.")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 16)
+                    .padding(.bottom, endsOnEmptyCard ? 0 : 16)
+                    .accessibilityIdentifier("chat.emptyState")
             } else {
                 ForEach(transcript.items) { item in
                     row(for: item)
@@ -836,6 +856,8 @@ struct ChatView: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(YansuTheme.border, lineWidth: 1)
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("chat.composerBox")
     }
 
     private func sendButton(_ proxy: ScrollViewProxy) -> some View {

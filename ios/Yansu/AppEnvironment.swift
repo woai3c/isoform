@@ -767,7 +767,7 @@ extension AppEnvironment {
               ["first-run", "unpaired", "paired", "unreadable", "older-pairing", "push-unavailable", "push-denied", "feed", "feed-empty",
                "feed-no-history", "feed-catchup", "feed-offline", "feed-review", "feed-first-brief", "feed-fetching", "feed-fetch-failed",
                "feed-audio", "feed-audio-rendering", "feed-words", "feed-conversation", "feed-your-week", "feed-topics", "feed-topics-no-chat-read", "chat",
-               "chat-not-sent", "chat-sent", "chat-away", "chat-live", "chat-live-cold", "chat-proactive", "chat-status", "chat-draft", "chat-cards", "goals",
+               "chat-not-sent", "chat-sent", "chat-away", "chat-live", "chat-live-cold", "chat-proactive", "chat-status", "chat-draft", "chat-cards", "chat-empty", "goals",
                "goals-empty", "library", "ideas", "ideas-empty", "tasks-seeded", "brain-dump", "holds-seeded", "launch-demo", "day-one"].contains(state) else { return nil }
         let motionCapture = state == "tasks-seeded"
             && ProcessInfo.processInfo.environment["YANSU_UITEST_MOTION_CAPTURE"] == "1"
@@ -794,7 +794,7 @@ extension AppEnvironment {
             switch isFirstLaunch ? state : "" {
             case "unreadable":
                 try Data("unreadable saved pairing".utf8).write(to: pairingURL)
-            case "chat", "chat-not-sent", "chat-sent", "chat-away", "chat-live", "chat-live-cold", "chat-proactive", "chat-status", "chat-draft", "chat-cards", "goals", "goals-empty", "ideas", "ideas-empty", "feed-conversation", "feed-your-week",
+            case "chat", "chat-not-sent", "chat-sent", "chat-away", "chat-live", "chat-live-cold", "chat-proactive", "chat-status", "chat-draft", "chat-cards", "chat-empty", "goals", "goals-empty", "ideas", "ideas-empty", "feed-conversation", "feed-your-week",
                  "feed-topics", "feed-topics-no-chat-read", "launch-demo", "day-one":
                 // Real session keys for a relay that does not exist, so a message or a goal's check-off goes out the
                 // way it does on a phone whose Mac cannot be reached, and waits. The chat-live states answer the chat
@@ -862,7 +862,8 @@ extension AppEnvironment {
                 : ["chat-proactive", "chat-status"].contains(state)
                     ? try ChatUITestSeed.presentationItem(status: state == "chat-status", now: Date()) : nil
             let presentationItems = state == "day-one" ? [try ChatUITestSeed.firstReadItem(now: Date())]
-                : state == "chat-cards" ? try ChatUITestSeed.proactiveCards(now: Date()) : presentationItem.map { [$0] }
+                : state == "chat-cards" ? try ChatUITestSeed.proactiveCards(now: Date())
+                : state == "chat-empty" ? [ChatItemView]() : presentationItem.map { [$0] }
             let dayOneHub = state == "day-one" ? ChatUITestHub(now: Date(), main: presentationItems) : nil
             // The Needs you frames with a queued card read the feed's needs, where the card is (FeedTasksUITestHub).
             let feedNeedsCard = state == "feed-review" && ProcessInfo.processInfo.environment["YANSU_UITEST_TODAY_WAITS"] == "1"

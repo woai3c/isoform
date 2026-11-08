@@ -39,8 +39,10 @@ extension View {
         modifier(TabRootBar())
     }
 
-    func tabBarScrollVisibility() -> some View {
-        modifier(TabBarScrollVisibility())
+    /// `bottomMargin` keeps scrolling content above the floating bar. A page whose composer already lifts above the
+    /// bar (Chat) passes 0 where its content must end at the composer, so the bar's margin is not counted twice (P153).
+    func tabBarScrollVisibility(bottomMargin: CGFloat = 88) -> some View {
+        modifier(TabBarScrollVisibility(bottomMargin: bottomMargin))
     }
 
     /// P137: nothing under the title bar reads at any scroll position. The bar is solid in the page's color up to its
@@ -307,13 +309,14 @@ struct FloatingTabBar: View {
 }
 
 private struct TabBarScrollVisibility: ViewModifier {
+    let bottomMargin: CGFloat
     @EnvironmentObject private var router: NotificationRouter
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         if #available(iOS 18.0, *) {
             content
-                .contentMargins(.bottom, 88, for: .scrollContent)
+                .contentMargins(.bottom, bottomMargin, for: .scrollContent)
                 .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y }) { oldValue, newValue in
                     guard abs(newValue - oldValue) > 2 else { return }
                     let compact = newValue > oldValue && newValue > 20
@@ -324,7 +327,7 @@ private struct TabBarScrollVisibility: ViewModifier {
                     }
                 }
         } else {
-            content.contentMargins(.bottom, 88, for: .scrollContent)
+            content.contentMargins(.bottom, bottomMargin, for: .scrollContent)
         }
     }
 }
