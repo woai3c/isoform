@@ -430,10 +430,16 @@ struct FeedView: View {
                             pairedContent(now: now)
                                 .transition(reduceMotion ? .opacity : .offset(y: 8).combined(with: .opacity))
                         }
+                    } else if pairing.recoveryMessage != nil {
+                        // A saved pairing that cannot be read is not an unpaired phone (P140): say so, keep the pairing button.
+                        PairPromptCard(
+                            title: String(localized: "This phone's pairing couldn't be read. Pair again."),
+                            retriesSavedPairing: true
+                        )
                     } else {
                         PairPromptCard(
                             title: String(localized: "Read your computer's daily brief here."),
-                            detail: String(localized: "Pair this phone with the Isoform app on your computer. Your feed is end to end encrypted, and the relay only stores ciphertext.")
+                            detail: String(localized: "Pair this phone with the Isoform app on your computer. Everything is encrypted between this phone and your computer.")
                         )
                     }
                 }
@@ -1203,8 +1209,11 @@ struct FeedPromptBox: View {
 /// The card an unpaired tab shows: what pairing gives, and the button that opens Pairing in Settings.
 struct PairPromptCard: View {
     let title: String
-    let detail: String
+    /// The body text. A saved pairing that cannot be read has no body: its "Try again" link stands in its place (P140).
+    var detail: String? = nil
+    var retriesSavedPairing = false
     @EnvironmentObject private var router: NotificationRouter
+    @EnvironmentObject private var environment: AppEnvironment
 
     var body: some View {
         YansuCard {
@@ -1216,10 +1225,19 @@ struct PairPromptCard: View {
                         .foregroundStyle(YansuTheme.ink)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(detail)
-                    .font(.subheadline)
-                    .foregroundStyle(YansuTheme.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let detail {
+                    Text(detail)
+                        .font(.subheadline)
+                        .foregroundStyle(YansuTheme.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if retriesSavedPairing {
+                    // Re-reads the saved pairing; a file that still cannot be read leaves this card as it is.
+                    Button("Try again") { environment.retrySavedPairing() }
+                        .buttonStyle(.plain)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(YansuTheme.accent)
+                        .accessibilityIdentifier("pairing.tryAgain")
+                }
                 Button("Pair with your computer") {
                     router.openPairing()
                 }

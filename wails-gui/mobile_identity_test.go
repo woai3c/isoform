@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -250,5 +251,36 @@ func TestMobileHubNameHasNoBonjourSuffixAndFitsTheLimit(t *testing.T) {
 	}
 	if got := mobileTruncateUTF8(strings.Repeat("\u00e9", 100), 121); len(got) > 121 || len(got) == 0 {
 		t.Fatalf("truncation split a rune: %d bytes", len(got))
+	}
+}
+
+// P140: the phone shows the name the owner gave the Mac. The host name is used only when no Computer Name is set
+// or it cannot be read, and then it loses its Bonjour suffix.
+func TestMobileHubNamePrefersTheComputerNameAndFallsBackToTheHostname(t *testing.T) {
+	saved := mobileComputerNameFunc
+	t.Cleanup(func() { mobileComputerNameFunc = saved })
+
+	mobileComputerNameFunc = func() (string, error) { return "Bo's MacBook Pro\n", nil }
+	if got := mobileHubName(); got != "Bo's MacBook Pro" {
+		t.Fatalf("hub name = %q, want the Computer Name with its words kept", got)
+	}
+
+	host, _ := os.Hostname()
+	wantHost := strings.TrimSuffix(strings.TrimSpace(host), ".local")
+	for name, reader := range map[string]func() (string, error){
+		"unreadable": func() (string, error) { return "", errors.New("scutil unavailable") },
+		"unset":      func() (string, error) { return " \n", nil },
+	} {
+		mobileComputerNameFunc = reader
+		got := mobileHubName()
+		if strings.HasSuffix(got, ".local") {
+			t.Fatalf("%s: hub name %q keeps the Bonjour suffix", name, got)
+		}
+		if wantHost != "" && got != mobileTruncateUTF8(wantHost, mobileHubNameLimit) {
+			t.Fatalf("%s: hub name = %q, want the host name %q", name, got, wantHost)
+		}
+		if got == "" {
+			t.Fatalf("%s: hub name is empty", name)
+		}
 	}
 }

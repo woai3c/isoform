@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdh"
 	"crypto/rand"
 	"encoding/base64"
@@ -9,6 +10,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -259,14 +261,30 @@ func validateMobileRelayURL(raw string) (string, error) {
 	return parsed.Scheme + "://" + parsed.Host, nil
 }
 
-// mobileHubName is the Mac's host name without the Bonjour suffix. It is shown on
-// the phone during pairing and in the brief.
+// mobileComputerNameFunc reads the Mac's user-facing Computer Name, the name its owner chose in System Settings
+// (`scutil --get ComputerName`). It is a variable so tests can supply the name a Mac would report.
+var mobileComputerNameFunc = func() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "/usr/sbin/scutil", "--get", "ComputerName").Output()
+	return string(out), err
+}
+
+// mobileHubName is the name the phone shows for this computer during pairing and in its status. It is the
+// Computer Name the owner gave the Mac, with its words kept (P140). The Bonjour host name is the fallback when
+// no Computer Name is set or it cannot be read, without its ".local" suffix.
 func mobileHubName() string {
-	name, err := os.Hostname()
-	if err != nil {
-		name = ""
+	name := ""
+	if computer, err := mobileComputerNameFunc(); err == nil {
+		name = strings.TrimSpace(computer)
 	}
-	name = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(name), ".local"))
+	if name == "" {
+		host, err := os.Hostname()
+		if err != nil {
+			host = ""
+		}
+		name = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(host), ".local"))
+	}
 	if name == "" {
 		name = "Isoform on this computer"
 	}
