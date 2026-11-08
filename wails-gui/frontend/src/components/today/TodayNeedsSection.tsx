@@ -31,9 +31,10 @@ export function TodayNeedsSection({ items, onOpen, onOpenTasks, receipts = [], f
             <div className="divide-y divide-border rounded-xl border border-border bg-panel px-[18px]">
                 {rows.map((item, index) => {
                     const receipt = receiptById.get(item.id);
-                    if (receipt?.result.person && receipt.result.at) {
+                    if (receipt?.result.kind === "you_replied" && receipt.result.at) {
                         const time = computerClock(new Date(receipt.result.at), i18n.resolvedLanguage);
-                        return <p key={item.id} role="status" className="py-3 text-[14px] text-muted">{t("needsYou.alreadyReplied", { person: receipt.result.person, time })}</p>;
+                        const text = receipt.result.person ? t("needsYou.alreadyReplied", { person: receipt.result.person, time }) : t("needsYou.alreadyRepliedNoName", { time });
+                        return <p key={item.id} role="status" className="py-3 text-[14px] text-muted">{text}</p>;
                     }
                     if (failures[item.id]) return <p key={item.id} role="alert" className="py-3 text-[14px] text-muted">
                         {failures[item.id] > 1 ? t("needsYou.stillFailed") : t("needsYou.couldNotCheck")} {" "}

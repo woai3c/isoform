@@ -1960,6 +1960,17 @@ it("shows a proven reply in place when a waiting row was handled elsewhere", asy
     await waitFor(() => expect(screen.queryByText("needsYou.alreadyReplied")).not.toBeInTheDocument());
 });
 
+
+it("keeps a proven reply with no usable name in place as your reply", async () => {
+    const row = { id: "reply-moment", kind: "waiting_on_reply", sentence: "Review the reply", source: "Mail", createdAt: 0, targetKind: "chat_item", targetId: "row-1" };
+    mockUseTodayNeeds.mockReturnValue({ items: [row], loading: false, failed: false });
+    pauseMocks.needResolution.mockResolvedValueOnce({ kind: "you_replied", at: 1793380320000 });
+    renderToday();
+    fireEvent.click(screen.getByRole("button", { name: "needsYou.review" }));
+    expect(await screen.findByText("needsYou.alreadyRepliedNoName")).toBeInTheDocument();
+    expect(pauseMocks.loadProactive).not.toHaveBeenCalled();
+});
+
 it("opens the exact task thread from a source-bound weekly result", async () => {
     const brief = { ...todayNextBrief, slot: "evening", yourWeek: { start: "2026-10-19", end: "2026-10-23", lead: "Your week.", done: [{ id: "result", kind: "outcome", title: "Prepared the file", taskId: "task-42" }] } };
     mockUseLatestBrief.mockReturnValue({ view: { brief, building: false, enabled: true, missing: [] }, loading: false, make: "idle", makeNow: vi.fn(), refresh: vi.fn() });

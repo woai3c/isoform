@@ -281,7 +281,7 @@ export function TodayPage({
         void GetTodayNeedCheck(item.id, item.kind, item.targetKind, item.targetId).then((result) => {
             if (request !== needRequest.current) return;
             setNeedCheckFailures((failures) => { const next = { ...failures }; delete next[item.id]; return next; });
-            if (result.kind === "resolved" || result.kind === "you_replied" && result.person && result.at) setNeedReceipts((receipts) => [...receipts.filter((receipt) => receipt.item.id !== item.id), { item, result, index: Math.max(0, index), receivedAt: Date.now() }]);
+            if (result.kind === "resolved" || (result.kind === "you_replied" && result.at)) setNeedReceipts((receipts) => [...receipts.filter((receipt) => receipt.item.id !== item.id), { item, result, index: Math.max(0, index), receivedAt: Date.now() }]);
             else if (item.kind === "commitment_slipping") pageHandlers.onFindTime?.();
             else openNeedTarget(item);
         }).catch(() => { if (request === needRequest.current) setNeedCheckFailures((failures) => ({ ...failures, [item.id]: (failures[item.id] ?? 0) + 1 })); });

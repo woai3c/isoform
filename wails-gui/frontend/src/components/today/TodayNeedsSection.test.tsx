@@ -86,6 +86,18 @@ it("keeps the proven handled reply in the row in English and Chinese", async () 
 });
 
 
+it("says your reply for a proven reply with no usable name", async () => {
+    const i18n = createInstance();
+    await i18n.init({ lng: "en", resources: { en: { today: en }, "zh-CN": { today: zh } }, defaultNS: "today" });
+    const receipt = { item: item("one", "waiting_on_reply"), index: 0, result: { kind: "you_replied", at: new Date(2026, 9, 30, 10, 12).getTime() } };
+    render(<I18nextProvider i18n={i18n}><TodayNeedsSection items={[]} receipts={[receipt]} onOpen={vi.fn()} onOpenTasks={vi.fn()} /></I18nextProvider>);
+    expect(screen.getByRole("status")).toHaveTextContent("Already done: you replied at 10:12 AM.");
+    await act(async () => { await i18n.changeLanguage("zh-CN"); });
+    expect(screen.getByRole("status")).toHaveTextContent("已经做了：你");
+    expect(screen.getByRole("status")).toHaveTextContent("回复了。");
+});
+
+
 it("counts only current task rows when a handled receipt occupies a preview slot", async () => {
     const i18n = createInstance();
     await i18n.init({ lng: "en", resources: { en: { today: en } }, defaultNS: "today" });

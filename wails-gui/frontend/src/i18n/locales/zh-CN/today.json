@@ -764,6 +764,7 @@
         "stillFailed": "还是没有成功。",
         "tryAgain": "重试",
         "alreadyReplied": "已经做了：你{{time}}回复了 {{person}}。",
+        "alreadyRepliedNoName": "已经做了：你{{time}}回复了。",
         "heading": "需要你",
         "more_one": "任务里还有 {{count}} 项",
         "more_other": "任务里还有 {{count}} 项",

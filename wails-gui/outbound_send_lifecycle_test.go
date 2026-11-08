@@ -40,7 +40,13 @@ func outboundSendTestCard(t *testing.T) (*App, *fakeProactiveSendTransport, enga
 func outboundSendTestCardWithApp(t *testing.T, app *App) (*App, *fakeProactiveSendTransport, engagement.Moment) {
 	t.Helper()
 	now := time.Now().Truncate(time.Second)
-	moment := proactiveVoiceTestMail(t, app, now)
+	return outboundSendTestCardForMoment(t, app, proactiveVoiceTestMail(t, app, now), now)
+}
+
+// outboundSendTestCardForMoment builds the sendable card for a waiting mail
+// that the caller already stored, so a test can shape the source first.
+func outboundSendTestCardForMoment(t *testing.T, app *App, moment engagement.Moment, now time.Time) (*App, *fakeProactiveSendTransport, engagement.Moment) {
+	t.Helper()
 	app.engagement = newEngagementService(app.store, nil, engagementDelivery{})
 	app.engagement.now = func() time.Time { return now }
 	stored, err := app.engagement.Submit(t.Context(), moment)

@@ -764,6 +764,7 @@
         "stillFailed": "Still didn't work.",
         "tryAgain": "Try again",
         "alreadyReplied": "Already done: you replied to {{person}} at {{time}}.",
+        "alreadyRepliedNoName": "Already done: you replied at {{time}}.",
         "heading": "Needs you",
         "more_one": "{{count}} more in Tasks",
         "more_other": "{{count}} more in Tasks",

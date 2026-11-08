@@ -36,10 +36,8 @@ func (a *App) GetTodayNeedResolution(momentID string) (TodayNeedResolution, erro
 		if task.Card.MomentID != momentID || task.RepliedAt <= 0 || a.validateMainChatSend(ctx, &task.Card) != nil {
 			continue
 		}
+		// A nameless recipient is still a proven reply: the row says "your reply".
 		person := mobileOfferText(task.recipientName(a), 80)
-		if person == "" {
-			return empty, nil
-		}
 		release, err := a.lockPeoplePublication(ctx, stamp)
 		if err != nil {
 			return empty, err
