@@ -210,12 +210,8 @@ struct ChatView: View {
             composerVisible = true
             recoverDrafts()
         }
-        .onChange(of: composerFocused) { _, focused in
-            router.isComposing = focused
-        }
         .onDisappear {
             composerVisible = false
-            router.isComposing = false
         }
     }
 
@@ -823,13 +819,7 @@ struct ChatView: View {
                 .font(.body)
                 .lineLimit(1...5)
                 .focused($composerFocused)
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button(String(localized: "Done")) { composerFocused = false }
-                            .accessibilityIdentifier("chat.keyboard.done")
-                    }
-                }
+                .composerKeyboardDone { composerFocused = false }
                 .accessibilityIdentifier("chat.composer")
             if draftBinding.wrappedValue.isEmpty {
                 Text("Message Isoform")

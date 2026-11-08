@@ -35,7 +35,7 @@ final class TabNavigationUITests: XCTestCase {
         app.buttons["tab.chat"].tap()
         composer.tap()
         XCTAssertTrue(keyboard.waitForExistence(timeout: 5))
-        app.buttons["chat.keyboard.done"].tap()
+        app.buttons["composer.keyboard.done"].tap()
         XCTAssertFalse(keyboard.waitForExistence(timeout: 2), "Done puts the keyboard away")
 
         for (tab, title) in [("tab.today", "Today"), ("tab.tasks", "Tasks"), ("tab.chat", "Chat")] {

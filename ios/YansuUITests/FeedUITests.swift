@@ -69,6 +69,28 @@ final class FeedUITests: XCTestCase {
         XCTAssertFalse(chip.exists)
     }
 
+    func testTopicComposerDoneDismissesKeyboardAndKeepsTabBar() throws {
+        let app = launchTopics()
+        let card = app.buttons.matching(identifier: "feed.topic").firstMatch
+        scrollIntoView(card, in: app)
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        card.tap()
+        let composer = app.descendants(matching: .any)["topic.composer"].firstMatch
+        XCTAssertTrue(composer.waitForExistence(timeout: 10))
+        composer.tap()
+        composer.typeText("Keep Nov 1 in the reply.")
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 5), "the topic composer opens the keyboard")
+        let done = app.buttons["composer.keyboard.done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5), "the keyboard has Done, as Chat does")
+        done.tap()
+        XCTAssertFalse(keyboard.waitForExistence(timeout: 2), "Done puts the keyboard away")
+        XCTAssertTrue(app.buttons["tab.today"].waitForExistence(timeout: 5) && app.buttons["tab.today"].isHittable,
+                      "the tab bar stays after Done")
+        XCTAssertTrue(app.buttons["tab.chat"].isHittable, "the tab bar stays after Done")
+        XCTAssertEqual(composer.value as? String, "Keep Nov 1 in the reply.", "Done keeps the typed words")
+    }
+
     func testTodayScreenshots() throws {
         for appearance in ["Light", "Dark"] {
             let suffix = appearance.lowercased()

@@ -64,8 +64,7 @@ struct TopicView: View {
             guard let event else { return }
             Task { await thread.receiveTurn(event) }
         }
-        .onChange(of: composerFocused) { _, focused in router.isComposing = focused }
-        .onDisappear { thread.stop(); router.isComposing = false }
+        .onDisappear { thread.stop() }
     }
 
     private static let bottom = "topic.bottom"
@@ -286,6 +285,7 @@ struct TopicView: View {
                     .foregroundStyle(YansuTheme.ink)
                     .lineLimit(1...5)
                     .focused($composerFocused)
+                    .composerKeyboardDone { composerFocused = false }
                     .padding(.vertical, 8)
                     .accessibilityLabel(Text("Ask about \(name)"))
                     .accessibilityIdentifier("topic.composer")
