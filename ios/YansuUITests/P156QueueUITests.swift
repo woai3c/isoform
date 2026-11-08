@@ -154,7 +154,8 @@ final class P156QueueUITests: XCTestCase {
         XCTAssertTrue(chatLine.waitForExistence(timeout: 10), "Chat did not open")
         let chat = chatLine.label
         // The clock digits: the formatter's space before AM/PM is a narrow no-break space.
-        let pattern = "yesterday at [0-9]+:[0-9]+"
+        // The day is "yesterday" or the date, depending on the hour: 26 hours ago is two days ago before 2 AM.
+        let pattern = "(yesterday|[A-Z][a-z]{2} [0-9]{1,2}) at [0-9]+:[0-9]+"
         func when(_ text: String) -> String? {
             guard let range = text.range(of: pattern, options: .regularExpression) else { return nil }
             return String(text[range])
