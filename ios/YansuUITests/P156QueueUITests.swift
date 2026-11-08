@@ -43,7 +43,7 @@ final class P156QueueUITests: XCTestCase {
             ])
             let again = app.buttons["chat.message.sendAgain"].firstMatch
             XCTAssertTrue(again.waitForExistence(timeout: 20), "the 24-hour line is missing in Chat (\(appearance))")
-            XCTAssertTrue(app.staticTexts["Your computer didn't wake, so this wasn't sent."].firstMatch
+            XCTAssertTrue(app.staticTexts["This waited a day, so it wasn't sent."].firstMatch
                 .waitForExistence(timeout: 5), "the 24-hour words are missing (\(appearance))")
             try capture(app, named: "day-line-chat-\(appearance)")
             app.terminate()
@@ -59,7 +59,7 @@ final class P156QueueUITests: XCTestCase {
             ])
             XCTAssertTrue(app.descendants(matching: .any)["today.expired.line"].firstMatch.waitForExistence(timeout: 20),
                           "the Today line is missing (\(appearance))")
-            XCTAssertTrue(app.staticTexts["Your computer didn't wake, so 2 messages weren't sent."].firstMatch
+            XCTAssertTrue(app.staticTexts["2 messages waited a day, so they weren't sent."].firstMatch
                 .waitForExistence(timeout: 5), "the Today words are missing (\(appearance))")
             try capture(app, named: "day-line-today-\(appearance)")
             app.buttons["today.expired.show"].firstMatch.tap()
@@ -76,7 +76,7 @@ final class P156QueueUITests: XCTestCase {
                 "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off",
                 "YANSU_UITEST_HELD_SEND": "expired", "YANSU_UITEST_TAB": "tasks",
             ])
-            let line = app.staticTexts["Your computer didn't wake, so this wasn't sent."].firstMatch
+            let line = app.staticTexts["This waited a day, so it wasn't sent."].firstMatch
             XCTAssertTrue(line.waitForExistence(timeout: 20), "the held reply has no line (\(appearance))")
             let again = app.buttons["Send again"].firstMatch
             XCTAssertTrue(again.waitForExistence(timeout: 5), "no Send again on the reply (\(appearance))")
@@ -100,7 +100,7 @@ final class P156QueueUITests: XCTestCase {
         // The row's identifier is tasks.row.unread.draft.ui-sow while it is new, so match the task id.
         let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier CONTAINS %@", "draft.ui-sow")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 10), "Show did not open Tasks at the reply")
-        let line = app.staticTexts["Your computer didn't wake, so this wasn't sent."].firstMatch
+        let line = app.staticTexts["This waited a day, so it wasn't sent."].firstMatch
         XCTAssertTrue(line.waitForExistence(timeout: 5), "the reply's row lost its line")
         XCTAssertTrue(line.isHittable, "Show did not scroll Tasks to the reply")
         app.terminate()
@@ -128,7 +128,7 @@ final class P156QueueUITests: XCTestCase {
                 "YANSU_UITEST_CONNECTION_CAUSE": "sleeping", "YANSU_UITEST_KEEP_AWAKE": "off",
                 "YANSU_UITEST_HELD_SEND": "expired", "YANSU_UITEST_HELD_PERSON": "Sam Lee",
             ])
-            let line = app.staticTexts["Your computer didn't wake, so your reply to Sam\u{00A0}Lee wasn't sent."].firstMatch
+            let line = app.staticTexts["Your reply to Sam\u{00A0}Lee waited a day, so it wasn't sent."].firstMatch
             XCTAssertTrue(line.waitForExistence(timeout: 20), "Today does not name the reply (\(appearance))")
             try capture(app, named: "today-named-reply-\(appearance)")
             app.buttons["today.expired.show"].firstMatch.tap()
@@ -195,11 +195,14 @@ final class P156QueueUITests: XCTestCase {
         }
     }
 
-    /// The ask-again prompt: "Your computer is awake. Send the reply to Sam now?"
+    /// The ask-again prompt: "Your computer is back. Send the reply to Sam now?"
     func testAskAgainPrompt() throws {
         for appearance in ["light", "dark"] {
             let app = launch(state: "tasks-seeded", appearance: appearance, extra: ["YANSU_UITEST_HELD_SEND": "confirm"])
             XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 20), "the prompt is missing (\(appearance))")
+            // v1.0.5: the prompt says the computer is back, true after sleep, after being off, or after Isoform opened.
+            let back = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Your computer is back.")).firstMatch
+            XCTAssertTrue(back.waitForExistence(timeout: 5), "the prompt does not say the computer is back (\(appearance))")
             try capture(app, named: "ask-again-prompt-\(appearance)")
             app.terminate()
         }

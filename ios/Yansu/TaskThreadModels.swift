@@ -75,9 +75,9 @@ struct TaskSendConfirmation: Equatable, Identifiable, Sendable {
     /// The prompt, naming the person when there is one: "the reply" otherwise.
     static func title(person: String?) -> Text {
         if let person = RecipientName.name(person) {
-            return Text("Your computer is awake. Send the reply to \(person) now?")
+            return Text("Your computer is back. Send the reply to \(person) now?")
         }
-        return Text("Your computer is awake. Send the reply now?")
+        return Text("Your computer is back. Send the reply now?")
     }
 }
 

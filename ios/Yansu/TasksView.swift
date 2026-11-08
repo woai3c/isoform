@@ -362,7 +362,7 @@ struct TasksView: View {
             row
             if let held {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(String(localized: "Your computer didn't wake, so this wasn't sent."))
+                    Text(String(localized: "This waited a day, so it wasn't sent."))
                         .font(.footnote).foregroundStyle(YansuTheme.secondary)
                         .accessibilityIdentifier("tasks.held.line")
                     Button(String(localized: "Send again")) { Task { await tasks.sendExpiredAgain(held) } }

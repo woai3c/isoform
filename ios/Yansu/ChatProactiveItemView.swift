@@ -32,7 +32,7 @@ struct PhoneWaitingProactiveRow: View {
                         VStack(alignment: .leading, spacing: 4) {
                             titleLines(item)
                             if expired {
-                                Text(String(localized: "Your computer didn't wake, so this wasn't sent."))
+                                Text(String(localized: "This waited a day, so it wasn't sent."))
                                     .font(.footnote).foregroundStyle(YansuTheme.secondary)
                             }
                         }

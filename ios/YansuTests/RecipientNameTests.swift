@@ -24,8 +24,8 @@ final class RecipientNameTests: XCTestCase {
     func testTodaysLineNeverShowsAnAddress() {
         let base = Date(timeIntervalSince1970: 1_800_000_000)
         let address = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: "sam.lee@example.com")])
-        XCTAssertEqual(address?.text, "Your computer didn't wake, so your reply wasn't sent.")
+        XCTAssertEqual(address?.text, "Your reply waited a day, so it wasn't sent.")
         let named = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: "Sam Lee")])
-        XCTAssertEqual(named?.text, "Your computer didn't wake, so your reply to Sam\u{00A0}Lee wasn't sent.")
+        XCTAssertEqual(named?.text, "Your reply to Sam\u{00A0}Lee waited a day, so it wasn't sent.")
     }
 }

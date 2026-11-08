@@ -535,7 +535,7 @@ struct ChatView: View {
             HStack(spacing: 4) {
                 if expired {
                     // A day with no answer: the relay let it go, so it did not send (PROTOCOL.md section 23).
-                    Text(String(localized: "Your computer didn't wake, so this wasn't sent."))
+                    Text(String(localized: "This waited a day, so it wasn't sent."))
                         .accessibilityIdentifier("chat.message.status")
                     Button(String(localized: "Send again")) { Task { await chat.sendExpiredAgain(message.id, in: chatID) } }
                         .buttonStyle(.plain)

@@ -41,16 +41,16 @@ struct HeldSendNotice: Equatable {
         if items.count == 1, case .task = oldest.place {
             if let person = RecipientName.name(oldest.person) {
                 text = String.localizedStringWithFormat(
-                    String(localized: "Your computer didn't wake, so your reply to %@ wasn't sent."),
+                    String(localized: "Your reply to %@ waited a day, so it wasn't sent."),
                     RecipientName.keepingTogether(person))
             } else {
-                text = String(localized: "Your computer didn't wake, so your reply wasn't sent.")
+                text = String(localized: "Your reply waited a day, so it wasn't sent.")
             }
         } else if items.count == 1 {
-            text = String(localized: "Your computer didn't wake, so your message wasn't sent.")
+            text = String(localized: "Your message waited a day, so it wasn't sent.")
         } else {
             text = String.localizedStringWithFormat(
-                String(localized: "Your computer didn't wake, so %lld messages weren't sent."), items.count)
+                String(localized: "%lld messages waited a day, so they weren't sent."), items.count)
         }
         return HeldSendNotice(text: text, oldest: oldest.place)
     }

@@ -7,26 +7,26 @@ final class HeldSendNoticeTests: XCTestCase {
 
     func testASingleNamedReplyInTasksNamesThePerson() {
         let notice = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: "Sam")])
-        XCTAssertEqual(notice?.text, "Your computer didn't wake, so your reply to Sam wasn't sent.")
+        XCTAssertEqual(notice?.text, "Your reply to Sam waited a day, so it wasn't sent.")
         XCTAssertEqual(notice?.oldest, .task(taskID: "draft.a"))
     }
 
     /// The name keeps its spaces as non-breaking spaces, so a wrap never splits "Sam Lee" (v1.0.4).
     func testTheNameStaysOnOneLine() {
         let notice = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: "Sam Lee")])
-        XCTAssertEqual(notice?.text, "Your computer didn't wake, so your reply to Sam\u{00A0}Lee wasn't sent.")
+        XCTAssertEqual(notice?.text, "Your reply to Sam\u{00A0}Lee waited a day, so it wasn't sent.")
     }
 
     func testASingleReplyWithNoNameSaysYourReply() {
         let notice = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: nil)])
-        XCTAssertEqual(notice?.text, "Your computer didn't wake, so your reply wasn't sent.")
+        XCTAssertEqual(notice?.text, "Your reply waited a day, so it wasn't sent.")
         let blank = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: "")])
-        XCTAssertEqual(blank?.text, "Your computer didn't wake, so your reply wasn't sent.")
+        XCTAssertEqual(blank?.text, "Your reply waited a day, so it wasn't sent.")
     }
 
     func testASingleChatMessageSaysYourMessage() {
         let notice = HeldSendNotice.make([.init(place: .chat(messageID: "m1"), sentAt: base, person: nil)])
-        XCTAssertEqual(notice?.text, "Your computer didn't wake, so your message wasn't sent.")
+        XCTAssertEqual(notice?.text, "Your message waited a day, so it wasn't sent.")
     }
 
     func testSeveralAreCountedAcrossChatAndTasks() {
@@ -35,7 +35,7 @@ final class HeldSendNoticeTests: XCTestCase {
             .init(place: .task(taskID: "draft.a"), sentAt: base.addingTimeInterval(60), person: "Sam"),
             .init(place: .chat(messageID: "m2"), sentAt: base.addingTimeInterval(120), person: nil),
         ]
-        XCTAssertEqual(HeldSendNotice.make(items)?.text, "Your computer didn't wake, so 3 messages weren't sent.")
+        XCTAssertEqual(HeldSendNotice.make(items)?.text, "3 messages waited a day, so they weren't sent.")
     }
 
     func testShowOpensTheOldestWhereverItIs() {
