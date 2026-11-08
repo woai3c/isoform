@@ -7,7 +7,7 @@ final class YourAgentUITests: XCTestCase {
 
     func testSettingsRowOpensPageAndDoneClosesSheet() {
         let app = launch("opened")
-        XCTAssertTrue(app.staticTexts["Rent out an agent of you"].exists)
+        XCTAssertTrue(app.staticTexts["Agent of You"].exists)
         app.buttons["settings.done"].tap()
         XCTAssertTrue(app.buttons["root.settings"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["settings.yourAgent.open"].exists)
@@ -16,7 +16,7 @@ final class YourAgentUITests: XCTestCase {
     func testStillLearningHidesTaste() {
         let app = launch("learning")
         XCTAssertTrue(app.staticTexts["Isoform is still learning how you work. Your specialties show here once it has seen you do something a few times."].exists)
-        XCTAssertFalse(app.staticTexts["A TASTE OF WHAT IT KNOWS"].exists)
+        XCTAssertFalse(app.staticTexts["A taste of what it knows"].exists)
         XCTAssertFalse(app.staticTexts["Lead the weekly update with what changed, not what happened."].exists)
     }
 
@@ -33,8 +33,8 @@ final class YourAgentUITests: XCTestCase {
 
     func testPlaceholderHasHeadingsWithoutLearningOrLoading() {
         let app = launch("placeholder")
-        XCTAssertTrue(app.staticTexts["WHAT IT WOULD SPECIALIZE IN"].exists)
-        XCTAssertTrue(app.staticTexts["A TASTE OF WHAT IT KNOWS"].exists)
+        XCTAssertTrue(app.staticTexts["What it would specialize in"].exists)
+        XCTAssertTrue(app.staticTexts["A taste of what it knows"].exists)
         XCTAssertFalse(app.staticTexts["Weekly updates"].exists)
         XCTAssertFalse(app.staticTexts["yourAgent.stillLearning"].exists)
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'loading'")).firstMatch.exists)
@@ -155,7 +155,7 @@ final class YourAgentUITests: XCTestCase {
                 }
                 let target: XCUIElement
                 switch state {
-                case "placeholder": target = app.staticTexts["Rent out an agent of you"]
+                case "placeholder": target = app.staticTexts["Agent of You"]
                 case "sent", "yours": target = app.buttons["yourAgent.share"]
                 case "code", "wrongCode": target = app.textFields["yourAgent.codeField"]
                 case "choice": target = app.buttons["yourAgent.switch"]
@@ -190,8 +190,8 @@ final class YourAgentUITests: XCTestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         XCTAssertTrue(row.label.contains("Agent of You"))
         reveal(row, in: app); row.tap()
-        XCTAssertTrue(app.staticTexts["Rent out an agent of you"].waitForExistence(timeout: 5))
-        let ready = state == "placeholder" ? app.staticTexts["WHAT IT WOULD SPECIALIZE IN"] : state == "learning"
+        XCTAssertTrue(app.staticTexts["Agent of You"].waitForExistence(timeout: 5))
+        let ready = state == "placeholder" ? app.staticTexts["What it would specialize in"] : state == "learning"
             ? app.staticTexts["Isoform is still learning how you work. Your specialties show here once it has seen you do something a few times."]
             : app.staticTexts["Weekly updates"]
         XCTAssertTrue(ready.waitForExistence(timeout: 5))

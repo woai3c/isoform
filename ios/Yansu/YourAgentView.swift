@@ -18,7 +18,10 @@ struct YourAgentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 header
-                specialties
+                // A section with nothing to list is left out (P146): specialties show once there are some.
+                if store.copy == nil || store.isStillLearning || !(store.copy?.specialties ?? []).isEmpty {
+                    specialties
+                }
                 if store.copy == nil {
                     VStack(alignment: .leading, spacing: 7) {
                         heading("A taste of what it knows")
@@ -68,7 +71,8 @@ struct YourAgentView: View {
         }
     }
 
-    private var title: some View { Text("Rent out an agent of you").font(.title.bold()).fixedSize(horizontal: false, vertical: true) }
+    // One name, Agent of You (P146); the product name stays in English in every language.
+    private var title: some View { Text("Agent of You").font(.title.bold()).fixedSize(horizontal: false, vertical: true) }
     private var badge: some View {
         Text("Coming soon").font(.caption2.weight(.semibold)).foregroundStyle(YansuTheme.warning)
             .padding(.horizontal, 7).padding(.vertical, 3)
@@ -78,7 +82,7 @@ struct YourAgentView: View {
         VStack(alignment: .leading, spacing: 10) {
             title
             badge
-            Text("Soon, people can hire an agent of you.")
+            Text("Soon, people can hire your Agent of You.")
                 .font(.subheadline).foregroundStyle(YansuTheme.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Text("It works the way you do, makes things for them in minutes, and you get paid for every minute it works.")
@@ -87,7 +91,8 @@ struct YourAgentView: View {
         }.padding(.horizontal, 4)
     }
     private func heading(_ text: LocalizedStringKey) -> some View {
-        Text(text).textCase(.uppercase).font(.footnote).tracking(0.3)
+        // Sentence case: labels are headings for a group, not capitals (P146).
+        Text(text).font(.footnote).tracking(0.3)
             .foregroundStyle(YansuTheme.tertiary).padding(.horizontal, 16)
             .accessibilityAddTraits(.isHeader).fixedSize(horizontal: false, vertical: true)
     }
