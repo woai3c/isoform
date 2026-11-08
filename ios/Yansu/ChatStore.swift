@@ -1301,6 +1301,15 @@ final class ChatStore: ObservableObject {
         awayPeriods[chatID]?.last { $0.messageIDs.contains(messageID) }
     }
 
+    /// True when every message under this stretch is one the computer did not take in a day, so none of them still
+    /// waits and the away line may drop its promise (PROTOCOL.md section 23).
+    func awayPeriodAllNotSent(_ period: ChatAwayPeriod, in chatID: String) -> Bool {
+        let outgoing = loadedOutgoing(chatID)
+        return !period.messageIDs.isEmpty && period.messageIDs.allSatisfy { id in
+            outgoing.first { $0.id == id }?.expiredWhileWaiting(computerOnline: hubOnline, now: now()) ?? false
+        }
+    }
+
     func awayPeriod(containingSeq seq: Int, in chatID: String) -> ChatAwayPeriod? {
         awayPeriods[chatID]?.last { $0.seqs.values.contains(seq) }
     }

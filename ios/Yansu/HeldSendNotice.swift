@@ -11,6 +11,11 @@ enum RecipientName {
         }
         return text
     }
+
+    /// The name with non-breaking spaces inside it, so a line wrap never splits "Sam Lee" across two lines.
+    static func keepingTogether(_ name: String) -> String {
+        name.replacingOccurrences(of: " ", with: "\u{00A0}")
+    }
 }
 
 struct HeldSendNotice: Equatable {
@@ -36,7 +41,8 @@ struct HeldSendNotice: Equatable {
         if items.count == 1, case .task = oldest.place {
             if let person = RecipientName.name(oldest.person) {
                 text = String.localizedStringWithFormat(
-                    String(localized: "Your computer didn't wake, so your reply to %@ wasn't sent."), person)
+                    String(localized: "Your computer didn't wake, so your reply to %@ wasn't sent."),
+                    RecipientName.keepingTogether(person))
             } else {
                 text = String(localized: "Your computer didn't wake, so your reply wasn't sent.")
             }

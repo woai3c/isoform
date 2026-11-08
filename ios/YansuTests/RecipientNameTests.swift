@@ -8,6 +8,11 @@ final class RecipientNameTests: XCTestCase {
         XCTAssertEqual(RecipientName.name("  Sam Lee  "), "Sam Lee")
     }
 
+    func testAKeptTogetherNameHasNoPlainSpace() {
+        XCTAssertEqual(RecipientName.keepingTogether("Sam Lee"), "Sam\u{00A0}Lee")
+        XCTAssertFalse(RecipientName.keepingTogether("Ana Maria Ruiz").contains(" "))
+    }
+
     func testAnAddressOrNothingIsNoName() {
         XCTAssertNil(RecipientName.name("sam.lee@example.com"))
         XCTAssertNil(RecipientName.name(""))
@@ -21,6 +26,6 @@ final class RecipientNameTests: XCTestCase {
         let address = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: "sam.lee@example.com")])
         XCTAssertEqual(address?.text, "Your computer didn't wake, so your reply wasn't sent.")
         let named = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: "Sam Lee")])
-        XCTAssertEqual(named?.text, "Your computer didn't wake, so your reply to Sam Lee wasn't sent.")
+        XCTAssertEqual(named?.text, "Your computer didn't wake, so your reply to Sam\u{00A0}Lee wasn't sent.")
     }
 }

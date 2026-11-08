@@ -67,6 +67,21 @@ enum ChatAwayCause: String, Codable, CaseIterable, Sendable, Identifiable {
         }
     }
 
+    /// The line once every message under it wasn't sent: the same cause with no promise to answer on wake, since
+    /// those messages wait for Send again rather than going out.
+    var settledLine: String {
+        switch self {
+        case .asleep: return String(localized: "Your computer is asleep.")
+        case .asleepBattery: return String(localized: "Your computer went to sleep to save its battery.")
+        case .lidClosed: return String(localized: "Your computer's lid is closed.")
+        case .off: return String(localized: "Your computer is off.")
+        case .closed: return String(localized: "Isoform is closed on your computer.")
+        case .notAnswering: return String(localized: "Your computer isn't answering.")
+        case .phoneOffline: return String(localized: "This iPhone is offline.")
+        case .cantConnect: return String(localized: "Isoform can't connect right now.")
+        }
+    }
+
     /// What the More sheet says to do.
     var directions: String {
         switch self {
@@ -86,8 +101,10 @@ struct ChatAwayPeriod: Codable, Equatable, Sendable, Identifiable {
     static let longAway: TimeInterval = 24 * 60 * 60
 
     /// The away line for this stretch. "Since" only with the goodbye time, after 24 hours; otherwise the timeless line.
-    func lineText(now: Date, locale: Locale = .current, calendar: Calendar = .current) -> String {
-        cause.line(since: sinceKnown == true ? startedAt : nil, now: now, locale: locale, calendar: calendar)
+    /// Once every message under it wasn't sent (`settled`), the line drops its promise and reads the settled line.
+    func lineText(now: Date, settled: Bool = false, locale: Locale = .current, calendar: Calendar = .current) -> String {
+        if settled { return cause.settledLine }
+        return cause.line(since: sinceKnown == true ? startedAt : nil, now: now, locale: locale, calendar: calendar)
     }
 
     let id: String

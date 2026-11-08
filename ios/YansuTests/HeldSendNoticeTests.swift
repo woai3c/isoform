@@ -11,6 +11,12 @@ final class HeldSendNoticeTests: XCTestCase {
         XCTAssertEqual(notice?.oldest, .task(taskID: "draft.a"))
     }
 
+    /// The name keeps its spaces as non-breaking spaces, so a wrap never splits "Sam Lee" (v1.0.4).
+    func testTheNameStaysOnOneLine() {
+        let notice = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: "Sam Lee")])
+        XCTAssertEqual(notice?.text, "Your computer didn't wake, so your reply to Sam\u{00A0}Lee wasn't sent.")
+    }
+
     func testASingleReplyWithNoNameSaysYourReply() {
         let notice = HeldSendNotice.make([.init(place: .task(taskID: "draft.a"), sentAt: base, person: nil)])
         XCTAssertEqual(notice?.text, "Your computer didn't wake, so your reply wasn't sent.")

@@ -208,12 +208,17 @@ enum ChatUITestSeed {
     static func seedAway(_ cache: ChatCache, cause: ChatAwayCause, phase: String, startedAt: Date? = nil, now: Date) throws {
         try cache.rememberMainChat(mainSummary(now: now))
         // "untimed" is a day-long stretch whose goodbye time is unknown: Chat must not say "since" for it.
-        let day = phase == "long" || phase == "untimed"
+        let untimed = phase.hasPrefix("untimed")
+        let day = phase == "long" || untimed
         var items = transcript(answered: true, now: now.addingTimeInterval(day ? -27 * 3600 : -9 * 3600))
         let start = startedAt ?? (day ? now.addingTimeInterval(-26 * 3600) : now.addingTimeInterval(-8 * 3600))
         let ids = ["ui-away-1", "ui-away-2"]
-        let typed = [start.addingTimeInterval(120), start.addingTimeInterval(180)]
-        var period = ChatAwayPeriod(id: "ui-away-period", cause: cause, startedAt: start, sinceKnown: phase != "untimed",
+        // "untimed-waiting" sent its messages minutes ago, so they still wait; "untimed" sent them a day ago, so they
+        // were not sent (v1.0.4: the line drops its promise then).
+        let typed = phase == "untimed-waiting"
+            ? [now.addingTimeInterval(-600), now.addingTimeInterval(-540)]
+            : [start.addingTimeInterval(120), start.addingTimeInterval(180)]
+        var period = ChatAwayPeriod(id: "ui-away-period", cause: cause, startedAt: start, sinceKnown: !untimed,
                                     messageIDs: ids)
         var messages: [ChatOutgoingMessage] = []
         if phase == "back" {

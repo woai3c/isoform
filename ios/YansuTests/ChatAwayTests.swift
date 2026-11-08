@@ -129,4 +129,18 @@ final class ComputerSleepReasonTests: XCTestCase {
                        "Press any key on your computer. Isoform picks up where it left off.")
         XCTAssertEqual(ComputerSleepReason.lidClosed.status(since: nil), "Computer asleep · Its lid is closed.")
     }
+
+    /// Once every message under the line wasn't sent, the line drops its promise to answer on wake (PROTOCOL.md 23).
+    func testWhenEveryMessageWasNotSentTheLineDropsItsPromise() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let period = ChatAwayPeriod(id: "p", cause: .asleep, startedAt: now.addingTimeInterval(-3600),
+                                    sinceKnown: true, messageIDs: ["m1"])
+        XCTAssertEqual(period.lineText(now: now), "Your computer is asleep. Isoform answers when it wakes.")
+        XCTAssertEqual(period.lineText(now: now, settled: true), "Your computer is asleep.")
+        XCTAssertEqual(ChatAwayCause.lidClosed.settledLine, "Your computer's lid is closed.")
+        for cause in ChatAwayCause.allCases {
+            XCTAssertFalse(cause.settledLine.contains("Isoform answers"), cause.settledLine)
+            XCTAssertFalse(cause.settledLine.contains("goes out"), cause.settledLine)
+        }
+    }
 }
